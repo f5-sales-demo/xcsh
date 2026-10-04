@@ -120,6 +120,7 @@ export function validateModelSubsetPreflight(cases:Array<{id:string;kind:string;
  if(cases.length!==40||JSON.stringify(counts)!==JSON.stringify([28,8,4]))throw new Error("Frozen model subset must be28/8/4");
  if(new Set(cases.map(c=>c.id)).size!==40||cases.some(c=>!suiteIds.includes(c.id)))throw new Error("Frozen model subset IDs do not match suite");
  validateModelActivation(cases);
+ validateHclDraftingCoverage(cases);
 }
 
 export function validateModelSubsetIdentity(
@@ -132,4 +133,20 @@ export function validateModelSubsetIdentity(
  };
  const byId=new Map(suite.map(c=>[c.id,c]));
  for(const c of subset){const original=byId.get(c.id);if(!original || canonical(c)!==canonical(original))throw new Error(`Model subset changed frozen case ${c.id}`);}
+}
+
+export function validateHclDraftingCoverage(cases:readonly {kind:string;prompt:string;model_expectations?:unknown}[]):void{
+ let required=0;
+ for(const c of cases){
+ const raw=c.model_expectations===undefined?{}:c.model_expectations;
+ if(!raw||typeof raw!=="object"||Array.isArray(raw))throw new Error("Model expectations must be an object");
+ const e=raw as Record<string,unknown>;
+ const marker=e.requires_hcl===undefined?false:e.requires_hcl;
+ if(typeof marker!=="boolean")throw new Error("HCL drafting expectation must be boolean");
+ if(!marker)continue;
+ const strings=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(x=>typeof x==="string"&&x.trim());
+ if(c.kind!=="answerable"||!/\b(?:draft|write|generate|create)\b.*\b(?:hcl|terraform)\b/i.test(c.prompt)||!strings(e.supported_fields)||!strings(e.must_read)||!(e.must_read as string[]).every(uri=>/^xcsh:\/\/terraform-documentation\/documentation\/[A-Za-z0-9_./-]+\.md#[A-Za-z0-9_.-]+$/.test(uri)&&!uri.slice("xcsh://terraform-documentation".length).split("#")[0]!.split("/").includes(".."))||!e.synthetic_values||typeof e.synthetic_values!=="object"||Array.isArray(e.synthetic_values)||!Object.keys(e.synthetic_values).length||!Object.entries(e.synthetic_values).every(([field,value])=>(e.supported_fields as string[]).includes(field)&&c.prompt.includes(field)&&["string","number","boolean"].includes(typeof value)&&String(value).trim()&&c.prompt.includes(String(value))))throw new Error("Mandatory HCL cases require answerable drafting intent, fields, exact reads and synthetic values");
+ required++;
+ }
+ if(!required)throw new Error("Model qualification requires positive mandatory HCL drafting coverage");
 }

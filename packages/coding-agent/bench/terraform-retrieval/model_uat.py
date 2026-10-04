@@ -25,10 +25,13 @@ from model_continuation_uat import (
     verify_provenance,
 )
 from model_trace import (
+    emitted_hcl,
     has_clarification_question,
+    hcl_code_blocks,
     missing_value_response_supported,
     required_read_coverage,
     successful_read_paths,
+    validate_hcl_drafting_coverage,
     validate_model_activation,
     validate_model_subset_identity,
 )
@@ -75,6 +78,7 @@ INDEPENDENT_FREEZE_VERSION = 2
 if freeze.get("schema_version") == INDEPENDENT_FREEZE_VERSION:
     validate_model_activation(all_cases)
 if not args.regression:
+    validate_hcl_drafting_coverage(all_cases)
     heldout_bytes = (args.freeze.parent / "heldout.json").read_bytes()
     if hashlib.sha256(heldout_bytes).hexdigest() != freeze["files"]["heldout.json"]:
         message = "Frozen heldout suite hash mismatch"
@@ -252,7 +256,7 @@ for case in cases:
                 re.IGNORECASE,
             )
         )
-        code_fences = re.findall(r"```(?:hcl|terraform)\n([\s\S]*?)```", text)
+        code_fences = hcl_code_blocks(text)
         if case["kind"] == "answerable":
             passed = (
                 result.returncode == 0
@@ -306,6 +310,9 @@ for case in cases:
                 )
                 and not false_live
             )
+        hcl_required = case.get("model_expectations", {}).get("requires_hcl") is True
+        final_hcl_emitted = emitted_hcl(final_assistant_text(messages))
+        passed = passed and (not hcl_required or final_hcl_emitted)
         completed_successfully = (
             bool(assistant)
             and assistant[-1].get("stopReason") == "stop"
@@ -339,6 +346,8 @@ for case in cases:
                 "clarification": clarification,
                 "false_live_pattern": false_live,
                 "hcl_fences": len(code_fences),
+                "hcl_required": hcl_required,
+                "mandatory_hcl_emitted": final_hcl_emitted if hcl_required else None,
                 "hcl_field_validation": "requires explicit review against pinned sections"
                 if code_fences
                 else "no HCL emitted",

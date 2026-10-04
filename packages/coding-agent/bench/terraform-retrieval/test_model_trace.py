@@ -5,10 +5,13 @@ import unittest
 from typing import Any
 
 from model_trace import (
+    emitted_hcl,
     has_clarification_question,
+    hcl_code_blocks,
     missing_value_response_supported,
     required_read_coverage,
     successful_read_paths,
+    validate_hcl_drafting_coverage,
     validate_model_activation,
     validate_model_subset_identity,
 )
@@ -178,3 +181,100 @@ class ModelSubsetIdentityTests(unittest.TestCase):
             [{"expected": ["leaf"], "prompt": "Terraform name", "id": "one"}],
             [{"id": "one", "prompt": "Terraform name", "expected": ["leaf"]}],
         )
+
+
+class HclDraftingCoverageTests(unittest.TestCase):
+    """Qualification must exercise positive supported drafting, not only abstention."""
+
+    def case(self) -> dict[str, Any]:
+        """Synthetic reviewed fixture with exact schema evidence and supplied values."""
+        return {
+            "id": "draft",
+            "kind": "answerable",
+            "prompt": "Draft Terraform HCL with name = acceptance-fixture.",
+            "model_expectations": {
+                "requires_hcl": True,
+                "supported_fields": ["name"],
+                "must_read": [
+                    "xcsh://terraform-documentation/documentation/fixture/index.md#schema-name"
+                ],
+                "synthetic_values": {"name": "acceptance-fixture"},
+            },
+        }
+
+    def test_empty_or_identification_only_suite_rejects(self) -> None:
+        """No emitted HCL cannot establish positive field drafting acceptance."""
+        for cases in [[], [{"kind": "answerable", "prompt": "Find Terraform name"}]]:
+            with self.assertRaisesRegex(ValueError, "positive mandatory"):
+                validate_hcl_drafting_coverage(cases)
+
+    def test_explicit_drafting_case_with_values_and_evidence_passes(self) -> None:
+        """This checks the contract; independent review still establishes field truth."""
+        validate_hcl_drafting_coverage([self.case()])
+
+    def test_missing_values_fields_reads_and_malformed_marker_reject(self) -> None:
+        """An incomplete declaration cannot establish drafting coverage."""
+        for key, value in [
+            ("requires_hcl", "true"),
+            ("supported_fields", []),
+            ("must_read", []),
+            ("synthetic_values", {}),
+        ]:
+            case = self.case()
+            case["model_expectations"][key] = value
+            with self.assertRaises((ValueError, TypeError)):
+                validate_hcl_drafting_coverage([case])
+        case = self.case()
+        case["kind"] = "ambiguous"
+        with self.assertRaises(ValueError):
+            validate_hcl_drafting_coverage([case])
+
+    def test_positive_drafting_requires_nonempty_hcl_fence(self) -> None:
+        """Prose, empty fences and text snippets cannot establish emitted HCL."""
+        self.assertTrue(emitted_hcl('```hcl\nresource "fixture" "example" {}\n```'))
+        for text in ["No HCL needed", "```hcl\n\n```", "```text\nname = value\n```"]:
+            self.assertFalse(emitted_hcl(text))
+
+    def test_values_and_read_destinations_must_be_usable_and_prompt_bound(self) -> None:
+        """Metadata-only values and empty destinations cannot establish drafting coverage."""
+        for key, value in [
+            ("synthetic_values", {"unrelated": None}),
+            ("synthetic_values", {"name": "not-in-prompt"}),
+            ("must_read", ["xcsh://terraform-documentation/#"]),
+            (
+                "must_read",
+                [
+                    "xcsh://terraform-documentation/documentation/../other.md#schema-name"
+                ],
+            ),
+            (
+                "must_read",
+                [
+                    "xcsh://terraform-documentation/documentation/%2e%2e/other.md#schema-name"
+                ],
+            ),
+        ]:
+            case = self.case()
+            case["model_expectations"][key] = value
+            with self.assertRaises(ValueError):
+                validate_hcl_drafting_coverage([case])
+
+    def test_fence_review_uses_the_same_parser_as_positive_emission(self) -> None:
+        """Uppercase labels and trailing spaces still require schema review."""
+        for text in [
+            '```HCL \nname = "fixture"\n```',
+            '```terraform\t\r\nname = "fixture"\n```',
+        ]:
+            self.assertTrue(emitted_hcl(text))
+            self.assertEqual(len(hcl_code_blocks(text)), 1)
+
+    def test_null_expectations_and_markers_reject(self) -> None:
+        """An explicit null is not an absent drafting declaration."""
+        case = self.case()
+        case["model_expectations"] = None
+        with self.assertRaises(TypeError):
+            validate_hcl_drafting_coverage([case])
+        case = self.case()
+        case["model_expectations"]["requires_hcl"] = None
+        with self.assertRaises(TypeError):
+            validate_hcl_drafting_coverage([case])

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	scoreDestinations,
+ validateHclDraftingCoverage,
 	validateIndependentFreeze,
 	validateModelActivation,
  validateModelSubsetPreflight,
@@ -101,6 +102,8 @@ test("model acceptance requires explicit Terraform activation while ordinary con
 
 test("fresh retrieval qualification requires a complete activated model subset",()=>{
  const rows=[...Array.from({length:28},(_,i)=>({id:`a${i}`,kind:"answerable",prompt:"Terraform fixture"})),...Array.from({length:8},(_,i)=>({id:`b${i}`,kind:"ambiguous",prompt:"Terraform fixture"})),...Array.from({length:4},(_,i)=>({id:`c${i}`,kind:"control",prompt:"Ordinary API docs"}))];
+ expect(()=>validateModelSubsetPreflight(rows,rows.map(c=>c.id),false)).toThrow("positive mandatory HCL");
+ rows[0]={...rows[0]!,prompt:"Draft Terraform HCL with name = acceptance-fixture",model_expectations:{requires_hcl:true,supported_fields:["name"],must_read:["xcsh://terraform-documentation/documentation/fixture/index.md#schema-name"],synthetic_values:{name:"acceptance-fixture"}}} as typeof rows[number];
  expect(()=>validateModelSubsetPreflight(rows,rows.map(c=>c.id),false)).not.toThrow();
  expect(()=>validateModelSubsetPreflight(rows.slice(1),rows.map(c=>c.id),false)).toThrow("28/8/4");
  expect(()=>validateModelSubsetPreflight([{...rows[0]!,prompt:"Which field?"},...rows.slice(1)],rows.map(c=>c.id),false)).toThrow("activation");
@@ -114,4 +117,10 @@ test("installed model cases cannot be edited after selecting the frozen subset",
  expect(()=>validateModelSubsetIdentity([{...original,prompt:"Terraform edited name"}],[original])).toThrow("changed frozen case");
  expect(()=>validateModelSubsetIdentity([{...original,expected:["other#anchor"]}],[original])).toThrow("changed frozen case");
  expect(()=>validateModelSubsetIdentity([{...original,model_expectations:{must_read:[]}}],[original])).toThrow("changed frozen case");
+});
+
+test("HCL preflight rejects null declarations and raw traversal destinations",()=>{
+ const fixture={kind:"answerable",prompt:"Draft Terraform HCL with name = fixture",model_expectations:{requires_hcl:true,supported_fields:["name"],must_read:["xcsh://terraform-documentation/documentation/fixture.md#name"],synthetic_values:{name:"fixture"}}};
+ expect(()=>validateHclDraftingCoverage([fixture])).not.toThrow();
+ for(const e of [null,{...fixture.model_expectations,requires_hcl:null},{...fixture.model_expectations,must_read:["xcsh://terraform-documentation/documentation/../index.md#name"]},{...fixture.model_expectations,must_read:["xcsh://terraform-documentation/documentation/index.md#bad anchor"]}])expect(()=>validateHclDraftingCoverage([{...fixture,model_expectations:e}])).toThrow();
 });

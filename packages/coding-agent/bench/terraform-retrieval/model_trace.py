@@ -112,3 +112,101 @@ def validate_model_subset_identity(
         if case.get("id") not in by_id or case != by_id[case["id"]]:
             message = f"Model subset changed frozen case {case.get('id')}"
             raise ValueError(message)
+
+
+def valid_drafting_read(uri: str) -> bool:
+    """Require a document destination and exact, nonempty property anchor."""
+    if not re.fullmatch(
+        r"xcsh://terraform-documentation/documentation/[A-Za-z0-9_./-]+\.md#[A-Za-z0-9_.-]+",
+        uri,
+    ):
+        return False
+    parsed = urlsplit(uri)
+    return (
+        parsed.scheme == "xcsh"
+        and parsed.netloc == "terraform-documentation"
+        and parsed.path.startswith("/documentation/")
+        and parsed.path.endswith(".md")
+        and ".." not in parsed.path.split("/")
+        and bool(parsed.fragment.strip())
+        and not parsed.query
+    )
+
+
+def supplied_drafting_values(values: Any, fields: Any, prompt: str) -> bool:
+    """Field-associated synthetic scalar values must be visible to the tested model."""
+    if not isinstance(values, dict) or not values or not isinstance(fields, list):
+        return False
+    for key, value in values.items():
+        if not isinstance(key, str) or key not in fields or key not in prompt:
+            return False
+        if not isinstance(value, (str, int, float, bool)) or value is None:
+            return False
+        rendered = str(value).lower() if isinstance(value, bool) else str(value)
+        if not rendered.strip() or rendered not in prompt:
+            return False
+    return True
+
+
+def validate_hcl_drafting_coverage(cases: list[dict[str, Any]]) -> None:
+    """Require positive drafting cases so supported-HCL acceptance cannot be vacuous."""
+    drafting = []
+    for case in cases:
+        expectation = case.get("model_expectations", {})
+        if not isinstance(expectation, dict):
+            message = "Model expectations must be an object"
+            raise TypeError(message)
+        required = expectation.get("requires_hcl", False)
+        if not isinstance(required, bool):
+            message = "HCL drafting expectation must be boolean"
+            raise TypeError(message)
+        if not required:
+            continue
+        fields = expectation.get("supported_fields")
+        reads = expectation.get("must_read")
+        values = expectation.get("synthetic_values")
+        invalid = [
+            case.get("kind") != "answerable",
+            not re.search(
+                r"\b(?:draft|write|generate|create)\b.*\b(?:hcl|terraform)\b",
+                case.get("prompt", ""),
+                re.IGNORECASE,
+            ),
+            not isinstance(fields, list),
+            not fields,
+            isinstance(fields, list)
+            and any(
+                not isinstance(field, str) or not field.strip() for field in fields
+            ),
+            not isinstance(reads, list),
+            not reads,
+            isinstance(reads, list)
+            and any(
+                not isinstance(uri, str) or not valid_drafting_read(uri)
+                for uri in reads
+            ),
+            not isinstance(values, dict),
+            not values,
+            not supplied_drafting_values(values, fields, case.get("prompt", "")),
+        ]
+        if any(invalid):
+            message = "Mandatory HCL cases require answerable drafting intent, fields, exact reads and synthetic values"
+            raise ValueError(message)
+        drafting.append(case)
+    if not drafting:
+        message = (
+            "Model qualification requires positive mandatory HCL drafting coverage"
+        )
+        raise ValueError(message)
+
+
+def hcl_code_blocks(text: str) -> list[str]:
+    """Use one fence parser for mandatory emission and schema-review detection."""
+    return re.findall(
+        r"```(?:hcl|terraform)[ \t]*\r?\n([\s\S]*?)```", text, re.IGNORECASE
+    )
+
+
+def emitted_hcl(text: str) -> bool:
+    """Only a nonempty HCL/terraform fence establishes a drafting attempt."""
+    return any(code.strip() for code in hcl_code_blocks(text))

@@ -1,0 +1,7 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_restored": true,
+  "decision": "Reject unscoped IPstack matcher:unrelatedclauses,negation,literalguardbypass,Cartesiannestedfamilies.101/140initialregressiondoesnotjustifyintegration."
+}
