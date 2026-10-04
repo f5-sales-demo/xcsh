@@ -1,0 +1,6 @@
+{
+  "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+  "qualification_eligible_for_retuning": false,
+  "first_result_preserved": true,
+  "reason": "First scored heldout run failed; all later tuned runs are regression only."
+}

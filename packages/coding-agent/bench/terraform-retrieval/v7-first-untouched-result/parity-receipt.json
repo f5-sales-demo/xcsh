@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "case_count": 200,
+  "mismatches": [],
+  "mac_p95_ms": 82.89020800000071,
+  "linux_p95_ms": 102.21508499999982,
+  "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+  "reports": {
+    "/tmp/terraform-v7-first-scored-mac.json": "b98141094f231317a2108f9501cee7ea3e9758cda9808b438931181b6e2da861",
+    "/tmp/terraform-v7-first-scored-linux.json": "8736c7ee3ef52a6af1d06eb598cb149e70f93d0883c02fa7c83d5ae3e18cbcaa"
+  }
+}
