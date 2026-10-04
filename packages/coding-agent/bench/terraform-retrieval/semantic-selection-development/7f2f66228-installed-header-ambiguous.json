@@ -1,0 +1,31 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "header-ambiguous",
+      "kind": "ambiguous",
+      "exit_code": 0,
+      "model_ms": 67938.28339199536,
+      "complete_leaf_read": true,
+      "clarification": true,
+      "text": "In `xcsh_workload` (provider **v12.4.0**), the relevant branch is:\n\n`stateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert`\n\nTwo mutually exclusive fields set the `Server` response-header value:\n\n- [`server_name`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name): overwrites any existing value.\n- [`append_server_name`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name): sets the value only when absent, preserving an existing value.\n\nShould the setting **overwrite an existing header**, or **preserve it and set only when absent**?",
+      "budget": {
+        "passed": true,
+        "total_bytes": 45088,
+        "max_bytes": 20242,
+        "measured_results": 7,
+        "violations": []
+      },
+      "trace_sha256": "b6511fe75f3224f0d33074cf74808eafa55d72036bf3caf33b41568b539a05eb",
+      "passed": true
+    }
+  ],
+  "complete": true
+}
