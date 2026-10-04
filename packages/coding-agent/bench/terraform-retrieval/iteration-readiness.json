@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "qualification_passed": false,
-  "source_commit": "9c432529fbf8002827e94bf7cfd3f163fd2e9b42",
+  "source_commit": "f1bb48523beb3baefae3517f4e893def28e96243",
   "provider_version": "v12.4.0",
   "documentation_tag": "documentation-v12.4.0",
   "provider_source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
@@ -31,11 +31,11 @@
       "repaired_full_package": "passed9617/562/0"
     },
     "source_package_tests": {
-      "pass": 9636,
+      "pass": 9650,
       "skip": 562,
       "fail": 0,
-      "source": "9c432529fbf8002827e94bf7cfd3f163fd2e9b42",
-      "family_repairs_focused_tests": 173
+      "source": "755e1f9f79f88357c66dbc20d89f758b4eedd36a",
+      "later_safety_repairs_focused_tests": 178
     },
     "latest_ci": "6c08ebb5e allPRchecks passed",
     "current_hybrid_development": {
@@ -46,7 +46,8 @@
       "rejected": true,
       "production_imported": false
     },
-    "combined_source_review": "fourfindingsfixedwithlookup/lifecyclestestfamilies"
+    "combined_source_review": "fourfindingsfixedwithlookup/lifecyclestestfamilies",
+    "scope_review": "Completedreviewfindingsfixed;capacityattemptandsandboxEROFSresultsretainedseparately"
   },
   "accuracy": {
     "first_untouched": {
@@ -73,6 +74,14 @@
       "top5": 102,
       "qualification_passed": false,
       "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a"
+    },
+    "current_scope_regression": {
+      "correct_answerable": 84,
+      "answerable": 140,
+      "top5": 115,
+      "qualification_passed": false,
+      "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+      "original_first_result_unchanged": true
     }
   },
   "remaining": [
