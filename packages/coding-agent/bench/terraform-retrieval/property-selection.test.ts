@@ -692,3 +692,19 @@ test("grouping keys require exact documented relationships and preserve role amb
  for(const q of ["Locate values never grouped by region","Locate values grouped by region, not region"])expect(selectPropertyDestination(q,[r]).kind).toBe("choices");
  expect(selectPropertyDestination("Locate values grouped by region",[r,{...r,provider_type:"data-sources",type:"list",path:"data"}]).kind).toBe("choices");
 });
+
+
+test("numeric cap intent excludes an empty unlimited choice while omitted type stays ambiguous", () => {
+ const number={...row("max_requests_per_connection",40),type:"number"};
+ const unlimited={...row("no_request_limit_per_connection",39),type:"object"};
+ expect(selectPropertyDestination("Locate the numeric cap on requests per connection",[number,unlimited]).destinations[0]?.schema_path).toBe(number.schema_path);
+ expect(selectPropertyDestination("Locate the numeric cap on requests per connection",[number,unlimited]).kind).toBe("leaf");
+ expect(selectPropertyDestination("Locate request limits",[number,unlimited]).kind).toBe("choices");
+});
+
+
+test("negated numeric cap wording cannot discard the object alternative", () => {
+ const number={...row("max_requests",40),type:"number"};
+ const unlimited={...row("no_request_limit",39),type:"object"};
+ expect(selectPropertyDestination("Locate request limits, not a numeric cap",[number,unlimited]).kind).not.toBe("leaf");
+});

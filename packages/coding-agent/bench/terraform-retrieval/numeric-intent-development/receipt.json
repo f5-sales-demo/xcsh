@@ -1,0 +1,8 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 93,
+  "v7_top5": 121,
+  "change": "Explicit numeric cap type intent excludes incompatible object choice; negated requests retain ambiguity",
+  "firstscorespreserved": true
+}

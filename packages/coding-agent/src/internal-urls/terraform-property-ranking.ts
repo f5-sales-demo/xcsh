@@ -219,6 +219,12 @@ export function propertyMatchesGrouping(text: string, candidate: PropertyCandida
 	);
 }
 export function propertyRequestedType(text: string): string | undefined {
+	const requested = propertyRequestedText(text) ?? text;
+	if (
+		!/\b(?:not|no|without|rather than)\b/i.test(requested) &&
+		/\b(?:numeric|number)\s+(?:cap|limit|value)\b/i.test(requested)
+	)
+		return "number";
 	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return undefined;
 	if (/\b(?:boolean|bool)\s+(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return "bool";
 	if (/\bscalar\s+list\b/i.test(text)) return "list";
