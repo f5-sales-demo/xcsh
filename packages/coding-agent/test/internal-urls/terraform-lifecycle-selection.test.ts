@@ -89,3 +89,10 @@ test("refreshing documentation does not assert a read lifecycle operation", () =
 			selectPropertyDestination(`${verb} the timeout documentation for a namespace resource`, rows).kind,
 		).not.toBe("leaf");
 });
+
+test("plural timeout documentation preserves absent lifecycle operation", () => {
+	for (const verb of ["Refresh", "Refreshing", "Refreshed", "Refreshes"])
+		expect(
+			selectPropertyDestination(`${verb} the timeouts documentation for a namespace resource`, rows).kind,
+		).not.toBe("leaf");
+});

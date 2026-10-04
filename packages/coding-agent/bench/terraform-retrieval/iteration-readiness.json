@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "qualification_passed": false,
-  "source_commit": "6c08ebb5e96f9f3b2724dae08680023109b02e23",
+  "source_commit": "9c432529fbf8002827e94bf7cfd3f163fd2e9b42",
   "provider_version": "v12.4.0",
   "documentation_tag": "documentation-v12.4.0",
   "provider_source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
@@ -31,18 +31,22 @@
       "repaired_full_package": "passed9617/562/0"
     },
     "source_package_tests": {
-      "source_commit": "6c08ebb5e96f9f3b2724dae08680023109b02e23",
-      "exit_code": 0,
-      "seconds": 492.0287160873413,
-      "log_sha256": "3a1ceaab6c28dac637bef87cfc274a5085b7114b4528192b1c58a5635a7f08e8",
-      "qualification_passed": false,
-      "repair": "Verified pinned gzip restored; no source changes",
-      "pass": 9617,
+      "pass": 9636,
       "skip": 562,
       "fail": 0,
-      "files": 970
+      "source": "9c432529fbf8002827e94bf7cfd3f163fd2e9b42",
+      "family_repairs_focused_tests": 173
     },
-    "latest_ci": "6c08ebb5e allPRchecks passed"
+    "latest_ci": "6c08ebb5e allPRchecks passed",
+    "current_hybrid_development": {
+      "answerable": 48,
+      "lexical_top1": 46,
+      "hybrid_top1": 34,
+      "top5_both": 46,
+      "rejected": true,
+      "production_imported": false
+    },
+    "combined_source_review": "fourfindingsfixedwithlookup/lifecyclestestfamilies"
   },
   "accuracy": {
     "first_untouched": {
@@ -62,6 +66,13 @@
       "correct_answerable": 58,
       "reverted": true,
       "reason": "regressedBotDefenseandmodelcases"
+    },
+    "current_structured_regression": {
+      "correct_answerable": 74,
+      "answerable": 140,
+      "top5": 102,
+      "qualification_passed": false,
+      "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a"
     }
   },
   "remaining": [

@@ -598,3 +598,9 @@ test("all direct lookup forms retain unsupported literal path rejection", () => 
  const field={...row("calibration.offset",40),description:"Calibration offset."};
  for(const prefix of ["Where is","Where do I put","I need","Locate"]) expect(selectPropertyDestination(`${prefix} calibration.missing.`,[field]).kind).toBe("none");
 });
+
+
+test("placement literal paths remain unsupported across question inflections", () => {
+ const field={...row("calibration.offset",40),description:"Calibration offset."};
+ for(const prefix of ["Where does","Where do"])expect(selectPropertyDestination(`${prefix} calibration.missing go?`,[field]).kind).toBe("none");
+});
