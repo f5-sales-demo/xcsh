@@ -1,0 +1,11 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "automated_pass": 0,
+  "total": 3,
+  "ambiguous_question_asked": false,
+  "explicit_field_answers_supported": true,
+  "explicit_exact_anchor_reads": 0,
+  "all_tool_budgets_passed": true,
+  "remaining": "Installed model still chooses overwrite when unspecified; explicit variants read full parent instead of exact anchors and incorrectly use provider_name=xcsh_workload during refinement. External helper success does not qualify installed route."
+}
