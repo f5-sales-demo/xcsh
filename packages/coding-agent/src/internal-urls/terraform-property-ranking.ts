@@ -167,7 +167,7 @@ function schemaPathMentions(text: string) {
 	const query = text.toLowerCase().replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	return [
 		...query.matchAll(
-			/\b(under|within|inside|schema path|branch|path|or|and)\s+(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
+			/\b(under|within|inside|schema path|branch|path|or|and|locate|find|point me to)\s+(?:(?:the|its)\s+)?(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
 		),
 	].map(match => {
 		const suffix = query.slice(match.index! + match[0].length);
@@ -258,6 +258,21 @@ export function propertyHasNestedQualifier(text: string): boolean {
 		)
 	);
 }
+export function propertyValueLookup(text: string): string | undefined {
+	const clauses = text.split(/;|[?!]|\.(?=\s|$)/);
+	for (const clause of clauses) {
+		const lookup = /\b(?:find|locate|point me to)\s+(.+)/i.exec(clause);
+		const operation = /\b(?:specify|set|provide|supply)\b/i.exec(clause);
+		if (operation && (!lookup || operation.index < lookup.index)) return undefined;
+		if (!lookup) continue;
+		if (/\b(?:example|usage|guidance)\b/i.test(clause)) return undefined;
+		const target = lookup[1]!.split(/\band\s+its\b/i)[0]!.trim();
+		if (!target || /^(?:(?:an?|the)\s+)?(?:resource\b|data[ -]source\b|provider\b|action\b|xcsh_)/i.test(target))
+			return undefined;
+		return target;
+	}
+	return undefined;
+}
 export function propertyRequestedText(text: string): string | undefined {
 	if (propertyRequestsBlock(text)) return undefined;
 	const fieldText = text.replace(
@@ -338,6 +353,7 @@ export function propertyRequestedText(text: string): string | undefined {
 						propertyTerms(value.replace(/\bxcsh_[a-z0-9_]+\b/gi, "").replace(/data[ -]source/gi, "")).length > 0,
 				)
 		: undefined;
+	const valueLookup = propertyValueLookup(text);
 	const passive =
 		/\bwhere\b.*?\b(?:is|are)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+?)\s+\b(?:specified|configured|defined|set|documented)\b/i.exec(
 			text,
@@ -348,6 +364,7 @@ export function propertyRequestedText(text: string): string | undefined {
 		classificationField ??
 		field ??
 		labeledField ??
+		valueLookup ??
 		operation ??
 		lookup ??
 		queryProperty ??

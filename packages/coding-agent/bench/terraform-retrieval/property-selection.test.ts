@@ -556,3 +556,39 @@ test("repeated leaf words in ancestors cannot defeat explicit parent capability 
  expect(selectPropertyDestination("Configure mobile_sdk_config on xcsh_fixture",[a,b]).kind).toBe("choices");
  expect(selectPropertyDestination("Configure mobile_sdk_config for policy and web on xcsh_fixture",[a,b]).kind).toBe("choices");
 });
+
+
+test("a directly named field is distinct from every enclosing schema section", () => {
+ const field={...row("policy.login.success_conditions.regex_values",40),description:"Regular expression values."};
+ const parent={...row("policy.login",39),anchor:"section",description:"Login success conditions regular expression values."};
+ expect(selectPropertyDestination("Which field sets regex values for login success conditions?",[field,parent]).kind).toBe("leaf");
+ const sibling={...row("policy.login.failure_conditions.regex_values",38),description:field.description};
+ expect(selectPropertyDestination("Which field sets regex values for login conditions?",[field,parent,sibling]).kind).toBe("choices");
+
+});
+
+
+test("lookup alone cannot distinguish an enclosing block from its size field", () => {
+ const field={...row("memory.allocation.size",40),description:"Allocation size."};
+ const parent={...row("memory.allocation",39),anchor:"section",description:"Memory allocation settings."};
+ expect(selectPropertyDestination("Locate memory allocation",[field,parent]).kind).toBe("choices");
+ expect(selectPropertyDestination("Locate memory allocation, not a field.",[field,parent]).kind).toBe("choices");
+ expect(selectPropertyDestination("Locate memory allocation; the field is optional.",[field,parent]).kind).toBe("choices");
+ expect(selectPropertyDestination("Which field specifies memory allocation size?",[field,parent]).kind).toBe("leaf");
+});
+
+
+test("partial leaf evidence excludes only ancestors and preserves conflicting leaf siblings", () => {
+ const field={...row("event.results.pattern_entries",40),description:"Regular expression patterns."};
+ const parent={...row("event.results",39),anchor:"section",description:"Event result pattern configuration."};
+ expect(selectPropertyDestination("Locate event result pattern",[field,parent]).kind).toBe("leaf");
+ const sibling={...row("event.other.pattern_entries",38),description:field.description};
+ expect(selectPropertyDestination("Locate event pattern",[field,parent,sibling]).kind).toBe("choices");
+});
+
+
+test("bare dotted lookup targets reject unsupported paths before ranking certainty", () => {
+ const field={...row("calibration.offset",40),description:"Calibration offset."};
+ expect(selectPropertyDestination("Locate calibration.missing.",[field]).kind).toBe("none");
+ expect(selectPropertyDestination("Locate calibration.offset.",[field]).kind).toBe("leaf");
+});

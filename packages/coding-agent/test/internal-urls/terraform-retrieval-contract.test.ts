@@ -17,6 +17,8 @@ import {
 	validateTerraformRetrievalMetadata,
 } from "../../src/internal-urls/terraform-documentation";
 
+import { propertyRequestedText } from "../../src/internal-urls/terraform-property-ranking";
+
 const metadata = (): TerraformMetadata => ({
 	id: "fixture",
 	canonical_id: "fixture",
@@ -941,4 +943,27 @@ test("value lookup preserves explicit lifecycle guidance", () => {
 	expect(terraformTaskDestination("Find lifecycle guidance on writing operation timeout durations.")).toEqual({
 		role: "timeouts",
 	});
+});
+
+test("value lookup clauses retain dotted paths and separate requested values from followups", () => {
+	expect(
+		propertyRequestedText("Terraform sensor resource: locate calibration.offset; I still need to supply its value."),
+	).toBe("calibration.offset");
+	expect(propertyRequestedText("Locate memory allocation and its unit.")).toBe("memory allocation");
+	expect(propertyRequestedText("Find the deployment example.")).toBeUndefined();
+	expect(propertyRequestedText("Find the resource documentation.")).toBeUndefined();
+	expect(propertyRequestedText("Which field sets port under listener?")).toBe("port under listener?");
+});
+
+test("lookup clauses preserve order and isolate sentence-local requests", () => {
+	expect(propertyRequestedText("Supply the retry ceiling; locate calibration.offset.")).toBe(
+		"the retry ceiling; locate calibration.offset.",
+	);
+	for (const boundary of ["?", "!", ";", "."])
+		expect(propertyRequestedText(`Locate calibration.offset${boundary} Supply retry ceiling.`)).toBe(
+			"calibration.offset",
+		);
+	expect(propertyRequestedText("Locate the actual calibration offset.")).toBe("the actual calibration offset");
+	expect(propertyRequestedText("Locate calibration.offset; show a usage example.")).toBe("calibration.offset");
+	expect(propertyRequestedText("Locate memory allocation and   its unit.")).toBe("memory allocation");
 });

@@ -402,6 +402,19 @@ export function selectPropertyDestination(
 		(first.anchor === "section" && propertyRequestsBlock(queryText) && completeFieldTerms(first));
 	const second = ranked.slice(1).find(other => {
 		if (
+			(fieldNamed ||
+				(first.anchor.startsWith("schema-") &&
+					requestedTerms.some(
+						term =>
+							propertyTerms(parts.at(-1)!).includes(term) && !propertyTerms(other.schema_path).includes(term),
+					))) &&
+			other.anchor === "section" &&
+			other.provider_type === first.provider_type &&
+			other.provider_name === first.provider_name &&
+			first.schema_path.startsWith(`${other.schema_path}.`)
+		)
+			return false;
+		if (
 			propertyNamesCollection(queryText, first) &&
 			other.provider_type === first.provider_type &&
 			other.provider_name === first.provider_name &&

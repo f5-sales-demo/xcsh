@@ -295,3 +295,13 @@ test("sentence punctuation and ignored mention spans preserve independent identi
  expect(searchPropertyIndex(db,"Port under alpha.beta. Use TLS.",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["alpha.beta.port"]);
  expect(searchPropertyIndex(db,"set field alpha_one.beta_two_extra, not under alpha_one.beta_two",{providerName:"fixture"})).toEqual([]);db.close();
 });
+
+
+test("bare dotted lookup constrains indexed candidates and cannot invent child fields", () => {
+ const db=new Database(":memory:");
+ db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description); INSERT INTO terraform_destinations VALUES('resources','fixture','calibration.offset','fixture','schema-calibration--offset','Calibration offset');");
+ populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Locate calibration.missing.",{providerName:"fixture"})).toEqual([]);
+ expect(searchPropertyIndex(db,"Locate calibration.offset.",{providerName:"fixture"})[0]?.schema_path).toBe("calibration.offset");
+ db.close();
+});
