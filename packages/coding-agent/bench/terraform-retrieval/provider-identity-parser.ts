@@ -56,6 +56,7 @@ export interface ProviderIdentityEvidence {
 }
 const roles:Record<string,string>={resource:"resources",resources:"resources",action:"actions",actions:"actions",ephemeral:"ephemeral-resources","data-source":"data-sources","data-sources":"data-sources"};
 const commandWords=new Set(["find","locate","inspect","query","read","configure","declare","identify"]);
+const coordinatedOperations=new Set([...commandWords,"use","using"]);
 export function parseProviderIdentity(text:string){
  const tokens=identityTokens(text),identities:ProviderIdentityEvidence[]=[],foundRoles=new Set<string>();
  let phrase:IdentityToken[]=[];
@@ -64,8 +65,24 @@ export function parseProviderIdentity(text:string){
   const token=tokens[i]!, next=tokens[i+1];
   if(token.kind==="boundary"||(!token.quoted&&token.text==="but")){phrase=[];continue;}
   if(!token.quoted&&commandWords.has(token.text)&&phrase.at(-1)?.text===",")phrase=[];
+  if(!token.quoted&&["and","or"].includes(token.text)){
+   let following=i+1;while(["a","an","the"].includes(tokens[following]?.text??""))following++;
+   const headToken=tokens[following];
+   const head=headToken?.quoted?headToken.text.slice(1,headToken.closed?-1:undefined):headToken?.text??"";
+   const suffix=tokens[following+1]?.text;
+   const quotedRole=headToken?.quoted&&(roles[suffix??""]||(suffix==="data"&&["source","sources"].includes(tokens[following+2]?.text??"")));
+   const contextWords=wordTexts();
+   const lastNegative=contextWords.findLastIndex(w=>["not","no","never","without","excluding"].includes(w));
+   const lastRequest=contextWords.findLastIndex(w=>commandWords.has(w));
+   const value=contextWords.findLastIndex(w=>["description","label","value","text"].includes(w));
+   const rejected=lastNegative>=0&&lastNegative>lastRequest;
+   if(coordinatedOperations.has(head)||((!rejected||value>lastNegative)&&(roles[head]||head==="data"||(!headToken?.quoted&&/(?:^|[.:])xcsh_/.test(head))||quotedRole)))phrase=[];
+  }
   const words=wordTexts();
-  const negative=words.some((w,n)=>["not","no","never","without","excluding"].includes(w)&&words.slice(n+1).every(t=>["a","an","the","use","using","resource","resources","data","source","sources","data-source","data-sources","action","actions","ephemeral","provider","type","named","called","or","and"].includes(t)||t.startsWith("xcsh_")));
+  const negativeIndex=words.findLastIndex(w=>["not","no","never","without","excluding"].includes(w));
+  const negativeTail=negativeIndex<0?[]:words.slice(negativeIndex+1);
+  // Relations and a new request verb end the rejected noun phrase; adjectives do not.
+  const negative=negativeIndex>=0&&!negativeTail.some(w=>["for","on","in","under","within","to"].includes(w)||(w==="of"&&negativeTail[negativeTail.indexOf(w)+1]!=="type")||commandWords.has(w));
   const example=words.includes("example")||words.some((w,n)=>w==="such"&&words[n+1]==="as")||words.some((w,n)=>w==="for"&&words[n+1]==="instance");
   let raw=token.text;
   if(token.quoted){raw=raw.slice(1,token.closed? -1:undefined).replace(/\\(["'`])/g,"$1");}
@@ -75,32 +92,55 @@ export function parseProviderIdentity(text:string){
    const reference=raw.slice(offset),name=reference.slice(5).split(/[.(\[\s]/)[0]!;
    const prefix=raw.slice(0,offset),suffix=reference.slice(5+name.length);
    const valid=/^[a-z][a-z0-9_]*$/.test(name)&&(!suffix||/^(?:\.[a-z][a-z0-9_]*|\[(?:\d+|"[^"\\]*"|'[^'\\]*')\])*$/i.test(suffix))&&!token.malformed&&(!token.quoted||token.closed===true);
-   const prefixRole=roles[words.at(-1)??""]??(["source","sources"].includes(words.at(-1)??"")&&words.at(-2)==="data"?"data-sources":undefined);
-   const namedRole=["named","called"].includes(words.at(-1)??"")?(roles[words.at(-2)??""]??(["source","sources"].includes(words.at(-2)??"")&&words.at(-3)==="data"?"data-sources":undefined)):undefined;
-   const suffixRole=roles[next?.text??""]??(next?.text==="data"&&["source","sources"].includes(tokens[i+2]?.text??"")?"data-sources":undefined);
-   const role=prefixRole??namedRole??suffixRole;
+   const roleEnding=(parts:string[]):string|undefined=>{
+    const copy=[...parts];
+    if(["named","called"].includes(copy.at(-1)??""))copy.pop();
+    if(copy.slice(-2).join(" ")==="of type")copy.splice(-2);
+    if(copy.slice(-2).join(" ")==="ephemeral resource"||copy.slice(-2).join(" ")==="ephemeral resources")return "ephemeral-resources";
+    if(["source","sources"].includes(copy.at(-1)??"")&&copy.at(-2)==="data")return "data-sources";
+    return roles[copy.at(-1)??""];
+   };
+   const prefixRole=roleEnding(words);
+   const suffixWords=tokens.slice(i+1,i+4).filter(t=>!t.quoted&&t.kind==="word").map(t=>t.text);
+   const suffixRole=suffixWords[0]==="ephemeral"?"ephemeral-resources":suffixWords[0]==="data"&&["source","sources"].includes(suffixWords[1]??"")?"data-sources":roles[suffixWords[0]??""];
+   const role=prefix==="data."?"data-sources":prefix==="resource."?"resources":prefix==="ephemeral."?"ephemeral-resources":prefixRole??suffixRole;
    // Value context is a separate phrase property; role words cannot override it.
-   const valueContext=words.some(w=>["description","label","value","text"].includes(w))&&!words.some(w=>commandWords.has(w));
+   const valueIndex=words.findLastIndex(w=>["description","label","value","text"].includes(w));
+   const requestIndex=words.findLastIndex(w=>commandWords.has(w));
+   const valueRelation=words.slice(valueIndex+1).some(w=>["for","on","of","in","under"].includes(w))&&(words.slice(valueIndex+1).some(w=>["field","attribute","property","setting","parameter","argument"].includes(w))||requestIndex>=0&&requestIndex<valueIndex)&&!!role;
+   const valueContext=valueIndex>=0&&!valueRelation;
    const quotedIdentity=!!role||(!valueContext&&["for","on","in","under"].includes(words.at(-1)??""));
    let classification:ProviderIdentityEvidence["classification"]="provider";
    if(/^(?:env|var|local|module)\./.test(prefix)||(!role&&text.slice(token.start,token.end)===text.slice(token.start,token.end).toUpperCase())||next?.text==="variable"||(next?.text==="environment"&&tokens[i+2]?.text==="variable"))classification="variable";
    else if(token.call||prefix.includes("::")||(next?.text==="("&&next.start===token.end)|| (next?.text==="("&&!/^(?:resource|resources|data|data-source|ephemeral|action|actions)$/.test(tokens[i+2]?.text??"")))classification="function";
-   else if(token.quoted&&(valueContext||!quotedIdentity))classification="quoted-value";
+   else if(valueContext||(token.quoted&&!quotedIdentity))classification="quoted-value";
    else if(example)classification="example";
    else if(negative)classification="rejected";
    identities.push({name,start:token.start,end:token.end,classification,valid,role,polarity:classification==="rejected"?"rejected":"affirmative",valueContext});
+   if(classification==="provider"&&role)foundRoles.add(role);
    if(classification==="provider"&&prefix==="data.")foundRoles.add("data-sources");
    if(classification==="provider"&&prefix==="resource.")foundRoles.add("resources");
    if(classification==="provider"&&prefix==="ephemeral.")foundRoles.add("ephemeral-resources");
   }
-  if(!token.quoted&&!negative&&!example){
+  const phraseValueIndex=words.findLastIndex(w=>["description","label","value","text"].includes(w));
+  const phraseRequestIndex=words.findLastIndex(w=>commandWords.has(w));
+  const phraseValueContext=phraseValueIndex>=0;
+  if(!token.quoted&&!negative&&!example&&!phraseValueContext){
    let role:string|undefined=roles[token.text];
    if(token.text==="data"&&["source","sources"].includes(next?.text??""))role="data-sources";
-   if(["resource","resources"].includes(token.text)&&phrase.at(-1)?.text==="ephemeral")role=undefined;
-   if(role&&!(role==="actions"&&(["field","attribute","property","value","setting"].includes(next?.text??"")||(!next&&words.some(w=>commandWords.has(w))))))foundRoles.add(role);
+   if(["resource","resources"].includes(token.text)&&words.includes("ephemeral"))role=undefined;
+   const fieldQuestion=(!next&&words.some(w=>commandWords.has(w)))||["in","inside","on","under","within"].includes(next?.text??"")||words.some(w=>["field","attribute","property","setting","argument","parameter"].includes(w));
+   const boundAction=next?.text.startsWith("xcsh_")||["named","called"].includes(next?.text??"")||token.text==="actions"||(!fieldQuestion&&!["field","attribute","property","value","setting"].includes(next?.text??""));
+   if(role&&(role!=="actions"||boundAction))foundRoles.add(role);
   }
   phrase.push(token);
  }
  const nounPhrases=identities.map(i=>({start:i.start,end:i.end,identity:i.name,role:i.role,polarity:i.polarity,valueContext:i.valueContext,classification:i.classification}));
  return {identities,nounPhrases,providerNames:[...new Set(identities.filter(i=>i.classification==="provider").map(i=>i.name))],explicitRole:foundRoles.size===1?[...foundRoles][0]:undefined,conflictingRoles:foundRoles.size>1};
+}
+
+export function providerIdentitySearch(text:string,parsed= parseProviderIdentity(text)):string {
+ let result=text;
+ for(const span of parsed.identities.toReversed())if(span.classification!=="provider")result=result.slice(0,span.start)+" ".repeat(span.end-span.start)+result.slice(span.end);
+ return result;
 }

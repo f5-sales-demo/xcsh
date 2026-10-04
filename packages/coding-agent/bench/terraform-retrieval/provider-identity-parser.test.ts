@@ -83,3 +83,73 @@ test("compound parenthetical roles preserve identities while calls keep complete
  for(const q of ['xcsh_unknown (data source)','xcsh_unknown (ephemeral resource)'])expect(parseProviderIdentity(q).providerNames).toEqual(["unknown"]);
  const c=parseProviderIdentity('xcsh_helper ()');expect(c.identities[0]?.name).toBe("helper");expect(c.identities[0]?.classification).toBe("function");
 });
+
+test("negation scope spans noun modifiers but ends at a relation or new request",()=>{
+ for(const text of ["do not use the unsupported resource xcsh_bad","not the old external data source named xcsh_bad","excluding the obsolete provider xcsh_bad"]){expect(parseProviderIdentity(text).providerNames).toEqual([]);expect(parseProviderIdentity(text).identities[0]?.polarity).toBe("rejected");}
+ for(const text of ["Do not modify state for xcsh_unknown resource","Without changing state, find xcsh_unknown resource","Not this setting; inspect xcsh_unknown resource"]){expect(parseProviderIdentity(text).providerNames).toEqual(["unknown"]);}
+});
+test("value and request phrase ownership follows the latest governing word",()=>{
+ expect(parseProviderIdentity('Find xcsh_good resource description is "xcsh_bad"').providerNames).toEqual(["good"]);
+ expect(parseProviderIdentity('Description is blue and find "xcsh_unknown" resource').providerNames).toEqual(["unknown"]);
+});
+
+test("coordination starts a new provider phrase without inheriting value or negation",()=>{
+ expect(parseProviderIdentity('Find resource xcsh_good with description "blue" and resource "xcsh_unknown"').providerNames).toEqual(["good","unknown"]);
+ expect(parseProviderIdentity('Do not use xcsh_bad and use xcsh_unknown resource').providerNames).toEqual(["unknown"]);
+ expect(parseProviderIdentity('Do not use resources of type xcsh_unknown').providerNames).toEqual([]);
+ expect(parseProviderIdentity('Find resource xcsh_good with description xcsh_literal').providerNames).toEqual(["good"]);
+});
+
+test("complete role phrases bind determiners type labels and alternative rejection",()=>{
+ expect(parseProviderIdentity('Find resource of type "xcsh_unknown"').providerNames).toEqual(["unknown"]);
+ expect(parseProviderIdentity('Find resource xcsh_good with description blue and the resource named "xcsh_unknown"').providerNames).toEqual(["good","unknown"]);
+ expect(parseProviderIdentity('Do not use resource xcsh_bad or resource xcsh_unknown').providerNames).toEqual([]);
+ const ephemeral=parseProviderIdentity('Find ephemeral resource named "xcsh_unknown"');expect(ephemeral.identities[0]?.role).toBe("ephemeral-resources");expect(ephemeral.explicitRole).toBe("ephemeral-resources");
+});
+
+test("clause ownership governs role aggregation and coordinated provider phrases",()=>{
+ expect(parseProviderIdentity('Do not use resource xcsh_bad and resource xcsh_unknown').providerNames).toEqual([]);
+ for(const q of ['Find resource xcsh_good with description blue or the resource named "xcsh_unknown"','Find resource xcsh_good with description blue or the resource named "xcsh_unknown$widget"']){expect(parseProviderIdentity(q).identities[1]?.classification).toBe("provider");}
+ expect(parseProviderIdentity('Find resource xcsh_good with description data source').explicitRole).toBe("resources");
+ const reference=parseProviderIdentity('Read data.xcsh_unknown.instance');expect(reference.identities[0]?.role).toBe("data-sources");expect(reference.explicitRole).toBe("data-sources");
+});
+
+test("reference alternatives start provider phrases while verbs in values remain value content",()=>{
+ const reference=parseProviderIdentity('Find resource xcsh_good with description blue or data.xcsh_unknown.instance');expect(reference.providerNames).toEqual(["good","unknown"]);expect(reference.identities[1]?.classification).toBe("provider");expect(reference.identities[1]?.role).toBe("data-sources");
+ expect(parseProviderIdentity('Find resource xcsh_good with description containing the words find xcsh_literal').providerNames).toEqual(["good"]);
+});
+test("phrase matrix separates coordinated requests from value words across equivalent role forms",()=>{
+ for(const coordination of ["and","or"]){for(const role of ["resource","data source","action","ephemeral resource"]){
+ const result=parseProviderIdentity(`Find resource xcsh_good with description blue ${coordination} the ${role} named "xcsh_unknown"`);expect(result.providerNames).toEqual(["good","unknown"]);
+ }}
+ for(const verb of ["find","locate","read","inspect"]){expect(parseProviderIdentity(`Find resource xcsh_good with description containing ${verb} xcsh_literal`).providerNames).toEqual(["good"]);}
+});
+
+test("quoted identity-first alternatives bind all suffix roles after coordination",()=>{
+ for(const conjunction of ["and","or"]){for(const role of ["resource","data source","action","ephemeral resource"]){
+ const parsed=parseProviderIdentity(`Find resource xcsh_good with description blue ${conjunction} "xcsh_unknown" ${role}`);expect(parsed.providerNames).toEqual(["good","unknown"]);if(role!=="resource")expect(parsed.conflictingRoles).toBe(true);
+ }}
+ expect(parseProviderIdentity('Find resource xcsh_good with description blue or "xcsh_literal"').providerNames).toEqual(["good"]);
+});
+
+test("an action mentioned in a field question is not a provider-role declaration",()=>{
+ expect(parseProviderIdentity("In a managed xcsh_fixture resource, which property specifies the action on detection?").explicitRole).toBe("resources");
+ expect(parseProviderIdentity("Which property specifies action xcsh_fixture?").explicitRole).toBe("actions");
+});
+
+test("a field request's provider relation ends descriptive value scope",()=>{
+ expect(parseProviderIdentity("Find description field for xcsh_unknown resource").providerNames).toEqual(["unknown"]);
+ expect(parseProviderIdentity("Find resource xcsh_good with description xcsh_literal").providerNames).toEqual(["good"]);
+});
+
+test("role noun phrases remain separate from field actions and descriptive ephemeral names",()=>{
+ expect(parseProviderIdentity("Terraform app_firewall resource: find good bot action in protection").explicitRole).toBe("resources");
+ expect(parseProviderIdentity("Locate malicious bot action inside protection on an app_firewall resource").explicitRole).toBe("resources");
+ expect(parseProviderIdentity("Find the token returned by the ephemeral Artifact Registry token resource").explicitRole).toBe("ephemeral-resources");
+});
+
+test("accepted identity role evidence agrees with aggregate roles for description-field relations",()=>{
+ expect(parseProviderIdentity("Find description for xcsh_unknown resource").providerNames).toEqual(["unknown"]);
+ const field=parseProviderIdentity("Find description field for xcsh_origin_pool data source");expect(field.identities[0]?.role).toBe("data-sources");expect(field.explicitRole).toBe("data-sources");
+ expect(parseProviderIdentity("Find description field for xcsh_origin_pool resource and data source").conflictingRoles).toBe(true);
+});
