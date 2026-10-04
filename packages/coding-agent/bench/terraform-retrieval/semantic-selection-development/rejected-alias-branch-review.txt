@@ -1,0 +1,15 @@
+Found five issues in the reviewed snapshot, reproduced with synthetic in-memory SQLite probes:
+
+1. **P2 — Guards miss negative, example, and quoted mentions.** `terraform-alias-branch.ts:10` accepts `outside automatic certificates`, `instead of automatic certificates`, `(such as automatic certificates)`, and `“automatic certificates”`. Each imposed `https_auto_cert`, removing other branches from both candidate retrieval paths.
+
+2. **P2 — Alias matching overrides literal paths.** Lines 17–22 normalize underscores and dots into prose; `terraform-property-index.ts:286–290` then intersects the inferred alias with explicit path constraints. With alias `automatic certificates → https_auto_cert`, `header under service.automatic_certificates` returned nothing; disabling the new filter recovered the exact literal descendant.
+
+3. **P2 — Overlapping phrases become independent mandatory constraints.** Lines 35–41 match every contained alias. Given `client certificate → client_cert` and `client certificate authentication → mtls_auth`, the longer phrase requires both segments. The probe lost `service.mtls_auth.header` and returned nothing. Overlapping matches need resolution before independent aliases are ANDed.
+
+4. **P2 — Singularization conflates HTTPS with HTTP.** Line 20 strips the trailing `s` from `https`. With only `http server → http` indexed, `https server header` selected the HTTP branch and discarded the HTTPS candidate. Existing property tokenization explicitly preserves `https`; this normalization does not.
+
+5. **P2 — The lookup bounds returned rows, not database work.** Line 25 retrieves provider-wide aliases, joins destinations, and sorts before applying `LIMIT 1001`; phrase matching happens afterward. `EXPLAIN QUERY PLAN` showed provider-scoped searches and a temporary ordering B-tree, without a path/anchor lookup for the join. Above 1,000 rows, unrelated aliases also disable all branch constraints.
+
+Static inspection found that repeated aliases preserve multiple owners, unresolved providers skip inference, and existing facet/node predicates remain ANDed. The new tests exercise only `indexedAliasBranch`, so they do not verify descendant retrieval, literal precedence, facet/node integration, or candidate recall.
+
+**Snapshot limitation:** During review, both new files disappeared and the property-index diff was removed by concurrent workspace activity. Findings apply to the initial uncommitted snapshot; the final scope probes could not run. I made no edits and performed no web, subagent, suite, or release work. This is development review evidence, not benchmark approval.
