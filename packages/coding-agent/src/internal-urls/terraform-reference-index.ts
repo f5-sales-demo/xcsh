@@ -56,6 +56,8 @@ export function lookupReferenceMembers(
 		providerName?: string;
 		scopePath?: string[];
 		member?: TerraformReferenceIdentity["member"];
+		filters?: Array<{ key: string; value: string }>;
+		node?: string;
 	},
 	limit = 500,
 ): PropertyCandidate[] {
@@ -77,6 +79,18 @@ export function lookupReferenceMembers(
 			clauses.push(`r.${key}=?`);
 			args.push(value);
 		}
+	}
+	for (const filter of scope.filters ?? []) {
+		clauses.push("EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=p.path AND f.facet=? AND f.value=?)");
+		args.push(filter.key, filter.value);
+	}
+	if (scope.node !== undefined) {
+		if (!db.query("SELECT 1 FROM terraform_documents WHERE id=?").get(scope.node))
+			throw new Error("Reference node not found");
+		clauses.push(
+			"p.path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT d.id,d.path FROM terraform_documents d JOIN descendants parent ON d.parent_id=parent.id) SELECT path FROM descendants)",
+		);
+		args.push(scope.node);
 	}
 	const rows = db
 		.query(

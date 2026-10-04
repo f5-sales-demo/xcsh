@@ -109,3 +109,34 @@ test("reference lookup rejects overflow without claiming unique ownership", () =
 	expect(() => lookupReferenceMembers(db, {}, 1)).toThrow("exceeds limit");
 	db.close();
 });
+
+test("reference scope respects AND facets and node descendants before limiting", () => {
+	const db = fixture();
+	db.exec("CREATE TABLE terraform_facets(path,facet,value)");
+	db.exec(
+		"ALTER TABLE terraform_documents ADD COLUMN id;ALTER TABLE terraform_documents ADD COLUMN parent_id;ALTER TABLE terraform_documents ADD COLUMN path",
+	);
+	db.exec(
+		"UPDATE terraform_documents SET id='leaf',parent_id='parent',path='p';INSERT INTO terraform_documents(metadata,id,parent_id,path) VALUES('{}','parent',NULL,'parent')",
+	);
+	db.exec(
+		"INSERT INTO terraform_facets VALUES('p','task','configuration');INSERT INTO terraform_facets VALUES('p','category','networking')",
+	);
+	populatePropertyIndex(db);
+	const scope = {
+		providerType: "resources",
+		providerName: "fixture",
+		scopePath: ["backend"],
+		node: "parent",
+		filters: [
+			{ key: "task", value: "configuration" },
+			{ key: "category", value: "networking" },
+		],
+	};
+	expect(lookupReferenceMembers(db, scope)).toHaveLength(1);
+	expect(
+		lookupReferenceMembers(db, { ...scope, filters: [...scope.filters, { key: "task", value: "troubleshooting" }] }),
+	).toEqual([]);
+	expect(() => lookupReferenceMembers(db, { ...scope, node: "missing" })).toThrow();
+	db.close();
+});

@@ -2038,3 +2038,71 @@ test("verified reference ownership appears in compact and contextual anchored re
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("explicit reference scope uses verified ownership and preserves all caller filters", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-reference-scope-"));
+	try {
+		const pin = await fixture(root, manifest => {
+			manifest.documents[0].metadata.sections = [
+				{
+					schema_path: ["backend", "name"],
+					document_id: "fixture",
+					anchor: "schema-value",
+					description: "Referenced name",
+					aliases: [],
+					flags: ["optional"],
+					relationships: [],
+					reference_identity: {
+						version: 1,
+						scope_path: ["backend"],
+						member: "name",
+						upstream_message: "ves.io.schema.ObjectRefType",
+						source: "receipt-pinned-schema-identity",
+					},
+				},
+			];
+		});
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const bytes = await readFile(index),
+			compressed = gzipSync(bytes);
+		const indexed = {
+			...pin,
+			index: {
+				sha256: terraformHash(bytes),
+				size_bytes: bytes.length,
+				gzip_sha256: terraformHash(compressed),
+				gzip_size_bytes: compressed.length,
+			},
+		};
+		const gzipPath = path.join(root, "index.gz");
+		await writeFile(gzipPath, compressed);
+		const repo = new TerraformDocumentationRepository(
+			{ pin: indexed, indexGzipPath: gzipPath },
+			path.join(root, "cache"),
+		);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?${query}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const scope = "provider_type=resources&provider_name=fixture&reference_scope=backend";
+		const exact = await read(scope + "&reference_member=name");
+		expect(exact.content).toContain("schema-value");
+		expect(exact.content).toContain("Verified reference member");
+		expect(exact.content).not.toContain("Selected leaf;");
+		expect(exact.size).toBeLessThanOrEqual(4096);
+		expect(exact.content).toContain("count or byte budget");
+		expect((await read(scope + "&task=troubleshooting")).content).toContain("No verified reference");
+		expect((await read(scope + "&reference_member=namespace")).content).toContain("No verified reference");
+		await expect(read("reference_scope=backend")).rejects.toThrow();
+		await expect(read(scope + "&reference_member=unsupported")).rejects.toThrow();
+		await expect(read(scope + "&view=hint")).rejects.toThrow();
+		await expect(read(scope + "&facet=task")).rejects.toThrow();
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

@@ -1,0 +1,14 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "checks": 4688,
+  "mismatches": 0,
+  "max_response_bytes": 1135,
+  "route_p95_ms": 9.913484000000608,
+  "limitations": "In-memory source-backed explicit scope route; not immutable installed qualification",
+  "focused_tests": 40,
+  "workspace_check": true,
+  "pin_changed": false,
+  "source_review": "approve explicit reference route",
+  "remaining": "New immutable snapshot and independently frozen model/retrieval qualification remain required."
+}

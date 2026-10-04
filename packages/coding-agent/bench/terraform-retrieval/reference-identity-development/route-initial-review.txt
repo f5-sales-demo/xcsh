@@ -1,0 +1,9 @@
+One blocking finding:
+
+- **[P2] Byte-budget truncation silently hides verified members** — [terraform-documentation.ts:1535](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1535). The “more members” notice depends on `rows.length > limit`, but the 4 KiB formatter can omit entries below that limit. An in-memory reproduction with a valid 459-byte scope and five members returned only three in 3,963 bytes, with no omission notice. Detect byte-budget omissions and direct callers to `reference_member`; preserve complete links.
+
+Otherwise, exact metadata matching, AND facets, node descendants, prohibited-combination validation, and legacy missing-evidence wording look sound. Context reads remain unchanged; no prose parsing or ranking selection was added.
+
+Seven index tests passed locally; ten malformed-request probes rejected correctly. Your reported end-to-end pass was not rerun because its fixture writes files.
+
+**Hold narrow-route approval pending the truncation fix.** No edits, contacts, subagents, benchmark prompts, qualification, or release work performed.

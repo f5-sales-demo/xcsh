@@ -27,6 +27,7 @@ import {
 	type TerraformReferenceIdentity,
 	validateReferenceIdentity,
 } from "./terraform-reference-evidence";
+import { lookupReferenceMembers } from "./terraform-reference-index";
 import { filterSecretRepresentation } from "./terraform-secret-representation";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
@@ -1416,6 +1417,8 @@ export class TerraformDocumentationRepository {
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const allowed = new Set([
 			"search",
+			"reference_scope",
+			"reference_member",
 			"choice_after",
 			"provider_type",
 			"provider_name",
@@ -1444,6 +1447,24 @@ export class TerraformDocumentationRepository {
 		const search = url.searchParams.get("search")?.trim();
 		if (search !== undefined && (!search || Buffer.byteLength(search) > 512))
 			throw new Error("Terraform search must contain 1 to 512 UTF-8 bytes");
+		const referenceScope = url.searchParams.get("reference_scope");
+		const referenceMember = url.searchParams.get("reference_member");
+		if (referenceMember !== null && referenceScope === null)
+			throw new Error("Reference member requires reference scope");
+		if (referenceScope !== null) {
+			if (
+				!/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*$/.test(referenceScope) ||
+				Buffer.byteLength(referenceScope) > 512 ||
+				!url.searchParams.has("provider_type") ||
+				!url.searchParams.has("provider_name") ||
+				["search", "choice_after", "cursor", "facet", "view", "after"].some(key => url.searchParams.has(key)) ||
+				documentPath ||
+				url.hash
+			)
+				throw new Error("Invalid explicit reference discovery");
+			if (referenceMember !== null && !["name", "namespace", "tenant", "kind", "uid"].includes(referenceMember))
+				throw new Error("Invalid reference member");
+		}
 		const limitValue = url.searchParams.get("limit");
 		if (limitValue !== null && !/^(?:[1-9]|10)$/.test(limitValue))
 			throw new Error("Terraform search limit must be 1 to 10");
@@ -1469,7 +1490,7 @@ export class TerraformDocumentationRepository {
 			throw new Error("Terraform view requires a document path");
 		if (!facet && !node && url.searchParams.has("cursor"))
 			throw new Error("Terraform cursor requires facets or navigation");
-		if (!documentPath && !search && !node && !facet && url.searchParams.size)
+		if (!documentPath && !search && !node && !facet && referenceScope === null && url.searchParams.size)
 			throw new Error("Terraform filters and limit require discovery");
 		const filters: Array<{ key: string; value: string }> = [];
 		for (const key of facetNames) {
@@ -1492,6 +1513,33 @@ export class TerraformDocumentationRepository {
 			)
 				.map(r => `- ${r.type} (${r.enforcement}): ${uri(r.target_path, r.target_anchor, "hint")}`)
 				.join("\n");
+		if (referenceScope !== null) {
+			const rows = lookupReferenceMembers(
+				db,
+				{
+					providerType: filters.find(f => f.key === "provider_type")!.value,
+					providerName: filters.find(f => f.key === "provider_name")!.value,
+					scopePath: referenceScope.split("."),
+					member: (referenceMember as TerraformReferenceIdentity["member"] | undefined) ?? undefined,
+					filters,
+					node: node ?? undefined,
+				},
+				10000,
+			);
+			const entries = rows
+				.slice(0, limit)
+				.map(
+					row =>
+						`Read: ${uri(row.path, row.anchor, "context")}\nVerified reference member: ${row.schema_path}\n${prerequisites(row.path, row.anchor)}`,
+				);
+			const content = boundedTerraformResponse(
+				`${provenance}\n\nReference scope: ${referenceScope}\n${rows.length ? "Verified reference members; compare exact sections before selecting a destination." : "No verified reference members in caller scope. Missing evidence does not establish unsupported input."}`,
+				entries,
+				4096,
+				"If reference members are omitted by count or byte budget, specify reference_member or narrow node/facets.",
+			);
+			return { url: url.href, content, contentType: "text/markdown", size: Buffer.byteLength(content) };
+		}
 		let content: string;
 		if (documentPath) {
 			const row = db.query("SELECT metadata,markdown FROM terraform_documents WHERE path=?").get(documentPath) as {
