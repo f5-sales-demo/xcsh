@@ -1,0 +1,39 @@
+{
+  "qualification_passed": false,
+  "retrieval_run": false,
+  "frozen": false,
+  "review_verdict": "revise",
+  "source_only": true,
+  "execution_route": "Ubuntu Codex ChatGPT sign-in",
+  "source_provider_version": "v12.4.0",
+  "candidate_suite_sha256": "1bfbb31e06a31299f784742ed85c4c898c80a2d59a197a3abb65cc11831c7d17",
+  "files": {
+    "independent-review.json.gz": {
+      "sha256": "a8abd5b59de79e9379a11a7a909d451c29dd77820fe0cef8310e4b960003bada",
+      "gzip_sha256": "11c9a8052f31a68034caa1fbc01405904a7ad393a56be018dd0c0ac3e8d70cd3"
+    },
+    "corrections.json.gz": {
+      "sha256": "7a4591ebff65d67259a0db9450a6b1f501889588ccac8c7ee44469fda4e87a99",
+      "gzip_sha256": "2b3b3a4da1d843ee885395db4552ea169a7c67eece5aa283c18c8a25c3480852"
+    },
+    "author-report.json.gz": {
+      "sha256": "5c961e3d5219c95e51d488ae03fda7f3b2ceafa2fa38f9f0d1e3991e210e67f6",
+      "gzip_sha256": "7bcc5ebc0a0507e9a36c6a58da9909a6fe3616b36b69b4a910955d5a5cfe1169"
+    },
+    "review-input-digests.json.gz": {
+      "sha256": "dbbee639004fcffadc35883a1fe4c665bf82aecdb64e2f180ba938d92f6ca5f5",
+      "gzip_sha256": "1ae04b357d6c4da4f7706a53892c55fd1cb1adace5b0964a97dd51d638a41d8f"
+    },
+    "source-frontmatter-boundary-note.json.gz": {
+      "sha256": "eabd6d940946468f37a7511aab65a3ab7df1128ee653ca2c1f39640d939f13ca",
+      "gzip_sha256": "ee655e5ba5e809aea902a429bfc8492a8e3174de3f9d7667b4b4b85f7800771d"
+    }
+  },
+  "findings": [
+    "26answerablecases lackexplicitrolediscriminator",
+    "50deepcases concentratedin4providers",
+    "8ambiguousmodelcases lackterminalgroundedread/citation/HCLexpectations",
+    "Authorbodymetadatamismatch isfrontmatterparsererror; exactboundaryverifiesallsourcepages"
+  ],
+  "next": "Source-only revision with role/coverage/continuation repairs is active; independent re-review required before freeze."
+}
