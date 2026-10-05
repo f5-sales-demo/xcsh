@@ -24,6 +24,18 @@
       "kind": "model-subset",
       "source": "v8-first-internal-result/exposure.json",
       "reason": "Internally frozen first retrieval evaluation failed; prompts exposed to implementation analysis. Regression only."
+    },
+    {
+      "sha256": "b80248156fbc699586bfedd7636c7ed3073e70b3d9960000fde5759337392640",
+      "kind": "heldout",
+      "source": "v9-first-internal-result/exposure.json",
+      "reason": "Internally frozen first retrieval evaluation failed; prompts exposed to implementation analysis. Regression only."
+    },
+    {
+      "sha256": "dc2fb39b1cae7b3f62902854f6072a670ba48b103e3ec78f0acc532adc0e74b7",
+      "kind": "model-subset",
+      "source": "v9-first-internal-result/exposure.json",
+      "reason": "Internally frozen first retrieval evaluation failed; prompts exposed to implementation analysis. Regression only."
     }
   ]
 }
