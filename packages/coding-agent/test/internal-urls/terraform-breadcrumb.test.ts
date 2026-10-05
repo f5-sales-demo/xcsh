@@ -123,3 +123,13 @@ test("ordered nesting requires contiguous repeated segments", () => {
 		}),
 	).toBe(false);
 });
+
+test("quoted field nouns preserve direct field identity within prose", () => {
+	expect(propertyRequestedText("Help with the HCL field `prefixes` on managed resource xcsh_fixture.")).toBe(
+		"prefixes",
+	);
+	expect(propertyRequestedText("Find attribute `hostname` in the backend settings.")).toBe("hostname");
+	expect(propertyRequestedText("Not field `name`; find namespace.")).not.toBe("name");
+	expect(propertyRequestedText("Example field `name`; find namespace.")).not.toBe("name");
+	expect(propertyRequestedText("Compare field `name` and attribute `namespace`.")).not.toBe("name");
+});

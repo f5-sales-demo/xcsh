@@ -135,3 +135,18 @@ test("explicit field lookup does not promote descriptive nouns to provider owner
 	expect(terraformProviderMention("For the namespace resource. Field: `name`.", names)).toBe("namespace");
 	expect(terraformProviderMention("For xcsh_subnet. Field: `name`.", names)).toBe("subnet");
 });
+
+test("quoted requested fields cannot override prose provider ownership", () => {
+	const names = ["addon_service", "addon_service_activation_status"];
+	expect(
+		terraformProviderMention(
+			"For data source describing addon service activation status, find the field rules for `addon_service`.",
+			names,
+		),
+	).toBe("addon_service_activation_status");
+	expect(terraformProviderMention("Find field `addon_service`.", names)).toBeUndefined();
+	expect(terraformProviderMention("For addon_service data source, find field `name`.", names)).toBe("addon_service");
+	expect(
+		terraformProviderMention("For xcsh_addon_service, find field `addon_service_activation_status`.", names),
+	).toBe("addon_service");
+});

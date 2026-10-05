@@ -525,9 +525,9 @@ export function propertyValueLookup(text: string): string | undefined {
 export function propertyRequestedText(text: string): string | undefined {
 	const quotedLookup = [
 		...text.matchAll(
-			/\b(?:what\s+does|verify|reference\s+explains|type\s+and\s+constraints\s+of|field\s+rules\s+for|understand|explain(?:\s+the\s+(?:type|rules?|restrictions?|constraints?|contract)(?:\s+and\s+(?:type|rules?|restrictions?|constraints?))?\s+of)?|check|rules?\s+apply\s+to|contract\s+for)\s+`([a-z][a-z0-9_]*)`/gi,
+			/\b(?:what\s+does|verify|reference\s+explains|type\s+and\s+constraints\s+of|field\s+rules\s+for|understand|explain(?:\s+the\s+(?:type|rules?|restrictions?|constraints?|contract)(?:\s+and\s+(?:type|rules?|restrictions?|constraints?))?\s+of)?|check|rules?\s+apply\s+to|contract\s+for|(?:field|attribute|property|parameter|argument|flag))\s+`([a-z][a-z0-9_]*)`/gi,
 		),
-	];
+	].filter(match => !/\bdata[ -]source\s*$/i.test(text.slice(0, match.index)));
 	if (
 		quotedLookup.length === 1 &&
 		!/\b(?:not|never|excluding|example|such as)\b/i.test(

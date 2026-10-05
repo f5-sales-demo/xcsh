@@ -1111,6 +1111,14 @@ export function terraformProviderMention(search: string, names: readonly string[
 	if (exact.length === 1 && names.includes(exact[0]!)) return exact[0];
 	if (exact.length > 1) return undefined;
 	search = propertyWithoutSingleSchemaScope(propertyWithoutBreadcrumbs(search));
+	const explicitFieldLabel = /\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`[a-z][a-z0-9_]*`/i.test(
+		search,
+	);
+	const requestedField = propertyRequestedText(search);
+	if (requestedField && /^[a-z][a-z0-9_]*$/i.test(requestedField))
+		search = search.replace(/`([a-z][a-z0-9_]*)`/gi, (literal, name) =>
+			name.toLowerCase() === requestedField.toLowerCase() ? " " : literal,
+		);
 	const literalNames = names.filter(name => name.includes("_") && new RegExp(`\\b${name}\\b`, "i").test(search));
 	if (literalNames.length === 1) return literalNames[0];
 	if (literalNames.length > 1) return undefined;
@@ -1164,9 +1172,6 @@ export function terraformProviderMention(search: string, names: readonly string[
 		})
 		.join(" ");
 	const query = ` ${normalize(providerSearch)} `;
-	const explicitFieldLabel = /\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`[a-z][a-z0-9_]*`/i.test(
-		search,
-	);
 	const found = names
 		.filter(name => query.includes(` ${normalize(name)} `))
 		.filter(name => {

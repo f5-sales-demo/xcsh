@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "source_commit": "8de9ef79054396db48111819156d5429af9d813a",
+  "case_id": "v9-103",
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "execution_host": "ubuntu",
+  "provider": "openai-codex",
+  "model": "openai-codex/gpt-6.1-sol",
+  "read_paths": [
+    "xcsh://terraform-documentation/?search=Before%20drafting%20HCL%20for%20managed%20resource%20xcsh_address_allocator%2C%20explain%20%60read%60%20timeouts.",
+    "xcsh://terraform-documentation/documentation/resources/address_allocator/properties/timeouts/index.md?view=context#schema-timeouts--read"
+  ],
+  "exact_section_read": true,
+  "exact_citation": true,
+  "tool_response_budget": {
+    "passed": true,
+    "total_bytes": 2701,
+    "max_bytes": 1436,
+    "measured_results": 2,
+    "violations": []
+  },
+  "trace_sha256": "ad2d324ce1fcaa203e581648837d19a78b1bc4405866db7535ec69d1d8860625",
+  "assistant": "For managed resource `xcsh_address_allocator` in provider **v12.4.0**, `timeouts.read`:\n\n- Is an **optional string** configuring the timeout duration for read operations.\n- Applies during **refresh**, including planning when refresh is enabled\u2014not to the entire plan.\n- Accepts durations such as `\"30s\"` or `\"2h45m\"`, using `s`, `m`, and `h`.\n- Has **no default duration stated in this documented section**.\n\n[Provider reference](xcsh://terraform-documentation/documentation/resources/address_allocator/properties/timeouts/index.md?view=context#schema-timeouts--read)",
+  "citation_destination_comparison": "Exact path and anchor; optional document view ignored",
+  "binary_sha256": "9d8d2d0d92d8180607295d9a88d2c9dc1ad8d6fa1843922f2945f04dce88a69c"
+}
