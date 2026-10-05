@@ -299,6 +299,10 @@ export function propertyOrderedNestingPath(text: string): string | undefined {
 	return segments.map(segment => segment.replace(/ +/g, "_")).join(".");
 }
 export function propertyBreadcrumbText(text: string): string {
+	text = text.replace(
+		/`([a-z][a-z0-9_]*)`(?=\s*[>→])|(?<=[>→]\s*)`([a-z][a-z0-9_]*)`/gi,
+		(_, first, last) => first ?? last,
+	);
 	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi, value =>
 		value.replace(/\s*[>→]\s*/g, "."),
 	);
@@ -320,11 +324,12 @@ export function propertyWithoutSingleSchemaScope(text: string): string {
 	return text;
 }
 function schemaPathMentions(text: string) {
+	const breadcrumbSource = text.replace(/`([a-z][a-z0-9_]*)`/gi, "$1");
 	const query = propertyBreadcrumbText(text)
 		.toLowerCase()
 		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	const literalBreadcrumbs = new Set(
-		[...text.matchAll(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi)].map(m =>
+		[...breadcrumbSource.matchAll(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi)].map(m =>
 			propertyBreadcrumbText(m[0]).toLowerCase(),
 		),
 	);

@@ -171,3 +171,12 @@ test("exclusive IP-family prose distinguishes single-family from dual-stack", ()
 	expect(propertyQueryTerms("not IPv4-only next-hop address")).not.toContain("single");
 	expect(propertyQueryTerms("`IPv4-only` literal")).not.toContain("single");
 });
+
+test("individually quoted breadcrumb components preserve complete adjacency", () => {
+	expect(propertyBreadcrumbText("selected `root` → `branch` → `field`.")).toBe("selected root.branch.field.");
+	expect(propertyExplicitSchemaPaths("selected `root` → `branch` → `field`. Explain value.")).toEqual([
+		"root.branch.field",
+	]);
+	expect(propertyExplicitSchemaPaths("not `root` → `branch` → `field`.")).toEqual([]);
+	expect(propertyExplicitSchemaPaths("compare `root` → `first` and `root` → `second`.")).toEqual([]);
+});
