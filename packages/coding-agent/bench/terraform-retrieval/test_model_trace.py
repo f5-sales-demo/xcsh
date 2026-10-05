@@ -5,6 +5,7 @@ import unittest
 from typing import Any
 
 from model_trace import (
+    cites_provider_version,
     emitted_hcl,
     has_clarification_question,
     hcl_code_blocks,
@@ -444,3 +445,26 @@ class TerraformResponseBudgetTests(unittest.TestCase):
         result = terraform_tool_response_budget(messages)
         self.assertTrue(result["passed"])
         self.assertEqual(result["measured_results"], 1)
+
+
+class ProviderVersionCitationTest(unittest.TestCase):
+    """Require the pinned version without imposing its display prefix."""
+
+    def test_exact_version_allows_display_prefix(self) -> None:
+        """Reject other semantic versions and preview qualifiers."""
+        for text in [
+            "Provider v12.4.0",
+            "bundled version **12.4.0**",
+            'version = "= 12.4.0"',
+        ]:
+            self.assertTrue(cites_provider_version(text, "v12.4.0"))
+        for text in [
+            "v12.4.01",
+            "v112.4.0",
+            "v12.4.0-beta",
+            "12.4.0+preview",
+            "v12.4.0.1",
+        ]:
+            self.assertFalse(cites_provider_version(text, "v12.4.0"))
+        with self.assertRaises(ValueError):
+            cites_provider_version("12.4.0", "latest")

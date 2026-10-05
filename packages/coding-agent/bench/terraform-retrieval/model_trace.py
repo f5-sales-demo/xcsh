@@ -11,6 +11,19 @@ SURROGATE_START = 0xD800
 SURROGATE_END = 0xDFFF
 
 
+def cites_provider_version(text: str, provider_version: str) -> bool:
+    """Match the pinned semantic version with an optional display v prefix."""
+    version = provider_version.removeprefix("v")
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+        message = "Expected an exact stable provider version"
+        raise ValueError(message)
+    return bool(
+        re.search(
+            r"(?<![A-Za-z0-9_.])v?" + re.escape(version) + r"(?![A-Za-z0-9_.+-])", text
+        )
+    )
+
+
 def successful_read_paths(messages: list[dict[str, Any]]) -> list[str]:
     """Require a successful result for each counted read call."""
     calls: dict[str, list[tuple[int, dict[str, Any]]]] = {}

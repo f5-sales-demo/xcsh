@@ -25,6 +25,7 @@ from model_continuation_uat import (
     verify_provenance,
 )
 from model_trace import (
+    cites_provider_version,
     emitted_hcl,
     has_clarification_question,
     hcl_code_blocks,
@@ -281,7 +282,7 @@ for case in cases:
                 and exact_read
                 and required_reads_verified
                 and cited
-                and args.provider_version in text
+                and cites_provider_version(text, args.provider_version)
                 and not false_live
             )
         elif case["kind"] == "ambiguous":
@@ -366,7 +367,9 @@ for case in cases:
                 "clarification_review_required": case["kind"] == "ambiguous",
                 "continuation_verified": case["id"] in continuation_verified,
                 "expected_citation": cited,
-                "provider_version_cited": args.provider_version in text,
+                "provider_version_cited": cites_provider_version(
+                    text, args.provider_version
+                ),
                 "clarification": clarification,
                 "false_live_pattern": false_live,
                 "hcl_fences": len(code_fences),
