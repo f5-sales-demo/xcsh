@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "source_commit": "375ccec000d1ace3cbdaa6cf67f9882a2a551368",
+  "binary_sha256": "b0bbf78de62daf5ca594e6099d4bb87601d73ed0b084b77add8cf435a5b82c9c",
+  "provider_version": "v12.4.0",
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "suite_sha256": "dc2fb39b1cae7b3f62902854f6072a670ba48b103e3ec78f0acc532adc0e74b7",
+  "complete": true,
+  "original_automated_passes": 37,
+  "case_count": 40,
+  "answerable_exact_leaf_reads": 28,
+  "answerable_count": 28,
+  "all_tool_response_budgets_passed": true,
+  "original_failed_ids": [
+    "v9-120",
+    "v9-008",
+    "v9-145"
+  ],
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "manual_hcl_and_clarification_review_required": true,
+  "report_sha256": "b41ae4649b7a8d1820e9819ba6813cdfda0bde13848b39f48493dbec8fc5ce7b"
+}
