@@ -935,6 +935,12 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	)
 		return { role: "fundamentals", anchor: "minimal-configuration" };
 	if (propertyRequestedBlockText(query) && !/\b(?:example|usage)\b/i.test(query)) return undefined;
+	if (
+		propertyRequestedText(query) &&
+		/`[a-z][a-z0-9_]*`/.test(query) &&
+		!/\b(?:import|example|usage|guidance|minimal|root)\b/i.test(query)
+	)
+		return undefined;
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
 	const valueLookup =
 		/\b(?:find|locate|point me to)\b|\bwhere\s+(?:is|are|do I put)\b/i.test(query) &&
@@ -1941,7 +1947,8 @@ export class TerraformDocumentationRepository {
 					)) &&
 				!terraformTaskDestination(search) &&
 				!terraformProviderSetupDestination(search) &&
-				!/\b(?:guidance|help|begin|start|explain)\b/i.test(search) &&
+				(!/\b(?:guidance|help|begin|start|explain)\b/i.test(search) ||
+					(Boolean(propertyRequestedText(search)) && /`[a-z][a-z0-9_]*`/.test(search))) &&
 				db.query("SELECT 1 FROM sqlite_master WHERE name=?").get("property_terms")
 			) {
 				const role = filters.find(f => f.key === "provider_type")?.value ?? resolvedIdentityRole;

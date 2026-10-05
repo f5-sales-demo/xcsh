@@ -52,3 +52,12 @@ test("article before named schema branch is preserved", () => {
 		"certificate_chain",
 	]);
 });
+
+test("quoted field in a contract lookup is the requested value", () => {
+	expect(propertyRequestedText("Explain the type and restrictions of `decryption_provider`.")).toBe(
+		"decryption_provider",
+	);
+	expect(propertyRequestedText("I need to understand `prefixes` in Terraform.")).toBe("prefixes");
+	expect(propertyRequestedText("Please check `url` against the docs.")).toBe("url");
+	expect(propertyRequestedText("Not explain `name`; find namespace.")).not.toBe("name");
+});

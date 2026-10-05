@@ -494,6 +494,21 @@ export function propertyValueLookup(text: string): string | undefined {
 	return needValue;
 }
 export function propertyRequestedText(text: string): string | undefined {
+	const quotedLookup = [
+		...text.matchAll(
+			/\b(?:understand|explain(?:\s+the\s+(?:type|rules?|restrictions?|constraints?|contract)(?:\s+and\s+(?:type|rules?|restrictions?|constraints?))?\s+of)?|check|rules?\s+apply\s+to|contract\s+for)\s+`([a-z][a-z0-9_]*)`/gi,
+		),
+	];
+	if (
+		quotedLookup.length === 1 &&
+		!/\b(?:not|never|excluding|example|such as)\b/i.test(
+			text
+				.slice(0, quotedLookup[0]!.index)
+				.split(/[.!?;]/)
+				.at(-1) ?? "",
+		)
+	)
+		return quotedLookup[0]![1];
 	const labels = [
 		...text.matchAll(
 			/(?:^|[.!?;]\s*)\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`([a-z][a-z0-9_]*)`(?=\s*(?:[.!?;]|$))/gi,
