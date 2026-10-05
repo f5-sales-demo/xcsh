@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	propertyBreadcrumbText,
 	propertyExplicitSchemaPaths,
+	propertyQueryTerms,
 	propertyRequestedText,
 } from "../../src/internal-urls/terraform-property-ranking";
 
@@ -85,4 +86,10 @@ test("literal ordered breadcrumb is scope without a leading location verb", () =
 	expect(propertyExplicitSchemaPaths("not first → child; find name")).toEqual([]);
 	expect(propertyExplicitSchemaPaths("compare first → child and second → child")).toEqual([]);
 	expect(propertyExplicitSchemaPaths("at first → child")).toEqual(["first.child"]);
+});
+
+test("dual-family prose uses documented dual-stack vocabulary", () => {
+	expect(propertyQueryTerms("dual-family next hop")).toContain("dual");
+	expect(propertyQueryTerms("both address families")).toContain("stack");
+	expect(propertyQueryTerms("`dual-family` literal")).not.toContain("stack");
 });
