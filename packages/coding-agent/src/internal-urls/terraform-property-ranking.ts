@@ -274,11 +274,27 @@ export function propertyBreadcrumbText(text: string): string {
 export function propertyWithoutBreadcrumbs(text: string): string {
 	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*>\s*)+[a-z][a-z0-9_]*\b/gi, " ");
 }
+function singleSchemaScopeMentions(text: string) {
+	if (!/\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`[a-z][a-z0-9_]*`/i.test(text)) return [];
+	return [
+		...text.matchAll(
+			/\b(at|uses|inspecting|concerns|under)\s+([a-z][a-z0-9_]*)(?=\s+(?:branch|on the|in the)|[:,!?]|\.(?=\s|$)|$)|;\s+([a-z][a-z0-9_]*)(?=[!?]|\.(?=\s|$))/gi,
+		),
+	].filter(m => !["root", "xcsh"].includes(m[2] ?? m[3] ?? "") && !(m[2] ?? m[3] ?? "").startsWith("xcsh_"));
+}
+export function propertyWithoutSingleSchemaScope(text: string): string {
+	for (const m of singleSchemaScopeMentions(text).reverse())
+		text = text.slice(0, m.index) + " " + text.slice(m.index! + m[0].length);
+	return text;
+}
 function schemaPathMentions(text: string) {
 	const query = propertyBreadcrumbText(text)
 		.toLowerCase()
 		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	return [
+		...singleSchemaScopeMentions(query).map(m =>
+			Object.assign([m[0], m[1] ?? "scope", "", m[2] ?? m[3]], { index: m.index }),
+		),
 		...query.matchAll(
 			/\b(under|within|inside|schema path|branch|path|or|and|locate|find|point me to|where is|where are|where do i put|where do|where does|i need|at|uses|inspecting|concerns|;)\s+(?:(?:the|its)\s+)?(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
 		),

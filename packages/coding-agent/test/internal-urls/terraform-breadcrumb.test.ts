@@ -31,3 +31,18 @@ test("rejected field labels do not become an explicit target", () => {
 	expect(propertyRequestedText("Not field: `name`. Find namespace")).not.toBe("name");
 	expect(propertyRequestedText("Example field: `name`. Find namespace")).not.toBe("name");
 });
+
+test("single labeled schema branch is explicit scope", () => {
+	expect(propertyExplicitSchemaPaths("at virtual_host: Which name? Field: `name`.")).toEqual(["virtual_host"]);
+	expect(propertyExplicitSchemaPaths("inspecting details on the data source. Field: `severity`.")).toEqual([
+		"details",
+	]);
+	expect(propertyExplicitSchemaPaths("under root. Field: `name`.")).toEqual([]);
+});
+
+test("single scope extraction never consumes dotted context prefixes", () => {
+	expect(propertyExplicitSchemaPaths("Context: resource; service > tls > certificates. Field: `name`.")).toEqual([
+		"service.tls.certificates",
+	]);
+	expect(propertyExplicitSchemaPaths("not at virtual_host: Field: `name`.")).toEqual([]);
+});

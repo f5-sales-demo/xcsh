@@ -1,0 +1,20 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": {
+    "packages/coding-agent/src/internal-urls/terraform-property-ranking.ts": "4a00d9484acff8ab3c54331c5d65ad82b056b4c584f4d4610502f081b42c3f60",
+    "packages/coding-agent/src/internal-urls/terraform-documentation.ts": "d6c779f2c1f80eefbc16115fcad64b0ac15a4f76d046dc09173b92c4ce795e6c"
+  },
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "answerable_correct": 117,
+  "answerable_total": 140,
+  "answerable_top5": 135,
+  "answerable_regressions": [],
+  "change": "Single-component explicitly labeled schema scopes constrain destination paths and do not become provider owners. Dotted path boundaries are preserved.",
+  "limitations": [
+    "Exposed regression only; selection accuracy below95percent and five destinations absent from topfive.",
+    "Rejected initial semicolon-boundary experiment preserved.",
+    "Final installed verification remains required."
+  ]
+}
