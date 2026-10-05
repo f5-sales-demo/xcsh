@@ -1204,6 +1204,7 @@ export function terraformProviderMention(search: string, names: readonly string[
 }
 
 export function terraformQueryIdentity(search: string): { providerPhrase?: string; providerType?: string } {
+	const ordinaryRoleText = search.replace(/\bephemeral\s+resource\b/gi, "ephemeral");
 	const exact = [...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)];
 	const names = [...new Set(exact.map(match => match[1]!.toLowerCase()))];
 	const explicitRoles = new Set<string>();
@@ -1212,7 +1213,7 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 		explicitRoles.add("ephemeral-resources");
 	if (
 		/\bresource\b|\bresource\.xcsh_[a-z0-9_]+\b|\b(?:managed|existing)\s+(?:xcsh_[a-z0-9_]+\s+)?resource\b|\bxcsh_[a-z0-9_]+\s+resource\b|\bmanaged\s+xcsh_[a-z0-9_]+\b/i.test(
-			search,
+			ordinaryRoleText,
 		)
 	)
 		explicitRoles.add("resources");
@@ -1879,7 +1880,7 @@ export class TerraformDocumentationRepository {
 			).map(r => r.provider_name);
 			let taskProvider =
 				filters.find(f => f.key === "provider_name")?.value ?? terraformProviderMention(search, taskNames);
-			if (!taskProvider && inferredTaskRole === "actions") {
+			if (!taskProvider && inferredTaskRole === "actions" && !propertyRequestedText(search)) {
 				const matches = rankTerraformProviderNames(search, taskNames);
 				if (matches[0] && (!matches[1] || matches[0].score >= matches[1].score + 10))
 					taskProvider = matches[0].name;

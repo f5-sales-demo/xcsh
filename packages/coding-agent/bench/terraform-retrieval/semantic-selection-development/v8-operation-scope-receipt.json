@@ -1,0 +1,16 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": "35e9c4062333253dcb28db5ed0c01595b78c3fea5faaada942bda0d9c89fafdd",
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "answerable_correct": 113,
+  "answerable_total": 140,
+  "answerable_top5": 131,
+  "answerable_regressions": [],
+  "change": "Ephemeral resource wording is one role; explicit field requests bypass action owner guessing.",
+  "limitations": [
+    "Exposed regression only; below95 percent.",
+    "Installed final-source verification required."
+  ]
+}

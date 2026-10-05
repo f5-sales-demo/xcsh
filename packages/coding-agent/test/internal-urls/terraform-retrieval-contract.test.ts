@@ -1212,3 +1212,10 @@ test("general operation timeout format requests use lifecycle guidance", () => {
 		role: "timeouts",
 	});
 });
+
+test("ephemeral resource wording retains only ephemeral role", () => {
+	expect(terraformQueryIdentity("In the ephemeral resource at root, find expiration_time").providerType).toBe(
+		"ephemeral-resources",
+	);
+	expect(terraformQueryIdentity("Compare an ephemeral resource and a managed resource").providerType).toBeUndefined();
+});
