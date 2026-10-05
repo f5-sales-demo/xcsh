@@ -1219,3 +1219,12 @@ test("ephemeral resource wording retains only ephemeral role", () => {
 	);
 	expect(terraformQueryIdentity("Compare an ephemeral resource and a managed resource").providerType).toBeUndefined();
 });
+
+test("complete resource HCL drafting starts from documented minimal configuration", () => {
+	expect(
+		terraformTaskDestination('Draft HCL for resource "xcsh_fixture" with name = "sample" and nested.field = 2'),
+	).toEqual({ role: "fundamentals", anchor: "minimal-configuration" });
+	expect(terraformTaskDestination("Draft HCL snippet for only the nested.field property on xcsh_fixture")).not.toEqual(
+		{ role: "fundamentals", anchor: "minimal-configuration" },
+	);
+});

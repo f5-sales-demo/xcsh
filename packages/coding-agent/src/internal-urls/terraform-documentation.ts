@@ -925,6 +925,12 @@ export function terraformProviderSetupDestination(query: string): string | undef
 }
 
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
+	if (
+		/\b(?:draft|write|generate)\s+hcl\b/i.test(query) &&
+		/\b(?:resource|ephemeral)\s+"?xcsh_[a-z0-9_]+/i.test(query) &&
+		!/\b(?:snippet|fragment|only the|only this)\b/i.test(query)
+	)
+		return { role: "fundamentals", anchor: "minimal-configuration" };
 	if (propertyRequestedBlockText(query) && !/\b(?:example|usage)\b/i.test(query)) return undefined;
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
 	const valueLookup =

@@ -258,6 +258,16 @@ export function resolveIndexedTask(
 	if (
 		identifiers.some(
 			term =>
+				!(
+					/\b(?:draft|write|generate)\s+hcl\b/i.test(query) &&
+					task?.anchor === "minimal-configuration" &&
+					scope.providerName &&
+					db
+						.query(
+							"SELECT 1 FROM terraform_destinations WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND instr('.'||schema_path||'.',?)>0 LIMIT 1",
+						)
+						.get(scope.providerName, scope.providerType ?? null, scope.providerType ?? null, `.${term}.`)
+				) &&
 				!rows.some(row =>
 					(
 						`${row.summary} ${row.context_markdown}`.toLowerCase().match(/[a-z][a-z0-9_]*/g) ?? ([] as string[])
