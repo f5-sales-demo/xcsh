@@ -1,0 +1,16 @@
+{
+  "source_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "errors": [
+    "tf1240-002: Mandatory read contains navigation only xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#property-reference",
+    "tf1240-002: Mandatory read contains navigation only xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md#blocking",
+    "tf1240-002: Mandatory read contains navigation only xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md#allowed_response_codes",
+    "tf1240-003: Mandatory read contains navigation only xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#property-reference",
+    "tf1240-003: Mandatory read contains navigation only xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#no_tls",
+    "tf1240-003: Mandatory read contains navigation only xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#timeouts"
+  ],
+  "limitations": [
+    "Historical suite and scores unchanged; requirements must be corrected only in separately labeled development data or a new pre-run freeze."
+  ]
+}

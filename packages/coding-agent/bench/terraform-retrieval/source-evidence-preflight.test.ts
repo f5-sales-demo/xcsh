@@ -1,5 +1,5 @@
 import { expect,test } from "bun:test";
-import { validateCaseSourceEvidence, validateSourceEvidenceUri, validateSourceEvidenceBinding } from "./source-evidence-preflight";
+import { validateModelReadEvidence, validateCaseSourceEvidence, validateSourceEvidenceUri, validateSourceEvidenceBinding } from "./source-evidence-preflight";
 const a="xcsh://terraform-documentation/documentation/resources/fixture/index.md#schema-name";
 const b="xcsh://terraform-documentation/documentation/data-sources/fixture/index.md#schema-name";
 const child="xcsh://terraform-documentation/documentation/resources/fixture/index.md#schema-namespace";
@@ -52,4 +52,28 @@ test("omitted provider needs cross-provider exact and ancestor-path adjudication
  expect(validateCaseSourceEvidence(cases,[evidence],[...source,peer]).some(e=>e.includes("cross-provider"))).toBe(true);
  const explicit=[{...cases[0]!,prompt:"Configure xcsh_fixture managed resource name"}];
  expect(validateCaseSourceEvidence(explicit,[{...evidence,peer_adjudications:[{...evidence.peer_adjudications[0]!,prompt_quote:"managed resource"}]}],[...source,peer])).toEqual([]);
+});
+
+test("mandatory model reads must contain evidence beyond headings and navigation",()=>{
+ const title={...source[0]!,markdown:"# Fixture\n\nBreadcrumbs:\n- [Root](../index.md)\n- Fixture\n"};
+ const c={id:"model",model_expectations:{must_read:[a],required_citation_destinations:[a]}};
+ expect(validateModelReadEvidence([c],[title])).toEqual([`model: Mandatory read contains navigation only ${a}`]);
+ expect(validateModelReadEvidence([c],source)).toEqual([]);
+ expect(validateModelReadEvidence([{...c,model_expectations:{must_read:[a],required_citation_destinations:[b]}}],source)).toEqual([`model: Mandatory citation lacks its own mandatory read ${b}`]);
+});
+
+test("same field meaning with a different key still needs source adjudication",()=>{
+ const uri="xcsh://terraform-documentation/documentation/resources/fixture/index.md#schema-display_name";
+ const peer={...source[0]!,uri,schema_path:"display_name"};
+ expect(validateCaseSourceEvidence(cases,[evidence],[...source,peer]).some(e=>e.includes("same-meaning"))).toBe(true);
+});
+test("substantive requirement lists are not navigation-only sections",()=>{
+ const c={id:"model",model_expectations:{must_read:[a],required_citation_destinations:[a]}};
+ expect(validateModelReadEvidence([c],[{...source[0]!,markdown:"# Requirements\n- The name is required.\n"}])).toEqual([]);
+});
+
+test("malformed mandatory evidence lists fail explicitly",()=>{
+ const bad={id:"model",model_expectations:{must_read:"invalid" as unknown as string[],required_citation_destinations:[]}};
+ expect(validateModelReadEvidence([bad],source)).toEqual(["model: Invalid mandatory read or citation list"]);
+ expect(validateModelReadEvidence([{id:"model",model_expectations:{must_read:[a,a]}}],source)).toContain("model: Duplicate mandatory read or citation");
 });

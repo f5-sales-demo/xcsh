@@ -13,7 +13,7 @@ import {
 	normalizeClarificationTree,
 	type FrozenClarificationTree,
 } from "./clarification-tree";
-import { validateCaseSourceEvidence, type CaseSourceEvidence, type EvidenceDestination, validateSourceEvidenceUri, validateSourceEvidenceBinding } from "./source-evidence-preflight";
+import { validateModelReadEvidence, validateCaseSourceEvidence, type CaseSourceEvidence, type EvidenceDestination, validateSourceEvidenceUri, validateSourceEvidenceBinding } from "./source-evidence-preflight";
 import { validateModelDecisionRecords } from "./model-decision-records";
 import { measureCompleteRetrieval } from "./complete-measurement";
 import {
@@ -131,7 +131,8 @@ if (!regression) {
  const evidence = JSON.parse(evidenceBytes.toString()) as CaseSourceEvidence[];
  const db = await repo.database();
  const destinations = db.query("SELECT provider_name,schema_path,description,path,anchor FROM terraform_destinations ORDER BY path,anchor").all() as Array<{provider_name:string;schema_path:string;description:string;path:string;anchor:string}>;
- const needed = new Set(evidence.flatMap(record => [...record.answer_sections.map(section=>section.uri),...record.peer_adjudications.map(peer=>peer.uri)]));
+ const modelCases=JSON.parse(await readFile(path.join(path.dirname(suiteFile),"model-subset.json"),"utf8"));
+ const needed = new Set([...evidence.flatMap(record => [...record.answer_sections.map(section=>section.uri),...record.peer_adjudications.map(peer=>peer.uri)]),...modelCases.flatMap((c:any)=>c.model_expectations?.must_read??[])]);
  const source: EvidenceDestination[] = destinations.map(row=>({...row,uri:`xcsh://terraform-documentation/${row.path}#${row.anchor}`,markdown:""}));
  const byUri = new Map(source.map(row=>[row.uri,row]));
  for (const uri of needed) {
@@ -144,7 +145,7 @@ if (!regression) {
  if(row) row.markdown=section.context_markdown;
  else source.push({uri,provider_name:"",schema_path:"",description:"",markdown:section.context_markdown});
  }
- const errors=validateCaseSourceEvidence(suite,evidence,source);
+ const errors=[...validateCaseSourceEvidence(suite,evidence,source),...validateModelReadEvidence(modelCases,source)];
  if(errors.length) throw new Error(`Frozen source evidence preflight failed: ${errors.slice(0,20).join("; ")}`);
 }
 

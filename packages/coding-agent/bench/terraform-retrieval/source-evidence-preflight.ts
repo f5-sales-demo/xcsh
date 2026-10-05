@@ -67,6 +67,10 @@ export function validateCaseSourceEvidence(
  const explicitProvider=/\bxcsh_[a-z0-9_]+\b/i.test(c.prompt);
  for (const peer of source) {
  if (peer.uri === uri) continue;
+ if(peer.provider_name===d.provider_name&&peer.schema_path&&peer.description.trim()&&
+ peer.schema_path.split(".").at(-1)!==leaf&&
+ peer.description.replace(/\s+/g," ").trim()===d.description.replace(/\s+/g," ").trim()&&!adjudications.has(peer.uri))
+ fail(`Unreviewed same-meaning peer ${peer.uri}`);
  const role=(value:string)=>new URL(value).pathname.split("/")[2];
  if(!explicitProvider&&peer.provider_name!==d.provider_name&&role(peer.uri)===role(d.uri)&&
  (peer.schema_path===d.schema_path||peer.schema_path.endsWith(`.${d.schema_path}`))&&!adjudications.has(peer.uri))
@@ -78,5 +82,35 @@ export function validateCaseSourceEvidence(
  }
  }
  for (const c of cases) if (!seen.has(c.id)) errors.push(`Missing source evidence ${c.id}`);
+ return errors;
+}
+
+export function validateModelReadEvidence(
+ cases: readonly {id:string;model_expectations?:{must_read?:string[];required_citation_destinations?:string[]}}[],
+ source: readonly EvidenceDestination[],
+):string[]{
+ const errors:string[]=[],byUri=new Map(source.map(s=>[s.uri,s]));
+ for(const c of cases){
+ const reads=c.model_expectations?.must_read??[];
+ const citations=c.model_expectations?.required_citation_destinations??[];
+ if(!Array.isArray(reads)||!Array.isArray(citations)||reads.some(uri=>typeof uri!=="string")||citations.some(uri=>typeof uri!=="string")){
+ errors.push(`${c.id}: Invalid mandatory read or citation list`);continue;
+ }
+ if(new Set(reads).size!==reads.length||new Set(citations).size!==citations.length)
+ errors.push(`${c.id}: Duplicate mandatory read or citation`);
+ for(const uri of reads){
+ const section=byUri.get(uri);
+ if(!validateSourceEvidenceUri(uri)||!section){errors.push(`${c.id}: Unknown mandatory read ${uri}`);continue;}
+ const content=section.markdown.replace(/Breadcrumbs:\n(?:\n|[-*] [^\n]*\n)*/g, "");
+ const substantive=content.split("\n").filter(line=>{
+ const text=line.trim();
+ return text&&!text.startsWith("#")&&!/^<[^>]+>$/.test(text)&&text!=="Breadcrumbs:"&&
+ !/^[-*] \[[^\]]+\]\([^)]+\)(?:[:;.]?\s*)$/.test(text)&&!/^\[[^\]]+\]\([^)]+\)$/.test(text);
+ });
+ if(!substantive.length)errors.push(`${c.id}: Mandatory read contains navigation only ${uri}`);
+ }
+ for(const uri of citations)
+ if(!reads.includes(uri))errors.push(`${c.id}: Mandatory citation lacks its own mandatory read ${uri}`);
+ }
  return errors;
 }
