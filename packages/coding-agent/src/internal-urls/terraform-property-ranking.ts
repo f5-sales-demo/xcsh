@@ -278,7 +278,7 @@ function singleSchemaScopeMentions(text: string) {
 	if (!/\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`[a-z][a-z0-9_]*`/i.test(text)) return [];
 	return [
 		...text.matchAll(
-			/\b(at|uses|inspecting|concerns|under)\s+([a-z][a-z0-9_]*)(?=\s+(?:branch|on the|in the)|[:,!?]|\.(?=\s|$)|$)|;\s+([a-z][a-z0-9_]*)(?=[!?]|\.(?=\s|$))/gi,
+			/\b(at|uses|inspecting|concerns|under)\s+(?:the\s+)?([a-z][a-z0-9_]*)(?=\s+(?:branch|on the|in the)|[:,!?]|\.(?=\s|$)|$)|;\s+([a-z][a-z0-9_]*)(?=[!?]|\.(?=\s|$))/gi,
 		),
 	].filter(m => !["root", "xcsh"].includes(m[2] ?? m[3] ?? "") && !(m[2] ?? m[3] ?? "").startsWith("xcsh_"));
 }

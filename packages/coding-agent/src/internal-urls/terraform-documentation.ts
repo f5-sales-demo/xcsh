@@ -928,7 +928,7 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	if (
 		/\b(?:draft|write|generate)\s+hcl\b/i.test(query) &&
 		/\b(?:resource|ephemeral)\s+"?xcsh_[a-z0-9_]+/i.test(query) &&
-		!/\b(?:snippet|fragment|only the|only this)\b/i.test(query)
+		!/\b(?:snippet|fragment)\b/i.test(query)
 	)
 		return { role: "fundamentals", anchor: "minimal-configuration" };
 	if (propertyRequestedBlockText(query) && !/\b(?:example|usage)\b/i.test(query)) return undefined;

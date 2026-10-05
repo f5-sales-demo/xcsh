@@ -46,3 +46,9 @@ test("single scope extraction never consumes dotted context prefixes", () => {
 	]);
 	expect(propertyExplicitSchemaPaths("not at virtual_host: Field: `name`.")).toEqual([]);
 });
+
+test("article before named schema branch is preserved", () => {
+	expect(propertyExplicitSchemaPaths("My data source uses the certificate_chain branch. Field: `name`.")).toEqual([
+		"certificate_chain",
+	]);
+});
