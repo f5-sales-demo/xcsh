@@ -253,6 +253,17 @@ function selectPropertyDestinationInternal(
 		}
 	}
 
+	const requestedLiteral = propertyRequestedText(queryText);
+	if (
+		requestedLiteral &&
+		/^[a-z][a-z0-9_]*$/i.test(requestedLiteral) &&
+		queryText.includes(`\`${requestedLiteral}\``)
+	) {
+		const exactFields = input.filter(
+			row => row.anchor.startsWith("schema-") && row.schema_path.split(".").at(-1) === requestedLiteral,
+		);
+		if (exactFields.length) input = exactFields;
+	}
 	const unique = new Map<string, RankedProperty>();
 	for (const row of input.filter(row => identifiersMatch(row))) {
 		const key = `${row.path}#${row.anchor}`;

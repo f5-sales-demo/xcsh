@@ -192,3 +192,28 @@ test("quoted operation remains explicit amidst documentation drafting boilerplat
 	expect(result.kind).toBe("leaf");
 	expect(result.destinations[0]?.schema_path).toBe("timeouts.read");
 });
+
+test("quoted scalar fields exclude incidental type wording while keeping branch peers", () => {
+	const field = {
+		...rows[0]!,
+		schema_path: "route.ipv6.addr",
+		anchor: "schema-route--ipv6--addr",
+		description: "IPv6 address.",
+		score: 20,
+		coverage: 0.8,
+	};
+	const type = {
+		...field,
+		schema_path: "route.type",
+		anchor: "schema-route--type",
+		description: "Next hop type.",
+		score: 19,
+	};
+	expect(selectPropertyDestination("Explain the type and restrictions of `addr` for IPv6", [field, type]).kind).toBe(
+		"leaf",
+	);
+	const peer = { ...field, schema_path: "other.ipv6.addr", path: "other", score: 18 };
+	expect(
+		selectPropertyDestination("Explain the type and restrictions of `addr` for IPv6", [field, type], [peer]).kind,
+	).toBe("choices");
+});
