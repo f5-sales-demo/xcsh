@@ -77,3 +77,12 @@ test("quoted contract verbs identify field rather than prose", () => {
 	expect(propertyRequestedText("Find the field rules for `status`.")).toBe("status");
 	expect(propertyRequestedText("Verify `addr` against its reference.")).toBe("addr");
 });
+
+test("literal ordered breadcrumb is scope without a leading location verb", () => {
+	expect(propertyExplicitSchemaPaths("verify `addr` ingress_egress_gw → routes → ipv4 against its reference")).toEqual(
+		["ingress_egress_gw.routes.ipv4"],
+	);
+	expect(propertyExplicitSchemaPaths("not first → child; find name")).toEqual([]);
+	expect(propertyExplicitSchemaPaths("compare first → child and second → child")).toEqual([]);
+	expect(propertyExplicitSchemaPaths("at first → child")).toEqual(["first.child"]);
+});

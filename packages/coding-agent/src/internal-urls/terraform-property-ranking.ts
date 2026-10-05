@@ -293,13 +293,27 @@ function schemaPathMentions(text: string) {
 	const query = propertyBreadcrumbText(text)
 		.toLowerCase()
 		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
-	return [
-		...singleSchemaScopeMentions(query).map(m =>
-			Object.assign([m[0], m[1] ?? "scope", "", m[2] ?? m[3]], { index: m.index }),
+	const literalBreadcrumbs = new Set(
+		[...text.matchAll(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi)].map(m =>
+			propertyBreadcrumbText(m[0]).toLowerCase(),
 		),
+	);
+	const qualified = [
 		...query.matchAll(
 			/\b(under|within|inside|schema path|branch|path|or|and|locate|find|point me to|where is|where are|where do i put|where do|where does|i need|at|uses|inspecting|concerns|;)\s+(?:(?:the|its)\s+)?(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
 		),
+	];
+	const bare = [...query.matchAll(/\b[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+\b/g)].filter(
+		m =>
+			literalBreadcrumbs.has(m[0]) &&
+			!qualified.some(q => m.index! >= q.index! && m.index! < q.index! + q[0].length),
+	);
+	return [
+		...bare.map(m => Object.assign([m[0], "literal", "", m[0]], { index: m.index })),
+		...singleSchemaScopeMentions(query).map(m =>
+			Object.assign([m[0], m[1] ?? "scope", "", m[2] ?? m[3]], { index: m.index }),
+		),
+		...qualified,
 	].map(match => {
 		const suffix = query.slice(match.index! + match[0].length);
 		const path = !match[2] && /^(?:\s+[a-z]|\s*[!?]|\s*$)/.test(suffix) ? match[3]!.replace(/\.$/, "") : match[3]!;
