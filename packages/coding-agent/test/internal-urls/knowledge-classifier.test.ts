@@ -51,7 +51,7 @@ describe("deterministic knowledge classifier", () => {
 		expect(result.query.hyde[0]).toContain("authoritative F5 documentation page");
 	});
 
-	it("selects marketing, operational, and support sources by question intent", () => {
+	it("selects marketing, operational, community, and support sources by question intent", () => {
 		expect(classifyKnowledgeRequest("What is client side defense?", { toolsEnabled: true, resources })).toMatchObject(
 			{
 				route: "documentation",
@@ -67,7 +67,16 @@ describe("deterministic knowledge classifier", () => {
 				toolsEnabled: true,
 				resources,
 			}),
+		).toMatchObject({ source: "community-f5-com", constraints: { source: "community-f5-com" } });
+		expect(
+			classifyKnowledgeRequest("Find the F5 support article K1234567", { toolsEnabled: true, resources }),
 		).toMatchObject({ source: "my-f5-com", constraints: { source: "my-f5-com" } });
+		expect(
+			classifyKnowledgeRequest("Show a community example for F5 DNS zone creation", {
+				toolsEnabled: true,
+				resources,
+			}),
+		).toMatchObject({ source: "community-f5-com", constraints: { source: "community-f5-com" } });
 	});
 
 	it("recognizes exact xcsh URIs without rewriting them", () => {
@@ -86,6 +95,15 @@ describe("deterministic knowledge classifier", () => {
 			route: "direct-uri",
 			directUri: uri,
 			constraints: { source: "www-f5-com" },
+		});
+	});
+
+	it("preserves numeric community topic identity on exact reads", () => {
+		const uri = "xcsh://documentation/community-f5-com/t/65170/index.md";
+		expect(classifyKnowledgeRequest(`Read ${uri}`, { toolsEnabled: true, resources })).toMatchObject({
+			route: "direct-uri",
+			directUri: uri,
+			constraints: { source: "community-f5-com" },
 		});
 	});
 

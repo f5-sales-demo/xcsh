@@ -20,7 +20,7 @@ function sha256(value: Uint8Array | string): string {
 function document(source: string, title: string, slug: string, url: string, body: string): Buffer {
 	const normalizedBody = `${body.trim()}\n`;
 	const marketing = source === "www-f5-com";
-	const support = source === "my-f5-com";
+	const support = source === "my-f5-com" || source === "community-f5-com";
 	const product = title === "Client-Side Defense" ? "client-side-defense" : null;
 	return Buffer.from(
 		[
@@ -107,6 +107,13 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 		"https://my.f5.com/manage/s/article/K000000001",
 		"# Support Article\n\nTroubleshoot a certificate.",
 	);
+	const community = document(
+		"community-f5-com",
+		"Community Walkthrough",
+		"65170",
+		"https://community.f5.com/t/65170",
+		"# Community Walkthrough\n\nTroubleshoot an API discovery example.",
+	);
 	const marketing = MARKETING_PAGES.map(([title, slug, url]) =>
 		document("www-f5-com", title, slug, url, `# ${title}\n\nDiscover F5 Distributed Cloud products and solutions.`),
 	);
@@ -158,6 +165,21 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 				terminal_confirmation_count: 0,
 			},
 		})),
+		{
+			sourceId: "community-f5-com",
+			url: "https://community.f5.com/t/65170",
+			path: "content/community-f5-com/t/65170/index.md",
+			body_sha256: sha256("# Community Walkthrough\n\nTroubleshoot an API discovery example.\n"),
+			file_sha256: sha256(community),
+			size_bytes: community.byteLength,
+			provenance: {
+				consecutive_failure_count: 0,
+				current_failure: null,
+				freshness: "fresh",
+				last_success_at: "2026-09-26T21:00:00Z",
+				terminal_confirmation_count: 0,
+			},
+		},
 	];
 	const webp = Buffer.from("webp");
 	const assets = [
@@ -184,6 +206,7 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 		schema_version: 2,
 		tool_version: "0.1.0",
 		source_roots: {
+			"community-f5-com": "https://community.f5.com",
 			"docs-cloud-f5-com": "https://docs.cloud.f5.com/docs-v2",
 			"my-f5-com": "https://my.f5.com/manage/s",
 			"www-f5-com": "https://www.f5.com/products/distributed-cloud-services",
@@ -207,6 +230,7 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 		[documents[0]!.path, docsCloud],
 		[documents[1]!.path, myF5],
 		...marketing.map((bytes, index) => [documents[index + 2]!.path as string, bytes] as const),
+		["content/community-f5-com/t/65170/index.md", community],
 		[assets[0]!.path, png],
 		[assets[1]!.path, svg],
 		[assets[2]!.path, webp],
@@ -314,11 +338,11 @@ describe("offline documentation release", () => {
 		);
 	});
 
-	it("verifies every archive member and generates byte-identical three-collection indexes", async () => {
+	it("verifies every archive member and generates byte-identical four-collection indexes", async () => {
 		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
 		const { pin } = await fixture(root);
 		const verified = await verifyDocumentationRelease(root, pin);
-		expect(verified.documents).toHaveLength(6);
+		expect(verified.documents).toHaveLength(7);
 		expect(verified.assets).toHaveLength(3);
 		expect(verified.documents.filter(item => item.source === "www-f5-com").map(item => item.originalUrl)).toEqual(
 			MARKETING_PAGES.map(([, , url]) => url),
@@ -343,11 +367,16 @@ describe("offline documentation release", () => {
 			const collections = db.query("SELECT name FROM store_collections ORDER BY name").all() as Array<{
 				name: string;
 			}>;
-			expect(collections.map(row => row.name)).toEqual(["docs-cloud-f5-com", "my-f5-com", "www-f5-com"]);
+			expect(collections.map(row => row.name)).toEqual([
+				"community-f5-com",
+				"docs-cloud-f5-com",
+				"my-f5-com",
+				"www-f5-com",
+			]);
 			const rows = db
 				.query("SELECT markdown, file_sha256 FROM documentation_documents ORDER BY source")
 				.all() as Array<{ markdown: string; file_sha256: string }>;
-			expect(rows).toHaveLength(6);
+			expect(rows).toHaveLength(7);
 			expect(rows.every(row => sha256(row.markdown) === row.file_sha256)).toBe(true);
 		} finally {
 			db.close();

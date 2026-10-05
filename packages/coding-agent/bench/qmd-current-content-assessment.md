@@ -1,0 +1,21 @@
+# QMD current-corpus development assessment
+
+This assessment is bound to verified release assets and saved public sitemap bytes recorded in the Ubuntu preservation receipt. It is development evidence; the original v8/v9/v10 scores and the first failed v10 result remain unchanged. The draft, no-auto-merge, no-release hold remains active.
+
+| Corpus | Selected source | Change from prior consumer pin |
+| --- | --- | --- |
+| General Markdown | `content-20261005T134122Z`, commit `cf7c552a056c6fa4441a01a164b316325a3c1a2d` | 1,063 → 739 pages; 297 added, 621 removed, 332 changed bodies; 3,822 source media assets |
+| Terraform | `documentation-v15.0.0`, commit `9625ca639d9c79008eeb117e9677f6b4bc404d9b` | 18,958 → 16,366 canonical pages; 2,592 removed, 502 changed bodies; 3,376 removed section anchors and 1,338 removed relationships |
+| API | `v12.0.0`, commit `a9be0360815e3fd3fa08ded845e03c0bd4afd6ec` | 38 domains retained; 1,826 → 1,779 distinct exact `(method,path,operationId)` operations; 47 removed |
+
+The general corpus now has 293 `community-f5-com` numeric topic pages. Its other sources have 345 official documentation pages, 85 MyF5 pages, and 16 marketing pages. No AppStack procedural URL remains in its manifest. The provider removed both roles for `securemesh_site`, `aws_vpc_site`, `azure_vnet_site`, `gcp_vpc_site`, `cloud_connect`, and `voltstack_site`. Exact v15 identities retain Secure Mesh v2, SMSv2, and AWS TGW content. The frozen API discovery cases remain preserved; four historical cases refer to the retired `cloud-connects` category and are now regression evidence.
+
+All 16,366 derived human-readable provider document routes occur in the saved public Pages sitemap. The 38 API reference domain routes occur in its sitemap. All 739 general document URLs match their verified source metadata. Exact API operation ownership is unique for 1,724 operations; 55 operations appear in multiple published domains and have no selected operation-level citation destination. The public pages inspected expose document-level anchors, but no verified equivalent of the internal Terraform property anchors or API operation IDs. `Cite:` therefore uses the verified page URL and says section-level linking is unavailable. Internal `Read:` destinations remain available for exact evidence.
+
+The v15 provider metadata names API release `v12.0.0` and commit `a9be0360815e3fd3fa08ded845e03c0bd4afd6ec` on 16,359 documents. Its 122 referenced schema components all exist in the selected API `openapi.json`; seven provider root pages carry no upstream schema identity. The general index contains verified Markdown and 3,822 media locator rows; its bundle and materialized cache contain zero media or source-archive bytes. An image read returns its verified public source page.
+
+The general index is 46,952,448 SQLite bytes and 13,581,264 compressed bytes; SHA-256 `5ee231a864752a399dacbf120d53b70fd9d7867dfb46222ff609bc6b7eca1b8d`, fingerprint `051b38f27ee7653ce31c710a9a04462e9764ba52f2388eafaa1f9e1bd0c768c0`. The v15 Terraform index is 706,154,496 SQLite bytes and 64,328,637 compressed bytes; SHA-256 `fbe22a883acb7d56026b302d2c52e8c9a5e855c003252dd42b6c4b9a6416c275`. Two builds of each source produced matching hashes. The API discovery SQLite has 2,215,936 bytes and its compressed index 494,162 bytes; its generated file digest matched on two runs.
+
+The exposed v10 prompts, used only as development workload on v15, produced 1,000 warm search samples with p95 124.97 ms and maximum response 4,095 bytes. These measurements do not establish the retained ≥95% qualification gate or installed Mac acceptance.
+
+GitHub reports the provider and API releases immutable. GitHub reports the selected general content release mutable; its exact six downloaded asset names, sizes, digests, and publication receipt were verified and pinned. The released bytes are preserved under the Ubuntu assessment directory, but the GitHub immutability flag is a remaining provenance limit.

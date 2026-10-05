@@ -15,6 +15,8 @@ import type {
 } from "./api-catalog-types";
 import type { ApiSpecDomainResource, ApiSpecIndex } from "./api-spec-types";
 import { formatMapConstraints, type MapConstraints } from "./map-constraints";
+import { PUBLIC_CITATION_SOURCES } from "./public-citation-destinations.generated";
+import { citationLine, publicCitationForApiOperation, publicCitationForInternalUri } from "./public-citations";
 import type { InternalResource, InternalUrl } from "./types";
 
 function normalizeApiPath(apiPath: string): string {
@@ -242,17 +244,23 @@ async function renderCatalogSearch(
 		].join("\n");
 	}
 
-	const rows = matches.map(
-		({ summary, kind }) => `| ${summary.name} | ${summary.displayName} | ${kind} | ${summary.operationCount} |`,
-	);
+	const rows = matches.map(({ summary, kind }) => {
+		const read = `xcsh://api-catalog/${summary.name}`;
+		const cite = citationLine(
+			publicCitationForInternalUri(read) ?? { readUri: read, reason: "missing-public-mapping" },
+			false,
+		);
+		return `| ${summary.name} | ${summary.displayName} | ${kind} | ${summary.operationCount} | \`${read}\` | ${cite} |`;
+	});
 
 	return [
 		`# API Catalog — search: "${term}"`,
 		"",
 		`${matches.length} matching categories.`,
 		"",
-		"| Category | Display Name | Kind | Operations |",
-		"|----------|--------------|------|------------|",
+		`Source: ${PUBLIC_CITATION_SOURCES.api.version}; archive SHA-256: ${PUBLIC_CITATION_SOURCES.api.digest}`,
+		"| Category | Display Name | Kind | Operations | Read | Cite |",
+		"|----------|--------------|------|------------|------|------|",
 		...rows,
 		"",
 	].join("\n");
@@ -335,12 +343,20 @@ function formatDefault(defaultVal: unknown, serverDefault: boolean | undefined):
 }
 
 function renderCatalogDetail(cat: ApiCatalogCategory, options?: { compact?: boolean }): string {
-	const sections: string[] = [`# ${cat.displayName}`, "", `${cat.operations.length} operations.`];
+	const sections: string[] = [
+		`# ${cat.displayName}`,
+		"",
+		`Source: ${PUBLIC_CITATION_SOURCES.api.version}; archive SHA-256: ${PUBLIC_CITATION_SOURCES.api.digest}`,
+		`${cat.operations.length} operations.`,
+	];
 	let fieldConstraintsRenderedForOp: string | null = null;
 	let fieldConstraintsFingerprint: string | null = null;
 
 	for (const op of cat.operations) {
 		sections.push("", `## ${op.method.toUpperCase()} ${op.path}`, "");
+		const read = `xcsh://api-catalog/${cat.name}`;
+		sections.push(`Read: ${read}`);
+		sections.push(citationLine(publicCitationForApiOperation(read, op.method, op.path, op.operationId), false));
 		sections.push(op.description);
 		sections.push(`Danger level: ${op.dangerLevel}`);
 

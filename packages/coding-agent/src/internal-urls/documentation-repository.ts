@@ -18,7 +18,7 @@ import { DOCUMENTATION_SOURCES } from "./documentation-resolve";
 import { extractVerifiedDocumentationAsset, type VerifiedDocumentationAsset } from "./documentation-snapshot";
 
 interface EmbeddedDocumentationAssetMetadata {
-	readonly archivePath: string;
+	readonly archivePath?: string;
 	readonly releaseTag: string;
 	readonly sourceCommit: string;
 	readonly archiveSha256: string;
@@ -28,6 +28,8 @@ interface EmbeddedDocumentationAssetMetadata {
 	readonly fingerprint: string;
 	readonly documentCount: number;
 	readonly assetCount: number;
+	readonly textManifestSha256?: string | null;
+	readonly bundledAssetCount?: number;
 }
 
 export type EmbeddedDocumentationAssets = EmbeddedDocumentationAssetMetadata &
@@ -53,7 +55,7 @@ export interface EmbeddedDocumentationRepository extends DocumentationRepository
 type QmdStore = Awaited<ReturnType<typeof createStore>>;
 
 interface MaterializedSnapshot {
-	readonly archivePath: string;
+	readonly archivePath?: string;
 	readonly indexPath: string;
 }
 
@@ -166,7 +168,7 @@ async function materializeSnapshot(
 	const archivePath = path.join(snapshotDirectory, "html-to-markdown-content.tar.gz");
 	const indexPath = path.join(snapshotDirectory, "documentation-index.sqlite");
 	if (
-		(await isVerifiedFile(archivePath, assets.archiveSizeBytes, assets.archiveSha256)) &&
+		(!assets.archivePath || (await isVerifiedFile(archivePath, assets.archiveSizeBytes, assets.archiveSha256))) &&
 		(await isVerifiedFile(indexPath, assets.indexSizeBytes, assets.indexSha256))
 	) {
 		return { archivePath, indexPath };
@@ -177,19 +179,22 @@ async function materializeSnapshot(
 	const staleDirectory = `${snapshotDirectory}.stale-${randomUUID()}`;
 	try {
 		await mkdir(stagingDirectory, { recursive: true });
-		await copyEmbeddedFile(
-			assets.archivePath,
-			path.join(stagingDirectory, "html-to-markdown-content.tar.gz"),
-			assets.archiveSizeBytes,
-			assets.archiveSha256,
-		);
+		if (assets.archivePath) {
+			await copyEmbeddedFile(
+				assets.archivePath,
+				path.join(stagingDirectory, "html-to-markdown-content.tar.gz"),
+				assets.archiveSizeBytes,
+				assets.archiveSha256,
+			);
+		}
 		await materializeIndex(assets, path.join(stagingDirectory, "documentation-index.sqlite"));
 
 		try {
 			await rename(stagingDirectory, snapshotDirectory);
 		} catch (error) {
 			if (
-				(await isVerifiedFile(archivePath, assets.archiveSizeBytes, assets.archiveSha256)) &&
+				(!assets.archivePath ||
+					(await isVerifiedFile(archivePath, assets.archiveSizeBytes, assets.archiveSha256))) &&
 				(await isVerifiedFile(indexPath, assets.indexSizeBytes, assets.indexSha256))
 			) {
 				await rm(stagingDirectory, { recursive: true, force: true });
@@ -214,7 +219,7 @@ async function materializeSnapshot(
 	}
 
 	if (
-		!(await isVerifiedFile(archivePath, assets.archiveSizeBytes, assets.archiveSha256)) ||
+		(assets.archivePath && !(await isVerifiedFile(archivePath, assets.archiveSizeBytes, assets.archiveSha256))) ||
 		!(await isVerifiedFile(indexPath, assets.indexSizeBytes, assets.indexSha256))
 	) {
 		throw new Error("Embedded documentation cache did not produce the pinned snapshot");
@@ -238,7 +243,7 @@ function verifyDatabase(database: Database, assets: EmbeddedDocumentationAssets)
 		asset_count: String(assets.assetCount),
 		document_count: String(assets.documentCount),
 		fingerprint: assets.fingerprint,
-		index_schema: "2",
+		index_schema: "3",
 		release_tag: assets.releaseTag,
 		source_commit: assets.sourceCommit,
 	};
@@ -393,12 +398,14 @@ function diversifySources(
 }
 
 const SUPPORT_QUERY = /\b(?:troubleshoot|support|knowledge[- ]base|error|failure|issue|K[0-9]{6,})\b/i;
+const COMMUNITY_QUERY = /\b(?:example|walkthrough|tutorial|community|forum|discussion|troubleshoot|troubleshooting)\b/i;
 const CONFIGURATION_QUERY = /\b(?:configure|configuration|set\s*up|procedure|instructions?|how\s+(?:do|can|to))\b/i;
 const CONCEPTUAL_QUERY = /\b(?:what\s+(?:is|are)|overview|product|solution|capabilities|benefits)\b/i;
 const MARKETING_TOPIC =
 	/\b(?:client[- ]side defense|distributed cloud|web (?:app|application) and api protection|multi[- ]cloud networking|dns load balancer|bot defense|api security|app connect|appstack|content delivery network|cdn|mobile app shield|synthetic monitoring|web app scanning)\b/i;
 
 function preferredDocumentationSource(query: string): DocumentationSource | undefined {
+	if (COMMUNITY_QUERY.test(query)) return "community-f5-com";
 	if (SUPPORT_QUERY.test(query)) return "my-f5-com";
 	if (CONFIGURATION_QUERY.test(query)) return "docs-cloud-f5-com";
 	if (CONCEPTUAL_QUERY.test(query) || MARKETING_TOPIC.test(query)) return "www-f5-com";
@@ -437,6 +444,7 @@ export function createEmbeddedDocumentationRepository(
 			fingerprint: assets.fingerprint,
 			documentCount: assets.documentCount,
 			assetCount: assets.assetCount,
+			bundledAssetCount: assets.bundledAssetCount ?? assets.assetCount,
 		},
 		prime: async () => {
 			await state();
@@ -496,7 +504,10 @@ export function createEmbeddedDocumentationRepository(
 				markdown = passage.markdown;
 			}
 			return {
-				markdown,
+				markdown: markdown.replace(
+					/!\[([^\]]*)\]\(assets\/[a-f0-9]{64}\.(?:gif|jpe?g|png|svg|webp)\)/g,
+					(_match, alt: string) => `[${alt || "Image"} on source page](${row.original_url})`,
+				),
 				title: row.title,
 				originalUrl: row.original_url,
 				lifecycle: row.lifecycle,
@@ -520,6 +531,13 @@ export function createEmbeddedDocumentationRepository(
 				sha256: row.sha256,
 				sizeBytes: row.size_bytes,
 			};
+			if (!current.archivePath || !assets.archivePath) {
+				const document = current.database
+					.query("SELECT original_url FROM documentation_documents WHERE source = ? AND stable_path = ?")
+					.get(source, stablePath) as { original_url: string } | null;
+				if (!document) throw new Error("documentation media has no verified source page");
+				return { publicUrl: document.original_url, mimeType: asset.mimeType };
+			}
 			const extracted = await extractVerifiedDocumentationAsset(
 				current.archivePath,
 				asset,

@@ -852,7 +852,7 @@ export class AcpAgent implements Agent {
 	}
 
 	async #replaySessionHistory(record: ManagedSessionRecord): Promise<void> {
-		for (const message of record.session.sessionManager.buildSessionContext().messages as ReplayableMessage[]) {
+		for (const message of record.session.buildDisplaySessionContext().messages as ReplayableMessage[]) {
 			for (const notification of this.#messageToReplayNotifications(record.session.sessionId, message)) {
 				await this.#connection.sessionUpdate(notification);
 			}

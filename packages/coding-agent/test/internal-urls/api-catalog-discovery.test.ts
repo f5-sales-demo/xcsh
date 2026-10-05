@@ -56,7 +56,7 @@ const categories: Record<string, ApiCatalogCategory> = {
 };
 
 describe("API catalog discovery corpus", () => {
-	it("keeps the frozen retrieval corpus complete, split, and authoritative", async () => {
+	it("keeps the frozen retrieval corpus intact and records current retired destinations", async () => {
 		const fixture = await Bun.file(
 			path.join(import.meta.dir, "../../bench/fixtures/api-catalog-retrieval-v1.json"),
 		).json();
@@ -75,9 +75,14 @@ describe("API catalog discovery corpus", () => {
 			expect(queries.filter(query => query.class === kind)).toHaveLength(10);
 		}
 		expect(new Set(queries.map(query => query.id)).size).toBe(60);
-		for (const query of queries) {
-			for (const category of query.expectedCategories) expect(categories.has(category)).toBe(true);
-		}
+		const retired = [...new Set(queries.flatMap(query => query.expectedCategories))]
+			.filter(category => !categories.has(category))
+			.sort();
+		// Preserve the historical cases; v12 removed this exact category identity.
+		expect(retired).toEqual(["cloud-connects"]);
+		for (const query of queries)
+			for (const category of query.expectedCategories)
+				if (!retired.includes(category)) expect(categories.has(category)).toBe(true);
 	});
 
 	it("is byte-deterministic and carries authoritative destinations", () => {

@@ -564,7 +564,7 @@ export class CommandController {
 		const manager = this.ctx.sessionManager;
 		const sessionId = manager.getSessionId();
 		const resolveText = () => {
-			if (sub === "link") return extractLastLink(session.messages) ?? undefined;
+			if (sub === "link") return extractLastLink(session.displayMessages) ?? undefined;
 			if (sub === "cmd") {
 				for (const message of [...session.messages].reverse()) {
 					if (message.role !== "assistant") continue;
@@ -609,7 +609,7 @@ export class CommandController {
 			const sessionId = manager.getSessionId();
 			const current = () =>
 				this.ctx.session === session && this.ctx.sessionManager === manager && manager.getSessionId() === sessionId;
-			if (!extractLastLink(session.messages)) {
+			if (!extractLastLink(session.displayMessages)) {
 				this.ctx.showWarning(t("controller.copy.warnings.noLink"));
 				return;
 			}
@@ -618,7 +618,7 @@ export class CommandController {
 				identity: `session-link:${sessionId}`,
 				scope: `External browser navigation · session ${sessionId}`,
 				current,
-				resolveUrl: () => extractLastLink(session.messages) ?? undefined,
+				resolveUrl: () => extractLastLink(session.displayMessages) ?? undefined,
 				open: link => this.openHttpUrl(link),
 			});
 			if (outcome === "busy") this.ctx.showStatus("Another reviewed action is already open.");

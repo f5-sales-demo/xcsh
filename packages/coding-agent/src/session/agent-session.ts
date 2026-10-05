@@ -124,6 +124,11 @@ import {
 	runApiCatalogPreflight,
 } from "../internal-urls/api-catalog-preflight";
 import {
+	DocumentationCitationStream,
+	normalizeAssistantDocumentationCitations,
+	projectAssistantDocumentationCitations,
+} from "../internal-urls/public-citations";
+import {
 	disposeKernelSessionsByOwner,
 	executePython as executePythonCommand,
 	type PythonResult,
@@ -1164,6 +1169,95 @@ export class AgentSession {
 
 	// Track last assistant message for auto-compaction check
 	#lastAssistantMessage: AssistantMessage | undefined = undefined;
+	readonly #citationStreams = new Map<number, DocumentationCitationStream>();
+
+	#projectDisplayCitations(event: AgentEvent): AgentEvent {
+		const projectStreamMessage = (message: AssistantMessage): AssistantMessage =>
+			projectAssistantDocumentationCitations({
+				...message,
+				content: message.content.map((block, index) => {
+					const stream = this.#citationStreams.get(index);
+					return block.type === "text" && stream ? { ...block, text: stream.visible } : block;
+				}),
+			});
+		if (event.type === "message_start" && event.message.role === "assistant") {
+			this.#citationStreams.clear();
+			return { ...event, message: projectAssistantDocumentationCitations(event.message) };
+		}
+		if (event.type === "message_update" && event.message.role === "assistant") {
+			const update = event.assistantMessageEvent;
+			if (update.type === "text_start") {
+				this.#citationStreams.set(update.contentIndex, new DocumentationCitationStream());
+				return {
+					...event,
+					message: projectStreamMessage(event.message),
+					assistantMessageEvent: { ...update, partial: projectStreamMessage(update.partial) },
+				};
+			}
+			if (update.type === "text_delta") {
+				let stream = this.#citationStreams.get(update.contentIndex);
+				if (!stream) {
+					stream = new DocumentationCitationStream();
+					this.#citationStreams.set(update.contentIndex, stream);
+				}
+				const delta = stream.push(update.delta);
+				return {
+					...event,
+					message: projectStreamMessage(event.message),
+					assistantMessageEvent: { ...update, delta, partial: projectStreamMessage(update.partial) },
+				};
+			}
+			if (update.type === "text_end") {
+				this.#citationStreams.get(update.contentIndex)?.complete();
+				return {
+					...event,
+					message: projectStreamMessage(event.message),
+					assistantMessageEvent: {
+						...update,
+						content:
+							this.#citationStreams.get(update.contentIndex)?.visible ??
+							normalizeAssistantDocumentationCitations(update.content),
+						partial: projectStreamMessage(update.partial),
+					},
+				};
+			}
+			if (update.type === "done") {
+				return {
+					...event,
+					message: projectStreamMessage(event.message),
+					assistantMessageEvent: { ...update, message: projectAssistantDocumentationCitations(update.message) },
+				};
+			}
+			if (update.type === "error") {
+				return {
+					...event,
+					message: projectStreamMessage(event.message),
+					assistantMessageEvent: { ...update, error: projectAssistantDocumentationCitations(update.error) },
+				};
+			}
+			return {
+				...event,
+				message: projectStreamMessage(event.message),
+				assistantMessageEvent: { ...update, partial: projectStreamMessage(update.partial) },
+			};
+		}
+		if (event.type === "message_end" && event.message.role === "assistant") {
+			this.#citationStreams.clear();
+			return { ...event, message: projectAssistantDocumentationCitations(event.message) };
+		}
+		if (event.type === "assistant_checkpoint")
+			return { ...event, message: projectAssistantDocumentationCitations(event.message) };
+		if (event.type === "turn_end" && event.message.role === "assistant")
+			return { ...event, message: projectAssistantDocumentationCitations(event.message) };
+		if (event.type === "agent_end")
+			return {
+				...event,
+				messages: event.messages.map(message =>
+					message.role === "assistant" ? projectAssistantDocumentationCitations(message) : message,
+				),
+			};
+		return event;
+	}
 	// A terminal envelope is discarded, but the core still pairs its partial tool
 	// calls with aborted placeholders. Keep those placeholders out of session state.
 	readonly #discardedTerminalToolCallIds = new Set<string>();
@@ -1321,6 +1415,7 @@ export class AgentSession {
 			}
 		}
 
+		displayEvent = this.#projectDisplayCitations(displayEvent);
 		const turnSettlementListeners = await this.#emitSessionEvent(displayEvent);
 
 		// `agent_end` is the provider-neutral completion boundary. Settle only
@@ -3203,8 +3298,18 @@ export class AgentSession {
 		return this.agent.state.messages;
 	}
 
+	/** Render saved assistant evidence through the current verified public citation map. */
+	get displayMessages(): AgentMessage[] {
+		return this.messages.map(message =>
+			message.role === "assistant" ? projectAssistantDocumentationCitations(message) : message,
+		);
+	}
+
 	buildDisplaySessionContext(): SessionContext {
 		const context = deobfuscateSessionContext(this.sessionManager.buildSessionContext(), this.#obfuscator);
+		context.messages = context.messages.map(message =>
+			message.role === "assistant" ? projectAssistantDocumentationCitations(message) : message,
+		);
 		context.usedTokens = calculateUsedTokens(context.messages);
 		return context;
 	}
@@ -8114,7 +8219,9 @@ export class AgentSession {
 
 		if (!lastAssistant) return undefined;
 
-		return finalAnswerText(lastAssistant as AssistantMessage).trim() || undefined;
+		return (
+			finalAnswerText(projectAssistantDocumentationCitations(lastAssistant as AssistantMessage)).trim() || undefined
+		);
 	}
 
 	/**
@@ -8123,7 +8230,7 @@ export class AgentSession {
 	 */
 	formatSessionAsText(): string {
 		return formatSessionDumpText({
-			messages: this.messages,
+			messages: this.displayMessages,
 			systemPrompt: this.agent.state.systemPrompt,
 			model: this.agent.state.model,
 			thinkingLevel: this.#thinkingLevel,

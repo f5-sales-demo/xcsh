@@ -93,7 +93,7 @@ export function parseQmdSmokeOutput(output: string): void {
 	if (trace[9]?.outcome !== TOOLS_DISABLED_MESSAGE) {
 		throw new Error("QMD smoke trace omitted the tools-disabled explanation");
 	}
-	if (trace[10]?.source !== SOURCE || trace[10]?.outcome !== "image/png") {
+	if (trace[10]?.source !== SOURCE || trace[10]?.outcome !== "public-media-link") {
 		throw new Error("QMD smoke trace contains an unexpected SVG conversion result");
 	}
 	if (trace[11]?.outcome !== "ok") throw new Error("QMD smoke trace did not confirm SQLite startup");

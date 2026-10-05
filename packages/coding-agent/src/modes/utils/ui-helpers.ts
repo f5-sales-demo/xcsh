@@ -562,7 +562,7 @@ export class UiHelpers {
 		this.ctx.pendingPythonComponents = [];
 
 		// Get aligned messages and entries from session context
-		const context = this.ctx.sessionManager.buildSessionContext();
+		const context = this.ctx.session.buildDisplaySessionContext();
 		this.ctx.renderSessionContext(context, {
 			updateFooter: true,
 			populateHistory: true,
@@ -773,8 +773,9 @@ export class UiHelpers {
 	}
 
 	findLastAssistantMessage(): AssistantMessage | undefined {
-		for (let i = this.ctx.session.messages.length - 1; i >= 0; i--) {
-			const message = this.ctx.session.messages[i];
+		const messages = this.ctx.session.displayMessages;
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const message = messages[i];
 			if (message?.role === "assistant") {
 				return message as AssistantMessage;
 			}

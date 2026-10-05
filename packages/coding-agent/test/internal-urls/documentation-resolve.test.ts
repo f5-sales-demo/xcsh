@@ -181,7 +181,10 @@ describe("xcsh://documentation", () => {
 		const document = await router().resolve(
 			"xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
 		);
-		expect(document.content).toBe("# Client-Side Defense\n");
+		expect(document.content).toStartWith(
+			"Cite: https://www.f5.com/products/distributed-cloud-services/client-side-defense",
+		);
+		expect(document.content).toEndWith("# Client-Side Defense\n");
 	});
 
 	it("returns reviewed marketing image assets", async () => {
@@ -210,7 +213,8 @@ describe("xcsh://documentation", () => {
 		expect(result.content).toContain("Warning: this document is deprecated");
 		expect(result.content).not.toContain("Protect applications");
 		const exact = await router().resolve("xcsh://documentation/my-f5-com/K000000001/index.md");
-		expect(exact.content).toStartWith("> Warning: this document is deprecated.");
+		expect(exact.content).toStartWith("Cite: unavailable (missing-public-mapping");
+		expect(exact.content).toContain("> Warning: this document is deprecated.");
 	});
 
 	it("passes normalized metadata filters and rejects invalid or duplicate values", async () => {
@@ -236,7 +240,8 @@ describe("xcsh://documentation", () => {
 		const result = await router().resolve(
 			"xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/index.md",
 		);
-		expect(result.content).toBe(markdown);
+		expect(result.content).toEndWith(markdown);
+		expect(result.content).toStartWith("Cite: https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection");
 		expect(result.contentType).toBe("text/markdown");
 	});
 
@@ -244,7 +249,7 @@ describe("xcsh://documentation", () => {
 		const result = await router().resolve(
 			"xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/index.md#protect-applications",
 		);
-		expect(result.content).toBe("# Protect applications\n\nConfigure a load balancer.\n");
+		expect(result.content).toEndWith("# Protect applications\n\nConfigure a load balancer.\n");
 		expect(result.sourcePath).toEndWith("index.md#protect-applications");
 	});
 

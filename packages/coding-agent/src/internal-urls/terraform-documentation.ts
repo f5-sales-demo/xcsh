@@ -1,13 +1,14 @@
 import { Database } from "bun:sqlite";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
-import { gunzipSync } from "node:zlib";
+import { createGunzip, gunzipSync } from "node:zlib";
 import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
+import { citationLine, publicCitationForInternalUri } from "./public-citations";
 import { lookupTerraformAlias } from "./terraform-alias-lookup";
 import { terraformBranchChoices, terraformLeadingRoleHint, terraformRoleChoices } from "./terraform-branch-choices";
 import { verifiedChoiceEdges } from "./terraform-choice-edges";
@@ -251,6 +252,16 @@ export async function verifyTerraformSnapshot(root: string, inputPin: TerraformP
 	const pin = parseTerraformPin(inputPin);
 	const files = new Map<string, Buffer>();
 	for (const name of Object.keys(pin.assets)) {
+		if (name === "terraform-docs.tar.gz") {
+			const archivePath = path.join(root, name);
+			if ((await stat(archivePath)).size !== pin.assets[name]!.size_bytes)
+				throw new Error(`Terraform asset verification failed: ${name}`);
+			const hash = createHash("sha256");
+			for await (const chunk of createReadStream(archivePath)) hash.update(chunk);
+			if (hash.digest("hex") !== pin.assets[name]!.sha256)
+				throw new Error(`Terraform asset verification failed: ${name}`);
+			continue;
+		}
 		const data = await readFile(path.join(root, name));
 		const expected = pin.assets[name]!;
 		if (data.length !== expected.size_bytes || terraformHash(data) !== expected.sha256)
@@ -399,11 +410,14 @@ export async function verifyTerraformSnapshot(root: string, inputPin: TerraformP
 			next();
 		});
 	});
-	const archive = gunzipSync(files.get("terraform-docs.tar.gz")!, { maxOutputLength: 1024 * 1024 * 1024 });
+	const source = createReadStream(path.join(root, "terraform-docs.tar.gz"));
+	const gunzip = createGunzip();
 	await new Promise<void>((resolve, reject) => {
 		extract.on("finish", resolve);
 		extract.on("error", reject);
-		Readable.from(archive).pipe(extract);
+		source.on("error", reject);
+		gunzip.on("error", reject);
+		source.pipe(gunzip).pipe(extract);
 	});
 	if (failure) throw failure;
 	if (expected.size || documents.length !== pin.document_count) throw new Error("Missing Terraform archive documents");
@@ -1625,6 +1639,10 @@ export class TerraformDocumentationRepository {
 		const provenance = `Provider: ${this.assets.pin.provider_version}\nSnapshot: ${this.assets.pin.release_tag}\nCommit: ${this.assets.pin.source_commit}\nReceipt SHA-256: ${this.assets.pin.receipt_sha256}`;
 		const uri = (p: string, a = "", v = "") =>
 			`xcsh://terraform-documentation/${p}${v ? `?view=${v}` : ""}${a ? `#${encodeURIComponent(a)}` : ""}`;
+		const readAndCite = (p: string, a = "", v = "") => {
+			const read = uri(p, a, v);
+			return `Read: ${read}\n${citationLine(publicCitationForInternalUri(read) ?? { readUri: read, reason: "missing-public-mapping" }, false)}`;
+		};
 		const prerequisites = (p: string, a: string) =>
 			(
 				db
@@ -1651,7 +1669,7 @@ export class TerraformDocumentationRepository {
 							refine.searchParams.set("node", row.id);
 							refine.searchParams.set("search", exactAlias);
 							for (const filter of filters) refine.searchParams.set(filter.key, filter.value);
-							return `Read: ${uri(row.path, row.anchor, "context")}\nRefine: ${refine.href}`;
+							return `${readAndCite(row.path, row.anchor, "context")}\nRefine: ${refine.href}`;
 						}),
 						url,
 						choiceAfter,
@@ -1679,7 +1697,7 @@ export class TerraformDocumentationRepository {
 					.slice(0, limit)
 					.map(
 						row =>
-							`Read: ${uri(row.path, row.anchor, "context")}\nVerified enum field: ${row.schema_path}\n${prerequisites(row.path, row.anchor)}`,
+							`${readAndCite(row.path, row.anchor, "context")}\nVerified enum field: ${row.schema_path}\n${prerequisites(row.path, row.anchor)}`,
 					),
 				4096,
 				"If destinations are omitted by count or byte budget, narrow node/facets.",
@@ -1703,7 +1721,7 @@ export class TerraformDocumentationRepository {
 				.slice(0, limit)
 				.map(
 					row =>
-						`Read: ${uri(row.path, row.anchor, "context")}\nVerified reference member: ${row.schema_path}\n${prerequisites(row.path, row.anchor)}`,
+						`${readAndCite(row.path, row.anchor, "context")}\nVerified reference member: ${row.schema_path}\n${prerequisites(row.path, row.anchor)}`,
 				);
 			const content = boundedTerraformResponse(
 				`${provenance}\n\nReference scope: ${referenceScope}\n${rows.length ? "Verified reference members; compare exact sections before selecting a destination." : "No verified reference members in caller scope. Missing evidence does not establish unsupported input."}`,
@@ -1765,7 +1783,7 @@ export class TerraformDocumentationRepository {
 					)
 					.all(documentPath) as Array<{ anchor: string; heading: string }>;
 				content = boundedTerraformResponse(
-					`${provenance}\n\n${m.summary}\nRead: ${uri(documentPath, anchor, "context")}\nFull: ${uri(documentPath, anchor, "full")}\n${prerequisites(documentPath, anchor || "section")}\n${metadata.role === "example" ? terraformExampleContext(db, documentPath) : ""}`,
+					`${provenance}\n\n${m.summary}\n${readAndCite(documentPath, anchor, "context")}\nFull: ${uri(documentPath, anchor, "full")}\n${prerequisites(documentPath, anchor || "section")}\n${metadata.role === "example" ? terraformExampleContext(db, documentPath) : ""}`,
 					[
 						...(ownershipHint(anchor) ? [ownershipHint(anchor)] : []),
 						...(ownershipScope(anchor) ? [ownershipScope(anchor)] : []),
@@ -1857,6 +1875,7 @@ export class TerraformDocumentationRepository {
 					.all(documentPath) as Array<{ heading: string; anchor: string }>;
 				content = `${provenance}\nDocument: ${documentPath}\n${this.#trace(db, documentPath)}\nProperty sections:\n${sections.map(p => `- [${p.heading}](${uri(documentPath, p.anchor)})`).join("\n")}\nPinned source: https://github.com/${this.assets.pin.source_repository}/blob/${this.assets.pin.source_commit}/${documentPath}\n\n${rewriteTerraformLinks(anchor ? terraformPassages(splitMarkdown(row.markdown).body).find(p => p.anchor === anchor)!.markdown : row.markdown, documentPath)}`;
 			}
+			content = `${citationLine(publicCitationForInternalUri(url.href) ?? { readUri: url.href, reason: "missing-public-mapping" })}\n\n${content}`;
 		} else if (facet) {
 			const cursor = url.searchParams.get("cursor") ?? "";
 			if (cursor && (!/^[A-Za-z0-9_.-]+$/.test(cursor) || Buffer.byteLength(cursor) > 256))
@@ -1928,7 +1947,7 @@ export class TerraformDocumentationRepository {
 						.slice(0, limit)
 						.map(
 							row =>
-								`Read: ${uri(row.path, row.anchor, "context")}\n${row.description}\n${prerequisites(row.path, row.anchor)}`,
+								`${readAndCite(row.path, row.anchor, "context")}\n${row.description}\n${prerequisites(row.path, row.anchor)}`,
 						),
 					4096,
 				);
@@ -2192,7 +2211,7 @@ export class TerraformDocumentationRepository {
 						`${provenance}\n\n# Terraform search: ${search}\n${decision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : shown.length ? "Narrowing choices; compare these candidates with the full request. Clarify only an unspecified role or branch." : "No results."}\nReason: ${decision.reason}${decision.kind === "choices" && !role && provider ? `\n${terraformLeadingRoleHint(shown)}` : ""}\nScores are ranking values, not probabilities.`,
 						shown.map(
 							row =>
-								`## ${row.provider_type}: xcsh_${row.provider_name}\nSchema path: ${row.schema_path}${row.flags?.length ? `\nDocumented flags: ${row.flags.join(", ")}` : ""}\nScore: ${Number(row.score.toFixed(12))}\nRead: ${uri(row.path, row.anchor, "context")}\n${prerequisites(row.path, row.anchor)}\n${row.description}`,
+								`## ${row.provider_type}: xcsh_${row.provider_name}\nSchema path: ${row.schema_path}${row.flags?.length ? `\nDocumented flags: ${row.flags.join(", ")}` : ""}\nScore: ${Number(row.score.toFixed(12))}\n${readAndCite(row.path, row.anchor, "context")}\n${prerequisites(row.path, row.anchor)}\n${row.description}`,
 						),
 						4096,
 						`Refine: ${continuation.href}`,
@@ -2836,7 +2855,7 @@ export class TerraformDocumentationRepository {
 				prefix,
 				rows.map(r => {
 					const m = JSON.parse(r.metadata) as TerraformMetadata;
-					return `## ${m.provider_type}: xcsh_${m.provider_name} — ${m.role}\nSchema path: ${m.schema_path.join(".") || "root"}\nScore: ${Number(r.score.toFixed(12))}\nRead: ${uri(r.path, r.anchor, "context")}\n${prerequisites(r.path, r.anchor)}\n${rewriteTerraformLinks(r.markdown, r.path).replace(/\s+/g, " ").slice(0, 100)}`;
+					return `## ${m.provider_type}: xcsh_${m.provider_name} — ${m.role}\nSchema path: ${m.schema_path.join(".") || "root"}\nScore: ${Number(r.score.toFixed(12))}\n${readAndCite(r.path, r.anchor, "context")}\n${prerequisites(r.path, r.anchor)}\n${rewriteTerraformLinks(r.markdown, r.path).replace(/\s+/g, " ").slice(0, 100)}`;
 				}),
 				4096,
 				`Refine: ${continuation.href}`,
@@ -2866,7 +2885,7 @@ export class TerraformDocumentationRepository {
 			const next = new URL(url.href);
 			if (shown.length) next.searchParams.set("cursor", shown.at(-1)!.path);
 			content = boundedTerraformResponse(
-				`${provenance}\n\n${selected.summary}\nRead: ${uri(selected.path, "", "hint")}`,
+				`${provenance}\n\n${selected.summary}\n${readAndCite(selected.path, "", "hint")}`,
 				shown.map(
 					r =>
 						`- ${r.summary}: xcsh://terraform-documentation/?node=${encodeURIComponent(r.id)}\n  Hint: ${uri(r.path, "", "hint")}`,

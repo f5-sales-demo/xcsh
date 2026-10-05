@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "e2cba90802368ac042143ee879f314b29716b5ce",
-  "fingerprint": "38ab645c135ffde304366a4a2bb30377909ca5153f2be486ebdccc879759facb",
+  "revision": "19332ab39b68ad7da1e3fc385dd964d1a67a2495",
+  "fingerprint": "9255ba54d387de248ff108835f0d6eb81f8074df7b8069d8bbe53b80c43571dd",
   "counts": {
     "total": 238,
     "components": 96,
@@ -356,9 +356,9 @@
         "packages/coding-agent/test/herdr-reporter.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
+        "packages/coding-agent/test/internal-urls/public-citations.test.ts",
         "packages/coding-agent/test/internal-urls/terraform-documentation-snapshot.test.ts",
-        "packages/coding-agent/test/internal-urls/terraform-documentation.test.ts",
-        "packages/coding-agent/test/internal-urls/terraform-retrieval-contract.test.ts"
+        "packages/coding-agent/test/internal-urls/terraform-documentation.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/normalize.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -964,7 +964,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "9907591a7378af4da7e4532f77d48ff0aa90c5b0b58b24f846d72593f7776b06",
+      "sha256": "496e756ce9005baf6780e0f8641f760a39be400de866a0607691bedd1705eda7",
       "exports": [
         "AcpAgent"
       ],
@@ -3112,7 +3112,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "047e590371c0c7634914b67160f067be64cc529c982ecf96ca9b8d2547ca997d",
+      "sha256": "bee97f575436adb8cfddc108ca341a11f2b5c4a4686b3e3eaf0e49db8c19cbe0",
       "exports": [
         "CommandController",
         "renderProviderSection",
@@ -3700,7 +3700,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "3b7ebf50238f14a34e93ad9b378f652e43f1fcca21bf080355e3d2d394b8204e",
+      "sha256": "d7846ae4bc7f53120eb8a6e48d1af6c7026fd95fce8f6a5a8b22d542c9aa07a3",
       "exports": [
         "PrintModeOptions",
         "buildJsonAgentEventLine",
@@ -3772,7 +3772,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "dfa00a5a2a350f055b530b2b02950fa42f512760773dbe280522fd276a670008",
+      "sha256": "0f676f963a2d6cae4c700c3ae7408fc25897f9f25e7035a824077da52850750f",
       "exports": [
         "PendingExtensionRequest",
         "requestRpcEditor",
@@ -4277,7 +4277,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "6055993ce7b97f6b12c002efbb4f55ce49373c631e32b73ffdc9c96bebce7e84",
+      "sha256": "9da0a3f900b70b2485c0204e3292e87f3eeabdc0b22e4be7ea9a3987d91b0a4e",
       "exports": [
         "UiHelpers"
       ],

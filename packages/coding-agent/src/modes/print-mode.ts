@@ -217,8 +217,7 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 		await session.prompt(message);
 	}
 
-	const state = session.state;
-	const lastMessage = state.messages[state.messages.length - 1];
+	const lastMessage = session.displayMessages.at(-1);
 	const assistantMsg = lastMessage?.role === "assistant" ? (lastMessage as AssistantMessage) : undefined;
 	const failed = assistantMsg?.stopReason === "error" || assistantMsg?.stopReason === "aborted";
 

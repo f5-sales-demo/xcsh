@@ -13,7 +13,13 @@ import {
 } from "../src/internal-urls/api-catalog-discovery";
 import { API_CATALOG_DATA, API_CATALOG_INDEX } from "../src/internal-urls/api-catalog-index.generated";
 
-const sourceSha = "04e4dbd8245c527a88f1a8f0bda547aef9ca81fb";
+const specPin = JSON.parse(await readFile(path.join(import.meta.dir, "../../../tools/spec-release.json"), "utf8")) as {
+	version: string;
+	target_commit: string;
+};
+if (specPin.version !== API_CATALOG_INDEX.version || !/^[a-f0-9]{40}$/.test(specPin.target_commit))
+	throw new Error("API catalog discovery source disagrees with reviewed release pin");
+const sourceSha = specPin.target_commit;
 const qmdVersion = "2.8.3";
 const outputPath = path.join(import.meta.dir, "../src/internal-urls/api-catalog-qmd-index.generated.ts");
 

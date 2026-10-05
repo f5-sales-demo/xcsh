@@ -7,9 +7,10 @@ import {
 	type DocumentationRelatedDocument,
 	type DocumentationTaskType,
 } from "./documentation-metadata";
+import { citationLine, publicCitationForInternalUri } from "./public-citations";
 import type { InternalResource, InternalUrl } from "./types";
 
-export const DOCUMENTATION_SOURCES = ["docs-cloud-f5-com", "my-f5-com", "www-f5-com"] as const;
+export const DOCUMENTATION_SOURCES = ["community-f5-com", "docs-cloud-f5-com", "my-f5-com", "www-f5-com"] as const;
 export type DocumentationSource = (typeof DOCUMENTATION_SOURCES)[number];
 
 export interface DocumentationProvenance {
@@ -20,6 +21,7 @@ export interface DocumentationProvenance {
 	readonly fingerprint: string;
 	readonly documentCount: number;
 	readonly assetCount: number;
+	readonly bundledAssetCount?: number;
 }
 
 export interface DocumentationSearchResult {
@@ -59,10 +61,15 @@ export interface DocumentationSearchFilters {
 	readonly lifecycle?: DocumentationLifecycle;
 }
 
-export interface DocumentationAsset {
-	readonly data: string;
-	readonly mimeType: "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/svg+xml";
-}
+export type DocumentationAsset =
+	| {
+			readonly data: string;
+			readonly mimeType: "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/svg+xml";
+	  }
+	| {
+			readonly publicUrl: string;
+			readonly mimeType: "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/svg+xml";
+	  };
 
 export interface DocumentationRepository {
 	readonly provenance: DocumentationProvenance;
@@ -190,7 +197,7 @@ function inventory(repository: DocumentationRepository): string {
 		`Archive SHA-256: \`${p.archiveSha256}\``,
 		`Index SHA-256: \`${p.indexSha256}\``,
 		`Index fingerprint: \`${p.fingerprint}\``,
-		`${p.documentCount} documents; ${p.assetCount} assets.`,
+		`${p.documentCount} documents; ${p.assetCount} source media assets; ${p.bundledAssetCount ?? p.assetCount} bundled media assets.`,
 		"",
 		"Sources:",
 		...DOCUMENTATION_SOURCES.map(source => `- \`${source}\``),
@@ -208,6 +215,7 @@ function renderSearch(
 		`# Offline documentation search: ${query}`,
 		"",
 		`Snapshot: \`${repository.provenance.releaseTag}\``,
+		`Source archive SHA-256: \`${repository.provenance.archiveSha256}\``,
 		"",
 	];
 	for (const result of results) {
@@ -228,6 +236,7 @@ function renderSearch(
 			`- Aliases: ${result.aliases?.join(", ") || "none"}`,
 			`- Score: ${result.score}`,
 			`- Read: \`${followUp}\``,
+			`- ${citationLine(publicCitationForInternalUri(followUp) ?? { readUri: followUp, reason: "missing-public-mapping" }, false)}`,
 			"",
 			snippet,
 			"",
@@ -285,7 +294,7 @@ export function createDocumentationResolver(repository: DocumentationRepository)
 						: `> Warning: this document is ${document.lifecycle}.${document.replacementUrl ? ` Replacement: ${document.replacementUrl}` : ""}\n\n`;
 				return textResource(
 					url,
-					`${warning}${document.markdown}`,
+					`${citationLine(publicCitationForInternalUri(url.href) ?? { readUri: url.href, reason: "missing-public-mapping" })}\n\n${warning}${document.markdown}`,
 					`xcsh://documentation/${source}/${stablePath}/index.md${anchor ? `#${anchor}` : ""}`,
 				);
 			}
@@ -295,6 +304,13 @@ export function createDocumentationResolver(repository: DocumentationRepository)
 				const filename = rest.at(-1)!;
 				const asset = await repository.readAsset(source, stablePath, filename);
 				if (!asset) throw new Error(`Documentation asset not found: ${source}/${stablePath}/assets/${filename}`);
+				if ("publicUrl" in asset) {
+					return textResource(
+						url,
+						`# Source image\n\nThe verified source page contains this image: ${asset.publicUrl}\n\nMedia bytes are not bundled.`,
+						`xcsh://documentation/${source}/${stablePath}/assets/${filename}`,
+					);
+				}
 				return {
 					url: url.href,
 					content: asset.data,

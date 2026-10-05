@@ -10,6 +10,8 @@ import type {
 	OpenAPISpec,
 } from "./api-spec-types";
 import { formatMapConstraints, type MapConstraints } from "./map-constraints";
+import { PUBLIC_CITATION_SOURCES } from "./public-citation-destinations.generated";
+import { citationLine, publicCitationForInternalUri } from "./public-citations";
 import type { InternalResource, InternalUrl } from "./types";
 
 const SCHEMA_RENDER_MAX_DEPTH = 3;
@@ -110,7 +112,14 @@ export function createApiSpecResolver(
 			}
 
 			const domain = entry.domain;
-			const withNote = (content: string): string => (resolutionNote ? `${resolutionNote}\n\n${content}` : content);
+			const cite = citationLine(
+				publicCitationForInternalUri(`xcsh://api-spec/${domain}`) ?? {
+					readUri: `xcsh://api-spec/${domain}`,
+					reason: "missing-public-mapping",
+				},
+			);
+			const withNote = (content: string): string =>
+				`${resolutionNote ? `${resolutionNote}\n\n` : ""}${cite}\n\n${content}`;
 
 			try {
 				const pathFilter = url.searchParams.get("path");
@@ -146,11 +155,11 @@ export function createApiSpecResolver(
 
 				if (pathFilter) {
 					const spec = lookup(domain);
-					return makeResource(url, renderPathSpec(domain, pathFilter, spec));
+					return makeResource(url, withNote(renderPathSpec(domain, pathFilter, spec)));
 				}
 
 				const spec = lookup(domain);
-				return makeResource(url, renderDomainDetail(domain, entry, spec));
+				return makeResource(url, withNote(renderDomainDetail(domain, entry, spec)));
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);
 				return makeResource(url, `# Error loading ${domain}\n\n${message}\n`);
@@ -293,16 +302,22 @@ function renderDomainIndex(index: ApiSpecIndex): string {
 		const tier = d.requiresTier ?? "";
 		const hasCritical = d.resources.some(r => criticalSet.has(r.name));
 		const desc = hasCritical ? `${d.descriptionShort} *` : d.descriptionShort;
-		return `| ${icon} | ${d.domain} | ${d.category} | ${d.resources.length} | ${d.pathCount} | ${tier} | ${desc} |`;
+		const read = `xcsh://api-spec/${d.domain}`;
+		const cite = citationLine(
+			publicCitationForInternalUri(read) ?? { readUri: read, reason: "missing-public-mapping" },
+			false,
+		);
+		return `| ${icon} | ${d.domain} | ${d.category} | ${d.resources.length} | ${d.pathCount} | ${tier} | ${desc} | \`${read}\` | ${cite} |`;
 	});
 
 	const lines = [
 		`# F5 XC API Specifications (v${index.version})`,
 		"",
+		`Source archive SHA-256: ${PUBLIC_CITATION_SOURCES.api.digest}`,
 		`${index.domains.length} domains. Read \`xcsh://api-spec/{domain}\` for resource details.`,
 		"",
-		"| Icon | Domain | Category | Resources | Paths | Tier | Description |",
-		"|------|--------|----------|-----------|-------|------|-------------|",
+		"| Icon | Domain | Category | Resources | Paths | Tier | Description | Read | Cite |",
+		"|------|--------|----------|-----------|-------|------|-------------|------|------|",
 		...rows,
 		"",
 	];
