@@ -269,10 +269,12 @@ export function propertyRequestsRootField(text: string): boolean {
 	);
 }
 export function propertyBreadcrumbText(text: string): string {
-	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*>\s*)+[a-z][a-z0-9_]*\b/gi, value => value.replace(/\s*>\s*/g, "."));
+	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi, value =>
+		value.replace(/\s*[>→]\s*/g, "."),
+	);
 }
 export function propertyWithoutBreadcrumbs(text: string): string {
-	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*>\s*)+[a-z][a-z0-9_]*\b/gi, " ");
+	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi, " ");
 }
 function singleSchemaScopeMentions(text: string) {
 	if (!/\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`[a-z][a-z0-9_]*`/i.test(text)) return [];
@@ -496,7 +498,7 @@ export function propertyValueLookup(text: string): string | undefined {
 export function propertyRequestedText(text: string): string | undefined {
 	const quotedLookup = [
 		...text.matchAll(
-			/\b(?:understand|explain(?:\s+the\s+(?:type|rules?|restrictions?|constraints?|contract)(?:\s+and\s+(?:type|rules?|restrictions?|constraints?))?\s+of)?|check|rules?\s+apply\s+to|contract\s+for)\s+`([a-z][a-z0-9_]*)`/gi,
+			/\b(?:what\s+does|verify|reference\s+explains|type\s+and\s+constraints\s+of|field\s+rules\s+for|understand|explain(?:\s+the\s+(?:type|rules?|restrictions?|constraints?|contract)(?:\s+and\s+(?:type|rules?|restrictions?|constraints?))?\s+of)?|check|rules?\s+apply\s+to|contract\s+for)\s+`([a-z][a-z0-9_]*)`/gi,
 		),
 	];
 	if (

@@ -61,3 +61,19 @@ test("quoted field in a contract lookup is the requested value", () => {
 	expect(propertyRequestedText("Please check `url` against the docs.")).toBe("url");
 	expect(propertyRequestedText("Not explain `name`; find namespace.")).not.toBe("name");
 });
+
+test("arrow paths preserve literal ordered schema scope", () => {
+	expect(propertyExplicitSchemaPaths("at items → object → spec → cpu, what does cores accept?")).toEqual([
+		"items.object.spec.cpu",
+	]);
+	expect(propertyExplicitSchemaPaths("not at items → object → spec → cpu, find name")).toEqual([]);
+	expect(propertyExplicitSchemaPaths("under first → child or second → child")).toEqual([]);
+});
+test("quoted contract verbs identify field rather than prose", () => {
+	expect(propertyRequestedText("What does `cores` accept?")).toBe("cores");
+	expect(propertyRequestedText("Which Terraform reference explains `store_provider` for xcsh_fixture?")).toBe(
+		"store_provider",
+	);
+	expect(propertyRequestedText("Find the field rules for `status`.")).toBe("status");
+	expect(propertyRequestedText("Verify `addr` against its reference.")).toBe("addr");
+});

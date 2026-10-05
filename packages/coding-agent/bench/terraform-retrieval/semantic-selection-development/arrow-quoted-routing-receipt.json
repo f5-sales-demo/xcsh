@@ -1,0 +1,23 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": "00130cd6362ab2b5fd46a3a71aa3f0fcb94d943611fec2e13ac8eccb0082147a",
+  "v9": {
+    "correct": 104,
+    "total": 140,
+    "top5": 125,
+    "baseline_correct": 72,
+    "answerable_regressions": []
+  },
+  "v8": {
+    "correct": 121,
+    "total": 140,
+    "top5": 138
+  },
+  "change": "Arrow-separated literal paths preserve ordered schema scope; quoted contract verbs preserve exact requested fields.",
+  "limitations": [
+    "Exposed regression only; gate unmet.",
+    "Final installed verification remains required."
+  ]
+}
