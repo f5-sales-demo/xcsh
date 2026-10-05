@@ -8,6 +8,7 @@ import {
 	propertyExcludedSchemaIdentifiers,
 	propertyExplicitSchemaPaths,
 	propertyInvalidExcludedScope,
+	propertyOrderedNestingPath,
 	propertyQueryTerms,
 	propertyRequestedText,
 	propertyRequestedType,
@@ -298,7 +299,8 @@ export function searchPropertyIndex(
 		clauses.push("instr('.' || schema_path || '.',?)=0");
 		args.push(`.${identifier}.`);
 	}
-	for (const path of propertyExplicitSchemaPaths(query)) {
+	const orderedNesting = propertyOrderedNestingPath(query);
+	for (const path of [...propertyExplicitSchemaPaths(query), ...(orderedNesting ? [orderedNesting] : [])]) {
 		clauses.push("instr('.' || schema_path || '.',?)>0");
 		args.push(`.${path}.`);
 	}

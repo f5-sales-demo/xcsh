@@ -269,6 +269,15 @@ export function propertyRequestsRootField(text: string): boolean {
 		text,
 	);
 }
+export function propertyOrderedNestingPath(text: string): string | undefined {
+	const clauses = text.toLowerCase().split(/,\s*within\s+/);
+	if (clauses.length < 3) return undefined;
+	const segments = clauses.slice(1).map(clause => clause.split(/[.!?;,]|\s+(?:against|on|in)\s+/)[0]!.trim());
+	if (segments.some(segment => !/^([a-z][a-z0-9_]*)(?: +[a-z][a-z0-9_]*){0,3}$/.test(segment))) return undefined;
+	if (/\b(?:not|no|without|rather than|instead of|outside|excluding|either|versus|compare)\b/i.test(clauses[0]!))
+		return undefined;
+	return segments.map(segment => segment.replace(/ +/g, "_")).join(".");
+}
 export function propertyBreadcrumbText(text: string): string {
 	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi, value =>
 		value.replace(/\s*[>→]\s*/g, "."),
@@ -342,7 +351,10 @@ export function propertyExplicitSchemaPaths(text: string): string[] {
 	return !match.negative && !["or", "and"].includes(match.qualifier) ? [match.path] : [];
 }
 export function propertyMatchesExplicitPaths(text: string, candidate: PropertyCandidate): boolean {
-	return propertyExplicitSchemaPaths(text).every(path => `.${candidate.schema_path}.`.includes(`.${path}.`));
+	const ordered = propertyOrderedNestingPath(text);
+	return [...propertyExplicitSchemaPaths(text), ...(ordered ? [ordered] : [])].every(path =>
+		`.${candidate.schema_path}.`.includes(`.${path}.`),
+	);
 }
 export function propertyScopeText(text: string): string {
 	return text

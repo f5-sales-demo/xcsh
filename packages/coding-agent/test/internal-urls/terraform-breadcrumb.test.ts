@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import {
 	propertyBreadcrumbText,
 	propertyExplicitSchemaPaths,
+	propertyMatchesExplicitPaths,
+	propertyOrderedNestingPath,
 	propertyQueryTerms,
 	propertyRequestedText,
 } from "../../src/internal-urls/terraform-property-ranking";
@@ -92,4 +94,32 @@ test("dual-family prose uses documented dual-stack vocabulary", () => {
 	expect(propertyQueryTerms("dual-family next hop")).toContain("dual");
 	expect(propertyQueryTerms("both address families")).toContain("stack");
 	expect(propertyQueryTerms("`dual-family` literal")).not.toContain("stack");
+});
+
+test("repeated within clauses preserve complete contiguous nesting order", () => {
+	expect(
+		propertyOrderedNestingPath(
+			"endpoint policy content, within protected endpoints, within protected endpoints, within cookie or, within values against its reference",
+		),
+	).toBe("protected_endpoints.protected_endpoints.cookie_or.values");
+	expect(propertyOrderedNestingPath("not endpoint policy content, within cookie or, within values")).toBeUndefined();
+	expect(propertyOrderedNestingPath("inside a cookie, within values")).toBeUndefined();
+	expect(propertyOrderedNestingPath("root, within cookie or or cookie and, within values")).toBeUndefined();
+});
+
+test("ordered nesting requires contiguous repeated segments", () => {
+	const row = { schema_path: "root.protected_endpoints.protected_endpoints.cookie_or.values" } as Parameters<
+		typeof propertyMatchesExplicitPaths
+	>[1];
+	const q = "root, within protected endpoints, within protected endpoints, within cookie or, within values";
+	expect(propertyMatchesExplicitPaths(q, row)).toBe(true);
+	expect(propertyMatchesExplicitPaths(q, { ...row, schema_path: "root.protected_endpoints.cookie_or.values" })).toBe(
+		false,
+	);
+	expect(
+		propertyMatchesExplicitPaths(q, {
+			...row,
+			schema_path: "root.protected_endpoints.protected_endpoints.cookie_and.values",
+		}),
+	).toBe(false);
 });
