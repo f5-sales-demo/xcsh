@@ -1,0 +1,78 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "tf1240-068",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 55772.36600697506,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "Up to **100 session identifiers per request** in the root `ids` field of `xcsh_access_active_sessions_terminate`.\n\nWhen supplied, `ids` must contain **1\u2013100 strings**, enforced by the provider\u2019s `SizeBetween(1, 100)` validator.\n\nSource: [ids reference, provider v12.4.0](xcsh://terraform-documentation/documentation/actions/access_active_sessions_terminate/properties/index.md?view=context#schema-ids).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 14519,
+        "max_bytes": 2904,
+        "measured_results": 7,
+        "violations": []
+      },
+      "trace_sha256": "ff41b160a77acb8e7503c6ed50f21fd94c0bfc2916ca3656477fabfe6e167308",
+      "passed": true
+    },
+    {
+      "id": "tf1240-075",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 45206.997891073115,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "In the `xcsh_artifact_registry_token` ephemeral resource, root-level `expiration_time` reports the token\u2019s expiration time as a **computed, sensitive string**. It is returned by the provider, not configured by you. The reference does not specify a timestamp format.\n\nSource: [expiration_time, provider v12.4.0](xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/properties/index.md?view=context#schema-expiration_time).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 2555,
+        "max_bytes": 1524,
+        "measured_results": 2,
+        "violations": []
+      },
+      "trace_sha256": "1c26d9d7f70e6be82030006db9ed355fc651b1725a45653475fdc792e64746c9",
+      "passed": true
+    },
+    {
+      "id": "tf1240-077",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 41745.652687968686,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "For the ephemeral `xcsh_artifact_registry_token`, root-level `namespace` is a **required string** specifying the namespace used to scope the query.\n\nSource: [namespace documentation](xcsh://terraform-documentation/documentation/ephemeral-resources/artifact_registry_token/properties/index.md?view=context#schema-namespace), provider v12.4.0.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 2550,
+        "max_bytes": 1552,
+        "measured_results": 2,
+        "violations": []
+      },
+      "trace_sha256": "9e8c62c73bb3c761b58f8cece2c5dfaf0c75755c4fc910d9b02963148aa0f642",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "cd85797375050aecf0762f4b8f3de524990caf6d",
+    "binary_sha256": "65d33e0c1bc58973e23888a8aad7df054c14a21c1191eb9ee4e5522c1d86ca9b",
+    "binary_bytes": 621934048,
+    "provider_version": "v12.4.0"
+  },
+  "limitations": [
+    "Three exposed development cases; no broad qualification."
+  ]
+}
