@@ -28,6 +28,7 @@ from model_trace import (
     cites_provider_version,
     emitted_hcl,
     has_clarification_question,
+    has_false_live_apply_claim,
     hcl_code_blocks,
     missing_value_response_supported,
     required_read_coverage,
@@ -262,19 +263,7 @@ for case in cases:
             r for r in reads if r.startswith("xcsh://terraform-documentation/")
         ]
         clarification = has_clarification_question(text)
-        claim_text = re.sub(
-            r"not verified by (?:a )?live apply|not (?:live[- ]?)?apply evidence|not successfully applied",
-            "",
-            text,
-            flags=re.IGNORECASE,
-        )
-        false_live = bool(
-            re.search(
-                r"(?<!not )successfully applied|confirmed.*(?:your tenant|your account)|verified.*live apply",
-                claim_text,
-                re.IGNORECASE,
-            )
-        )
+        false_live = has_false_live_apply_claim(text)
         code_fences = hcl_code_blocks(text)
         if case["kind"] == "answerable":
             passed = (

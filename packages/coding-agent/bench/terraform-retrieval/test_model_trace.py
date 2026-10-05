@@ -8,6 +8,7 @@ from model_trace import (
     cites_provider_version,
     emitted_hcl,
     has_clarification_question,
+    has_false_live_apply_claim,
     hcl_code_blocks,
     missing_value_response_supported,
     required_read_coverage,
@@ -468,3 +469,24 @@ class ProviderVersionCitationTest(unittest.TestCase):
             self.assertFalse(cites_provider_version(text, "v12.4.0"))
         with self.assertRaises(ValueError):
             cites_provider_version("12.4.0", "latest")
+
+
+class LiveApplyClaimTest(unittest.TestCase):
+    """Separate sourced reference verification from live-apply assertions."""
+
+    def test_sentence_local_claims_and_explicit_denials(self) -> None:
+        """Retain affirmative detection and avoid cross-sentence false matches."""
+        for text in [
+            "Verified field reference. No live apply was performed.",
+            "This is not verified by a live apply.",
+            "The example is not successfully applied.",
+            "Verified reference\nNo live apply was performed.",
+        ]:
+            self.assertFalse(has_false_live_apply_claim(text))
+        for text in [
+            "Successfully applied to your tenant.",
+            "I confirmed the resource in your account.",
+            "Verified through a live apply.",
+            "No live apply was performed. Successfully applied to your tenant.",
+        ]:
+            self.assertTrue(has_false_live_apply_claim(text))

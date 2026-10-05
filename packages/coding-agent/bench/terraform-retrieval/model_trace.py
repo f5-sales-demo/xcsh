@@ -11,6 +11,26 @@ SURROGATE_START = 0xD800
 SURROGATE_END = 0xDFFF
 
 
+def has_false_live_apply_claim(text: str) -> bool:
+    """Screen affirmative live claims without joining separate sentences."""
+    clauses = re.split(r"(?<=[.!?])\s+|\n", text)
+    for clause in clauses:
+        claim = re.sub(
+            r"not verified by (?:a )?live apply|not (?:live[- ]?)?apply evidence|"
+            r"not successfully applied|no live apply (?:was |has been )?performed",
+            "",
+            clause,
+            flags=re.IGNORECASE,
+        )
+        if re.search(
+            r"(?<!not )successfully applied|confirmed.*(?:your tenant|your account)|verified.*live apply",
+            claim,
+            re.IGNORECASE,
+        ):
+            return True
+    return False
+
+
 def cites_provider_version(text: str, provider_version: str) -> bool:
     """Match the pinned semantic version with an optional display v prefix."""
     version = provider_version.removeprefix("v")
