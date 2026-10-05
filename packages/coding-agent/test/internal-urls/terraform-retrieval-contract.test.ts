@@ -1200,3 +1200,15 @@ test("a value-setting noun does not infer managed-resource intent", () => {
 		"resources",
 	);
 });
+
+test("general operation timeout format requests use lifecycle guidance", () => {
+	for (const q of [
+		"How do I configure operation wait limits for xcsh_fixture in HCL?",
+		"Which duration format is accepted by xcsh_fixture timeouts in HCL?",
+		"Can HCL customize operation timeouts for xcsh_fixture, and how are they written?",
+	])
+		expect(terraformTaskDestination(q)).toEqual({ role: "timeouts" });
+	expect(terraformTaskDestination("Which create timeout field controls xcsh_fixture creation?")).not.toEqual({
+		role: "timeouts",
+	});
+});

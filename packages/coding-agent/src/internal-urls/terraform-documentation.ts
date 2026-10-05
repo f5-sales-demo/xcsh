@@ -999,6 +999,14 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	}
 
 	if (
+		/\b(?:timeouts?|operation(?:s)? wait limits|wait limits.*operations)\b/i.test(query) &&
+		/\b(?:duration.*format|how.*(?:written|configure)|customize|expose.*wait limits)\b/i.test(query) &&
+		!/\b(?:field|attribute|property|parameter|schema|create|delete|read|update|connection|idle|handshake)\b/i.test(
+			query,
+		)
+	)
+		return { role: "timeouts" };
+	if (
 		/\btimeouts?\b/i.test(query) &&
 		/\blifecycle\b|\busage\b|\bduration string format\b|\bguidance\b/i.test(query) &&
 		!/\battributes?\b|\bschema\b|\b(?:property|properties)\b/i.test(query)

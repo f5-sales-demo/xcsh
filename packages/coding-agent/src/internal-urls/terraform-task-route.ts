@@ -143,7 +143,7 @@ export function resolveIndexedTask(
 		!(query.match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/gi) ?? []).some(
 			term => !term.startsWith("xcsh_") && term !== scope.providerName,
 		) &&
-		!/\b(?:explain|guidance|overview|example)\b/i.test(query) &&
+		!/\b(?:explain|guidance|overview|example|format|written)\b|\bhow\b.*\bconfigure\b/i.test(query) &&
 		db.query("SELECT 1 FROM sqlite_master WHERE name=?").get("terraform_destinations")
 	) {
 		const conditions = ["dest.provider_name=?", "dest.schema_path IN (?,?,?,?)"];

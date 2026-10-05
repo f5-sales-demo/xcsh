@@ -1,0 +1,19 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": {
+    "packages/coding-agent/src/internal-urls/terraform-documentation.ts": "4981b8d46c70981489a87e4998a12aa266763b2d6c9e4310c1e7549f786828f2",
+    "packages/coding-agent/src/internal-urls/terraform-task-route.ts": "ad57aa5c04dd2840320a150ae5f958eb61a1733d9cebc08565ab090ac11368b6"
+  },
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "answerable_correct": 108,
+  "answerable_total": 140,
+  "answerable_top5": 128,
+  "route_p95_ms": 102.49194999999963,
+  "change": "General operation wait-limit and duration-format questions use lifecycle guidance; explicit operation fields retain leaf routing.",
+  "limitations": [
+    "Exposed regression only; below95 percent.",
+    "Installed final-source verification remains required."
+  ]
+}
