@@ -84,6 +84,13 @@ def validate_inputs(
     return corpus, lexical, receipt
 
 
+def destination_hits(destinations: list[str], expected: list[str]) -> tuple[bool, bool]:
+    """Top-five recall counts only the first five actual ranked destinations."""
+    return bool(destinations and destinations[0] in expected), any(
+        uri in expected for uri in destinations[:5]
+    )
+
+
 def main() -> None:
     """Measure candidate embedding/fusion only; never certify qualification."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -172,14 +179,15 @@ def main() -> None:
             embedding.append((embedded - before) * 1000)
             ranking.append((end - embedded) * 1000)
         all_times.extend(timings)
+        top1, top5 = destination_hits(destinations, case["expected"])
         results.append(
             {
                 "id": case["id"],
                 "kind": case["kind"],
                 "destinations": destinations,
                 "ranked": ranked,
-                "top1": bool(destinations and destinations[0] in case["expected"]),
-                "top5": any(uri in case["expected"] for uri in destinations),
+                "top1": top1,
+                "top5": top5,
                 "embedding_ms": embedding,
                 "ranking_fusion_ms": ranking,
                 "semantic_route_ms": timings,

@@ -1,4 +1,4 @@
-# ruff: noqa: INP001, PT027
+# ruff: noqa: INP001, PT027, PT009
 """Check experiment provenance without downloading or executing a model."""
 
 import json
@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from minilm_experiment import digest, validate_inputs
+from minilm_experiment import destination_hits, digest, validate_inputs
 
 
 class MiniLMInputTests(unittest.TestCase):
@@ -97,3 +97,17 @@ class MiniLMInputTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DestinationHitTests(unittest.TestCase):
+    """Candidate recall respects the reported cutoff."""
+
+    def test_top_five_never_counts_sixth_candidate(self) -> None:
+        """A present candidate outside the cutoff is still a miss."""
+        self.assertEqual(
+            destination_hits(["a", "b", "c", "d", "e", "f"], ["f"]), (False, False)
+        )
+        self.assertEqual(
+            destination_hits(["a", "b", "c", "d", "e"], ["e"]), (False, True)
+        )
+        self.assertEqual(destination_hits(["a"], ["a"]), (True, True))

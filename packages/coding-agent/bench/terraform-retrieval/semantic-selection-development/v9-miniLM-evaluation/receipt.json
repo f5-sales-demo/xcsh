@@ -1,0 +1,41 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "production_imported": false,
+  "source_provider_version": "v12.4.0",
+  "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "source_index_sha256": "78b74970e92fadfb45cf073428c98b7207b4eb0a8c7797235ddaba50eb5b8b55",
+  "suite_sha256": "b80248156fbc699586bfedd7636c7ed3073e70b3d9960000fde5759337392640",
+  "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+  "model_files_verified": 11,
+  "vector_sha256": "8fb1c43d88686f1d5286ac2e01d2418e479778ef0bc0d8c6daa91b3f7d64bd12",
+  "corpus_sha256": "fb8ed598e102fb2fa8cd59a63bae665b16d1013675b1bdd46c9d2fdf236410ab",
+  "measurements": {
+    "answerable": 140,
+    "lexical_top1": 108,
+    "lexical_top5": 125,
+    "hybrid_top1": 93,
+    "hybrid_top5": 124
+  },
+  "semantic_candidate_route_p95_ms": 81.36914006900042,
+  "expected_outside_property_corpus": [
+    "v9-113",
+    "v9-114",
+    "v9-115",
+    "v9-116",
+    "v9-117",
+    "v9-118",
+    "v9-119",
+    "v9-120"
+  ],
+  "corrected_evaluator_sha256": "1f29088027a2bddb6c04f2fca454551238b606a2b81f049785332cb96bcd324c",
+  "limitations": [
+    "Exposed v9 suite; accuracy gate failed. No release qualification.",
+    "Candidate ranking only; no confident selection, prerequisite rendering, complete tool-envelope or cross-platform latency acceptance.",
+    "Original evaluator top5 tested entire ranking; original report preserved. Corrected report tests first five; here numerical result happened to match.",
+    "Current hash-pinned exported corpus identical to prior vector corpus; vectors reused only after exact digest verification.",
+    "Optional local Python model dependency; no production import.",
+    "Whole-source exact Markdown remains authoritative."
+  ]
+}
