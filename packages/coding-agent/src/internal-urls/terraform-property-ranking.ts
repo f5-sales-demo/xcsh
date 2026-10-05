@@ -143,6 +143,23 @@ export function propertyMatchesWorkloadArchitecture(text: string, candidate: Pro
 	const parts = candidate.schema_path.split(".");
 	return stateless ? !parts.includes("stateful_service") : !parts.includes("service");
 }
+// Outer and inner cookie groups are separate schema levels. Require both assertions.
+export function propertyCookieOperators(text: string): [string, string] | undefined {
+	const assertions = [...text.matchAll(/\b(outer|inner)\s+cookie\s+group\s+(?:also\s+)?uses\s+(AND|OR|NONE)\b/gi)];
+	if (assertions.length !== 2 || new Set(assertions.map(m => m[1]!.toLowerCase())).size !== 2) return undefined;
+	if (/\b(?:not|never|without|either|versus|instead of|rather than|compare)\b/i.test(text)) return undefined;
+	const outer = assertions.find(m => m[1]!.toLowerCase() === "outer")!;
+	const inner = assertions.find(m => m[1]!.toLowerCase() === "inner")!;
+	return [outer[2]!.toLowerCase(), inner[2]!.toLowerCase()];
+}
+export function propertyMatchesCookieOperators(text: string, row: PropertyCandidate): boolean {
+	const operators = propertyCookieOperators(text);
+	if (!operators) return true;
+	const parts = row.schema_path.split(".");
+	const outer = parts.find(part => /^cookies_(?:and|or|none)$/.test(part));
+	const inner = parts.find(part => /^cookie_(?:and|or|none)$/.test(part));
+	return Boolean(outer && inner && outer === `cookies_${operators[0]}` && inner === `cookie_${operators[1]}`);
+}
 export function propertyQueryTerms(text: string): string[] {
 	text = affirmativeComparisonText(text);
 	text = text
@@ -324,22 +341,24 @@ function schemaPathMentions(text: string) {
 			Object.assign([m[0], m[1] ?? "scope", "", m[2] ?? m[3]], { index: m.index }),
 		),
 		...qualified,
-	].map(match => {
-		const suffix = query.slice(match.index! + match[0].length);
-		const path = !match[2] && /^(?:\s+[a-z]|\s*[!?]|\s*$)/.test(suffix) ? match[3]!.replace(/\.$/, "") : match[3]!;
-		const clause =
-			query
-				.slice(0, match.index)
-				.split(/[;!?\n]|\.(?=\s)/)
-				.at(-1) ?? "";
-		return {
-			start: match.index!,
-			end: match.index! + match[0].length,
-			path,
-			qualifier: match[1]!,
-			negative: /\b(?:not|no|without)\s+(?:(?:necessarily|a|an|the)\s+){0,3}$/.test(clause),
-		};
-	});
+	]
+		.filter(match => !(match[2] === "" && /^e\.g\.?$/i.test(match[3]!)))
+		.map(match => {
+			const suffix = query.slice(match.index! + match[0].length);
+			const path = !match[2] && /^(?:\s+[a-z]|\s*[!?]|\s*$)/.test(suffix) ? match[3]!.replace(/\.$/, "") : match[3]!;
+			const clause =
+				query
+					.slice(0, match.index)
+					.split(/[;!?\n]|\.(?=\s)/)
+					.at(-1) ?? "";
+			return {
+				start: match.index!,
+				end: match.index! + match[0].length,
+				path,
+				qualifier: match[1]!,
+				negative: /\b(?:not|no|without)\s+(?:(?:necessarily|a|an|the)\s+){0,3}$/.test(clause),
+			};
+		});
 }
 export function propertyMentionedSchemaPaths(text: string): string[] {
 	return [...new Set(schemaPathMentions(text).map(match => match.path))];
@@ -714,6 +733,7 @@ export function rankPropertyScope(
 	const access = requestedFieldAccess(queryText);
 	return scope.rows
 		.filter(row => matchesFieldAccess(row, access))
+		.filter(row => propertyMatchesCookieOperators(queryText, row))
 		.filter(row => propertyMatchesWorkloadArchitecture(queryText, row))
 		.filter(row => propertyMatchesWorkloadPortCount(queryText, row))
 		.filter(row => !requestedType || row.type == null || row.type === requestedType)

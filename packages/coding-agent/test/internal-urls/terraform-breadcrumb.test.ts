@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 import {
 	propertyBreadcrumbText,
+	propertyCookieOperators,
 	propertyExplicitSchemaPaths,
+	propertyMatchesCookieOperators,
 	propertyMatchesExplicitPaths,
 	propertyOrderedNestingPath,
 	propertyQueryTerms,
@@ -132,4 +134,32 @@ test("quoted field nouns preserve direct field identity within prose", () => {
 	expect(propertyRequestedText("Not field `name`; find namespace.")).not.toBe("name");
 	expect(propertyRequestedText("Example field `name`; find namespace.")).not.toBe("name");
 	expect(propertyRequestedText("Compare field `name` and attribute `namespace`.")).not.toBe("name");
+});
+
+test("outer and inner cookie operator assertions retain separate nesting", () => {
+	const query = "the outer cookie group uses AND, and the inner cookie group also uses OR";
+	expect(propertyCookieOperators(query)).toEqual(["and", "or"]);
+	const row = { schema_path: "cookie_v2.cookies_and.cookie_operator.cookie.cookie_or.match.value" } as any;
+	expect(propertyMatchesCookieOperators(query, row)).toBe(true);
+	expect(
+		propertyMatchesCookieOperators(query, {
+			...row,
+			schema_path: row.schema_path.replace("cookie_or", "cookie_and"),
+		}),
+	).toBe(false);
+	for (const q of [
+		"outer cookie group uses AND",
+		"outer cookie group uses AND, inner cookie group uses AND, outer cookie group uses OR",
+		"not outer cookie group uses AND, inner cookie group uses AND",
+		"compare outer cookie group uses AND, inner cookie group uses OR",
+	])
+		expect(propertyCookieOperators(q)).toBeUndefined();
+});
+
+test("unquoted example abbreviation is not a schema path", () => {
+	expect(propertyExplicitSchemaPaths("Find name; e.g. default flavor reference")).toEqual([]);
+	expect(propertyExplicitSchemaPaths("Find name under tls.certificates; e.g. client settings")).toEqual([
+		"tls.certificates",
+	]);
+	expect(propertyExplicitSchemaPaths("under `e.g` find value")).toEqual(["e.g"]);
 });

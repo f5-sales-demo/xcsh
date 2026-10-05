@@ -8,6 +8,7 @@ import {
 	propertyExplicitSchemaPaths,
 	propertyGroupingKey,
 	propertyInvalidExcludedScope,
+	propertyMatchesCookieOperators,
 	propertyMatchesExplicitPaths,
 	propertyMatchesGrouping,
 	propertyMatchesWorkloadArchitecture,
@@ -85,6 +86,8 @@ function selectPropertyDestinationInternal(
 	input = input.filter(row => matchesFieldAccess(row, access));
 	alternatives = alternatives.filter(row => matchesFieldAccess(row, access));
 	const identityPeers = [...input, ...alternatives];
+	input = input.filter(row => propertyMatchesCookieOperators(queryText, row));
+	alternatives = alternatives.filter(row => propertyMatchesCookieOperators(queryText, row));
 	const excludedIdentifiers = propertyExcludedSchemaIdentifiers(queryText);
 	const uncertainExcluded = propertyUncertainExcludedIdentifiers(queryText);
 	if (propertyInvalidExcludedScope(queryText))

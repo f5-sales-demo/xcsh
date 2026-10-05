@@ -870,3 +870,14 @@ test("conditional and corrective storage qualifiers retain representation choice
  const clear={...row("token.clear_secret_info.provider_ref",40),description:"Secret store reference."};const encrypted={...row("token.blindfold_secret_info.store_provider",39),description:"Secret store provider."};
  for(const query of ["Locate the store reference for clear secrets unless encrypted storage is required","Locate the store reference for clear secrets but use encrypted storage","Locate the store reference for clear secrets, then use encrypted storage","Locate the store reference for encrypted secrets, then use clear storage"]){expect(selectPropertyDestination(query,[clear,encrypted]).kind).toBe("choices");}
 });
+
+
+test("explicit outer and inner cookie operators resolve repeated choices", () => {
+ const rows=[row("cookie_v2.cookies_and.cookie_operator.cookie.cookie_or.match.case_sensitive",60),row("cookie_v2.cookies_or.cookie_operator.cookie.cookie_and.match.case_sensitive",59),row("cookie_v2.cookies_and.cookie_operator.cookie.cookie_and.match.case_sensitive",58)];
+ const q="Explain case_sensitive: outer cookie group uses AND, inner cookie group uses OR";
+ const result=selectPropertyDestination(q,rows);
+ expect(result.kind).toBe("leaf");
+ expect(result.destinations[0]?.schema_path).toBe(rows[0]!.schema_path);
+ expect(selectPropertyDestination("Explain case_sensitive: outer cookie group uses AND",rows).kind).toBe("choices");
+ expect(selectPropertyDestination("Explain case_sensitive: not outer cookie group uses AND, inner cookie group uses OR",rows).kind).not.toBe("leaf");
+});
