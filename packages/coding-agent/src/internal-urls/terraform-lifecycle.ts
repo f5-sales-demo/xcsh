@@ -39,6 +39,9 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 			/\b(?:read|refresh(?:ing|ed|es)?|inspect|update|modify|create|delete)\s+(?:the\s+)?(?:timeouts?\s+)?(?:documentation|docs|guide|page)\b/gi,
 			"documentation",
 		);
+	const quotedOperations = /\btimeouts?\b/i.test(query)
+		? [...new Set([...query.matchAll(/`(create|read|update|delete)`/gi)].map(m => m[1]!.toLowerCase()))]
+		: [];
 	const patterns: Array<[string, RegExp]> = [
 		["create", /\b(?:create|creation|creating)\b/i],
 		["read", /\brefresh(?:ing|ed|es)?\b|\bread\s+operation\b|\boperation\s+read\b|\bread\s+timeout\b/i],
@@ -48,7 +51,11 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 	if (!/\btimeouts?\b/i.test(query) && !patterns.some(([, pattern]) => pattern.test(evidence))) return undefined;
 	const conflicting = /\b(?:not|never|except|without|rather than|instead of)\b/i.test(evidence);
 	return {
-		operations: conflicting ? [] : patterns.filter(([, pattern]) => pattern.test(evidence)).map(([name]) => name),
+		operations: conflicting
+			? []
+			: patterns
+					.filter(([name, pattern]) => quotedOperations.includes(name) || pattern.test(evidence))
+					.map(([name]) => name),
 		field: !block,
 		evidence,
 	};

@@ -238,9 +238,12 @@ function selectPropertyDestinationInternal(
 			const intent = lifecycleEvidence(lifecycle.evidence);
 			const requested = propertyQueryTerms(intent);
 			const local = new Set(propertyTerms(`${first.schema_path} ${first.description} ${first.provider_name}`));
+			const exactQuotedOperation = queryText.includes(`\`${lifecycle.operations[0]}\``);
 			if (
 				/\b(?:retry|retries|count)\b/i.test(intent) ||
-				(requested.length && requested.filter(term => local.has(term)).length / requested.length < 0.35)
+				(!exactQuotedOperation &&
+					requested.length &&
+					requested.filter(term => local.has(term)).length / requested.length < 0.35)
 			)
 				return choices;
 			return { kind: "leaf", destinations: [first], reason: "Exact documented lifecycle operation" };

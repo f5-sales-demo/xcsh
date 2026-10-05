@@ -162,3 +162,33 @@ test("reversed corrections retain the affirmative transport target", async () =>
 			?.operations,
 	).toEqual(["delete"]);
 });
+
+test("quoted lifecycle field names are explicit operation evidence", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	expect(interpretTerraformLifecycle("Before drafting HCL, explain `read` timeouts.")?.operations).toEqual(["read"]);
+	expect(selectPropertyDestination("Explain `read` timeouts", rows).destinations[0]?.schema_path).toBe(
+		"timeouts.read",
+	);
+	expect(interpretTerraformLifecycle("Explain `create` and `delete` timeouts.")?.operations).toEqual([
+		"create",
+		"delete",
+	]);
+	expect(interpretTerraformLifecycle("Read the timeout documentation.")?.operations).toEqual([]);
+	expect(interpretTerraformLifecycle("Not `read` timeouts.")?.operations).toEqual([]);
+});
+
+test("quoted operation does not override a different operation in prose", async () => {
+	const { interpretTerraformLifecycle } = await import("../../src/internal-urls/terraform-lifecycle");
+	expect(interpretTerraformLifecycle("Explain `read` and creation timeouts.")?.operations).toEqual(["create", "read"]);
+});
+
+test("quoted operation remains explicit amidst documentation drafting boilerplate", () => {
+	const result = selectPropertyDestination(
+		"Before drafting HCL for managed resource xcsh_namespace, explain `read` timeouts.",
+		rows,
+		[],
+		{ identityResolved: true },
+	);
+	expect(result.kind).toBe("leaf");
+	expect(result.destinations[0]?.schema_path).toBe("timeouts.read");
+});
