@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "89ab6ad82716d97b439df9def9e297c6bb447a1d",
+  "revision": "c80c2951f4e565efcd0cf5bd7947b311e9dc57c4",
   "fingerprint": "38ab645c135ffde304366a4a2bb30377909ca5153f2be486ebdccc879759facb",
   "counts": {
     "total": 238,
@@ -2686,6 +2686,7 @@
         "packages/coding-agent/test/catalog-workflow-runner-parse-ref.test.ts",
         "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
         "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts",
+        "packages/coding-agent/test/internal-urls/terraform-breadcrumb.test.ts",
         "packages/coding-agent/test/marketplace/parse-internal-url.test.ts",
         "packages/coding-agent/test/marketplace/registry.test.ts",
         "packages/coding-agent/test/plugin-dashboard-interactions.test.ts",
