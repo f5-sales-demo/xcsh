@@ -45,3 +45,11 @@ test("qualification source evidence must be bound to an independent v2 review",(
  expect(()=>validateSourceEvidenceBinding({...freeze,retrieval_results_withheld:false},{source_evidence_sha256:"source"},"source","review")).toThrow();
  expect(()=>validateSourceEvidenceBinding(freeze,{source_evidence_sha256:"other"},"source","review")).toThrow();
  });
+
+test("omitted provider needs cross-provider exact and ancestor-path adjudication",()=>{
+ const uri="xcsh://terraform-documentation/documentation/resources/other/index.md#schema-name";
+ const peer={uri,provider_name:"other",schema_path:"custom.name",description:"Other object name.",markdown:"Other object name."};
+ expect(validateCaseSourceEvidence(cases,[evidence],[...source,peer]).some(e=>e.includes("cross-provider"))).toBe(true);
+ const explicit=[{...cases[0]!,prompt:"Configure xcsh_fixture managed resource name"}];
+ expect(validateCaseSourceEvidence(explicit,[{...evidence,peer_adjudications:[{...evidence.peer_adjudications[0]!,prompt_quote:"managed resource"}]}],[...source,peer])).toEqual([]);
+});

@@ -64,8 +64,13 @@ export function validateCaseSourceEvidence(
  for (const uri of c.expected) {
  const d = byUri.get(uri); if (!d || !d.schema_path) continue;
  const leaf = d.schema_path.split(".").at(-1);
+ const explicitProvider=/\bxcsh_[a-z0-9_]+\b/i.test(c.prompt);
  for (const peer of source) {
  if (peer.uri === uri) continue;
+ const role=(value:string)=>new URL(value).pathname.split("/")[2];
+ if(!explicitProvider&&peer.provider_name!==d.provider_name&&role(peer.uri)===role(d.uri)&&
+ (peer.schema_path===d.schema_path||peer.schema_path.endsWith(`.${d.schema_path}`))&&!adjudications.has(peer.uri))
+ fail(`Unreviewed cross-provider schema peer ${peer.uri}`);
  if (peer.provider_name === d.provider_name && peer.schema_path.split(".").at(-1) === leaf &&
  peer.description.replace(/\s+/g," ").trim() === d.description.replace(/\s+/g," ").trim() && !adjudications.has(peer.uri))
  fail(`Unreviewed same-leaf peer ${peer.uri}`);
