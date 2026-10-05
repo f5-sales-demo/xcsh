@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "case_id": "v9-120",
+  "source_commit": "375ccec000d1ace3cbdaa6cf67f9882a2a551368",
+  "purpose": "Separate audit of original running model score; no score mutation",
+  "original_passed": false,
+  "original_failure": "provider_version_cited uses literal v12.4.0 substring",
+  "verified_answer_version": "12.4.0",
+  "verified_hcl_version_constraint": "= 12.4.0",
+  "exact_reads_and_citations_passed": true,
+  "raw_trace_sha256": "99724f3d26fb7faf9d07459535f4f836d9284584318a35b68db7bbb01d193a4e",
+  "original_report_modified": false,
+  "qualification_passed": false
+}
