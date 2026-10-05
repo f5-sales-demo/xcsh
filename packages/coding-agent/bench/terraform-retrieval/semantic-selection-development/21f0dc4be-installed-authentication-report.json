@@ -1,0 +1,45 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "tf1240-001",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 83111.6930609569,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "```hcl\nterraform {\n  required_providers {\n    xcsh = {\n      source = \"f5-sales-demo/xcsh\"\n    }\n  }\n}\n\nprovider \"xcsh\" {\n  api_url   = \"https://synthetic-tenant.example.invalid\"\n  api_token = \"SYNTHETIC-NONFUNCTIONAL-TOKEN\"\n}\n```\n\nBoth fields appear in the bundled provider **v12.4.0** [API Token Authentication example](xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-1-api-token-authentication).\n\nOffline draft only; no Terraform commands or authentication attempted.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 14843,
+        "max_bytes": 9943,
+        "measured_results": 5,
+        "violations": []
+      },
+      "trace_sha256": "57f516b67ba9ea42085a59228f979b171afa8d7409b403bdcdd21e31edb14571",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "21f0dc4be62e6d1467c14cba0b6ad3c665183e97",
+    "binary_sha256": "456f42f891764936d05a760648c0b82ddd8c9497b4e2c8f7e6a4d7b2db2703f5",
+    "binary_bytes": 621938144,
+    "provider_version": "v12.4.0"
+  },
+  "full_required_reads": true,
+  "full_required_citations": true,
+  "source_review": "Exact bundled provider example supports api_url and api_token; supplied synthetic strings preserved. No authentication, validation, or live apply claimed.",
+  "limitations": [
+    "One exposed regression prompt; no heldout qualification."
+  ]
+}
