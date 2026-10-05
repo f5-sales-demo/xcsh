@@ -1,0 +1,25 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": {
+    "packages/coding-agent/src/internal-urls/terraform-documentation.ts": "841f4312cd2e45c442359b0aeae5b2197dd9c9646df05044e9862eabe48baecf",
+    "packages/coding-agent/src/internal-urls/terraform-task-route.ts": "ed22f7761f7ee14abef0da15f2765b3d00d610cd5744e0cd497917ee914b90fc"
+  },
+  "v9": {
+    "correct": 111,
+    "total": 140,
+    "top5": 129,
+    "baseline_correct": 107
+  },
+  "v8": {
+    "correct": 121,
+    "total": 140,
+    "top5": 138
+  },
+  "change": "Complete Terraform HCL requests recognize provider name before or after resource role; explicitly requested standalone example anchors remain exact destinations.",
+  "limitations": [
+    "Exposed regressions only; gate unmet.",
+    "Installed final-source drafting/read/citation validation remains required."
+  ]
+}

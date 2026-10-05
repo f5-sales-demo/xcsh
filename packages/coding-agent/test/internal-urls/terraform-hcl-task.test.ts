@@ -29,5 +29,27 @@ test("complete HCL draft verifies nested fields beyond minimal example", () => {
 	expect(resolveIndexedTask(db, 'Draft HCL for resource "xcsh_fixture" with unsupported_field = 2', scope)?.kind).toBe(
 		"none",
 	);
+	db.query("INSERT INTO terraform_documents VALUES(?,?,?,?,?,?)").run(
+		"documentation/resources/fixture/examples/resource/index.md",
+		"example",
+		"resources",
+		"fixture",
+		"example",
+		"Fixture example.",
+	);
+	db.query("INSERT INTO terraform_sections VALUES(?,?,?,?)").run(
+		"documentation/resources/fixture/examples/resource/index.md",
+		"resource",
+		0,
+		"name = sample",
+	);
+	const draft =
+		"Draft Terraform HCL for a synthetic xcsh_fixture resource with nested.optional_field = 2. Use the standalone Resource example as the starting point.";
+	const result = resolveIndexedTask(db, draft, scope);
+	expect(result?.kind).toBe("leaf");
+	expect(result?.destinations[0]?.path).toBe("documentation/resources/fixture/examples/resource/index.md");
+	expect(resolveIndexedTask(db, draft.replace("nested.optional_field", "unsupported_field"), scope)?.kind).toBe(
+		"none",
+	);
 	db.close();
 });

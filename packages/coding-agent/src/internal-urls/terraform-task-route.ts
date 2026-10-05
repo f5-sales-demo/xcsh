@@ -1,6 +1,7 @@
 // Indexed adaptive task route; all reads use the pinned canonical index.
 import type { Database } from "bun:sqlite";
 import {
+	terraformCompleteDraft,
 	terraformProviderSetupDestination,
 	terraformTaskDestination,
 	terraformTimeoutOperations,
@@ -259,8 +260,8 @@ export function resolveIndexedTask(
 		identifiers.some(
 			term =>
 				!(
-					/\b(?:draft|write|generate)\s+hcl\b/i.test(query) &&
-					task?.anchor === "minimal-configuration" &&
+					terraformCompleteDraft(query) &&
+					(task?.anchor === "minimal-configuration" || task?.role === "example") &&
 					scope.providerName &&
 					db
 						.query(

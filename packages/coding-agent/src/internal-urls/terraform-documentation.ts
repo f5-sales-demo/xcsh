@@ -927,13 +927,19 @@ export function terraformProviderSetupDestination(query: string): string | undef
 	return methods.length === 1 ? methods[0]!.anchor : "authentication-options";
 }
 
-export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
-	if (
-		/\b(?:draft|write|generate)\s+hcl\b/i.test(query) &&
-		/\b(?:resource|ephemeral)\s+"?xcsh_[a-z0-9_]+/i.test(query) &&
+export function terraformCompleteDraft(query: string): boolean {
+	return (
+		/\b(?:draft|write|generate)\s+(?:terraform\s+)?hcl\b/i.test(query) &&
+		(/\b(?:resource|ephemeral)\s+"?xcsh_[a-z0-9_]+/i.test(query) ||
+			/\bxcsh_[a-z0-9_]+\s+(?:resource|ephemeral)\b/i.test(query)) &&
 		!/\b(?:snippet|fragment)\b/i.test(query)
-	)
-		return { role: "fundamentals", anchor: "minimal-configuration" };
+	);
+}
+export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
+	if (terraformCompleteDraft(query))
+		return /\bstandalone\s+resource\s+example\b/i.test(query)
+			? { role: "example", anchor: "resource" }
+			: { role: "fundamentals", anchor: "minimal-configuration" };
 	if (propertyRequestedBlockText(query) && !/\b(?:example|usage)\b/i.test(query)) return undefined;
 	if (
 		propertyRequestedText(query) &&

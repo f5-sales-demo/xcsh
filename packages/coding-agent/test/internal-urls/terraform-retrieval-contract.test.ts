@@ -1251,3 +1251,15 @@ test("exact provider credential input identifies documented authentication metho
 	).toBe("authentication-options");
 	expect(terraformProviderSetupDestination("Resource xcsh_cloud_credentials uses api_token")).toBeUndefined();
 });
+
+test("complete Terraform HCL syntax preserves explicitly requested example view", () => {
+	expect(
+		terraformTaskDestination(
+			"Draft Terraform HCL for a synthetic xcsh_healthcheck resource. Use the standalone Resource example as the starting point.",
+		),
+	).toEqual({ role: "example", anchor: "resource" });
+	expect(terraformTaskDestination("Draft Terraform HCL for a synthetic xcsh_healthcheck resource.")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+});
