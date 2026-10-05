@@ -1133,8 +1133,20 @@ export function terraformProviderMention(search: string, names: readonly string[
 		})
 		.join(" ");
 	const query = ` ${normalize(providerSearch)} `;
+	const explicitFieldLabel = /\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`[a-z][a-z0-9_]*`/i.test(
+		search,
+	);
 	const found = names
 		.filter(name => query.includes(` ${normalize(name)} `))
+		.filter(name => {
+			if (!explicitFieldLabel || name.includes("_")) return true;
+			const phrase = normalize(name);
+			return (
+				new RegExp(
+					`\\b(?:${phrase} (?:managed )?(?:resource|data source|action)|(?:resource|data source|action) ${phrase})\\b`,
+				).test(query) || new RegExp(`\\b(?:on|in|under) (?:a |an |the |my |our )${phrase}\\b`).test(query)
+			);
+		})
 		.filter(name => {
 			if (!["endpoint", "authentication", "setup", "xcsh"].includes(name)) return true;
 			const phrase = normalize(name);

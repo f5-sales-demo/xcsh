@@ -123,3 +123,15 @@ test("schema breadcrumb component cannot masquerade as provider identity", () =>
 	).toBe("workload");
 	expect(terraformProviderMention("HTTP load balancer under https > certificates", names)).toBe("http_loadbalancer");
 });
+
+test("explicit field lookup does not promote descriptive nouns to provider owners", () => {
+	const names = ["namespace", "subnet", "workload"];
+	expect(
+		terraformProviderMention("Which namespace does this reference use? Field: `namespace`.", names),
+	).toBeUndefined();
+	expect(
+		terraformProviderMention("Set prefix length of each allocated subnet. Field: `allocation_unit`.", names),
+	).toBeUndefined();
+	expect(terraformProviderMention("For the namespace resource. Field: `name`.", names)).toBe("namespace");
+	expect(terraformProviderMention("For xcsh_subnet. Field: `name`.", names)).toBe("subnet");
+});
