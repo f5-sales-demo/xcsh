@@ -141,6 +141,14 @@ class ModelTraceTests(unittest.TestCase):
             has_clarification_question("Do you use a P12 bundle or separate PEM files?")
         )
         self.assertFalse(has_clarification_question("```hcl\n# which value?\n```"))
+        self.assertFalse(
+            has_clarification_question(
+                "Pattern: `^[a-z]([-a-z0-9]*[a-z0-9])?$`. Draft complete."
+            )
+        )
+        self.assertTrue(
+            has_clarification_question("Pattern: `x?`. Which role do you intend?")
+        )
 
     def test_missing_configuration_control_needs_the_actual_missing_field(self) -> None:
         """An unrelated disclaimer cannot prove missing-value handling."""

@@ -77,6 +77,7 @@ def validate_model_activation(cases: list[dict[str, Any]]) -> None:
 def has_clarification_question(text: str) -> bool:
     """Ignore code and link queries when detecting a user-facing question."""
     prose = re.sub(r"```[\s\S]*?```", "", text)
+    prose = re.sub(r"(`+)[^`]*?\1", "", prose)
     prose = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", prose)
     prose = re.sub(r"(?:xcsh|https?)://[^\s]+", "", prose)
     return bool(

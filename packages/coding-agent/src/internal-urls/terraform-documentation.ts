@@ -14,6 +14,7 @@ import { verifiedChoiceEdges } from "./terraform-choice-edges";
 import { terraformChoiceResponse } from "./terraform-choice-response";
 import { terraformConflictContext } from "./terraform-conflict-context";
 import { type EnumValidatorEvidence, validateEnumEvidence } from "./terraform-enum-evidence";
+import { terraformExampleContext } from "./terraform-example-context";
 import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
 import { interpretTerraformLifecycle } from "./terraform-lifecycle";
 import {
@@ -1759,7 +1760,7 @@ export class TerraformDocumentationRepository {
 					)
 					.all(documentPath) as Array<{ anchor: string; heading: string }>;
 				content = boundedTerraformResponse(
-					`${provenance}\n\n${m.summary}\nRead: ${uri(documentPath, anchor, "context")}\nFull: ${uri(documentPath, anchor, "full")}\n${prerequisites(documentPath, anchor || "section")}`,
+					`${provenance}\n\n${m.summary}\nRead: ${uri(documentPath, anchor, "context")}\nFull: ${uri(documentPath, anchor, "full")}\n${prerequisites(documentPath, anchor || "section")}\n${metadata.role === "example" ? terraformExampleContext(db, documentPath) : ""}`,
 					[
 						...(ownershipHint(anchor) ? [ownershipHint(anchor)] : []),
 						...(ownershipScope(anchor) ? [ownershipScope(anchor)] : []),
@@ -1803,7 +1804,7 @@ export class TerraformDocumentationRepository {
 						}>);
 				const pieces: string[] = [];
 				let last: string | undefined;
-				const prefix = `${provenance}\nDocument: ${documentPath}\nFull: ${uri(documentPath, anchor, "full")}\n\n`;
+				const prefix = `${provenance}\nDocument: ${documentPath}\nFull: ${uri(documentPath, anchor, "full")}\n${metadata.role === "example" ? terraformExampleContext(db, documentPath) : ""}\n\n`;
 				const reserve = 1500;
 				const seen = new Set<string>();
 				for (const section of sections) {
