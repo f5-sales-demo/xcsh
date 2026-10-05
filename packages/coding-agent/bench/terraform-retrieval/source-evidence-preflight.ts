@@ -67,7 +67,7 @@ export function validateCaseSourceEvidence(
  const explicitProvider=/\bxcsh_[a-z0-9_]+\b/i.test(c.prompt);
  for (const peer of source) {
  if (peer.uri === uri) continue;
- if(peer.provider_name===d.provider_name&&peer.schema_path&&peer.description.trim()&&
+ if(peer.uri.split("#")[1]?.startsWith("schema-")&&d.uri.split("#")[1]?.startsWith("schema-")&&peer.provider_name===d.provider_name&&peer.schema_path&&peer.description.trim()&&
  peer.schema_path.split(".").at(-1)!==leaf&&
  peer.description.replace(/\s+/g," ").trim()===d.description.replace(/\s+/g," ").trim()&&!adjudications.has(peer.uri))
  fail(`Unreviewed same-meaning peer ${peer.uri}`);
