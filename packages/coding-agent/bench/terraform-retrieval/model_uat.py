@@ -30,6 +30,7 @@ from model_trace import (
     has_clarification_question,
     has_false_live_apply_claim,
     hcl_code_blocks,
+    missing_user_values_requested,
     missing_value_response_supported,
     required_read_coverage,
     successful_read_paths,
@@ -331,6 +332,16 @@ for case in cases:
             )
         )
         final_text = final_assistant_text(messages)
+        missing_fields = [
+            item["field"]
+            for item in case.get("model_expectations", {}).get(
+                "missing_user_values", []
+            )
+        ]
+        user_values_requested = missing_user_values_requested(
+            final_text, missing_fields
+        )
+        passed = passed and user_values_requested
         passed = (
             passed
             and completed_successfully
@@ -359,6 +370,7 @@ for case in cases:
                 "provider_version_cited": cites_provider_version(
                     text, args.provider_version
                 ),
+                "missing_user_values_requested": user_values_requested,
                 "clarification": clarification,
                 "false_live_pattern": false_live,
                 "hcl_fences": len(code_fences),

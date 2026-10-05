@@ -11,6 +11,27 @@ SURROGATE_START = 0xD800
 SURROGATE_END = 0xDFFF
 
 
+def missing_user_values_requested(text: str, fields: list[str]) -> bool:
+    """Require every absent value to be requested before emitting any HCL."""
+    if not fields:
+        return True
+    if emitted_hcl(text) or not has_clarification_question(text):
+        return False
+    questions = [
+        sentence
+        for sentence in re.split(r"(?<=[.!?])\s+|\n", text)
+        if "?" in sentence
+        or re.search(r"\b(?:provide|supply|need|missing)\b", sentence, re.IGNORECASE)
+    ]
+    return all(
+        any(
+            re.search(r"\b" + re.escape(field) + r"\b", question, re.IGNORECASE)
+            for question in questions
+        )
+        for field in fields
+    )
+
+
 def has_false_live_apply_claim(text: str) -> bool:
     """Screen affirmative live claims without joining separate sentences."""
     clauses = re.split(r"(?<=[.!?])\s+|\n", text)

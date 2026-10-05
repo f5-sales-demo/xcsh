@@ -10,6 +10,7 @@ from model_trace import (
     has_clarification_question,
     has_false_live_apply_claim,
     hcl_code_blocks,
+    missing_user_values_requested,
     missing_value_response_supported,
     required_read_coverage,
     successful_read_paths,
@@ -490,3 +491,38 @@ class LiveApplyClaimTest(unittest.TestCase):
             "No live apply was performed. Successfully applied to your tenant.",
         ]:
             self.assertTrue(has_false_live_apply_claim(text))
+
+
+class MissingUserValuesTest(unittest.TestCase):
+    """Prevent missing HCL values from being replaced with invented defaults."""
+
+    def test_each_missing_identifier_is_requested_before_hcl(self) -> None:
+        """A branch question alone cannot supply required user identifiers."""
+        fields = ["name", "namespace"]
+        self.assertTrue(
+            missing_user_values_requested(
+                "Which name and namespace should the lookup use?", fields
+            )
+        )
+        self.assertFalse(
+            missing_user_values_requested(
+                "Which TLS representation should I use?", fields
+            )
+        )
+        self.assertFalse(
+            missing_user_values_requested("Which name should I use?", fields)
+        )
+        self.assertFalse(
+            missing_user_values_requested(
+                'Which name and namespace?\n```hcl\ndata "xcsh_fixture" "x" { name = "invented" }\n```',
+                fields,
+            )
+        )
+        self.assertFalse(
+            missing_user_values_requested(
+                "The name and namespace identify the lookup.", fields
+            )
+        )
+        self.assertTrue(
+            missing_user_values_requested("Documented field description", [])
+        )
