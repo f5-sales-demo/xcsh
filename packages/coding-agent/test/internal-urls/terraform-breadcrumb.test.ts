@@ -163,3 +163,11 @@ test("unquoted example abbreviation is not a schema path", () => {
 	]);
 	expect(propertyExplicitSchemaPaths("under `e.g` find value")).toEqual(["e.g"]);
 });
+
+test("exclusive IP-family prose distinguishes single-family from dual-stack", () => {
+	expect(propertyQueryTerms("IPv4-only next-hop address")).toContain("single");
+	expect(propertyQueryTerms("IPv6 only next-hop address")).toContain("single");
+	expect(propertyQueryTerms("IPv4 next-hop address")).not.toContain("single");
+	expect(propertyQueryTerms("not IPv4-only next-hop address")).not.toContain("single");
+	expect(propertyQueryTerms("`IPv4-only` literal")).not.toContain("single");
+});

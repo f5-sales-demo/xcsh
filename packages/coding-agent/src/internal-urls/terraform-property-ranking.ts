@@ -170,6 +170,9 @@ export function propertyQueryTerms(text: string): string[] {
 				: part
 						.replace(/\bbeginning\b/gi, word => `${word} start`)
 						.replace(/\bdual[ -]family\b|\bboth\s+(?:address|IP)\s+families\b/gi, "dual stack")
+						.replace(/\b(ipv[46])[ -]only\b/gi, (phrase, family, offset) =>
+							/\b(?:not|never|without)\s*$/.test(part.slice(0, offset)) ? phrase : `${family} single stack`,
+						)
 						.replace(
 							/\b(primary|secondary)(?=\s+(?:(?:cookie|HMAC)\s+){1,3}keys?\b)/gi,
 							term => `${term} ${term.toLowerCase() === "primary" ? "prim" : "sec"}`,
