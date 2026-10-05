@@ -1,0 +1,65 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "v9-117",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 110216.67992405128,
+      "complete_leaf_read": true,
+      "required_read_coverage": true,
+      "required_citations": true,
+      "clarification": false,
+      "text": "Based on the standalone [Resource example](xcsh://terraform-documentation/documentation/resources/healthcheck/examples/resource/index.md?view=context#resource), pinned to bundled provider **v12.4.0** and updated to the maintained [Terraform requirement](xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#requirements):\n\n```hcl\nterraform {\n  required_version = \">= 1.14\"\n\n  required_providers {\n    xcsh = {\n      source  = \"f5-sales-demo/xcsh\"\n      version = \"= 12.4.0\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_healthcheck\" \"synthetic_probe\" {\n  name      = \"synthetic-probe\"\n  namespace = \"synthetic-lab\"\n\n  healthy_threshold   = 3\n  interval            = 10\n  timeout             = 3\n  unhealthy_threshold = 2\n}\n```\n\n### Supplied field constraints\n\nAll six fields are [provider-required root properties](xcsh://terraform-documentation/documentation/resources/healthcheck/index.md?view=context#root-configuration).\n\n| Field | Supplied value | Documented constraint |\n|---|---|---|\n| [name](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-name) | `synthetic-probe` | Provider `NameValidator`; unique within namespace. Upstream documents DNS-1035, 1\u201363 characters, and immutability during replace. |\n| [namespace](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-namespace) | `synthetic-lab` | Provider `NamespaceValidator`; upstream documents DNS-label format, 1\u201363 characters. |\n| [healthy_threshold](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-healthy_threshold) | `3` | Provider-enforced integer **1\u201316**, inclusive; successful responses before healthy. Startup requires only one success. |\n| [interval](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-interval) | `10` | Provider-enforced integer **1\u2013600 seconds**, inclusive, between requests. |\n| [timeout](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-timeout) | `3` | Provider-enforced integer **1\u2013600 seconds**, inclusive, waiting for a response. |\n| [unhealthy_threshold](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-unhealthy_threshold) | `2` | Provider-enforced integer **1\u201316**, inclusive; failed responses before unhealthy. HTTP 503 marks unhealthy immediately. |\n\nThe supplied values satisfy these documented constraints. No protocol, path, target, or optional defaults were invented.\n\n[Prerequisites](xcsh://terraform-documentation/documentation/resources/healthcheck/index.md?view=context#prerequisites): namespace access and documented Standard service tier. Supply `XCSH_API_URL` and exactly one authentication method through the environment.\n\n**Validation:** documentation-checked only; Terraform execution and live apply were not performed.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 86430,
+        "max_bytes": 37450,
+        "measured_results": 18,
+        "violations": []
+      },
+      "trace_sha256": "0a900bc4a6cad6769fd97b63c2c66257b46e870464440e3a52e5bc805e0afbb8",
+      "passed": true
+    },
+    {
+      "id": "v9-118",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 96047.10683191661,
+      "complete_leaf_read": true,
+      "required_read_coverage": true,
+      "required_citations": true,
+      "clarification": false,
+      "text": "```hcl\nterraform {\n  required_version = \">= 1.14\"\n\n  required_providers {\n    xcsh = {\n      source  = \"f5-sales-demo/xcsh\"\n      version = \"= 12.4.0\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_rate_limiter\" \"synthetic_rate\" {\n  name      = \"synthetic-rate\"\n  namespace = \"synthetic-lab\"\n}\n```\n\nBased on the standalone [Resource example](xcsh://terraform-documentation/documentation/resources/rate_limiter/examples/resource/index.md?view=context#resource), with the bundled provider pinned to **v12.4.0** and Terraform\u2019s minimum updated to the maintained [requirements](xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#requirements).\n\n### Supplied field constraints\n\n| Field | Provider schema | Documented upstream constraints |\n|---|---|---|\n| [`name`](xcsh://terraform-documentation/documentation/resources/rate_limiter/properties/index.md?view=context#schema-name) | Required string; `NameValidator()` | Unique within namespace; cannot change through replace API. DNS-1035 label, 1\u201363 characters. |\n| [`namespace`](xcsh://terraform-documentation/documentation/resources/rate_limiter/properties/index.md?view=context#schema-namespace) | Required string; `NamespaceValidator()` | DNS label, 1\u201363 characters. |\n\nBoth values satisfy the documented upstream pattern `^[a-z]([-a-z0-9]*[a-z0-9])?$`. These numeric and pattern constraints come from receipt-pinned upstream metadata, not observed local validation.\n\nOnly `name` and `namespace` are [required root properties](xcsh://terraform-documentation/documentation/resources/rate_limiter/index.md?view=context#root-configuration); no limits or additional scalar values were invented.\n\n[Prerequisites](xcsh://terraform-documentation/documentation/resources/rate_limiter/index.md?view=context#prerequisites): Standard service tier and access to the target namespace. Configure `XCSH_API_URL` and exactly one authentication method through environment variables.\n\n**Validation:** Documentation-checked draft only; Terraform execution and live deployment were not performed.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 56608,
+        "max_bytes": 24741,
+        "measured_results": 15,
+        "violations": []
+      },
+      "trace_sha256": "825e335ccba890f4195e9003b36c320d58ad350f1023a0ccd5a3614de599b553",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "e33df962aa423ce2d837f178d86468843f040831",
+    "binary_sha256": "244062a969c74eb2375a0165f41d8f011807ad0c27705d2e3725ebdef44bb3b2",
+    "binary_bytes": 621942240,
+    "provider_version": "v12.4.0"
+  },
+  "source_review": "Both resource declarations use supplied synthetic fields, documented scalar/empty object syntax, provider =12.4.0 and Terraform >=1.14. Both cite exact examples, root requirements, prerequisites and field constraints. No validation or apply claim.",
+  "limitations": [
+    "Two exposed development HCL cases, not broad or heldout qualification."
+  ]
+}
