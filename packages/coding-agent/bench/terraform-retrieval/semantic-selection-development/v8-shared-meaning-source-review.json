@@ -1,0 +1,291 @@
+{
+  "source_review_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_provider_version": "v12.4.0",
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "findings": [
+    {
+      "id": "tf1240-036",
+      "prompt": "Terraform: Which access object supplies the secret decryption backend? Context: read-only data source; storage_device_list > storage_devices > netapp_trident > netapp_backend_ontap_san > use_chap > chap_initiator_secret > blindfold_secret_info. Field: `decryption_provider`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/fleet/properties/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--decryption_provider",
+      "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-custom_storage_config--storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--decryption_provider",
+          "provider": "voltstack_site",
+          "schema_path": "custom_storage_config.storage_device_list.storage_devices.netapp_trident.netapp_backend_ontap_san.use_chap.chap_initiator_secret.blindfold_secret_info.decryption_provider",
+          "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-053",
+      "prompt": "Terraform: For the managed resource, under storage_device_list > storage_devices > netapp_trident > netapp_backend_ontap_san > use_chap > chap_initiator_secret > blindfold_secret_info, Which access object supplies the secret decryption backend? Field: `decryption_provider`.",
+      "expected": "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--decryption_provider",
+      "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-custom_storage_config--storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--decryption_provider",
+          "provider": "voltstack_site",
+          "schema_path": "custom_storage_config.storage_device_list.storage_devices.netapp_trident.netapp_backend_ontap_san.use_chap.chap_initiator_secret.blindfold_secret_info.decryption_provider",
+          "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-079",
+      "prompt": "Terraform: I am inspecting domains > credentials > api_key on the read-only data source. What key material does this credential expect? Field: `key`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/api_testing/properties/domains/credentials/api_key/index.md#schema-domains--credentials--api_key--key",
+      "source_description": "Cryptographic key material",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/index.md#schema-api_testing--domains--credentials--api_key--key",
+          "provider": "http_loadbalancer",
+          "schema_path": "api_testing.domains.credentials.api_key.key",
+          "source_description": "Cryptographic key material"
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-080",
+      "prompt": "Terraform: Where is the primary HMAC key expiry specified? This concerns cookie_params > auth_hmac in the read-only data source. Field: `prim_key_expiry`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/authentication/properties/cookie_params/auth_hmac/index.md#schema-cookie_params--auth_hmac--prim_key_expiry",
+      "source_description": "Primary HMAC Key Expiry time.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/virtual_host/properties/authentication/cookie_params/auth_hmac/index.md#schema-authentication--cookie_params--auth_hmac--prim_key_expiry",
+          "provider": "virtual_host",
+          "schema_path": "authentication.cookie_params.auth_hmac.prim_key_expiry",
+          "source_description": "Primary HMAC Key Expiry time."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-081",
+      "prompt": "Terraform: In the read-only data source at aws_secret_key > secret_key > blindfold_secret_info: Which access object supplies the secret decryption backend? Field: `decryption_provider`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_secret_key--secret_key--blindfold_secret_info--decryption_provider",
+      "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/cloud_user_account/properties/aws_provider/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_provider--aws_secret_key--secret_key--blindfold_secret_info--decryption_provider",
+          "provider": "cloud_user_account",
+          "schema_path": "aws_provider.aws_secret_key.secret_key.blindfold_secret_info.decryption_provider",
+          "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-082",
+      "prompt": "Terraform: My managed resource uses the domains > credentials > api_key branch. What key material does this credential expect? Field: `key`.",
+      "expected": "xcsh://terraform-documentation/documentation/resources/api_testing/properties/domains/credentials/api_key/index.md#schema-domains--credentials--api_key--key",
+      "source_description": "Cryptographic key material",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/index.md#schema-api_testing--domains--credentials--api_key--key",
+          "provider": "http_loadbalancer",
+          "schema_path": "api_testing.domains.credentials.api_key.key",
+          "source_description": "Cryptographic key material"
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-083",
+      "prompt": "Terraform: For the managed resource, under cookie_params > auth_hmac, Where is the primary HMAC key expiry specified? Field: `prim_key_expiry`.",
+      "expected": "xcsh://terraform-documentation/documentation/resources/authentication/properties/cookie_params/auth_hmac/index.md#schema-cookie_params--auth_hmac--prim_key_expiry",
+      "source_description": "Primary HMAC Key Expiry time.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/resources/virtual_host/properties/authentication/cookie_params/auth_hmac/index.md#schema-authentication--cookie_params--auth_hmac--prim_key_expiry",
+          "provider": "virtual_host",
+          "schema_path": "authentication.cookie_params.auth_hmac.prim_key_expiry",
+          "source_description": "Primary HMAC Key Expiry time."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-084",
+      "prompt": "Terraform: Which access object supplies the secret decryption backend? Context: managed resource; aws_secret_key > secret_key > blindfold_secret_info. Field: `decryption_provider`.",
+      "expected": "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_secret_key--secret_key--blindfold_secret_info--decryption_provider",
+      "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/resources/cloud_user_account/properties/aws_provider/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_provider--aws_secret_key--secret_key--blindfold_secret_info--decryption_provider",
+          "provider": "cloud_user_account",
+          "schema_path": "aws_provider.aws_secret_key.secret_key.blindfold_secret_info.decryption_provider",
+          "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-085",
+      "prompt": "Terraform: I am inspecting domains > credentials > api_key > value > blindfold_secret_info on the read-only data source. Which access object supplies the secret decryption backend? Field: `decryption_provider`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/api_testing/properties/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-domains--credentials--api_key--value--blindfold_secret_info--decryption_provider",
+      "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-api_testing--domains--credentials--api_key--value--blindfold_secret_info--decryption_provider",
+          "provider": "http_loadbalancer",
+          "schema_path": "api_testing.domains.credentials.api_key.value.blindfold_secret_info.decryption_provider",
+          "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-086",
+      "prompt": "Terraform: What expiry value belongs to the secondary HMAC key? This concerns cookie_params > auth_hmac in the read-only data source. Field: `sec_key_expiry`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/authentication/properties/cookie_params/auth_hmac/index.md#schema-cookie_params--auth_hmac--sec_key_expiry",
+      "source_description": "Secondary HMAC Key Expiry time.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/virtual_host/properties/authentication/cookie_params/auth_hmac/index.md#schema-authentication--cookie_params--auth_hmac--sec_key_expiry",
+          "provider": "virtual_host",
+          "schema_path": "authentication.cookie_params.auth_hmac.sec_key_expiry",
+          "source_description": "Secondary HMAC Key Expiry time."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-087",
+      "prompt": "Terraform: In the read-only data source at aws_secret_key > secret_key > blindfold_secret_info: What format does the secret location use? Field: `location`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_secret_key--secret_key--blindfold_secret_info--location",
+      "source_description": "Location is the uri_ref. It could be in URL format for string:/// Or it could be a path if the store provider is an HTTP/HTTPS location.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/cloud_user_account/properties/aws_provider/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_provider--aws_secret_key--secret_key--blindfold_secret_info--location",
+          "provider": "cloud_user_account",
+          "schema_path": "aws_provider.aws_secret_key.secret_key.blindfold_secret_info.location",
+          "source_description": "Location is the uri_ref. It could be in URL format for string:/// Or it could be a path if the store provider is an HTTP/HTTPS location."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-088",
+      "prompt": "Terraform: My managed resource uses the domains > credentials > api_key > value > blindfold_secret_info branch. Which access object supplies the secret decryption backend? Field: `decryption_provider`.",
+      "expected": "xcsh://terraform-documentation/documentation/resources/api_testing/properties/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-domains--credentials--api_key--value--blindfold_secret_info--decryption_provider",
+      "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-api_testing--domains--credentials--api_key--value--blindfold_secret_info--decryption_provider",
+          "provider": "http_loadbalancer",
+          "schema_path": "api_testing.domains.credentials.api_key.value.blindfold_secret_info.decryption_provider",
+          "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-092",
+      "prompt": "Terraform: What interval controls grouped notifications? This concerns notification_parameters in the read-only data source. Field: `group_interval`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/alert_policy/properties/notification_parameters/index.md#schema-notification_parameters--group_interval",
+      "source_description": "Group Interval is used to specify how long to wait before sending a notification about new alerts that are added to the group for which an initial notification has already been sent. Format: , where s - seconds, m - minutes, h - hours, d - days If not specified, group_interval defaults to \"1m\"",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/alert_policy/properties/routes/notification_parameters/index.md#schema-routes--notification_parameters--group_interval",
+          "provider": "alert_policy",
+          "schema_path": "routes.notification_parameters.group_interval",
+          "source_description": "Group Interval is used to specify how long to wait before sending a notification about new alerts that are added to the group for which an initial notification has already been sent. Format: , where s - seconds, m - minutes, h - hours, d - days If not specified, group_interval defaults to \"1m\""
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-097",
+      "prompt": "Terraform: I am inspecting domains > credentials > api_key > value > blindfold_secret_info on the read-only data source. What format does the secret location use? Field: `location`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/api_testing/properties/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-domains--credentials--api_key--value--blindfold_secret_info--location",
+      "source_description": "Location is the uri_ref. It could be in URL format for string:/// Or it could be a path if the store provider is an HTTP/HTTPS location.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-api_testing--domains--credentials--api_key--value--blindfold_secret_info--location",
+          "provider": "http_loadbalancer",
+          "schema_path": "api_testing.domains.credentials.api_key.value.blindfold_secret_info.location",
+          "source_description": "Location is the uri_ref. It could be in URL format for string:/// Or it could be a path if the store provider is an HTTP/HTTPS location."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-100",
+      "prompt": "Terraform: My read-only data source uses the cookie_params > auth_hmac > prim_key > blindfold_secret_info branch. Which access object supplies the secret decryption backend? Field: `decryption_provider`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/authentication/properties/cookie_params/auth_hmac/prim_key/blindfold_secret_info/index.md#schema-cookie_params--auth_hmac--prim_key--blindfold_secret_info--decryption_provider",
+      "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/virtual_host/properties/authentication/cookie_params/auth_hmac/prim_key/blindfold_secret_info/index.md#schema-authentication--cookie_params--auth_hmac--prim_key--blindfold_secret_info--decryption_provider",
+          "provider": "virtual_host",
+          "schema_path": "authentication.cookie_params.auth_hmac.prim_key.blindfold_secret_info.decryption_provider",
+          "source_description": "Name of the Secret Management Access object that contains information about the backend Secret Management service."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-114",
+      "prompt": "Terraform: What session name appears for this assumed role? Context: read-only data source; aws_assume_role. Field: `session_name`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--session_name",
+      "source_description": "Use the role session name to uniquely identify a session, which will be used for deploy, monitor from F5XC console.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/cloud_user_account/properties/aws_provider/aws_assume_role/index.md#schema-aws_provider--aws_assume_role--session_name",
+          "provider": "cloud_user_account",
+          "schema_path": "aws_provider.aws_assume_role.session_name",
+          "source_description": "Use the role session name to uniquely identify a session, which will be used for deploy, monitor from F5XC console."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    },
+    {
+      "id": "tf1240-127",
+      "prompt": "Terraform: I am inspecting action on the read-only data source. How do I choose whether this fast ACL drops or forwards traffic? Field: `simple_action`.",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/fast_acl_rule/properties/action/index.md#schema-action--simple_action",
+      "source_description": "FastAclRuleSimpleAction specifies simple action like PASS or DENY Drop the traffic Forward the traffic.",
+      "peers": [
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/fast_acl/properties/re_acl/fast_acl_rules/action/index.md#schema-re_acl--fast_acl_rules--action--simple_action",
+          "provider": "fast_acl",
+          "schema_path": "re_acl.fast_acl_rules.action.simple_action",
+          "source_description": "FastAclRuleSimpleAction specifies simple action like PASS or DENY Drop the traffic Forward the traffic."
+        },
+        {
+          "uri": "xcsh://terraform-documentation/documentation/data-sources/fast_acl/properties/site_acl/fast_acl_rules/action/index.md#schema-site_acl--fast_acl_rules--action--simple_action",
+          "provider": "fast_acl",
+          "schema_path": "site_acl.fast_acl_rules.action.simple_action",
+          "source_description": "FastAclRuleSimpleAction specifies simple action like PASS or DENY Drop the traffic Forward the traffic."
+        }
+      ],
+      "finding": "Question omits provider or additional ancestor while the same exact field meaning occurs at multiple destinations. Identical suffix scope alone does not distinguish the owning destination.",
+      "frozen_label_unchanged": true
+    }
+  ],
+  "limitations": [
+    "No relabeling or rescoring of original suite.",
+    "These findings must be resolved before a new freeze; they do not qualify the current implementation."
+  ]
+}
