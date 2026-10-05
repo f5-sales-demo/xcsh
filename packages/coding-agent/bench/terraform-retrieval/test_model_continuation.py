@@ -634,3 +634,20 @@ class InternalFreezeTests(unittest.TestCase):
                 {**eligibility, "qualification_eligible": False},
                 "review",
             )
+
+
+class TimeoutEvidenceTests(unittest.TestCase):
+    """Timeouts preserve observed output without treating partial turns as success."""
+
+    def test_timeout_retains_partial_stream(self) -> None:
+        """Kill the task process while retaining its flushed trace."""
+        with self.assertRaises(subprocess.TimeoutExpired) as raised:
+            run_json_process(
+                [
+                    sys.executable,
+                    "-c",
+                    "import time; print('partial-event',flush=True); time.sleep(30)",
+                ],
+                timeout_seconds=0.2,
+            )
+        self.assertIn("partial-event", raised.exception.output)

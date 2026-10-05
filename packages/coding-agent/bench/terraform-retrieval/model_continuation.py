@@ -220,6 +220,13 @@ def run_json_process(
             return subprocess.CompletedProcess(
                 command, process.returncode, stdout, stderr
             )
+        except subprocess.TimeoutExpired:
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(process.pid, signal.SIGKILL)
+            stdout, stderr = process.communicate(timeout=1)
+            raise subprocess.TimeoutExpired(
+                command, timeout_seconds, output=stdout, stderr=stderr
+            ) from None
         finally:
             with contextlib.suppress(ProcessLookupError):
                 os.killpg(process.pid, signal.SIGKILL)

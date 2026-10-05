@@ -380,6 +380,11 @@ for case in cases:
             }
         )
     except (subprocess.TimeoutExpired, json.JSONDecodeError, ValueError) as error:
+        if isinstance(error, subprocess.TimeoutExpired):
+            (args.output / (case["id"] + ".partial.ndjson")).write_text(
+                error.output or ""
+            )
+            (args.output / (case["id"] + ".stderr.txt")).write_text(error.stderr or "")
         results.append(
             {
                 "id": case["id"],
