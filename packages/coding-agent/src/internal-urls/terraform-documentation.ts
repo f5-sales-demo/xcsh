@@ -913,12 +913,15 @@ export function terraformProviderSetupDestination(query: string): string | undef
 	if (/\b(?:decryption|secret store|store provider|storage provider)\b/i.test(query)) return undefined;
 	if (/\b(?:resources?|data[ -]sources?|actions?|ephemeral)\b/i.test(query)) return undefined;
 	if (/\bxcsh_(?!provider\b)[a-z][a-z0-9_]*\b/i.test(query)) return undefined;
-	if (!/\bprovider\b/i.test(query) || !/\bauthenticat(?:ion|e|ing)\b|\bcredentials?\b|\bapi[ -]token\b/i.test(query))
+	if (!/\bprovider\b/i.test(query) || !/\bauthenticat(?:ion|e|ing)\b|\bcredentials?\b|\bapi[ _-]token\b/i.test(query))
 		return undefined;
 	if (/\benvironment\b.*\bvariables?\b/i.test(query)) return "argument-reference";
 	const methods = [
-		{ present: /\bapi[ -]token\b/i.test(query), anchor: "option-1-api-token-authentication" },
-		{ present: /\bp12\b|\bpkcs[ #_-]?12\b/i.test(query), anchor: "option-2-p12-certificate-authentication" },
+		{ present: /\bapi[ _-]token\b/i.test(query), anchor: "option-1-api-token-authentication" },
+		{
+			present: /\bp12(?:_file|_password)?\b|\bpkcs[ #_-]?12\b/i.test(query),
+			anchor: "option-2-p12-certificate-authentication",
+		},
 		{ present: /\bpem\b/i.test(query), anchor: "option-3-pem-certificate-authentication" },
 	].filter(method => method.present);
 	return methods.length === 1 ? methods[0]!.anchor : "authentication-options";

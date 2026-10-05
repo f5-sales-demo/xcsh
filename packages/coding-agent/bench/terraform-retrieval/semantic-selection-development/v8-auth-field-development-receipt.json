@@ -1,0 +1,16 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": "e3f32f4e734ae59c4b86a4d42daa836723c8fd57f4cea0ff88f31180731ff66e",
+  "suite_sha256": "a53925c0e0e0d448aa8c349f1b708ac98c77ea07900ccf800b2c5f8692bc9995",
+  "answerable_correct": 137,
+  "answerable_total": 140,
+  "answerable_top5": 139,
+  "change": "Provider api_token and p12_file/p12_password inputs are exact authentication-method evidence. Resource credential fields remain separate.",
+  "limitations": [
+    "17 original prompt collisions resolved by supplied owner/root only in this derived development suite. Original frozen suite unchanged.",
+    "Not heldout qualification; no release authorization.",
+    "Remaining source-choice and HCL destination contracts incomplete."
+  ]
+}

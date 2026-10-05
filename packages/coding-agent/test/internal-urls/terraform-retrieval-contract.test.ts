@@ -1236,3 +1236,18 @@ test("complete ephemeral declaration can restrict supplied inputs", () => {
 		),
 	).toEqual({ role: "fundamentals", anchor: "minimal-configuration" });
 });
+
+test("exact provider credential input identifies documented authentication method", () => {
+	expect(terraformProviderSetupDestination('Draft HCL provider xcsh with api_token = "sample"')).toBe(
+		"option-1-api-token-authentication",
+	);
+	expect(terraformProviderSetupDestination('Provider xcsh authentication with p12_file = "sample.p12"')).toBe(
+		"option-2-p12-certificate-authentication",
+	);
+	expect(
+		terraformProviderSetupDestination(
+			'Provider xcsh authentication with api_token = "sample" and p12_file = "sample.p12"',
+		),
+	).toBe("authentication-options");
+	expect(terraformProviderSetupDestination("Resource xcsh_cloud_credentials uses api_token")).toBeUndefined();
+});
