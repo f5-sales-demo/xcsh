@@ -48,6 +48,18 @@
       "kind": "model-subset",
       "source": "v10-first-internal-result/exposure.json",
       "reason": "v10 first untouched retrieval failed; all subsequent runs regression only"
+    },
+    {
+      "sha256": "46145a8d3cb655c200cca004198b557efa14b4452d7a72584cb283a8f82a9fac",
+      "kind": "heldout",
+      "source": "current-v15-first-freeze/v15-first-frozen-failure.json.gz",
+      "reason": "First v15 frozen run failed and subsequent source analysis exposed prompts; regression only."
+    },
+    {
+      "sha256": "fdce9ed81317c5e3451928fe70385763c7b4dc39747bae9a02f17a499ce2b865",
+      "kind": "model-subset",
+      "source": "current-v15-first-freeze/v15-first-frozen-failure.json.gz",
+      "reason": "First v15 frozen run failed and subsequent source analysis exposed prompts; regression only."
     }
   ]
 }

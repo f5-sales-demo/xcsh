@@ -63,3 +63,11 @@ verified public citation. Warm p95 was 31.85 ms. The exposed suite is regression
 qualification or installed-model acceptance is claimed. The full TypeScript command completed
 successfully, including 9,911 coding-agent tests. The frozen suite and failed first result are
 retained in `terraform-retrieval/current-v15-first-freeze/`.
+
+
+Subsequent source-description and retry-scope fixes raised the exposed v15 regression to
+139/140 top five and 127/140 automatically selected correct leaves, with zero ambiguous
+cases selected. The remaining uncovered query is the unchanged 712-byte input rejected
+by the request limit. All expected exact reads and public citation mappings passed.
+Warm p95 was 31.00 ms. This remains development evidence; the exposure ledger records
+both frozen suite and model-subset digests as regression-only.
