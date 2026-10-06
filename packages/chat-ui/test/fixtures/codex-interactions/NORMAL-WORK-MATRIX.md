@@ -21,8 +21,8 @@ The live model prompts never name question tools and use automatic tool choice. 
 | Terminal drafts and pause | Presentation queue respects pauses and restores editor text | hook-editor.test.ts; user-interactions.test.ts |
 | Readable summaries | Correlated JSON remains model-facing; display answer text | chat-ui/Transcript.test.tsx |
 | macOS and Ubuntu source | Focused owner/boundary tests pass on both hosts | macOS 23 tests; Ubuntu focused and full TypeScript workspace checks |
-| Chrome and VS Code | Shared sequential forms and receipts reach consumer UI | Chrome #656: 441 tests/types/build; VS Code #1639: 1371 tests/types/build plus forwarding regression tests |
+| Chrome and Visual Studio Code | Shared sequential forms and receipts reach consumer UI | Chrome #656: 441 tests/types/build; Visual Studio Code #1639: 1371 tests/types/build plus forwarding regression tests |
 | Office and RPC/remote | Shared form inheritance, existing question/reply contract | Office 436 tests; RPC/remote focused checks |
-| Installed clients | Published immutable artifact and scenario repeated in terminal, Chrome, VS Code, Office, RPC/remote | Pending release and installed acceptance |
+| Installed clients | Published immutable artifact and scenario repeated in terminal, Chrome, Visual Studio Code, Office, RPC/remote | Pending release and installed acceptance |
 
 Public evidence excludes raw provider traces, answers from real users, credentials and encrypted reasoning. Private temporary synthetic traces retain timing and correlated replies for inspection.
