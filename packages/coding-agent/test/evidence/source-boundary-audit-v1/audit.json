@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "6b6678fb6ad994d490304b663862eb1f764b2ab4",
-  "fingerprint": "f1ef6245b8eea536ffa9a907f6abdad21dfab5917ca426187a25c8b65c221a6a",
+  "revision": "8341e587bc88aa58e96b9afe60fbd49a5ee56b1b",
+  "fingerprint": "521e184238c1c1186409299e7bb7e56cb00dfadd4de167e428db0784e2153925",
   "counts": {
     "total": 238,
     "components": 96,
@@ -3219,7 +3219,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "2315fb32df3602f9c001adae254853282ba5fda3b0933ffebc92ab6ccc5ce474",
+      "sha256": "7d2eb113ed1fd1f9fb5fed059d352a965854896c04cabc0bb4726b6e89027000",
       "exports": [
         "EventController"
       ],

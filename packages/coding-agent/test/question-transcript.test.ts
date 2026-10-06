@@ -167,6 +167,7 @@ describe("question transcript presentation", () => {
 		const liveChildren: any[] = [];
 		const showStatus = vi.fn();
 		const addMessageToChat = vi.fn();
+		const setEditorText = vi.fn();
 		const liveCtx = {
 			isInitialized: true,
 			statusLine: { invalidate() {} },
@@ -180,7 +181,7 @@ describe("question transcript presentation", () => {
 			},
 			addMessageToChat,
 			optimisticUserMessageSignature: undefined,
-			editor: { setText() {} },
+			editor: { setText: setEditorText },
 			updatePendingMessagesDisplay() {},
 		};
 		const controller = new EventController(liveCtx as any);
@@ -192,6 +193,7 @@ describe("question transcript presentation", () => {
 		await controller.handleEvent({ type: "message_start", message: reply } as any);
 		expect(showStatus).not.toHaveBeenCalled();
 		expect(addMessageToChat).not.toHaveBeenCalled();
+		expect(setEditorText).not.toHaveBeenCalled();
 		const live = Bun.stripANSI(liveChildren.flatMap(child => child.render(80)).join("\n"));
 		expect(live).toContain("/questions");
 		expect(live).toContain("Answer recorded");
