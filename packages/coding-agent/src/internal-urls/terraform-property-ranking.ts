@@ -122,6 +122,7 @@ export function propertyWorkloadArchitecture(text: string): "stateless" | "state
 	return assertions.size === 1 ? [...assertions][0] : undefined;
 }
 export function propertyWorkloadPortCount(text: string): "single" | "multiple" | undefined {
+	text = propertyInstructionText(text);
 	const query = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	if (
 		/\b(?:not|no|never|without|maybe|possibly)\b[^.!?;]*\b(?:one|single|multiple|multi)[ -]?(?:public[ -]?)?ports?\b/i.test(
@@ -869,12 +870,23 @@ export function rankPropertyScope(
 				if (localTerms.has(term)) precision += weight(term);
 				else if (row.aliasTerms.includes(term)) precision += weight(term) * 0.25;
 			}
+			const describedMeaning =
+				propertyInstructionText(queryText) !== queryText ? propertyRequestedText(queryText) : undefined;
+			const normalizedDescription = (text: string) =>
+				text
+					.toLowerCase()
+					.replace(/^exclusive with\s+/, "")
+					.replace(/[^a-z0-9]+/g, " ")
+					.trim();
+			const exactDescription =
+				describedMeaning && normalizedDescription(describedMeaning) === normalizedDescription(row.description);
 			const requestedLeaf = row.leaf.filter(term => target.includes(term)).length;
 			const leafComplete = row.leaf.length > 0 && row.leaf.every(term => target.includes(term));
 			let score =
 				(local + context * 0.6) * (total ? (coverage / total) ** 2 : 0) +
 				precision * 1.5 +
-				(leafComplete ? 12 : requestedLeaf * 3);
+				(leafComplete ? 12 : requestedLeaf * 3) +
+				(exactDescription ? 100 : 0);
 			const capabilityTerms = row.leaf.filter(term => !["enable", "disable"].includes(term));
 			const capabilityBlock =
 				row.anchor === "section" &&

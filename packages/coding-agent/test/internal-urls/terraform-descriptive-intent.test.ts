@@ -6,6 +6,7 @@ import {
 } from "../../src/internal-urls/terraform-documentation";
 import { interpretTerraformLifecycle } from "../../src/internal-urls/terraform-lifecycle";
 import {
+	preparePropertyScope,
 	propertyExplicitSchemaPaths,
 	propertyNamedRootPath,
 	propertyQueryTerms,
@@ -13,6 +14,8 @@ import {
 	propertyRequestedText,
 	propertyRequestsBlock,
 	propertySchemaIdentifiers,
+	propertyWorkloadPortCount,
+	rankPropertyScope,
 } from "../../src/internal-urls/terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "../../src/internal-urls/terraform-property-selection";
 
@@ -243,4 +246,25 @@ test("source-described importing is field meaning and nested timeout remains a p
 	expect(interpretTerraformLifecycle("Follow `timeouts`. Explain the documented field `read`.")?.operations).toEqual([
 		"read",
 	]);
+});
+
+test("field meanings preserve explicit multi-port scope and distinguish target versus reached ports", () => {
+	expect(
+		propertyWorkloadPortCount(
+			"Follow `multi_ports`. Find the field described as follows: One or two ports in each range.",
+		),
+	).toBeUndefined();
+	const rows = ["port", "target_port"].map(field => ({
+		provider_type: "data-sources",
+		provider_name: "workload",
+		schema_path: "stateful_service.info." + field,
+		path: "fixture",
+		anchor: "schema-" + field,
+		description: field === "port" ? "Port the workload can be reached on." : "Port the workload is listening on.",
+	}));
+	const ranked = rankPropertyScope(
+		"Follow `stateful_service` → `info`. Find the field described as follows: Port the workload is listening on.",
+		preparePropertyScope(rows),
+	);
+	expect(ranked[0]?.schema_path).toBe("stateful_service.info.target_port");
 });

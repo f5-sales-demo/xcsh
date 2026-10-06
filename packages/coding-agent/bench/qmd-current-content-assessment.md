@@ -101,3 +101,9 @@ The fifth unique-prompt first freeze reached 137/140 top-five and 132/140 correc
 with no ambiguous selection; it remains failed and regression-only. One case used an incomplete
 canonical description, and two cases revealed nested-timeout/import-word routing defects.
 All first results and source files remain unchanged and preserved.
+
+
+The sixth source-reviewed first freeze reached 138/140 top-five coverage, 137/140 correct
+selection, and zero ambiguous selections. Two workload fields exposed source-description
+port-count and target-versus-reached-port distinctions. Its first result is retained in
+`terraform-retrieval/current-v15-sixth-freeze/`; later runs are regression-only.
