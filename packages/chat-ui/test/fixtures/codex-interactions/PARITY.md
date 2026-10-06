@@ -53,5 +53,5 @@ xcsh intentionally extends Default policy: material missing choices use async st
 
 Progressive core includes async questions; explicit tool scopes remain authoritative. Terminal and shared chat forms open sequentially. Dismissal leaves async requests pending; reopening and reconnect never submit a highlighted recommendation. The shared completion owner and receipts remain unchanged in responsibility.
 
-Evidence: progressive-context-loading.test.ts, system-prompt-questions.test.ts, user-interactions.test.ts, interaction-parity.test.ts, interaction-panel.test.tsx and Transcript.test.tsx. The static prompt budget now includes the core question schema and guidance. 
+Evidence: progressive-context-loading.test.ts, system-prompt-questions.test.ts, user-interactions.test.ts, interaction-parity.test.ts, interaction-panel.test.tsx and Transcript.test.tsx. The static prompt budget now includes the core question schema and guidance.
 Live model and installed macOS/Ubuntu terminal, Chrome, Visual Studio Code, Office and RPC/remote acceptance remain required; deterministic tests do not establish those gates.
