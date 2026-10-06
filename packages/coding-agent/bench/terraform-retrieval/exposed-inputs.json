@@ -132,6 +132,18 @@
       "kind": "model-subset",
       "source": "current-v15-seventh-freeze/v15-seventh-first-retrieval.json.gz",
       "reason": "First retrieval missed an answerable top-five destination; regression only."
+    },
+    {
+      "sha256": "2db095ec0521131b24632b1e0627c3e7cf704cc2ce4a4c8b9a6e8ae5deae3fc4",
+      "kind": "heldout",
+      "source": "current-v15-eighth-freeze/installed-first-source-review.json.gz",
+      "reason": "Installed source review failed zero-unsupported-configurability claim gate; later runs regression only."
+    },
+    {
+      "sha256": "417f87e5cb10378f173c5744833e0cec691b537fe3e2ed46eb80eb09379085d6",
+      "kind": "model-subset",
+      "source": "current-v15-eighth-freeze/installed-first-source-review.json.gz",
+      "reason": "Installed source review failed zero-unsupported-configurability claim gate; later runs regression only."
     }
   ]
 }

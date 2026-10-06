@@ -113,3 +113,13 @@ The seventh unique first freeze missed one aggregate route timeout (139/140 top 
 136/140 correct selection, zero ambiguous selections). Its unchanged first result is retained
 in `terraform-retrieval/current-v15-seventh-freeze/`. Later results are regression-only.
 The explicit nested route hierarchy now excludes lifecycle routing for this field.
+
+
+The eighth first retrieval passed every answerable top-five expectation (140/140), selected
+138/140 correctly, and read every expected exact section with verified public mappings.
+Mac/Ubuntu responses matched, with p95 34.99/30.83 ms. All 16 installed continuation
+branches passed source review. Installed 40-case first results were 39/40 automated,
+38/40 after source review (95% overall, 96.43% answerable). Qualification failed the absolute
+zero-unsupported-claims gate: one clarification falsely implied a computed-only reference UID
+could be configured in the resource role. A complete HCL case also missed a required root
+anchored read. All first scores are preserved; the eighth suite is now regression-only.
