@@ -479,6 +479,7 @@ class LiveApplyClaimTest(unittest.TestCase):
     def test_documentation_verification_does_not_assert_a_later_negated_apply(
         self,
     ) -> None:
+        """Separate verified documentation from denied execution in another statement."""
         self.assertFalse(
             has_false_live_apply_claim(
                 "This draft was documentation-verified; terraform validate and live apply were not run."
