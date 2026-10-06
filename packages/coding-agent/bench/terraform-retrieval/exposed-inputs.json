@@ -144,6 +144,18 @@
       "kind": "model-subset",
       "source": "current-v15-eighth-freeze/installed-first-source-review.json.gz",
       "reason": "Installed source review failed zero-unsupported-configurability claim gate; later runs regression only."
+    },
+    {
+      "sha256": "a8bf234600102408f0038a91e654db739361cb1e557009a11c3693aada7e8bec",
+      "kind": "heldout",
+      "source": "current-v15-ninth-qualified/installed-first-source-review.json.gz",
+      "reason": "First candidate run passed and is preserved; published/analysed suite is now exposed. Subsequent runs regression only."
+    },
+    {
+      "sha256": "d506e7fb3e9aeb38f081c59f70711ef8a0470005eb6dd5011e0e73b2b146a3f2",
+      "kind": "model-subset",
+      "source": "current-v15-ninth-qualified/installed-first-source-review.json.gz",
+      "reason": "First candidate run passed and is preserved; published/analysed suite is now exposed. Subsequent runs regression only."
     }
   ]
 }
