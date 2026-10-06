@@ -35,6 +35,7 @@ const DOCUMENTATION_HOSTS = new Set([
 	"docs",
 	"documentation",
 	"terraform-documentation",
+	"terraform-release",
 	"terraform",
 	"api-spec",
 	"api-catalog",
@@ -130,7 +131,8 @@ function citationCorpus(value: string): DocumentationCitationCorpus | null {
 	try {
 		const host = new URL(value).hostname;
 		if (host === "documentation") return "documentation";
-		if (host === "terraform-documentation" || host === "terraform") return "terraform";
+		if (host === "terraform-documentation" || host === "terraform-release" || host === "terraform")
+			return "terraform";
 		if (host === "api-spec" || host === "api-catalog") return "api";
 	} catch {
 		/* unrelated URL */
@@ -173,6 +175,36 @@ export class SessionCitationRegistry {
 		if (source?.type !== "internal" || typeof source.value !== "string") return;
 		const corpus = citationCorpus(source.value);
 		if (!corpus) return;
+		if (new URL(source.value).hostname === "terraform-release") {
+			const text = message.content
+				.filter(part => part.type === "text")
+				.map(part => part.text)
+				.join("\n");
+			const parsed = new URL(source.value);
+			const match = /^\/(v\d+\.\d+\.\d+)\/(documentation\/.*\.(?:md|txt))$/.exec(parsed.pathname);
+			const commit = /^Commit: ([a-f0-9]{40})$/m.exec(text)?.[1];
+			const cite = /^Cite: (https:\/\/\S+) \((v\d+\.\d+\.\d+), (sha256:[a-f0-9]{64})\)$/m.exec(text);
+			if (
+				!match ||
+				!commit ||
+				!cite ||
+				cite[2] !== match[1] ||
+				cite[1] !== `https://github.com/f5-sales-demo/terraform-provider-xcsh/blob/${commit}/${match[2]}`
+			)
+				return;
+			const key = citationKey(source.value);
+			if (key)
+				this.#mappings.set(key, {
+					readUri: source.value,
+					publicUrl: cite[1]!,
+					title: match[2]!,
+					corpus: "terraform",
+					sourceVersion: match[1]!,
+					sourceDigest: cite[3]!,
+					sectionLevelLinkAvailable: false,
+				});
+			return;
+		}
 		const text = message.content
 			.filter(part => part.type === "text")
 			.map(part => part.text)
@@ -277,7 +309,7 @@ export function citationLine(
 }
 
 const DOC_URI =
-	/xcsh:\/\/(?:docs|documentation|terraform-documentation|terraform|api-spec|api-catalog)(?![A-Za-z0-9.-])(?:[/?#][^\s<>)\]}`]*)?/gi;
+	/xcsh:\/\/(?:docs|documentation|terraform-documentation|terraform-release|terraform|api-spec|api-catalog)(?![A-Za-z0-9.-])(?:[/?#][^\s<>)\]}`]*)?/gi;
 
 /** Project assistant prose only. Tool inputs, tool results, fenced code, and inline protocol examples stay exact. */
 export function normalizeAssistantDocumentationCitations(

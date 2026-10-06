@@ -123,6 +123,7 @@ import {
 	type ApiCatalogPreflightResult,
 	runApiCatalogPreflight,
 } from "../internal-urls/api-catalog-preflight";
+import type { ProviderReleaseMetadata } from "../internal-urls/provider-release";
 import {
 	type DocumentationCitationResolver,
 	DocumentationCitationStream,
@@ -131,6 +132,7 @@ import {
 	projectDocumentationTranscript,
 	SessionCitationRegistry,
 } from "../internal-urls/public-citations";
+import { runTerraformPreflight, type TerraformPreflightOptions } from "../internal-urls/terraform-preflight";
 import {
 	disposeKernelSessionsByOwner,
 	executePython as executePythonCommand,
@@ -142,6 +144,7 @@ import autoHandoffThresholdFocusPrompt from "../prompts/system/auto-handoff-thre
 import defaultModePrompt from "../prompts/system/default-mode-active.md" with { type: "text" };
 import handoffDocumentPrompt from "../prompts/system/handoff-document.md" with { type: "text" };
 import planModeActivePrompt from "../prompts/system/plan-mode-active.md" with { type: "text" };
+import terraformPreflightPrompt from "../prompts/system/terraform-preflight.md" with { type: "text" };
 import ttsrInterruptTemplate from "../prompts/system/ttsr-interrupt.md" with { type: "text" };
 import type { RoutingState, RoutingTier } from "../routing";
 import { RoutingCoordinator } from "../routing/coordinator";
@@ -356,6 +359,7 @@ export interface AgentSessionConfig {
 		prompt: string,
 		options: { toolsEnabled: boolean; previousResource?: ApiCatalogPreflightIntent },
 	) => Promise<ApiCatalogPreflightResult | null>;
+	terraformPreflight?: (text: string, options: TerraformPreflightOptions) => Promise<ProviderReleaseMetadata | null>;
 	/** TTSR manager for time-traveling stream rules */
 	ttsrManager?: TtsrManager;
 	/** Secret obfuscator for deobfuscating streaming edit content */
@@ -668,6 +672,10 @@ export class AgentSession {
 	#rebuildSystemPrompt: ((toolNames: string[], tools: Map<string, AgentTool>) => Promise<string>) | undefined;
 	#apiCatalogPreflight: NonNullable<AgentSessionConfig["apiCatalogPreflight"]>;
 	#apiCatalogPreflightContext: ApiCatalogPreflightIntent | undefined;
+	#terraformPreflight: NonNullable<AgentSessionConfig["terraformPreflight"]>;
+	#terraformPreflightContext = false;
+	#terraformPreflightSessionId: string | undefined;
+	#terraformPreflightControllers = new Set<AbortController>();
 	#toolSelectionRevision = 0;
 	#baseSystemPrompt: string;
 	#discoverableTools = new Map<string, DiscoverableTool>();
@@ -804,6 +812,7 @@ export class AgentSession {
 		this.#convertToLlm = config.convertToLlm ?? convertToLlm;
 		this.#rebuildSystemPrompt = config.rebuildSystemPrompt;
 		this.#apiCatalogPreflight = config.apiCatalogPreflight ?? runApiCatalogPreflight;
+		this.#terraformPreflight = config.terraformPreflight ?? runTerraformPreflight;
 		this.#baseSystemPrompt = this.agent.state.systemPrompt;
 		this.#setDiscoverableTools();
 		this.#syncRoutingStateFromBranch();
@@ -2935,6 +2944,8 @@ export class AgentSession {
 	beginDispose(): void {
 		if (this.isDisposing) return;
 		this.#promptGeneration++;
+		for (const controller of this.#terraformPreflightControllers)
+			controller.abort(new Error("Terraform preflight cancelled"));
 		this.#pythonExecutionDisposing = true;
 		this.#sessionTransitions.beginClose();
 	}
@@ -3979,12 +3990,29 @@ export class AgentSession {
 			// compaction or provider inference. A QMD/index error is deliberately
 			// terminal for this turn so the model cannot substitute web search or a guess.
 			let apiCatalogPreflight: ApiCatalogPreflightResult | null = null;
+			let terraformPreflight: ProviderReleaseMetadata | null = null;
 			if (message.role === "user") {
+				const controller = new AbortController();
+				this.#terraformPreflightControllers.add(controller);
 				try {
-					apiCatalogPreflight = await this.#apiCatalogPreflight(expandedText, {
-						toolsEnabled: this.getActiveToolNames().includes("read"),
-						previousResource: this.#apiCatalogPreflightContext,
+					terraformPreflight = await this.#terraformPreflight(expandedText, {
+						previousTerraform:
+							this.#terraformPreflightContext && this.#terraformPreflightSessionId === this.sessionId,
+						signal: controller.signal,
 					});
+				} finally {
+					this.#terraformPreflightControllers.delete(controller);
+				}
+				if (this.#promptGeneration !== generation) return;
+				this.#terraformPreflightContext = terraformPreflight !== null;
+				this.#terraformPreflightSessionId = this.sessionId;
+				try {
+					apiCatalogPreflight = terraformPreflight
+						? null
+						: await this.#apiCatalogPreflight(expandedText, {
+								toolsEnabled: this.getActiveToolNames().includes("read"),
+								previousResource: this.#apiCatalogPreflightContext,
+							});
 				} catch (error) {
 					this.#apiCatalogPreflightContext = undefined;
 					throw error;
@@ -4030,6 +4058,17 @@ export class AgentSession {
 			// hidden/context injection so it remains the final instruction to the model.
 			const messages: AgentMessage[] = await logger.ttftAttr("ttft.build-context", async () => {
 				const built: AgentMessage[] = [];
+				if (terraformPreflight) {
+					built.push({
+						role: "custom",
+						customType: "terraform-preflight",
+						content: prompt.render(terraformPreflightPrompt, { ...terraformPreflight }),
+						display: false,
+						details: terraformPreflight,
+						attribution: "agent",
+						timestamp: Date.now(),
+					});
+				}
 				if (apiCatalogPreflight) {
 					built.push({
 						role: "custom",
@@ -4810,6 +4849,8 @@ export class AgentSession {
 		this.userInteractions.cancelAll("interrupted");
 		this.abortRetry();
 		this.#promptGeneration++;
+		for (const controller of this.#terraformPreflightControllers)
+			controller.abort(new Error("Terraform preflight cancelled"));
 		this.#scheduledHiddenNextTurnGeneration = undefined;
 		this.#resolveTtsrResume();
 		this.#cancelPostPromptTasks();
@@ -4899,6 +4940,7 @@ export class AgentSession {
 			this.#pendingNextTurnMessages = [];
 			this.#scheduledHiddenNextTurnGeneration = undefined;
 			this.#apiCatalogPreflightContext = undefined;
+			this.#terraformPreflightContext = false;
 
 			if (this.model) this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
 			this.sessionManager.appendThinkingLevelChange(this.thinkingLevel);
@@ -5789,6 +5831,7 @@ export class AgentSession {
 			this.#asyncJobManager?.cancelAll();
 			await this.sessionManager.newSession(undefined, preview);
 			this.agent.reset();
+			this.#terraformPreflightContext = false;
 			this.agent.sessionId = this.sessionManager.getSessionId();
 			if (this.model) this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
 			this.#steeringMessages = [];
@@ -7560,6 +7603,7 @@ export class AgentSession {
 
 				this.agent.replaceMessages(sessionContext.messages);
 				this.#apiCatalogPreflightContext = undefined;
+				this.#terraformPreflightContext = false;
 				this.#syncTodoPhasesFromBranch();
 				this.#syncRoutingStateFromBranch();
 				if (switchingToDifferentSession) {

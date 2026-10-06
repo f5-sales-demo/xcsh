@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "issue": 4741,
+  "sourceBase": "d92fbed94115a2dc2e31892aa23ebbb1613be936",
+  "prototypeCandidateOnly": true,
+  "registryStableVersionAtAcceptance": "15.2.0",
+  "liveSubsequentPublicationAcceptance": false,
+  "limitations": [
+    "The successor Registry 15.3.0 and new field were simulated. No actual 15.3.0 publication or published-binary validation is claimed.",
+    "macOS model acceptance used configured LiteLLM; OpenAI Codex subscription authentication was unavailable on that host."
+  ],
+  "candidates": {
+    "linuxInitial": "fc795ba35edd90006bf16f75947a6a1fbe84218e219ce7f035d67244619ac757",
+    "macosInitial": "3b15f9aad46814683865755f9ef3b152e2c605498d45a0f71f4720031997c591",
+    "linuxFinal": "38f03fca42a325a0bae74a0c73549ca618d52aafc9baad47595183ca0f567a2b",
+    "macosFinal": "fc7acb524921246115ac64b2a3540e6a852479e1368ae63d332a24657ef4b7bf"
+  },
+  "results": [
+    {
+      "case": "linux-new",
+      "model": "openai-codex/gpt-6.1-sol",
+      "traceSha256": "c87f6b7d1faf930ea2d42e1f8003344b7082182b9425cf0f674f573f3505dcc1",
+      "selectedProviderVersion": "15.2.0",
+      "embeddedDocumentationVersion": "15.2.0",
+      "internalDocumentationReads": 16,
+      "targetedReleasePageReads": 0,
+      "infrastructureCommands": 0,
+      "exactHclPin": true,
+      "publishedProviderLockVerified": true,
+      "formatInitValidatePassed": true
+    },
+    {
+      "case": "linux-upgrade",
+      "model": "openai-codex/gpt-6.1-sol",
+      "traceSha256": "1596ad9a6890839f790468238650efb28cd95166ad41abe6aba12a26cc213c5a",
+      "selectedProviderVersion": "15.2.0",
+      "embeddedDocumentationVersion": "15.2.0",
+      "internalDocumentationReads": 3,
+      "targetedReleasePageReads": 0,
+      "infrastructureCommands": 0,
+      "exactHclPin": true,
+      "publishedProviderLockVerified": true,
+      "formatInitValidatePassed": true,
+      "lockVersionChanged": "15.1.0 -> 15.2.0"
+    },
+    {
+      "case": "linux-override",
+      "model": "openai-codex/gpt-6.1-sol",
+      "traceSha256": "3a1d410133049b9bfb4e67113481058657d92fdebd48a0cfa48aca304f88b38d",
+      "selectedProviderVersion": "15.1.0",
+      "embeddedDocumentationVersion": "15.2.0",
+      "internalDocumentationReads": 6,
+      "targetedReleasePageReads": 0,
+      "infrastructureCommands": 0,
+      "exactHclPin": true,
+      "publishedProviderLockVerified": true,
+      "formatInitValidatePassed": true
+    },
+    {
+      "case": "linux-successor-fixture",
+      "model": "openai-codex/gpt-6.1-sol",
+      "traceSha256": "7da00455224c9076240727ca2a47ec4d9fdbbb1cf913dfb34bbdc8546da401c0",
+      "selectedProviderVersion": "15.3.0",
+      "embeddedDocumentationVersion": "15.2.0",
+      "internalDocumentationReads": 16,
+      "targetedReleasePageReads": 1,
+      "infrastructureCommands": 0,
+      "exactHclPin": true,
+      "simulatedRegistryAndNewField": true,
+      "formatPassed": true,
+      "providerInstallationFailed": true,
+      "draftFailureDisclosed": true,
+      "publishedProviderValidation": false
+    },
+    {
+      "case": "linux-offline",
+      "model": "openai-codex/gpt-6.1-sol",
+      "traceSha256": "1205349e1793c8c537ab42ac0eacb115ef3ad9d15b708323a91a4c36d07f7ab0",
+      "selectedProviderVersion": "15.2.0",
+      "embeddedDocumentationVersion": "15.2.0",
+      "internalDocumentationReads": 1,
+      "targetedReleasePageReads": 0,
+      "infrastructureCommands": 0,
+      "registryFreshness": "cached",
+      "failureDisclosed": true,
+      "registryRequests": 1
+    },
+    {
+      "case": "macos-new",
+      "model": "litellm/gpt-6.1-sol",
+      "traceSha256": "fe619614acb3638fa90862f0235d7b19b46f6d59ba8ab660e7b93cbcdd5249e6",
+      "selectedProviderVersion": "15.2.0",
+      "embeddedDocumentationVersion": "15.2.0",
+      "internalDocumentationReads": 11,
+      "targetedReleasePageReads": 0,
+      "infrastructureCommands": 0,
+      "exactHclPin": true,
+      "publishedProviderLockVerified": true,
+      "formatInitValidatePassed": true
+    },
+    {
+      "case": "macos-offline",
+      "model": "litellm/gpt-6.1-sol",
+      "traceSha256": "4e7846b3f356cba4e122e9a03fae1a0141aed592c2ff36c7d24b825140792393",
+      "selectedProviderVersion": "15.2.0",
+      "embeddedDocumentationVersion": "15.2.0",
+      "internalDocumentationReads": 1,
+      "targetedReleasePageReads": 0,
+      "infrastructureCommands": 0,
+      "registryFreshness": "cached",
+      "failureDisclosed": true,
+      "registryRequests": 1
+    },
+    {
+      "case": "linux-final-validation",
+      "model": "openai-codex/gpt-6.1-sol",
+      "traceSha256": "41d744fba7dc896877a8e520d387517e772b40729883eb874da264f1e588b2ce",
+      "selectedProviderVersion": "15.2.0",
+      "embeddedDocumentationVersion": "15.2.0",
+      "exactHclPin": true,
+      "publishedProviderLockVerified": true,
+      "formatInitValidatePassed": true,
+      "internalDocumentationReads": 4,
+      "infrastructureCommands": 0
+    },
+    {
+      "case": "macos-final-validation",
+      "model": "litellm/gpt-6.1-sol",
+      "traceSha256": "3e52f5ed3ffee3c1a75c9945976e7588fc3e63d09c18c2576633ff6bdc3c7372",
+      "selectedProviderVersion": "15.2.0",
+      "embeddedDocumentationVersion": "15.2.0",
+      "exactHclPin": true,
+      "publishedProviderLockVerified": true,
+      "formatInitValidatePassed": true,
+      "internalDocumentationReads": 3,
+      "infrastructureCommands": 0
+    }
+  ]
+}
