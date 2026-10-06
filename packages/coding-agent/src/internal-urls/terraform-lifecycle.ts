@@ -6,7 +6,8 @@ export interface TerraformLifecycleIntent {
 }
 export function interpretTerraformLifecycle(query: string): TerraformLifecycleIntent | undefined {
 	const clauses = query.split(/[.!?;]+/).filter(clause => /\btimeouts?\b|\bduration\b/i.test(clause));
-	const transport = /\b(?:connection|idle|inactive|request|response|tls|handshake|probe|stream)\b|\bno[ -]traffic\b/i;
+	const transport =
+		/\b(?:connection|idle|inactive|request|response|tls|handshake|probe|stream)\b|\bno[ -]traffic\b|\btimeout\s+per\s+retry\b|\bretry\s+attempt\b/i;
 	if (
 		!clauses.length ||
 		query.split(/[.!?;]+/).some(clause => {

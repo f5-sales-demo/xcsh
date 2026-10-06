@@ -168,3 +168,12 @@ test("attributed field descriptions cannot introduce schema scope or Terraform r
 		"qmd_unknown_field",
 	);
 });
+
+test("per-attempt retry limits stay separate from resource lifecycle durations", () => {
+	expect(
+		interpretTerraformLifecycle(
+			"Find the field described as follows: Specifies a non-zero timeout per retry attempt. In milliseconds.",
+		),
+	).toBeUndefined();
+	expect(interpretTerraformLifecycle("Find a resource update timeout.")?.operations).toEqual(["update"]);
+});
