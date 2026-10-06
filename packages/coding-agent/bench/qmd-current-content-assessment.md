@@ -123,3 +123,35 @@ branches passed source review. Installed 40-case first results were 39/40 automa
 zero-unsupported-claims gate: one clarification falsely implied a computed-only reference UID
 could be configured in the resource role. A complete HCL case also missed a required root
 anchored read. All first scores are preserved; the eighth suite is now regression-only.
+
+
+## Final candidate acceptance under the draft hold
+
+The ninth source-reviewed suite (`internal-user-waived`, heldout digest
+`a8bf234600102408f0038a91e654db739361cb1e557009a11c3693aada7e8bec`,
+exact model-subset digest `d506e7fb3e9aeb38f081c59f70711ef8a0470005eb6dd5011e0e73b2b146a3f2`)
+uses 200 unique prompts and unexposed lookup destinations, bound to consumer
+`bc24f08e4c74ce6802fe7a59863a5b5d71802d2a` and canonical v15.
+Its first source run reached 140/140 answerable top-five destinations,
+137/140 correct automatic selections, zero ambiguous selections, successful exact
+reads of every expected section, and verified public mappings. All 200 complete
+responses matched on Mac/Ubuntu; warm p95 was 37.67/32.81 ms.
+
+The first isolated Ubuntu installed-candidate model run passed 40/40 after source
+review: all 28 answerable cases (including four supported synthetic HCL drafts),
+eight justified clarification cases, and four controls. All 16 same-process
+clarification branches passed, including repeated exact terminal reads after replies.
+No unsupported field/configurability claim, internal visible documentation citation,
+or false live-apply claim was found. Every first frozen/model result is retained.
+
+The accepted workload is source-stratified with explicit provider identity and ordered
+parent scope. It establishes this recorded candidate gate; unguided descriptive provider
+identification remains separate development evidence. Both Mac and Ubuntu isolated
+candidate installs passed documentation smokes; the Mac smokes ran with network denied.
+This is not a published artifact or Homebrew release acceptance. The provider enrichment
+remains preview-only and the immutable successor pin update remains deferred.
+
+The retained hold keeps both linked PRs drafts, with no auto-merge, merge, or release.
+Publishing still requires explicit removal of that hold, then provider enrichment
+publication, immutable successor verification, reviewed consumer pin update, release,
+and installed Homebrew/Ubuntu release acceptance.
