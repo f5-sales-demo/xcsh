@@ -81,7 +81,14 @@ export function publicCitationForInternalUri(
 		return null;
 	}
 	if (url.protocol !== "xcsh:" || !DOCUMENTATION_HOSTS.has(url.hostname)) return null;
-	const pathname = url.pathname.replace(/^\//, "");
+	let pathname: string;
+	try {
+		pathname = decodeURIComponent(url.pathname).replace(/^\//, "");
+	} catch {
+		return { readUri, reason: "missing-public-mapping" };
+	}
+	if (pathname.includes("\\") || pathname.split("/").some(part => part === "." || part === ".."))
+		return { readUri, reason: "missing-public-mapping" };
 	if (url.hostname === "docs") return { readUri, reason: "missing-public-mapping" };
 	if (url.hostname === "documentation") {
 		const key = pathname.replace(/\/index\.md$/, "");
@@ -270,7 +277,7 @@ export function citationLine(
 }
 
 const DOC_URI =
-	/xcsh:\/\/(?:docs|documentation|terraform-documentation|terraform|api-spec|api-catalog)\/[^\s<>)\]}`]+/g;
+	/xcsh:\/\/(?:docs|documentation|terraform-documentation|terraform|api-spec|api-catalog)\/[^\s<>)\]}`]+/gi;
 
 /** Project assistant prose only. Tool inputs, tool results, fenced code, and inline protocol examples stay exact. */
 export function normalizeAssistantDocumentationCitations(
@@ -311,12 +318,13 @@ export class DocumentationCitationStream {
 	constructor(private readonly resolve: DocumentationCitationResolver = publicCitationForInternalUri) {}
 
 	#pendingUrlStart(): number | null {
-		const full = this.#raw.lastIndexOf(DocumentationCitationStream.#prefix);
+		const lowerRaw = this.#raw.toLowerCase();
+		const full = lowerRaw.lastIndexOf(DocumentationCitationStream.#prefix);
 		if (full >= 0) {
 			const tail = this.#raw.slice(full);
 			if (!/[\s<>)\]}`"']/.test(tail)) {
 				const hostAndPath = tail.slice(DocumentationCitationStream.#prefix.length);
-				const host = hostAndPath.split("/", 1)[0]!;
+				const host = hostAndPath.split("/", 1)[0]!.toLowerCase();
 				if (DOCUMENTATION_HOSTS.has(host) || [...DOCUMENTATION_HOSTS].some(value => value.startsWith(host)))
 					return full;
 			}
@@ -324,7 +332,7 @@ export class DocumentationCitationStream {
 		for (let length = 1; length < DocumentationCitationStream.#prefix.length; length++) {
 			const start = this.#raw.length - length;
 			if (
-				this.#raw.endsWith(DocumentationCitationStream.#prefix.slice(0, length)) &&
+				lowerRaw.endsWith(DocumentationCitationStream.#prefix.slice(0, length)) &&
 				(start === 0 || /[^A-Za-z0-9]/.test(this.#raw[start - 1]!))
 			)
 				return start;

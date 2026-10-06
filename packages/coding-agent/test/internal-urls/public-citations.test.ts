@@ -201,3 +201,26 @@ describe("public documentation citations", () => {
 		);
 	});
 });
+
+test("public citation parsing handles uppercase schemes and encoded document paths", () => {
+	const uri =
+		"XCSH://terraform-documentation/documentation/resources/http%5Floadbalancer/index.md?view=context#schema-domains";
+	const normalized = normalizeAssistantDocumentationCitations(`[Source](${uri})`);
+	expect(normalized).toBe(
+		"[Source](https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/http_loadbalancer/)",
+	);
+});
+
+test("streaming encoded uppercase citations agrees with completed projection", () => {
+	const stream = new DocumentationCitationStream();
+	const chunks = [
+		"See XCS",
+		"H://terraform-documentation/documentation/resources/http%5F",
+		"loadbalancer/index.md for details.",
+	];
+	const deltas = chunks.map(chunk => stream.push(chunk));
+	expect(deltas.some(delta => /XCSH:\/\//i.test(delta))).toBe(false);
+	expect(deltas.join("") + stream.complete()).toBe(
+		"See https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/http_loadbalancer/ for details.",
+	);
+});

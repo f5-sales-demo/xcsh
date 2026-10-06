@@ -7,6 +7,7 @@ import {
 	propertyRequestedBlockText,
 	propertyRequestedText,
 	propertyRequestsBlock,
+	propertySchemaIdentifiers,
 } from "../../src/internal-urls/terraform-property-ranking";
 import { type RankedProperty, selectPropertyDestination } from "../../src/internal-urls/terraform-property-selection";
 
@@ -156,4 +157,14 @@ test("lifecycle operation intent survives an unrelated rejected transport timeou
 		"read",
 		"update",
 	]);
+});
+
+test("attributed field descriptions cannot introduce schema scope or Terraform roles", () => {
+	const query =
+		"In Terraform resource xcsh_workload, follow `stateful_service` → `mount`. Find the field described as follows: VOLUME_MOUNT_READ_ONLY means read-only mount.";
+	expect(propertySchemaIdentifiers(query, "workload")).not.toContain("volume_mount_read_only");
+	expect(terraformQueryIdentity(query).providerType).toBe("resources");
+	expect(propertySchemaIdentifiers("Find the field `qmd_unknown_field` in the reference.")).toContain(
+		"qmd_unknown_field",
+	);
 });

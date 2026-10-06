@@ -75,7 +75,14 @@ export function propertyTerms(text: string): string[] {
 }
 // Canonical workload service is stateless; stateful_service is its parallel architecture.
 // Apply this distinction only within the workload provider, preserving missing/conflicting intent.
+/** Source-attributed field prose is meaning evidence, not caller-supplied schema scope. */
+export function propertyInstructionText(text: string): string {
+	return text.split(
+		/\b(?:find|locate|identify)\s+(?:the\s+)?(?:field|leaf|property)\s+(?:described as(?: follows)?|with (?:this|the following) (?:documented )?(?:meaning|description))\s*:/i,
+	)[0]!;
+}
 export function propertyWorkloadArchitecture(text: string): "stateless" | "stateful" | undefined {
+	text = propertyInstructionText(text);
 	text = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "").replaceAll("`", "");
 	const assertions = new Set<"stateless" | "stateful">();
 	const negative =
@@ -478,11 +485,11 @@ export function propertyInvalidExcludedScope(text: string): boolean {
 	return /\b(?:outside|excluding)\s+[a-z][a-z0-9]*_[a-z0-9_]*(?:[-/:])[a-z0-9_/-]*/.test(propertyScopeText(text));
 }
 export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
-	let request = propertyBreadcrumbText(text)
+	let request = propertyBreadcrumbText(propertyInstructionText(text))
 		.toLowerCase()
 		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
 	request = request.replace(/\b(?:grouped|keyed)\s+by\s+(?:the\s+)?(?:`[^`]+`|"[^"]+"|[a-z][a-z0-9_-]*)/gi, " ");
-	const requiredPaths = propertyExplicitSchemaPaths(text);
+	const requiredPaths = propertyExplicitSchemaPaths(propertyInstructionText(text));
 	const excluded = new Set([
 		...propertyExcludedSchemaIdentifiers(text),
 		...propertyUncertainExcludedIdentifiers(text),

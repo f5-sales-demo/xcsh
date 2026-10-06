@@ -26,6 +26,7 @@ import {
 } from "./terraform-property-index";
 import {
 	propertyBreadcrumbText,
+	propertyInstructionText,
 	propertyRequestedBlockText,
 	propertyRequestedText,
 	propertyRequestsBlock,
@@ -1268,6 +1269,7 @@ export function terraformProviderMention(search: string, names: readonly string[
 }
 
 export function terraformQueryIdentity(search: string): { providerPhrase?: string; providerType?: string } {
+	search = propertyInstructionText(search);
 	const ordinaryRoleText = search.replace(/\bephemeral\s+resource\b/gi, "ephemeral");
 	const exact = [...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)];
 	const names = [...new Set(exact.map(match => match[1]!.toLowerCase()))];
