@@ -17,6 +17,7 @@ All 16,366 derived human-readable provider document routes occur in the saved pu
 document URLs match their verified source metadata. Exact API operation ownership is unique for 1,724 operations; 55 operations appear in multiple published domains and have no
 selected operation-level citation destination. The public pages inspected expose document-level anchors, but no verified equivalent of the internal Terraform property anchors or
 API operation IDs. `Cite:` therefore uses the verified page URL and says section-level linking is unavailable. Internal `Read:` destinations remain available for exact evidence.
+Saved internal read results bind historical citation URLs to their original source version and digest during display and export. If an older session lacks a verified public mapping, its visible citation fails closed; original session evidence is not rewritten.
 
 The v15 provider metadata names API release `v12.0.0` and commit `a9be0360815e3fd3fa08ded845e03c0bd4afd6ec` on 16,359 documents. Its 122 referenced schema components all exist in
 the selected API `openapi.json`; seven provider root pages carry no upstream schema identity. The general index contains verified Markdown and 3,822 media locator rows; its bundle

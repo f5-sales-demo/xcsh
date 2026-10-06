@@ -124,10 +124,12 @@ import {
 	runApiCatalogPreflight,
 } from "../internal-urls/api-catalog-preflight";
 import {
+	type DocumentationCitationResolver,
 	DocumentationCitationStream,
 	normalizeAssistantDocumentationCitations,
 	projectAssistantDocumentationCitations,
 	projectDocumentationTranscript,
+	SessionCitationRegistry,
 } from "../internal-urls/public-citations";
 import {
 	disposeKernelSessionsByOwner,
@@ -1171,26 +1173,36 @@ export class AgentSession {
 	// Track last assistant message for auto-compaction check
 	#lastAssistantMessage: AssistantMessage | undefined = undefined;
 	readonly #citationStreams = new Map<number, DocumentationCitationStream>();
+	#citationRegistry = new SessionCitationRegistry();
 	#pendingCitationDelta: AgentEvent | undefined;
 
 	#projectDisplayCitations(event: AgentEvent): AgentEvent {
+		const resolve: DocumentationCitationResolver = uri => this.#citationRegistry.resolve(uri);
 		const projectStreamMessage = (message: AssistantMessage): AssistantMessage =>
-			projectAssistantDocumentationCitations({
-				...message,
-				content: message.content.map((block, index) => {
-					const stream = this.#citationStreams.get(index);
-					return block.type === "text" && stream ? { ...block, text: stream.visible } : block;
-				}),
-			});
+			projectAssistantDocumentationCitations(
+				{
+					...message,
+					content: message.content.map((block, index) => {
+						const stream = this.#citationStreams.get(index);
+						return block.type === "text" && stream ? { ...block, text: stream.visible } : block;
+					}),
+				},
+				resolve,
+			);
+		if (event.type === "message_end" && event.message.role === "toolResult") {
+			this.#citationRegistry.observe(event.message);
+			return event;
+		}
 		if (event.type === "message_start" && event.message.role === "assistant") {
+			this.#citationRegistry = new SessionCitationRegistry(this.agent.state.messages);
 			this.#citationStreams.clear();
 			this.#pendingCitationDelta = undefined;
-			return { ...event, message: projectAssistantDocumentationCitations(event.message) };
+			return { ...event, message: projectAssistantDocumentationCitations(event.message, resolve) };
 		}
 		if (event.type === "message_update" && event.message.role === "assistant") {
 			const update = event.assistantMessageEvent;
 			if (update.type === "text_start") {
-				this.#citationStreams.set(update.contentIndex, new DocumentationCitationStream());
+				this.#citationStreams.set(update.contentIndex, new DocumentationCitationStream(resolve));
 				return {
 					...event,
 					message: projectStreamMessage(event.message),
@@ -1200,7 +1212,7 @@ export class AgentSession {
 			if (update.type === "text_delta") {
 				let stream = this.#citationStreams.get(update.contentIndex);
 				if (!stream) {
-					stream = new DocumentationCitationStream();
+					stream = new DocumentationCitationStream(resolve);
 					this.#citationStreams.set(update.contentIndex, stream);
 				}
 				const delta = stream.push(update.delta);
@@ -1233,7 +1245,7 @@ export class AgentSession {
 						...update,
 						content:
 							this.#citationStreams.get(update.contentIndex)?.visible ??
-							normalizeAssistantDocumentationCitations(update.content),
+							normalizeAssistantDocumentationCitations(update.content, resolve),
 						partial,
 					},
 				};
@@ -1242,14 +1254,20 @@ export class AgentSession {
 				return {
 					...event,
 					message: projectStreamMessage(event.message),
-					assistantMessageEvent: { ...update, message: projectAssistantDocumentationCitations(update.message) },
+					assistantMessageEvent: {
+						...update,
+						message: projectAssistantDocumentationCitations(update.message, resolve),
+					},
 				};
 			}
 			if (update.type === "error") {
 				return {
 					...event,
 					message: projectStreamMessage(event.message),
-					assistantMessageEvent: { ...update, error: projectAssistantDocumentationCitations(update.error) },
+					assistantMessageEvent: {
+						...update,
+						error: projectAssistantDocumentationCitations(update.error, resolve),
+					},
 				};
 			}
 			return {
@@ -1260,18 +1278,16 @@ export class AgentSession {
 		}
 		if (event.type === "message_end" && event.message.role === "assistant") {
 			this.#citationStreams.clear();
-			return { ...event, message: projectAssistantDocumentationCitations(event.message) };
+			return { ...event, message: projectAssistantDocumentationCitations(event.message, resolve) };
 		}
 		if (event.type === "assistant_checkpoint")
-			return { ...event, message: projectAssistantDocumentationCitations(event.message) };
+			return { ...event, message: projectAssistantDocumentationCitations(event.message, resolve) };
 		if (event.type === "turn_end" && event.message.role === "assistant")
-			return { ...event, message: projectAssistantDocumentationCitations(event.message) };
+			return { ...event, message: projectAssistantDocumentationCitations(event.message, resolve) };
 		if (event.type === "agent_end")
 			return {
 				...event,
-				messages: event.messages.map(message =>
-					message.role === "assistant" ? projectAssistantDocumentationCitations(message) : message,
-				),
+				messages: projectDocumentationTranscript(event.messages),
 			};
 		return event;
 	}
@@ -8222,7 +8238,7 @@ export class AgentSession {
 	 * @returns Text content, or undefined if no assistant message exists
 	 */
 	getLastAssistantText(): string | undefined {
-		const lastAssistant = this.messages
+		const lastAssistant = this.displayMessages
 			.slice()
 			.reverse()
 			.find(m => {
@@ -8235,9 +8251,7 @@ export class AgentSession {
 
 		if (!lastAssistant) return undefined;
 
-		return (
-			finalAnswerText(projectAssistantDocumentationCitations(lastAssistant as AssistantMessage)).trim() || undefined
-		);
+		return finalAnswerText(lastAssistant as AssistantMessage).trim() || undefined;
 	}
 
 	/**

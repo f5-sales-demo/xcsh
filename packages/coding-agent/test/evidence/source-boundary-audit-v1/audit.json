@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "a35c539b90f789abb0103e23d6839354f2feb8e9",
-  "fingerprint": "715afa570f8ae264be54d346d06ac28100d5b71ed6f529a98f736e4fa15c0234",
+  "revision": "17c86a352323f7e003baa9ade42df032bfc7b5f2",
+  "fingerprint": "ded41e5c7c135f374687f06ed8f307abb511f56c5418682d2eb1248613549b2e",
   "counts": {
     "total": 238,
     "components": 96,
@@ -3700,7 +3700,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "f6d33b448b1e01ec53fbce36ff63d308592f0e9acc55a9e11ba78e1ed6f00dd5",
+      "sha256": "1dbd91bab418b6ac44b07eb3c49336b882cba9d6c891aa09476d7971ad7d6675",
       "exports": [
         "PrintModeOptions",
         "buildJsonAgentEventLine",

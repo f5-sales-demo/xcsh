@@ -1,17 +1,101 @@
 import { describe, expect, test } from "bun:test";
 import path from "node:path";
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import { PUBLIC_CITATION_SOURCES } from "../../src/internal-urls/public-citation-destinations.generated";
 import {
 	DocumentationCitationStream,
 	normalizeAssistantDocumentationCitations,
 	projectAssistantDocumentationCitations,
+	projectDocumentationTranscript,
 	publicCitationForApiOperation,
 	publicCitationForInternalUri,
+	SessionCitationRegistry,
 } from "../../src/internal-urls/public-citations";
 import { extractReferences } from "../../src/references";
 
 describe("public documentation citations", () => {
+	test("historical read provenance binds a public page to its original version and digest", () => {
+		const read =
+			"xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md?view=context#schema-domains";
+		const publicUrl = "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/http_loadbalancer/";
+		const oldDigest = `sha256:${"a".repeat(64)}`;
+		const toolResult = {
+			role: "toolResult",
+			toolName: "read",
+			isError: false,
+			details: { meta: { source: { type: "internal", value: read } } },
+			content: [
+				{
+					type: "text",
+					text: `Cite: ${publicUrl} (document page; section link unavailable; documentation-v12.4.0, ${oldDigest})\n\nSource section`,
+				},
+			],
+		} as AgentMessage;
+		const registry = new SessionCitationRegistry([toolResult]);
+		const bound = registry.resolve(read);
+		expect(bound && "publicUrl" in bound && bound.publicUrl).toBe(publicUrl);
+		expect(bound && "publicUrl" in bound && bound.sourceVersion).toBe("documentation-v12.4.0");
+		expect(bound && "publicUrl" in bound && bound.sourceDigest).toBe(oldDigest);
+	});
+
+	test("old history without a verified public mapping fails closed and keeps its evidence unchanged", () => {
+		const read = "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#schema-domains";
+		const oldToolResult = {
+			role: "toolResult",
+			toolName: "read",
+			isError: false,
+			details: { meta: { source: { type: "internal", value: "xcsh://terraform-documentation/?search=domains" } } },
+			content: [
+				{
+					type: "text",
+					text: "Provider: v12.4.0\nSnapshot: documentation-v12.4.0\nRead: xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#schema-domains",
+				},
+			],
+		} as AgentMessage;
+		const assistant = { role: "assistant", content: [{ type: "text", text: `See ${read}` }] } as AssistantMessage;
+		const projected = projectDocumentationTranscript([oldToolResult, assistant]);
+		expect(JSON.stringify(projected[0])).toContain(read);
+		expect(JSON.stringify(projected[1])).toContain("[unverified documentation citation]");
+		expect(JSON.stringify(projected[1])).not.toContain(read);
+		expect(assistant.content[0]?.type === "text" && assistant.content[0].text).toContain(read);
+	});
+
+	test("historical API catalog headings cannot inherit the current reference version", () => {
+		const read = "xcsh://api-spec/virtual?resource=http_loadbalancer";
+		const oldResult = {
+			role: "toolResult",
+			toolName: "read",
+			isError: false,
+			details: { meta: { source: { type: "internal", value: read } } },
+			content: [{ type: "text", text: "# F5 XC API Specifications (v10.0.0)\n\nOlder reference" }],
+		} as AgentMessage;
+		expect(new SessionCitationRegistry([oldResult]).resolve(read)).toEqual({
+			readUri: read,
+			reason: "conflicting-source-version",
+		});
+	});
+
+	test("a retired historical document cannot acquire an unverified current public page", () => {
+		const read = "xcsh://terraform-documentation/documentation/resources/retired_resource/index.md#old";
+		const oldResult = {
+			role: "toolResult",
+			toolName: "read",
+			isError: false,
+			details: { meta: { source: { type: "internal", value: read } } },
+			content: [
+				{
+					type: "text",
+					text: `Cite: https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/retired_resource/ (document page; section link unavailable; documentation-v12.4.0, sha256:${"a".repeat(64)})`,
+				},
+			],
+		} as AgentMessage;
+		expect(new SessionCitationRegistry([oldResult]).resolve(read)).toEqual({
+			readUri: read,
+			reason: "conflicting-source-version",
+		});
+	});
+
 	test("publication mapping provenance agrees with every reviewed source pin", async () => {
 		const root = path.resolve(import.meta.dir, "../../../../tools");
 		const [content, provider, api] = await Promise.all([
