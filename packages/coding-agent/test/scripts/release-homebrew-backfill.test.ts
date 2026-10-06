@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 
 const root = path.resolve(import.meta.dir, "../../../..");
@@ -36,7 +37,7 @@ describe("release Homebrew backfill workflow contract", () => {
 		expect(workflow).toContain("arch: x64");
 		expect(workflow).toContain("os: macos-14");
 		expect(workflow).toContain("arch: arm64");
-		expect(workflow).toContain('cd "$UAT_HOME"');
+		expect(workflow).not.toContain('          cd "$UAT_HOME"');
 		expect(workflow).toContain('sudo -H -u "$UAT_USER" env');
 		expect(workflow).toContain("path: .controller");
 		expect(workflow).toContain(".controller/scripts/ci-macos-uat-user.sh");
@@ -51,6 +52,16 @@ describe("release Homebrew backfill workflow contract", () => {
 		expect(verifierCopy).toBeGreaterThan(controllerCheckout);
 		expect(workflow).toContain('RELEASE_ARCH="$RELEASE_ARCH"');
 		expect(workflow).toContain('PATH="$UAT_BREW_PREFIX/bin:/usr/bin:/bin:/usr/sbin:/sbin"');
-		expect(workflow).toContain('/bin/bash "$UAT_HOME/ci-verify-homebrew-cask.sh"');
+		const command = /\/bin\/bash -c '([^']+)' _ "\$UAT_HOME"/.exec(workflow)?.[1];
+		expect(command).toBeDefined();
+		const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh UAT home "));
+		try {
+			await fs.writeFile(path.join(temporary, "ci-verify-homebrew-cask.sh"), 'printf "%s" "$PWD"');
+			const process = Bun.spawn(["/bin/bash", "-c", command!, "_", temporary], { stdout: "pipe", stderr: "pipe" });
+			expect(await process.exited).toBe(0);
+			expect(await new Response(process.stdout).text()).toBe(temporary);
+		} finally {
+			await fs.rm(temporary, { recursive: true, force: true });
+		}
 	});
 });
