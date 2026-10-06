@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "regression_only": true,
+  "artifact_source": "af2ea2c2ec2e75585baf5fda9a251ac9e5127e5c",
+  "current_source": "ec377e5ae3ecda20f4287c9cbe9ee7f283dd23f6",
+  "offline_smoke_pass": true,
+  "subscription_preflight_pass": true,
+  "strict_json_preflight_pass": true,
+  "model_40_run": "active; not adjudicated",
+  "limitations": "Artifact predates latest comparison fixes; cannot qualify final source",
+  "raw_traces": "Task-local; failed PI_DEV trace preserved unchanged"
+}

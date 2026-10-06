@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "change": "Keep explicit outer and inner cookie boolean operators at separate schema levels; unquoted e.g. is not a schema path",
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "checks": {
+    "focused_tests": 158,
+    "typescript": "passed"
+  },
+  "regressions": [
+    {
+      "suite": "v8",
+      "report": "v8-cookie-operators-regression.json.gz",
+      "report_sha256": "eeaadb8bcab2bf1d7cae4b3ca7ddb45ff4b2eb1b35dccfcce8c57b2ce8fe1aec",
+      "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+      "answerable_accuracy": 0.8642857142857143,
+      "answerable_top5": 0.9857142857142858
+    },
+    {
+      "suite": "v9",
+      "report": "v9-cookie-operators-regression.json.gz",
+      "report_sha256": "b49addee53240ee5ba14f8044cb2e7893aeb69baf9e71fb6967b4c06e5f64171",
+      "suite_sha256": "b80248156fbc699586bfedd7636c7ed3073e70b3d9960000fde5759337392640",
+      "answerable_accuracy": 0.9357142857142857,
+      "answerable_top5": 0.9928571428571429
+    }
+  ]
+}

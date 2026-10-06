@@ -1,0 +1,61 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "tf1240-002",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 79504.55132790376,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "```hcl\nterraform {\n  required_providers {\n    xcsh = {\n      source = \"f5-sales-demo/xcsh\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_app_firewall\" \"synthetic\" {\n  name      = \"synthetic-waf\"\n  namespace = \"synthetic-lab\"\n  blocking  = {}\n\n  allowed_response_codes {\n    response_code = [200, 204]\n  }\n}\n```\n\nVerified against bundled provider **v12.4.0**: [required root fields](xcsh://terraform-documentation/documentation/resources/app_firewall/index.md?view=context#root-configuration), [blocking choice](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md?view=context#section), and [response-code block](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md?view=context#section) with its [numeric list field](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md?view=context#schema-allowed_response_codes--response_code). `monitoring` is omitted.\n\nDraft only; Terraform validation and deployment were not run.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 76976,
+        "max_bytes": 53621,
+        "measured_results": 13,
+        "violations": []
+      },
+      "trace_sha256": "bad23823d0afdb39dee38cfce60beac58ae95acc1d5c47c8b472ca3030b5f9db",
+      "passed": true
+    },
+    {
+      "id": "tf1240-003",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 92319.57978603896,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "```hcl\nterraform {\n  required_providers {\n    xcsh = {\n      source = \"f5-sales-demo/xcsh\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_origin_pool\" \"synthetic\" {\n  name      = \"synthetic-pool\"\n  namespace = \"synthetic-lab\"\n  no_tls    = {}\n\n  timeouts {\n    create = \"20m\"\n  }\n}\n```\n\nVerified against bundled provider **v12.4.0**: [`no_tls` choice](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#section), [`timeouts` block](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#section), and [`create` duration](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#schema-timeouts--create). `use_tls` is omitted.\n\nDraft only; not run or applied.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 55174,
+        "max_bytes": 21163,
+        "measured_results": 16,
+        "violations": []
+      },
+      "trace_sha256": "2d8caacccbbbf623e59205df2fdd04826e4d5c8267a1912c908e3870c26e2029",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "814ac27f5386e815e0f1e39174b99403f28033fe",
+    "binary_sha256": "04edd6165bc2d80140c223bedd6bfcf65a75e50f56308773321f1dc4c52e5ad1",
+    "binary_bytes": 621938144,
+    "provider_version": "v12.4.0"
+  },
+  "limitations": [
+    "Lightweight expected-guide read diagnostic only; both cases fail original frozen full coverage contract.",
+    "Original expected reads/citations and scores remain unchanged."
+  ]
+}

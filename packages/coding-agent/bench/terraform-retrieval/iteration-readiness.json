@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "qualification_passed": false,
+  "source_commit": "f1bb48523beb3baefae3517f4e893def28e96243",
+  "provider_version": "v12.4.0",
+  "documentation_tag": "documentation-v12.4.0",
+  "provider_source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "index_sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+  "delivery_policy": "Keep merged code; draft fixes; do not release until retained qualification gates pass.",
+  "verified": {
+    "independent_suite": "200cases140/40/20;50deepacross11providers;model40at28/8/4;source-reviewedandfrozen;firstscoredrunfailed",
+    "python_trace_continuation_tests": 31,
+    "narrow_value_lookup_contract_tests": 56,
+    "native_ci": {
+      "run": 37167620023,
+      "conclusion": "success",
+      "source": "8f97af7f1489404d4576bd7f719bdf03165e4038",
+      "publishing": false
+    },
+    "signed_installed_offline": "Macarm64andUbuntux64verifiedhashes;network-disabledTerraformsmokepassed;predatesvaluefix",
+    "platform_parity": "all200completefirstresponsehashesanddestinationsmatch",
+    "warm_p95_ms": {
+      "Mac": 82.89020800000071,
+      "Ubuntu": 102.21508499999982
+    },
+    "environment_repair": {
+      "failed_full_package_preserved": "a22e937fa8bf5a527de325b1cee839760bd1f15c00ee4fdc358adfbd97c4c09b",
+      "cause": "ignoredpinnedgzipmissingafterbuildcleanup",
+      "repair": "exactverifiedartifactrestoredwithoutsourcechanges",
+      "focused_pass": 82,
+      "repaired_full_package": "passed9617/562/0"
+    },
+    "source_package_tests": {
+      "pass": 9650,
+      "skip": 562,
+      "fail": 0,
+      "source": "755e1f9f79f88357c66dbc20d89f758b4eedd36a",
+      "later_safety_repairs_focused_tests": 178
+    },
+    "latest_ci": "6c08ebb5e allPRchecks passed",
+    "current_hybrid_development": {
+      "answerable": 48,
+      "lexical_top1": 46,
+      "hybrid_top1": 34,
+      "top5_both": 46,
+      "rejected": true,
+      "production_imported": false
+    },
+    "combined_source_review": "fourfindingsfixedwithlookup/lifecyclestestfamilies",
+    "scope_review": "Completedreviewfindingsfixed;capacityattemptandsandboxEROFSresultsretainedseparately"
+  },
+  "accuracy": {
+    "first_untouched": {
+      "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+      "correct_answerable": 32,
+      "answerable": 140,
+      "top5": 72,
+      "qualification_passed": false
+    },
+    "retained_value_fix_regression": {
+      "correct_answerable": 34,
+      "top5": 74,
+      "prior_pass_regressions": 0,
+      "qualification_passed": false
+    },
+    "broad_lookup_experiment": {
+      "correct_answerable": 58,
+      "reverted": true,
+      "reason": "regressedBotDefenseandmodelcases"
+    },
+    "current_structured_regression": {
+      "correct_answerable": 74,
+      "answerable": 140,
+      "top5": 102,
+      "qualification_passed": false,
+      "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a"
+    },
+    "current_scope_regression": {
+      "correct_answerable": 84,
+      "answerable": 140,
+      "top5": 115,
+      "qualification_passed": false,
+      "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+      "original_first_result_unchanged": true
+    }
+  },
+  "remaining": [
+    "Structuredintent/routing/ranking/selectiondevelopmentandseparatesemantichybridevaluation",
+    "Newindependentlyrevieweduntouchedsuiteafterdevelopment;currentfailedsuiteisregressiononly",
+    "Retained95overallandanswerablegate;everyanswerabletop5;zerounsupportedorfalse-liveclaims",
+    "40installedmodelUATwithallfrozencontinuationsandmanualHCL/citation/provenancereview",
+    "Final-sourceinstalledMac/Ubuntuperformanceandartifactmeasurements",
+    "Consumermerge/releaseandinstalledHomebrew/Ubuntuacceptanceaftergates"
+  ],
+  "benchmark_integrity": {
+    "original_labels_and_scores_unchanged": true,
+    "post_result_label_concerns": "Twoadditionalbranchambiguitiesreportedseparately;noscoreadjustment",
+    "heldout_retuning_prohibited": true,
+    "first_result_preserved": "v7-first-untouched-result"
+  },
+  "model_route": "UbuntuCodexLoggedinusingChatGPT;userconfirmedProsubscription",
+  "limitations": [
+    "Readinessinventoryisnotacceptanceauthority",
+    "Installedcandidatesdonotqualifylaterdraftchanges"
+  ]
+}

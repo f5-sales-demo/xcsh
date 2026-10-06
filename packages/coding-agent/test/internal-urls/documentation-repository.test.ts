@@ -360,7 +360,7 @@ describe("embedded documentation repository", () => {
 		for (const row of rows) {
 			const first = await repository.readAsset(row.source, row.stable_path, row.filename);
 			expect(first?.mimeType).toBe(row.mime_type);
-			expect(first?.data).toBeTruthy();
+			expect(first && "data" in first ? first.data : null).toBeTruthy();
 		}
 		const firstRow = rows[0]!;
 		const cachedAsset = path.join(cacheRoot, assets.fingerprint, "assets", firstRow.filename);
@@ -371,7 +371,7 @@ describe("embedded documentation repository", () => {
 			firstRow.stable_path,
 			firstRow.filename,
 		);
-		expect(repaired?.data).not.toBe(Buffer.from("corrupt").toString("base64"));
+		expect(repaired && "data" in repaired ? repaired.data : null).not.toBe(Buffer.from("corrupt").toString("base64"));
 	});
 
 	it("repairs a corrupt cached index and rejects stale embedded provenance", async () => {

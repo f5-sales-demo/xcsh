@@ -1,0 +1,27 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": {
+    "packages/coding-agent/src/internal-urls/terraform-documentation.ts": "787af69bb2fa2820615b8c7cb029b5a4b9317d82300509014d735875b59de71f",
+    "packages/coding-agent/src/internal-urls/terraform-property-ranking.ts": "215aa4a0ba4ddb4cadad04ccfc6ec921893d15aa2ee020b051c63d030f2b2bd6"
+  },
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "baseline": {
+    "correct": 70,
+    "top5": 94,
+    "total": 140
+  },
+  "final": {
+    "correct": 82,
+    "top5": 107,
+    "total": 140,
+    "route_p95_ms": 104.37624499999947
+  },
+  "change": "Treat explicit > schema breadcrumb components as schema scope rather than provider identity; retain exact xcsh type mentions and named prose owners.",
+  "limitations": [
+    "Exposed regression only; no heldout or installed final-source qualification.",
+    "Other provider identity and HCL adaptive-routing failures remain.",
+    "Initial breadcrumb experiment overlapped parser offset correction; final receipt binds stable final source."
+  ]
+}

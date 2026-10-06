@@ -1,0 +1,7 @@
+One finding prevents approval:
+
+- **[P2] Verify anchors before returning destinations** — [terraform-alias-lookup.ts:30](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-alias-lookup.ts:30) joins documents but never verifies `a.anchor` against `terraform_sections`. Document-level aliases are indexed with an unchecked `section` anchor. Reproduced: discovery labels the destination verified, but following its URI throws `Terraform anchor not found: section`. Join sections on both path and anchor, and cover missing-anchor behavior.
+
+Other checks passed: 14 tests; 27 malformed requests; exact-only matching; AND facets/node scope; indexed SQL lookup; 40 destinations across five pages, maximum 2,761 bytes; candidate cap; and hint/context/full/default reads. No new prose inference or automatic leaf selection found.
+
+The appended integration test was inspected, not executed because it writes temporary files. No edits, web, subagents, benchmark reads, or releases.

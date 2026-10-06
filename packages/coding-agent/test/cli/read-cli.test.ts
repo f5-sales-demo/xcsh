@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { runReadCommand } from "../../src/cli/read-cli";
 import { Settings } from "../../src/config/settings";
+import { InternalDocsProtocolHandler } from "../../src/internal-urls/xcsh-protocol";
 import * as scrapers from "../../src/web/scrapers/types";
 
 describe("runReadCommand URL handling", () => {
@@ -10,11 +11,36 @@ describe("runReadCommand URL handling", () => {
 		vi.restoreAllMocks();
 	});
 
+	it("routes xcsh documentation URIs through the internal read tool", async () => {
+		const settings = Settings.isolated({});
+		vi.spyOn(Settings, "init").mockResolvedValue(settings);
+		const resolve = vi.spyOn(InternalDocsProtocolHandler.prototype, "resolve").mockResolvedValue({
+			url: "xcsh://terraform-documentation/test",
+			content: "Complete offline Terraform documentation",
+			contentType: "text/markdown",
+		});
+		const output = vi.spyOn(process.stdout, "write").mockImplementation(((_text: string, callback: () => void) => {
+			callback();
+			return true;
+		}) as any);
+		await runReadCommand({
+			path: "xcsh://terraform-documentation/documentation/resources/fixture/index.md?view=full#schema-name",
+		});
+		expect(resolve).toHaveBeenCalled();
+		expect(output).toHaveBeenCalledWith("Complete offline Terraform documentation\n", expect.any(Function));
+	});
+
 	it("delegates URL inputs through the read tool pipeline", async () => {
 		const cwd = path.join(os.tmpdir(), "read-cli-url-test");
 		const settings = Settings.isolated({ "fetch.enabled": true });
 		const pageUrl = "https://example.com/cli-read";
-		const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+		const consoleLogSpy = vi.spyOn(process.stdout, "write").mockImplementation(((
+			_text: string,
+			callback: () => void,
+		) => {
+			callback();
+			return true;
+		}) as any);
 		vi.spyOn(Settings, "init").mockResolvedValue(settings);
 		vi.spyOn(scrapers, "loadPage").mockResolvedValue({
 			ok: true,
@@ -28,6 +54,6 @@ describe("runReadCommand URL handling", () => {
 		await runReadCommand({ path: pageUrl });
 
 		expect(cwdSpy).toHaveBeenCalled();
-		expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("CLI URL content"));
+		expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("CLI URL content"), expect.any(Function));
 	});
 });

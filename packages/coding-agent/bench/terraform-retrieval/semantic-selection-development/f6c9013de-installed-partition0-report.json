@@ -1,0 +1,460 @@
+{
+  "model": "openai-codex/gpt-6.1-sol",
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "input_sha256": {
+    "binary": "e6da8268983e4d993c23ac5582441ac02ba71d63cdb90915dd0cc8f981ca6ff5",
+    "freeze": "91b86764d4b1415efe15b5e9148a1ba6242868029b78d62f03de88c33175b339",
+    "heldout.json": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+    "model-subset.json": "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2",
+    "model-continuations.json": "eed8adc60bce1db510e0372afbc51ca66716075313ced0458b16167030bbdbc5",
+    "independent-review.json": "8e782e5840e243dbc86a0dc5a33e96b933a9d1ba641a61214bdab22870821341",
+    "eligibility.json": "f1d8fc60c47f813ea34c97104e66ee7448db59e09fa36bfc12303115855e8c4e"
+  },
+  "binary": "/tmp/terraform-f6c9013de-installed/xcsh",
+  "provider_version": "v12.4.0",
+  "suite_sha256": "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2",
+  "automated_trace_accuracy": 0.3,
+  "manual_review_required": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "complete": true,
+  "partition_index": 0,
+  "partition_count": 4,
+  "hcl_review_required": false,
+  "results": [
+    {
+      "id": "A001",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 4190,
+        "max_bytes": 2602,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 47639.8625720758,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=In%20Terraform%2C%20which%20setting%20controls%20how%20long%20the%20assumed%20AWS%20role%20session%20lasts%20when%20configuring%20a%20cloud%20credentials%20resource%3F",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "xcsh://branding/terraform"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=In%20Terraform%2C%20which%20setting%20controls%20how%20long%20the%20assumed%20AWS%20role%20session%20lasts%20when%20configuring%20a%20cloud%20credentials%20resource%3F",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "xcsh://branding/terraform"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "9cbc1fef002e8305f09df75259eda4e4e8d917230b49166bbc41fc5d45d81c35",
+      "raw_trace_sha256": "6fe2bb0110e15c960ed194de69f2211a01273d94a4fd61f612a3e9925dfa2484"
+    },
+    {
+      "id": "A010",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 2952,
+        "max_bytes": 1508,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 41685.391501989216,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Locate%20the%20Terraform%20certificate%20resource%20destroy%20timeout%2C%20including%20the%20documented%20state-related%20caveat",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/timeouts/index.md?view=context#schema-timeouts--delete"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Locate%20the%20Terraform%20certificate%20resource%20destroy%20timeout%2C%20including%20the%20documented%20state-related%20caveat",
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/timeouts/index.md?view=context#schema-timeouts--delete"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/certificate/properties/timeouts/index.md?view=context#schema-timeouts--delete"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "757f82a956144af5ac97141b47dda168a6cb32e780d65e1bb2fc41ac60866b7f",
+      "raw_trace_sha256": "e66ab3c265a9e211005160fb39560dbf31118f2164e0f1f0add2edd18ef44d83"
+    },
+    {
+      "id": "A031",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 3720,
+        "max_bytes": 2222,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 39055.74145598803,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=For%20a%20managed%20container%20registry%20credential%20resource%20in%20Terraform%2C%20find%20the%20fully%20qualified%20registry%20login%20server%20field",
+        "xcsh://terraform-documentation/documentation/resources/container_registry/properties/index.md?view=context#schema-registry"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=For%20a%20managed%20container%20registry%20credential%20resource%20in%20Terraform%2C%20find%20the%20fully%20qualified%20registry%20login%20server%20field",
+        "xcsh://terraform-documentation/documentation/resources/container_registry/properties/index.md?view=context#schema-registry"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/container_registry/properties/index.md?view=context#schema-registry"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "e018ad34712121ddfdf5e2b0d1bb5de26a741545ba3ab678e04fd3f226152057",
+      "raw_trace_sha256": "5ccd10e148b9215a07e02a8154f3697677b4e921ba4275406b29301e21cc3834"
+    },
+    {
+      "id": "A047",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 2662,
+        "max_bytes": 1519,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 47793.19659806788,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=For%20the%20release-pinned%20Regional%20Edge%20allowlist%20data%20source%2C%20find%20the%20input%20that%20restricts%20published%20regions",
+        "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-regions"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=For%20the%20release-pinned%20Regional%20Edge%20allowlist%20data%20source%2C%20find%20the%20input%20that%20restricts%20published%20regions",
+        "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-regions"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-regions"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "5e7efe736f5212ce31b7cedd4128aba7118a0bddc87f66bdc5730861be7a8020",
+      "raw_trace_sha256": "b3fa521a5c1fa30ea56b9c8a3f32a2972ce00275da2963bd62b0d2520ad99f35"
+    },
+    {
+      "id": "A058",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 2766,
+        "max_bytes": 1576,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 41720.44125397224,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=For%20DNS%20load-balancer%20health-check%20ingress%20in%20Terraform%2C%20find%20the%20pinned%20allowlist%20data-source%20output%20of%20normalized%20IPv4%20CIDRs.",
+        "xcsh://terraform-documentation/documentation/data-sources/network_dnslb_health_checks/properties/index.md?view=context#schema-cidr_blocks"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=For%20DNS%20load-balancer%20health-check%20ingress%20in%20Terraform%2C%20find%20the%20pinned%20allowlist%20data-source%20output%20of%20normalized%20IPv4%20CIDRs.",
+        "xcsh://terraform-documentation/documentation/data-sources/network_dnslb_health_checks/properties/index.md?view=context#schema-cidr_blocks"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_dnslb_health_checks/properties/index.md?view=context#schema-cidr_blocks"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "8753fe7ddd491a2af96567d0bc0eeb2f7db6c7479616b51fc7c15927ae7e5c78",
+      "raw_trace_sha256": "48cfe12ea752cffe5b8935be08b26c602915af1aeeee540f9993fa8369eb04a2"
+    },
+    {
+      "id": "A107",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 10797,
+        "max_bytes": 4055,
+        "measured_results": 3,
+        "violations": []
+      },
+      "model_ms": 59263.95887089893,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Where%20is%20the%20DHCP%20pool%20exclusion%20setting%20for%20unmanaged%20AWS%20node%20interfaces%20in%20a%20managed%20securemesh_site_v2%20resource%20in%20Terraform%3F",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/index.md?view=context#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md?view=context#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings",
+        "xcsh://branding/terraform"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Where%20is%20the%20DHCP%20pool%20exclusion%20setting%20for%20unmanaged%20AWS%20node%20interfaces%20in%20a%20managed%20securemesh_site_v2%20resource%20in%20Terraform%3F",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/index.md?view=context#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md?view=context#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings",
+        "xcsh://branding/terraform"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/index.md?view=context#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md?view=context#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings"
+      ],
+      "exact_leaf_read": false,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": false,
+      "provider_version_cited": true,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "09d7d27723eb3b621227e2ea2a98c568ea76ba98d86c09f2750205b8813510b9",
+      "raw_trace_sha256": "dfcd86ea1d75b1b2d7d025c47281bd3a2d9150f094f872e2d27227c8adc6f35a"
+    },
+    {
+      "id": "A135",
+      "kind": "answerable",
+      "passed": false,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 2442,
+        "max_bytes": 1323,
+        "measured_results": 2,
+        "violations": []
+      },
+      "model_ms": 47638.14932096284,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20provider%20setup%3A%20show%20the%20documented%20API-token%20authentication%20configuration.%20I%20still%20need%20to%20supply%20the%20tenant%20URL%20and%20token.",
+        "xcsh://branding/terraform",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-1-api-token-authentication"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20provider%20setup%3A%20show%20the%20documented%20API-token%20authentication%20configuration.%20I%20still%20need%20to%20supply%20the%20tenant%20URL%20and%20token.",
+        "xcsh://branding/terraform",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-1-api-token-authentication"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-1-api-token-authentication"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": false,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "498d4022c981bf1e200bbd83d4ace5df87d60502f79cbac17ca71f9085edac05",
+      "raw_trace_sha256": "fd13494785e4b70f3d6b1a1481db26f628728b9847dfb34c0a926b5f4ca94ba9"
+    },
+    {
+      "id": "M001",
+      "kind": "ambiguous",
+      "passed": true,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 8360,
+        "max_bytes": 3285,
+        "measured_results": 3,
+        "violations": []
+      },
+      "model_ms": 51266.51094702538,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20cloud_credentials%20AWS%20assume-role%20branch%3A%20locate%20the%20role-session%20duration%20field",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Terraform%20cloud_credentials%20AWS%20assume-role%20branch%3A%20locate%20the%20role-session%20duration%20field",
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds",
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md?view=context#schema-aws_assume_role--duration_seconds"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": true,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "9f6c6616ccc094cc0beacabb5d7436c98456131877b759c70252f7611432e47a",
+      "raw_trace_sha256": "8eaf4a3918d6917f65d8753ce866825acf9a427491cc2f23e54be43410a6a880"
+    },
+    {
+      "id": "M021",
+      "kind": "ambiguous",
+      "passed": true,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 7054,
+        "max_bytes": 2755,
+        "measured_results": 3,
+        "violations": []
+      },
+      "model_ms": 48855.90738104656,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Find%20the%20registry%20email%20in%20container_registry%20documentation%20for%20Terraform",
+        "xcsh://terraform-documentation/documentation/resources/container_registry/properties/index.md?view=context#schema-email",
+        "xcsh://terraform-documentation/documentation/data-sources/container_registry/properties/index.md?view=context#schema-email"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Find%20the%20registry%20email%20in%20container_registry%20documentation%20for%20Terraform",
+        "xcsh://terraform-documentation/documentation/resources/container_registry/properties/index.md?view=context#schema-email",
+        "xcsh://terraform-documentation/documentation/data-sources/container_registry/properties/index.md?view=context#schema-email"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/resources/container_registry/properties/index.md?view=context#schema-email",
+        "xcsh://terraform-documentation/documentation/data-sources/container_registry/properties/index.md?view=context#schema-email"
+      ],
+      "exact_leaf_read": true,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": true,
+      "continuation_verified": false,
+      "expected_citation": true,
+      "provider_version_cited": true,
+      "clarification": true,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "de5d70a183d8cd19e73dbf1c636e7bb9b9693ccab1b3199835355a1d6c7f26d4",
+      "raw_trace_sha256": "fcecc89ed4061498b058d9a47a0ccdeff6c71051f2fb628e91ee5d18f0b25f95"
+    },
+    {
+      "id": "C001",
+      "kind": "control",
+      "passed": true,
+      "completed_successfully": true,
+      "tool_response_budget": {
+        "passed": true,
+        "total_bytes": 8118,
+        "max_bytes": 3864,
+        "measured_results": 3,
+        "violations": []
+      },
+      "model_ms": 48170.08110601455,
+      "exit_code": 0,
+      "read_uris": [
+        "xcsh://terraform-documentation/?search=Can%20Terraform%20call%20an%20xcsh%20provider-defined%20function%20to%20format%20my%20configuration%3F%20Please%20check%20whether%20this%20provider%20documents%20functions%20before%20suggesting%20syntax.",
+        "xcsh://terraform-documentation/?search=provider-defined%20functions%20format%20configuration&node=xcsh-docs%3Aprovider%3Axcsh%3Anavigation",
+        "xcsh://branding/terraform",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#requirements"
+      ],
+      "successful_read_uris": [
+        "xcsh://terraform-documentation/?search=Can%20Terraform%20call%20an%20xcsh%20provider-defined%20function%20to%20format%20my%20configuration%3F%20Please%20check%20whether%20this%20provider%20documents%20functions%20before%20suggesting%20syntax.",
+        "xcsh://terraform-documentation/?search=provider-defined%20functions%20format%20configuration&node=xcsh-docs%3Aprovider%3Axcsh%3Anavigation",
+        "xcsh://branding/terraform",
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#requirements"
+      ],
+      "citation_uris": [
+        "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#requirements"
+      ],
+      "exact_leaf_read": false,
+      "required_read_coverage": true,
+      "missing_value_review_required": false,
+      "clarification_review_required": false,
+      "continuation_verified": false,
+      "expected_citation": false,
+      "provider_version_cited": true,
+      "clarification": false,
+      "false_live_pattern": false,
+      "hcl_fences": 0,
+      "hcl_required": false,
+      "mandatory_hcl_emitted": null,
+      "hcl_field_validation": "no HCL emitted",
+      "response_sha256": "4cff105b9d418dc988b8b88ccfe19edb1b1becd7cab1bce98ff4ea309a54a046",
+      "raw_trace_sha256": "d15014a9c184322d5322224b69f36045c2a4dad6827db01c0db0d31dc99ef11b"
+    }
+  ]
+}

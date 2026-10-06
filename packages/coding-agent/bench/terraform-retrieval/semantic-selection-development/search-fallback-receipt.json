@@ -1,0 +1,553 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "scope_supplied": false,
+  "expected_answers_withheld": true,
+  "execution_route": "Ubuntu Codex ChatGPT login",
+  "exit_code": 0,
+  "model_network_wall_ms": 289710.39784606546,
+  "suite_sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+  "index_sha256": "0212f54bf1d37fbc3d1c369e7e8fc7f600bb2500dc118ef77cf2dcd2e64fc164",
+  "assets_sha256": "5a1c54a5afc424c4196834d77c6ea55fbe3811524ed3de913d501f8444cbae39",
+  "helper_sha256": "3fe67bd7d8a9d866ea1cca6e90013471cd9e7d013c9c69e38002f4191ef052a7",
+  "context_sha256": "731d465b3852c56ec423ee880fa4dfe8baed937450c84d720062fa900c7f2ef0",
+  "consumer_commit": "2e5f9031720c4dcf79f6a9f411fa48b16dfae133",
+  "source_files_sha256": {
+    "/tmp/terraform-semantic-search-fallback-development/config.json": "sha256:3e7d5a7a011f4662e3d2a3d2e50d45e48bfe9d2bb106d51930faacb1ee71ac5a",
+    "/tmp/terraform-semantic-search-fallback-development/input.json": "sha256:ac46c1bee3b1c77238752883844d8b6a24256c848932f1e404ff318da86c140e",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic_development.py": "sha256:a4930a7ae1f2be66618c01021a4ce5701855942b1853e6c9d717861d9bb0eb76",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic-development-helper.ts": "sha256:3fe67bd7d8a9d866ea1cca6e90013471cd9e7d013c9c69e38002f4191ef052a7",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/semantic-development-context.ts": "sha256:731d465b3852c56ec423ee880fa4dfe8baed937450c84d720062fa900c7f2ef0",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-branch-choices.ts": "sha256:16e52e922594ecb11b8a74b10cbe3700903aa890ddaf5f2135696062532abc16",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-choice-response.ts": "sha256:47566e80112f5f05f3e6a98ddda5a7aafc33de76b88a7165903337c51102efdb",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation-assets.generated.ts": "sha256:8c037e080d1be325be2b9b4e0a3954ee1596e23c054bf707e80d58ad45bd2c7c",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts": "sha256:7ceb5ea7a330080c0407cf1f3b76852b6b0b6e06369159075dc05e111d7895a7",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-enum-evidence.ts": "sha256:563cd4e3b484013e4613baff62bef6a063f1a56cb4d3ee665337359cf59778a8",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-field-access.ts": "sha256:4b5798652a5cf23a15c71b933667ac543ae2b25c17e673c4efa124bf455bee28",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-index.generated.ts": "sha256:5dd5d36bf41fb9a2442659768c8c24c5cee66231efcd1582d05ca8f704bd4f0f",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-lifecycle.ts": "sha256:678419c3879b5724dcf6a2db8e5375c202717f5e0ecb014c3b8f697a51d15c11",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts": "sha256:65eb1362f5e9d62db15beb2ea0df3e6f7f3cc940af12f44018a837143814c4dd",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-ranking.ts": "sha256:95af0ea28e550e12de711bc00e59dde59193d54287dadd3b13336f9e71a3e864",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-refinement.ts": "sha256:63ecb4f9b95fe1140af7d41ba0bb3fad5c3b17169b2496a8ec9a98f6cc58286e",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-selection.ts": "sha256:c83965d83388fff30640450664314ff10c64ab22fea8c535750ac6b04448861a",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-reference-evidence.ts": "sha256:271efbfbbf1d36c9be5faffd511d58805fc49ae68eb9c18140d3072a306633c1",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-reference-index.ts": "sha256:4193255c148e9a15fb91294a36be093f63df638beec539bdcf2dd71a4b59fbba",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-resolve.ts": "sha256:207e6ae66943d95ef216580545d1aed0205936ed1d4826729ef9d323bd186132",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-secret-representation.ts": "sha256:9c332f80a5d7a860f967fec5c44b2ada205193aa5d5240b4de4668d0723837ce",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-task-route.ts": "sha256:d0d3e9afa9b987aafdd22a93fc9bd73713f6612891f91857b65d9334ebaccf69",
+    "/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-types.ts": "sha256:d829692cfcabb6ee480ee34eb426a83a5b74df7cbbc58ab0c0d6530461c9e63a",
+    "/tmp/terraform-http-domains-alias-development.sqlite": "sha256:0212f54bf1d37fbc3d1c369e7e8fc7f600bb2500dc118ef77cf2dcd2e64fc164",
+    "/tmp/terraform-bgp-generated-preview-assets.json": "sha256:5a1c54a5afc424c4196834d77c6ea55fbe3811524ed3de913d501f8444cbae39",
+    "/tmp/terraform-v1240-qualification-v7-corrected-frozen/heldout.json": "sha256:67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a"
+  },
+  "evaluator_sha256": "a4930a7ae1f2be66618c01021a4ce5701855942b1853e6c9d717861d9bb0eb76",
+  "retrieval_sources_sha256": "3e7da9f44e314da3ce102a8a91150a8a010c04198dcc7bcad379479b3cffd1ae",
+  "events_sha256": "df6c4fabee543d5c63c11b780046587b1699c43c7861b1cdb4f07600f2aee8cf",
+  "audit": {
+    "passed": true,
+    "successful_reads": [
+      "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md?view=context#schema-ephemeral_storage",
+      "xcsh://terraform-documentation/documentation/resources/workload/properties/job/containers/index.md?view=context#schema-job--containers--flavor",
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context#schema-domains",
+      "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-cidr_blocks",
+      "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/index.md?view=context#root-configuration",
+      "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#property-reference",
+      "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-source_entries",
+      "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-1-api-token-authentication",
+      "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#authentication-options",
+      "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-2-p12-certificate-authentication",
+      "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication",
+      "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/import/index.md?view=context#import",
+      "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md?view=context#schema-certificate_url",
+      "xcsh://terraform-documentation/documentation/resources/namespace/lifecycle/import/index.md?view=context#import",
+      "xcsh://terraform-documentation/documentation/resources/namespace/properties/index.md?view=context#schema-namespace",
+      "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/timeouts/index.md?view=context#timeouts",
+      "xcsh://terraform-documentation/documentation/resources/certificate/properties/timeouts/index.md?view=context#section",
+      "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md?view=context#root-configuration",
+      "xcsh://terraform-documentation/documentation/resources/workload/properties/job/volumes/persistent_volume/storage/index.md?view=context#schema-job--volumes--persistent_volume--storage--storage_size"
+    ],
+    "tool_calls": 50,
+    "outputs": [
+      {
+        "id": "item_1",
+        "operation": "candidates",
+        "value": "A028",
+        "output_bytes": 2907,
+        "envelope_bytes": 3369,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_2",
+        "operation": "candidates",
+        "value": "A028",
+        "output_bytes": 2702,
+        "envelope_bytes": 3180,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_3",
+        "operation": "search",
+        "value": "workload flavor scratch storage mebibytes ephemeral disk",
+        "output_bytes": 2737,
+        "envelope_bytes": 3229,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_4",
+        "operation": "search",
+        "value": "resource workload_flavor ephemeral_storage",
+        "output_bytes": 1174,
+        "envelope_bytes": 1631,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_5",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md?view=context#schema-ephemeral_storage",
+        "output_bytes": 1730,
+        "envelope_bytes": 2401,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_6",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/workload/properties/job/containers/index.md?view=context#schema-job--containers--flavor",
+        "output_bytes": 3187,
+        "envelope_bytes": 3991,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_7",
+        "operation": "candidates",
+        "value": "A044",
+        "output_bytes": 2493,
+        "envelope_bytes": 2953,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_8",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context#schema-domains",
+        "output_bytes": 5636,
+        "envelope_bytes": 6495,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_9",
+        "operation": "candidates",
+        "value": "A049",
+        "output_bytes": 2708,
+        "envelope_bytes": 3170,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_10",
+        "operation": "search",
+        "value": "Regional Edge allowlist original address CIDR representation data source",
+        "output_bytes": 2741,
+        "envelope_bytes": 3262,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_11",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-cidr_blocks",
+        "output_bytes": 1083,
+        "envelope_bytes": 1631,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_12",
+        "operation": "search",
+        "value": "network_regional_edges original",
+        "output_bytes": 2566,
+        "envelope_bytes": 3033,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_13",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/index.md?view=context#root-configuration",
+        "output_bytes": 949,
+        "envelope_bytes": 1470,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_15",
+        "operation": "search",
+        "value": "data source network_regional_edges addresses",
+        "output_bytes": 1183,
+        "envelope_bytes": 1647,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_16",
+        "operation": "search",
+        "value": "network_regional_edges raw prefixes",
+        "output_bytes": 756,
+        "envelope_bytes": 1192,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_17",
+        "operation": "search",
+        "value": "network_regional_edges preserves",
+        "output_bytes": 747,
+        "envelope_bytes": 1180,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_18",
+        "operation": "search",
+        "value": "network_regional_edges properties",
+        "output_bytes": 1861,
+        "envelope_bytes": 2320,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_19",
+        "operation": "search",
+        "value": "original address CIDR",
+        "output_bytes": 2641,
+        "envelope_bytes": 3159,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_20",
+        "operation": "search",
+        "value": "network_regional_edges networks",
+        "output_bytes": 2580,
+        "envelope_bytes": 3063,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_21",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#property-reference",
+        "output_bytes": 1059,
+        "envelope_bytes": 1594,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_22",
+        "operation": "search",
+        "value": "network_regional_edges ip_ranges",
+        "output_bytes": 747,
+        "envelope_bytes": 1180,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_23",
+        "operation": "search",
+        "value": "network_regional_edges entries",
+        "output_bytes": 1143,
+        "envelope_bytes": 1593,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_24",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-source_entries",
+        "output_bytes": 1112,
+        "envelope_bytes": 1664,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_25",
+        "operation": "candidates",
+        "value": "A135",
+        "output_bytes": 1834,
+        "envelope_bytes": 2307,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_26",
+        "operation": "search",
+        "value": "provider API token authentication configuration",
+        "output_bytes": 858,
+        "envelope_bytes": 1308,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_27",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-1-api-token-authentication",
+        "output_bytes": 1212,
+        "envelope_bytes": 1759,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_28",
+        "operation": "search",
+        "value": "provider authentication methods",
+        "output_bytes": 1340,
+        "envelope_bytes": 1783,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_29",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#authentication-options",
+        "output_bytes": 784,
+        "envelope_bytes": 1286,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_30",
+        "operation": "candidates",
+        "value": "A136",
+        "output_bytes": 2411,
+        "envelope_bytes": 2882,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_31",
+        "operation": "search",
+        "value": "provider PKCS#12 client authentication setup",
+        "output_bytes": 860,
+        "envelope_bytes": 1307,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_33",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-2-p12-certificate-authentication",
+        "output_bytes": 1388,
+        "envelope_bytes": 1951,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_34",
+        "operation": "candidates",
+        "value": "A137",
+        "output_bytes": 2562,
+        "envelope_bytes": 3049,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_35",
+        "operation": "search",
+        "value": "provider separate PEM certificate private key authentication",
+        "output_bytes": 890,
+        "envelope_bytes": 1353,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_36",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication",
+        "output_bytes": 1660,
+        "envelope_bytes": 2239,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_37",
+        "operation": "candidates",
+        "value": "A138",
+        "output_bytes": 2860,
+        "envelope_bytes": 3353,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_38",
+        "operation": "search",
+        "value": "standalone certificate resource import format",
+        "output_bytes": 836,
+        "envelope_bytes": 1284,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_39",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/import/index.md?view=context#import",
+        "output_bytes": 1073,
+        "envelope_bytes": 1594,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_40",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md?view=context#schema-certificate_url",
+        "output_bytes": 2680,
+        "envelope_bytes": 3440,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_41",
+        "operation": "candidates",
+        "value": "A139",
+        "output_bytes": 1235,
+        "envelope_bytes": 1680,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_42",
+        "operation": "search",
+        "value": "namespace resource import identifier tenant level",
+        "output_bytes": 840,
+        "envelope_bytes": 1292,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_43",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/namespace/lifecycle/import/index.md?view=context#import",
+        "output_bytes": 1090,
+        "envelope_bytes": 1609,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_44",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/namespace/properties/index.md?view=context#schema-namespace",
+        "output_bytes": 2567,
+        "envelope_bytes": 3309,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_45",
+        "operation": "candidates",
+        "value": "A140",
+        "output_bytes": 2562,
+        "envelope_bytes": 3055,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_46",
+        "operation": "search",
+        "value": "certificate resource lifecycle timeouts duration syntax",
+        "output_bytes": 862,
+        "envelope_bytes": 1320,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_47",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/timeouts/index.md?view=context#timeouts",
+        "output_bytes": 1168,
+        "envelope_bytes": 1689,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_48",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/certificate/properties/timeouts/index.md?view=context#section",
+        "output_bytes": 1002,
+        "envelope_bytes": 1534,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_49",
+        "operation": "candidates",
+        "value": "A044",
+        "output_bytes": 2491,
+        "envelope_bytes": 2954,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_51",
+        "operation": "search",
+        "value": "http_loadbalancer root configuration",
+        "output_bytes": 1225,
+        "envelope_bytes": 1668,
+        "budget_bytes": 4096
+      },
+      {
+        "id": "item_52",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md?view=context#root-configuration",
+        "output_bytes": 943,
+        "envelope_bytes": 1456,
+        "budget_bytes": 16384
+      },
+      {
+        "id": "item_53",
+        "operation": "read",
+        "value": "xcsh://terraform-documentation/documentation/resources/workload/properties/job/volumes/persistent_volume/storage/index.md?view=context#schema-job--volumes--persistent_volume--storage--storage_size",
+        "output_bytes": 1936,
+        "envelope_bytes": 2647,
+        "budget_bytes": 16384
+      }
+    ],
+    "max_envelope_bytes": 6495,
+    "total_envelope_bytes": 113515,
+    "violations": []
+  },
+  "cases": [
+    {
+      "id": "A028",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/workload_flavor/properties/index.md?view=context#schema-ephemeral_storage",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": null
+    },
+    {
+      "id": "A044",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/index.md?view=context#schema-domains",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": null
+    },
+    {
+      "id": "A049",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/data-sources/network_regional_edges/properties/index.md?view=context#schema-source_entries",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": null
+    },
+    {
+      "id": "A135",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-1-api-token-authentication",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": "Before filling in configuration, what tenant API URL and token variable or environment source should be used?"
+    },
+    {
+      "id": "A136",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-2-p12-certificate-authentication",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": "What is the PKCS#12 bundle path, which variable or environment source supplies its password, and what tenant API URL should be used?"
+    },
+    {
+      "id": "A137",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#option-3-pem-certificate-authentication",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": "Before filling in configuration, what are the PEM certificate and private-key paths, and what tenant API URL should be used?"
+    },
+    {
+      "id": "A138",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/import/index.md?view=context#import",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": null
+    },
+    {
+      "id": "A139",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/namespace/lifecycle/import/index.md?view=context#import",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": null
+    },
+    {
+      "id": "A140",
+      "kind": "answerable",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/certificate/lifecycle/timeouts/index.md?view=context#timeouts",
+      "expected_destination_match": true,
+      "selected_leaf_read": true,
+      "clarification": null
+    }
+  ],
+  "remaining": "Independent benchmark, installed UAT and publication gates remain unmet; ambiguous/control semantic correctness requires review.",
+  "exported_original_receipt_sha256": "eb9aee9bf07a9dcde2bdcfb6453344f283cab6f637af79ad6c6c2ee7208593b2",
+  "digest_export_format": "SHA-256 values have an explicit algorithm prefix; underlying digest values unchanged."
+}

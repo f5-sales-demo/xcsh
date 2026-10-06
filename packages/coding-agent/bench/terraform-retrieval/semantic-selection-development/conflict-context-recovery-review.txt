@@ -1,0 +1,8 @@
+Two findings prevent approval:
+
+- **P2 — Omitted cross-document peers lack recovery.** [terraform-conflict-context.ts:30](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-conflict-context.ts:30) links only to the source document when peers exceed the row/byte limit. Reproduced with six peers in separate documents: omitted destinations have no continuation or read links, and their meanings need not exist in the source document.
+- **P2 — Recovery text can exceed its own budget.** [terraform-conflict-context.ts:42](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-conflict-context.ts:42) throws for a valid approximately 1.9 KB source path. This aborts the context request instead of returning bounded content.
+
+Otherwise, the narrow comparison preserves complete records, filters provider identity, excludes self/missing targets, and introduces no inferred prerequisites or validation. Source-section existence is enforced by the caller, not independently by the helper.
+
+Verification: **4 tests passed**; additional in-memory probes confirmed identity isolation and working context continuation/oversized-section fallback. No files changed.

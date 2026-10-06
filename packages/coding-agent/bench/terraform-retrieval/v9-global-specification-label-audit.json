@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "purpose": "Source audit of exposed benchmark labels; original inputs and scores unchanged",
+  "provider_version": "v12.4.0",
+  "suite_sha256": "b80248156fbc699586bfedd7636c7ed3073e70b3d9960000fde5759337392640",
+  "source_path": "documentation/data-sources/site_registrations/properties/items/object/spec/index.md",
+  "source_sha256": "3fc756ac1815e4a7678d2fc2c8cc78330f03c9eef661f89b4383692384d76181",
+  "verified_description": "Global Specification.",
+  "affected_case_ids": [
+    "v9-025",
+    "v9-026",
+    "v9-027"
+  ],
+  "finding": "The prompt expansion garbage-collection specification is unsupported by the pinned source; gc_spec is documented as Global Specification.",
+  "qualification_passed": false,
+  "original_inputs_modified": false
+}

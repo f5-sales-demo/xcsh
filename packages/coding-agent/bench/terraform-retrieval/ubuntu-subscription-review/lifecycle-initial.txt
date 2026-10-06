@@ -1,0 +1,8 @@
+Found one bug and one test gap; approval withheld.
+
+- **Whole-block regression:** [terraform-lifecycle.ts:17](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-lifecycle.ts:17) treats any `duration`, `value`, or `limit` mention as a field request unless `entire`, `whole`, or `complete` precedes `block`. For example, “Read the timeouts block describing creation duration” now yields `field: true`, operation `create`. This requests the block but scopes retrieval to `timeouts.create`. Preserve block-read intent and add a regression test.
+- **Coverage gap:** The new resolver tests cover four positive duration requests, but omit whole-block reads containing duration/value/limit, request/connection/TLS exclusion cases, and conflicting explicit constraints using the new wording. Existing constraint tests exercise older field wording.
+
+Source inspection supports direct-field selection for the four added cases. Network-timeout exclusions and explicit type, identifier, facet, provider, and node constraints remain in place.
+
+Read-only development review only. No tests executed; no qualification claim.

@@ -1,0 +1,20 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "answerable_correct": 9,
+  "answerable_total": 9,
+  "expected_leaf_reads": 9,
+  "original_audit_passed": true,
+  "review_limitations": [
+    "Oversized section status required repair",
+    "Search continuation required repair",
+    "Quoted query data incorrectly rejected",
+    "Markdown dependency omitted from source binding"
+  ],
+  "model_network_wall_ms": 289710.39784606546,
+  "tool_calls": 50,
+  "max_envelope_bytes": 6495,
+  "trace_sha256": "df6c4fabee543d5c63c11b780046587b1699c43c7861b1cdb4f07600f2aee8cf",
+  "unpublished_alias_preview": true,
+  "remaining": "No independent heldout or installed-model qualification. Final wrapper fixes require verification and broader development."
+}

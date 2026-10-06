@@ -1,0 +1,15 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 89,
+  "v7_top5": 118,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "improved": [
+    "A057"
+  ],
+  "regressed": [],
+  "focused_tests": 265,
+  "changes": "Grouped/keyedoutputintentrequiresdocumentedmapandgroupkey;negatedoralternativekeysremainchoices",
+  "firstscorespreserved": true
+}

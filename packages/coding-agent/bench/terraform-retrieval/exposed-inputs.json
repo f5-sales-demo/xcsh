@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "sha256": "67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a",
+      "kind": "heldout",
+      "source": "v7-first-untouched-result/exposure.json",
+      "reason": "First scored heldout run failed; implementation has seen and used these prompts."
+    },
+    {
+      "sha256": "9797fa4f9b2bf52b98466a8775a8e8e2b818ec7ffe7895e7b0ad58dd62ac6cc2",
+      "kind": "model-subset",
+      "source": "semantic-selection-development/installed-40-mixed-development-summary.json",
+      "reason": "Installed diagnostics and implementation analysis exposed all40 model prompts."
+    },
+    {
+      "sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+      "kind": "heldout",
+      "source": "v8-first-internal-result/exposure.json",
+      "reason": "Internally frozen first retrieval evaluation failed; prompts exposed to implementation analysis. Regression only."
+    },
+    {
+      "sha256": "9c2ec71da89748bc31b9b147b832ac7a934e5aafad6fbf2847251f4d32b027a0",
+      "kind": "model-subset",
+      "source": "v8-first-internal-result/exposure.json",
+      "reason": "Internally frozen first retrieval evaluation failed; prompts exposed to implementation analysis. Regression only."
+    },
+    {
+      "sha256": "b80248156fbc699586bfedd7636c7ed3073e70b3d9960000fde5759337392640",
+      "kind": "heldout",
+      "source": "v9-first-internal-result/exposure.json",
+      "reason": "Internally frozen first retrieval evaluation failed; prompts exposed to implementation analysis. Regression only."
+    },
+    {
+      "sha256": "dc2fb39b1cae7b3f62902854f6072a670ba48b103e3ec78f0acc532adc0e74b7",
+      "kind": "model-subset",
+      "source": "v9-first-internal-result/exposure.json",
+      "reason": "Internally frozen first retrieval evaluation failed; prompts exposed to implementation analysis. Regression only."
+    },
+    {
+      "sha256": "ca965a643bc319e042909cec555621d2161bcc118df43c1edcdb459777cb56d9",
+      "kind": "heldout",
+      "source": "v10-first-internal-result/exposure.json",
+      "reason": "v10 first untouched retrieval failed; all subsequent runs regression only"
+    },
+    {
+      "sha256": "a19dfa531eb8849d3fb38e0c04b9dfef6a109c42dcc6aa7cc4dff6c4c8980af7",
+      "kind": "model-subset",
+      "source": "v10-first-internal-result/exposure.json",
+      "reason": "v10 first untouched retrieval failed; all subsequent runs regression only"
+    },
+    {
+      "sha256": "46145a8d3cb655c200cca004198b557efa14b4452d7a72584cb283a8f82a9fac",
+      "kind": "heldout",
+      "source": "current-v15-first-freeze/v15-first-frozen-failure.json.gz",
+      "reason": "First v15 frozen run failed and subsequent source analysis exposed prompts; regression only."
+    },
+    {
+      "sha256": "fdce9ed81317c5e3451928fe70385763c7b4dc39747bae9a02f17a499ce2b865",
+      "kind": "model-subset",
+      "source": "current-v15-first-freeze/v15-first-frozen-failure.json.gz",
+      "reason": "First v15 frozen run failed and subsequent source analysis exposed prompts; regression only."
+    },
+    {
+      "sha256": "a8a21b9585e0544d6c5506cd796814c19ddb59e6516f694bc24df5a6ce95ae3f",
+      "kind": "heldout",
+      "source": "current-v15-second-freeze/v15-second-first-retrieval.json.gz",
+      "reason": "First source-reviewed retrieval run failed top-five completeness and ambiguity; regression only."
+    },
+    {
+      "sha256": "81527158c33396b59577d479c05f7b36e280aa8669a91eb8d379182a8920fa01",
+      "kind": "model-subset",
+      "source": "current-v15-second-freeze/v15-second-first-retrieval.json.gz",
+      "reason": "First source-reviewed retrieval run failed top-five completeness and ambiguity; regression only."
+    },
+    {
+      "sha256": "2a6799c28d49a4eceb8ac993fd8ec9b150d5b0c7dd72168c37e02f401c57b302",
+      "kind": "heldout",
+      "source": "current-v15-third-freeze/v15-third-first-retrieval.json.gz",
+      "reason": "First source-reviewed retrieval missed one answerable top-five destination; regression only."
+    },
+    {
+      "sha256": "cec8752a65a2f51cb5cd2176b071f2ae3468b71a425f7a229e4cd32de937ba65",
+      "kind": "model-subset",
+      "source": "current-v15-third-freeze/v15-third-first-retrieval.json.gz",
+      "reason": "First source-reviewed retrieval missed one answerable top-five destination; regression only."
+    },
+    {
+      "sha256": "b8359aff57a86b2dc910b91d73fe2d29cc57feedc378566be4f5fff534fa6f94",
+      "kind": "heldout",
+      "source": "current-v15-fourth-freeze",
+      "reason": "Fourteen HCL/control prompts repeat exposed inputs; eligibility audit disqualifies qualification. Regression only."
+    },
+    {
+      "sha256": "901540787a1d42bcbf6f50fa7bb13760cf7a87e168e4cbfd02fef80301f4afc1",
+      "kind": "model-subset",
+      "source": "current-v15-fourth-freeze",
+      "reason": "Fourteen HCL/control prompts repeat exposed inputs; eligibility audit disqualifies qualification. Regression only."
+    },
+    {
+      "sha256": "4d37341c9900d2b8d9f6fcdf2c7cd1f779c2d62b2dac5c998e0e3659e01ec51b",
+      "kind": "heldout",
+      "source": "current-v15-fifth-freeze",
+      "reason": "First retrieval missed three answerable top-five destinations. Regression only."
+    },
+    {
+      "sha256": "a64e99bba0b8ce8b23163543a7d6750993fdd464193ed4e3e8440cf146940fa1",
+      "kind": "model-subset",
+      "source": "current-v15-fifth-freeze",
+      "reason": "First retrieval missed three answerable top-five destinations. Regression only."
+    },
+    {
+      "sha256": "3adc834a66835730aa5f30d3105868f713bd4e0c85e0384eba3001eb77879f4a",
+      "kind": "heldout",
+      "source": "current-v15-sixth-freeze/v15-sixth-first-retrieval.json.gz",
+      "reason": "First retrieval missed two answerable top-five destinations. Regression only."
+    },
+    {
+      "sha256": "c5e25bd0676281c7db808ca2fb9e1c4c51341d39bfaf77437940bd59bde7f977",
+      "kind": "model-subset",
+      "source": "current-v15-sixth-freeze/v15-sixth-first-retrieval.json.gz",
+      "reason": "First retrieval missed two answerable top-five destinations. Regression only."
+    },
+    {
+      "sha256": "08a53931929847590ca93ee55d57c2fc8a02fcfeb77deae2a85f3ab1e3bff7ed",
+      "kind": "heldout",
+      "source": "current-v15-seventh-freeze/v15-seventh-first-retrieval.json.gz",
+      "reason": "First retrieval missed an answerable top-five destination; regression only."
+    },
+    {
+      "sha256": "7b2dca044fb012af02460d5fec838026d1063c35d50c84e168379993d612e09d",
+      "kind": "model-subset",
+      "source": "current-v15-seventh-freeze/v15-seventh-first-retrieval.json.gz",
+      "reason": "First retrieval missed an answerable top-five destination; regression only."
+    },
+    {
+      "sha256": "2db095ec0521131b24632b1e0627c3e7cf704cc2ce4a4c8b9a6e8ae5deae3fc4",
+      "kind": "heldout",
+      "source": "current-v15-eighth-freeze/installed-first-source-review.json.gz",
+      "reason": "Installed source review failed zero-unsupported-configurability claim gate; later runs regression only."
+    },
+    {
+      "sha256": "417f87e5cb10378f173c5744833e0cec691b537fe3e2ed46eb80eb09379085d6",
+      "kind": "model-subset",
+      "source": "current-v15-eighth-freeze/installed-first-source-review.json.gz",
+      "reason": "Installed source review failed zero-unsupported-configurability claim gate; later runs regression only."
+    },
+    {
+      "sha256": "a8bf234600102408f0038a91e654db739361cb1e557009a11c3693aada7e8bec",
+      "kind": "heldout",
+      "source": "current-v15-ninth-qualified/installed-first-source-review.json.gz",
+      "reason": "First candidate run passed and is preserved; published/analysed suite is now exposed. Subsequent runs regression only."
+    },
+    {
+      "sha256": "d506e7fb3e9aeb38f081c59f70711ef8a0470005eb6dd5011e0e73b2b146a3f2",
+      "kind": "model-subset",
+      "source": "current-v15-ninth-qualified/installed-first-source-review.json.gz",
+      "reason": "First candidate run passed and is preserved; published/analysed suite is now exposed. Subsequent runs regression only."
+    }
+  ]
+}

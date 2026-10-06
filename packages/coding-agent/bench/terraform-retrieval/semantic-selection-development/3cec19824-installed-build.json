@@ -1,0 +1,8 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "consumer_commit": "3cec19824eb681abac74e68b85d4a87fe6d97aea",
+  "binary_sha256": "fb146b583c5e05809ab113fbb88e2548743ced45f533435256fb355c682a8e3e",
+  "binary_bytes": 621934048,
+  "provider_version": "v12.4.0"
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "change": "Exclusive IPv4-only and IPv6-only prose preserves documented single-family branch choice",
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "checks": {
+    "focused_tests": 126,
+    "typescript": "passed"
+  },
+  "regressions": [
+    {
+      "suite": "v8",
+      "report": "v8-family-only-regression.json.gz",
+      "report_sha256": "caa189d0a7c1f920607e318f0327bcea5cc7e777f40165fadd4ed4b579896742",
+      "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+      "answerable_accuracy": 0.8642857142857143,
+      "answerable_top5": 0.9857142857142858
+    },
+    {
+      "suite": "v9",
+      "report": "v9-family-only-regression.json.gz",
+      "report_sha256": "d8949618585a35a818602f2dc99f075b1dada93a7494b4a586fb2b1140acc044",
+      "suite_sha256": "b80248156fbc699586bfedd7636c7ed3073e70b3d9960000fde5759337392640",
+      "answerable_accuracy": 0.9642857142857143,
+      "answerable_top5": 0.9928571428571429
+    }
+  ]
+}

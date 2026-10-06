@@ -1,0 +1,14 @@
+{
+  "qualification_passed": false,
+  "candidate_only": true,
+  "workflow_run": 37167620023,
+  "source_commit": "8f97af7f1489404d4576bd7f719bdf03165e4038",
+  "binary_sha256": "7d22e4abf9166e641f7702e7202bdb2333146d045ea7078b38b3537a17eb9c3f",
+  "verified_hashes_signatures_team": true,
+  "network_disabled": true,
+  "exit_code": 0,
+  "seconds": 6.853240013122559,
+  "stdout": "{\"event\":\"terraform-inventory\",\"providerVersion\":\"v12.4.0\",\"sourceCommit\":\"c0169b220fe41a707260a88378dfb4d0b339f9b3\",\"documentCount\":18958}\n{\"event\":\"terraform-filtered-search\",\"outcome\":\"top-five\"}\n{\"event\":\"terraform-bounded-hint-facets\",\"outcome\":\"within-4096-bytes\"}\n{\"event\":\"terraform-explicit-anchor\",\"outcome\":\"complete-property\"}\n{\"event\":\"terraform-deep-leaf\",\"path\":\"documentation/resources/http_loadbalancer/properties/bot_defense/policy/protected_app_endpoints/flow_label/authentication/login/transaction_result/success_conditions/index.md\",\"outcome\":\"read-and-navigation\"}\n{\"event\":\"terraform-missing\",\"outcome\":\"no-match-no-fetch\"}\nXCSH_TERRAFORM_DOCUMENTATION_SMOKE_OK\n",
+  "stderr": "",
+  "smoke_passed": true
+}

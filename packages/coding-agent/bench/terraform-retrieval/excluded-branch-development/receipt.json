@@ -1,0 +1,17 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 75,
+  "v7_top5": 103,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "first_result_scores_unchanged": true,
+  "focused_tests": 249,
+  "review_findings_fixed": [
+    "malformedtokenpartialmatch",
+    "quoteandreversedcoordination",
+    "examplefalseconflict",
+    "phrasenegation"
+  ],
+  "changes": "Explicitoutside/excludingnamedbranchfilters;uncertainandconflictingphrasesremainchoices;targetedSQLandselectionusesamescopeinterpretation"
+}

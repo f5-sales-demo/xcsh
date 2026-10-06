@@ -1,0 +1,23 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "mixed_candidate_diagnostic": true,
+  "candidate_commits": [
+    "f6c9013dea1313bfcb3f957676bf2c9c66441cc4",
+    "907ebc6fff6559ea8fcb75ab0f786e3faa9198c1"
+  ],
+  "completed": 40,
+  "automated_pass": 12,
+  "answerable_exact_reads": 26,
+  "answerable_total": 28,
+  "all_response_budgets_passed": true,
+  "answerable_misses": [
+    "A107",
+    "A114"
+  ],
+  "ambiguous_without_question": [
+    "M037"
+  ],
+  "suite_unchanged": true,
+  "remaining": "Exposed suite, mixed binaries, no installed continuation qualification; ancillary read demands unresolved, A107/A114 semantic branch failures and M037 missing question."
+}

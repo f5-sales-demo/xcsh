@@ -1,0 +1,7 @@
+Approved the narrow source change. No blocking findings.
+
+- Retains `primary`/`secondary` while adding `prim`/`sec` only before cookie/HMAC key wording.
+- Bare database keys and protected quote/path spans avoid expansion.
+- No scope or polarity loss introduced by the change.
+
+Focused verification: **5 tests passed, 18 assertions**; diff check clean. No edits or broader qualification performed.

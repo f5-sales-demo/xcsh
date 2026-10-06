@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "case_id": "v9-008",
+  "source_commit": "375ccec000d1ace3cbdaa6cf67f9882a2a551368",
+  "purpose": "Separate content audit of original running model score; no score mutation",
+  "original_passed": false,
+  "original_failure": "verified.*live apply joins a verified field reference to an explicit denial in the next sentence",
+  "verified_denial": "No live apply was performed.",
+  "exact_reads_and_citations_passed": true,
+  "raw_trace_sha256": "d2b9c3fd15110704953c0ccf70dcb1d9b23c49de98a86147be4ab24ac7edd797",
+  "original_report_modified": false,
+  "qualification_passed": false
+}

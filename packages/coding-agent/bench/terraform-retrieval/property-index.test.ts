@@ -233,3 +233,117 @@ test("canonical field prose supplements support evidence without replacing metad
  const rows=searchPropertyIndex(db,"Which attribute returns rendered manifest payload data?",{providerName:"fixture"});
  expect(rows[0]?.description).toBe("HTTP binary body.");expect(rows[0]?.documentation_terms).toContain("manifest");expect(rows[0]?.documentation_terms).not.toContain("validator");expect(selectPropertyDestination("Which attribute returns rendered manifest payload data?",rows).kind).toBe("leaf");db.close();
 });
+
+test("unscoped architecture alternatives retain workload paths without relaxing other providers", () => {
+ const db=new Database(":memory:");
+ db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");
+ const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for (const provider of ["workload","fixture"]) for(const architecture of ["service","stateful_service"])
+ put.run("resources",provider,`${architecture}.port`,`${provider}/${architecture}`,"schema-port","Listener port.");
+ populatePropertyIndex(db);
+ const query="stateless or stateful_service workload port";
+ const rows=searchPropertyIndex(db,query,{});
+ expect(rows.filter(row=>row.provider_name==="workload").map(row=>row.schema_path).sort()).toEqual(["service.port","stateful_service.port"]);
+ expect(rows.filter(row=>row.provider_name==="fixture").map(row=>row.schema_path)).toEqual(["stateful_service.port"]);
+ expect(searchPropertyIndex(db,query,{providerType:"data-sources"})).toEqual([]);
+ db.close();
+});
+
+test("explicit dotted schema paths bind contiguous segments rather than unordered words",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha.beta.port","beta.alpha.port","alpha.betax.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Which field sets port under alpha.beta?",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["alpha.beta.port"]);
+ expect(searchPropertyIndex(db,"Which field sets port under alpha.missing?",{providerName:"fixture"})).toEqual([]);
+ expect(searchPropertyIndex(db,"Which field sets port under alpha.beta?",{providerType:"data-sources"})).toEqual([]);db.close();
+});
+
+test("explicit path parser does not truncate malformed tokens or lose scope to earlier wording",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha.beta.port","gamma.delta.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ for(const query of ["under alpha.beta.1missing", "under alpha.beta-missing", "No rewrite is needed. Which field sets port under alpha.missing?", "port or timeout under alpha.missing"])
+ expect(searchPropertyIndex(db,query,{providerName:"fixture"})).toEqual([]);
+ for(const query of ["port under alpha.beta or under gamma.delta", "port under alpha.beta and under gamma.delta", "port under alpha.beta, or gamma.delta"])
+ expect(searchPropertyIndex(db,query,{providerName:"fixture"})).toHaveLength(2);
+ db.close();
+});
+
+test("suppressed dotted path intent cannot leak into underscore identifier filters",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha_one.beta_two.port","gamma_three.delta_four.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"port under alpha_one.beta_two or under gamma_three.delta_four",{providerName:"fixture"})).toHaveLength(2);
+ expect(searchPropertyIndex(db,"port not under alpha_one.beta_two",{providerName:"fixture"})).toHaveLength(2);db.close();
+});
+
+test("bare alternative paths and quoted malformed endings remain literal",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha_one.beta_two.port","gamma_three.delta_four.port","alpha.beta.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ const rows=searchPropertyIndex(db,"port under alpha_one.beta_two or gamma_three.delta_four",{providerName:"fixture"});expect(rows).toHaveLength(3);
+ expect(searchPropertyIndex(db,"Which field sets port under `alpha.beta.`?",{providerName:"fixture"})).toEqual([]);db.close();
+});
+
+test("conjunction-only and repeated path mentions are choices; malformed dotted punctuation stays literal",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha.beta.port","gamma.delta.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ for(const query of ["port or alpha.beta","port under alpha.beta or alpha.beta","port under alpha.beta and under alpha.beta"])
+ expect(searchPropertyIndex(db,query,{providerName:"fixture"})).toHaveLength(2);
+ expect(searchPropertyIndex(db,"port under alpha.beta., with TLS enabled",{providerName:"fixture"})).toEqual([]);db.close();
+});
+
+test("sentence punctuation and ignored mention spans preserve independent identifiers",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const schema of ["alpha.beta.port","alpha_one.beta_two.port"])put.run("resources","fixture",schema,schema,"schema-port","Listening port.");populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Port under alpha.beta. Use TLS.",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["alpha.beta.port"]);
+ expect(searchPropertyIndex(db,"set field alpha_one.beta_two_extra, not under alpha_one.beta_two",{providerName:"fixture"})).toEqual([]);db.close();
+});
+
+
+test("bare dotted lookup constrains indexed candidates and cannot invent child fields", () => {
+ const db=new Database(":memory:");
+ db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description); INSERT INTO terraform_destinations VALUES('resources','fixture','calibration.offset','fixture','schema-calibration--offset','Calibration offset');");
+ populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Locate calibration.missing.",{providerName:"fixture"})).toEqual([]);
+ expect(searchPropertyIndex(db,"Locate calibration.offset.",{providerName:"fixture"})[0]?.schema_path).toBe("calibration.offset");
+ db.close();
+});
+
+
+test("outside a named underscore branch excludes it before indexed ranking", () => {
+ const db=new Database(":memory:");
+ db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description); INSERT INTO terraform_destinations VALUES('resources','fixture','policy.action','direct','schema-policy--action','Action for requests'), ('resources','fixture','detection_settings.policy.action','nested','schema-detection--action','Action for requests');");
+ populatePropertyIndex(db);
+ expect(searchPropertyIndex(db,"Find the action outside detection_settings.",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["policy.action"]);
+ expect(searchPropertyIndex(db,"Find the action inside detection_settings",{providerName:"fixture"}).map(r=>r.schema_path)).toEqual(["detection_settings.policy.action"]);
+ db.close();
+});
+
+test("indexed candidate limits report hidden matches before selection",()=>{
+ const db=new Database(":memory:");
+ db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");
+ const put=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(let i=0;i<8;i++)put.run("resources","fixture","branch"+i+".port","p"+i,"schema-port","Listening port.");
+ populatePropertyIndex(db);
+ const limited:{truncated?:boolean}={};
+ expect(searchPropertyIndex(db,"Listening port",{providerName:"fixture"},2,limited).length).toBeLessThanOrEqual(4);
+ expect(limited.truncated).toBe(true);
+ const complete:{truncated?:boolean}={};
+ searchPropertyIndex(db,"Listening port",{providerName:"fixture"},20,complete);
+ expect(complete.truncated).toBe(false);
+ db.close();
+});
+test("invalid candidate limits fail before diagnostics or SQL",()=>{
+ const db=new Database(":memory:");
+ for(const limit of [-2,0,1.5,NaN,Infinity]){
+ const status={truncated:true};
+ expect(()=>searchPropertyIndex(db,"port",{},limit,status)).toThrow("Invalid property candidate limit");
+ expect(status.truncated).toBe(true);
+ }
+ db.close();
+});
+
+test("indexed leaf prefilter preserves exact terminal alternatives despite normalized collisions",()=>{
+ const db=new Database(":memory:");db.exec("CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor,description)");const insert=db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?,?)");
+ for(const [role,field] of [["resources","a.addr"],["resources","b.addr"],["resources","a.address"],["data-sources","b.addr"]])insert.run(role,"fixture",field,field,"schema-"+field,"Address");populatePropertyIndex(db);
+ const leaf=(db.query("SELECT leaf FROM property_terms WHERE provider_type=? AND provider_name=? AND schema_path=?").get("resources","fixture","a.addr") as {leaf:string}).leaf;
+ const old=db.query("SELECT provider_type,schema_path FROM property_terms WHERE provider_name=? AND (schema_path=? OR substr(schema_path,-length(?))=?) ORDER BY provider_type,schema_path").all("fixture","addr",".addr",".addr");
+ const next=db.query("SELECT provider_type,schema_path FROM property_terms WHERE provider_name=? AND leaf=? AND (schema_path=? OR substr(schema_path,-length(?))=?) ORDER BY provider_type,schema_path").all("fixture",leaf,"addr",".addr",".addr");expect(next).toEqual(old);expect(next).toHaveLength(3);db.close();
+});

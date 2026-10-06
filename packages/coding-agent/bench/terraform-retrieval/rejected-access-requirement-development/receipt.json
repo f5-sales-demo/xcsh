@@ -1,0 +1,11 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_restored": true,
+  "initial_correct": 100,
+  "total_answerable": 140,
+  "top5": 125,
+  "complete_route_p95_ms": 69.093846,
+  "decision": "Reject prefix-dropping requirement extraction: small accuracy gain loses same-clause obligations, nested qualifiers and unrecognized prefix requirements. Failed independent development counterexamples preserved."
+}

@@ -1,0 +1,11 @@
+{
+  "suite_sha256": "ca965a643bc319e042909cec555621d2161bcc118df43c1edcdb459777cb56d9",
+  "source_commit": "5e16fa28dc49b3a425370602f0e31c49e4d1dbed",
+  "benchmark_review_mode": "internal-user-waived",
+  "first_untouched_result": true,
+  "answerable_accuracy": 0.2357142857142857,
+  "answerable_top5": 0.7071428571428572,
+  "result_sha256": "2c0365463c5055fbf96d7b4a9ceb856fdc7830a7764f8a1bf6db36a8a154ba1d",
+  "qualification_passed": false,
+  "exposed_regression_only_after_first_result": true
+}

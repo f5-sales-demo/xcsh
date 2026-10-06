@@ -1,0 +1,67 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "header-ambiguous",
+      "kind": "ambiguous",
+      "exit_code": 0,
+      "model_ms": 69064.32520202361,
+      "complete_leaf_read": true,
+      "clarification": true,
+      "text": "In `xcsh_workload` (provider v12.4.0), the branch is:\n\n`stateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert`\n\nTwo mutually exclusive settings match:\n\n- [`server_name`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name): sets the value, overwriting any existing `Server` header.\n- [`append_server_name`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name): sets it only when absent, preserving an existing value.\n\nShould the setting **overwrite an existing header or preserve it**?",
+      "budget": {
+        "passed": true,
+        "total_bytes": 45088,
+        "max_bytes": 20242,
+        "measured_results": 7,
+        "violations": []
+      },
+      "trace_sha256": "4c3979e2b42fe3629a268fcb630b6885397cb9877378d23e44c75115abc38084",
+      "passed": true
+    },
+    {
+      "id": "header-preserve",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 62492.296101059765,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "Use **`append_server_name`** on `xcsh_workload` at:\n\n```text\nstateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.append_server_name\n```\n\nIt sets the configured `Server` value only when absent; an existing value passes through unchanged. Do **not** use `server_name`, which overwrites existing values.\n\nThe setting is an optional string, mutually exclusive with `server_name`, `default_header`, and `pass_through`.\n\nVerified in bundled provider **v12.4.0**: [exact field documentation](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 37784,
+        "max_bytes": 20242,
+        "measured_results": 6,
+        "violations": []
+      },
+      "trace_sha256": "eaeb7304843821a8e16b0be1c3440eb42d44829969af2addba08fe828bf8667d",
+      "passed": true
+    },
+    {
+      "id": "header-overwrite",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 65996.18958297651,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "Use **`server_name`** in `xcsh_workload` at:\n\n```text\nstateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.server_name\n```\n\nIt sets the `Server` response-header value and **overwrites any existing value**. Do not use `append_server_name`, which preserves existing values.\n\nThe field is an optional string, provider-limited to 8,096 characters, and mutually exclusive with `append_server_name`, `default_header`, and `pass_through`.\n\nVerified in bundled provider **v12.4.0**: [exact field documentation](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 40950,
+        "max_bytes": 20242,
+        "measured_results": 7,
+        "violations": []
+      },
+      "trace_sha256": "2be99188bd440f9b7a8ea66570ea4c3e6ad52d41ac93511416498412c85a7cdd",
+      "passed": true
+    }
+  ],
+  "complete": true
+}

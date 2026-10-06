@@ -1,0 +1,14 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "model_tests": 50,
+  "ruff": true,
+  "mypy": true,
+  "pylint": true,
+  "review": "approve narrow harness budget audit",
+  "discovery_hint_budget": 4096,
+  "context_budget": 16384,
+  "exact_full_reads_unlimited": true,
+  "single_and_continuation_gate": true,
+  "remaining": "Bounded installed model qualification remains unmet; diagnostic oversized response preserved."
+}

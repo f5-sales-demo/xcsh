@@ -1,0 +1,49 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "v9-117",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 103823.01508903038,
+      "complete_leaf_read": true,
+      "clarification": true,
+      "text": "Adapted from the [standalone Resource example](xcsh://terraform-documentation/documentation/resources/healthcheck/examples/resource/index.md?view=context#resource), using only your six resource values. Provider pinned to the reviewed bundled version, **v12.4.0**.\n\n```hcl\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    xcsh = {\n      source  = \"f5-sales-demo/xcsh\"\n      version = \"= 12.4.0\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_healthcheck\" \"synthetic_probe\" {\n  name      = \"synthetic-probe\"\n  namespace = \"synthetic-lab\"\n\n  healthy_threshold   = 3\n  interval            = 10\n  timeout             = 3\n  unhealthy_threshold = 2\n}\n```\n\n### Supplied field constraints\n\nAll six fields are provider-schema **required**.\n\n| Field | Documented constraints |\n|---|---|\n| [name](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-name) | String; `NameValidator`; unique within namespace. Upstream documents DNS-1035 naming, 1\u201363 characters. |\n| [namespace](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-namespace) | String; `NamespaceValidator`. Upstream documents DNS-label naming, 1\u201363 characters. |\n| [healthy_threshold](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-healthy_threshold) | Integer; provider-enforced inclusive range **1\u201316**. |\n| [interval](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-interval) | Integer seconds; provider-enforced inclusive range **1\u2013600**. |\n| [timeout](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-timeout) | Integer seconds; provider-enforced inclusive range **1\u2013600**. |\n| [unhealthy_threshold](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-unhealthy_threshold) | Integer; provider-enforced inclusive range **1\u201316**. |\n\nUpstream naming pattern: `^[a-z]([-a-z0-9]*[a-z0-9])?$`. Both supplied strings and all numeric values satisfy the documented constraints.\n\n[Authentication](xcsh://terraform-documentation/documentation/provider/setup/index.md?view=full#authentication-options) remains environment-based: set `XCSH_API_URL` and exactly one supported token or certificate method.\n\nSchema-reviewed only; `terraform validate`, plan, and apply were not run.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 51274,
+        "max_bytes": 15367,
+        "measured_results": 14,
+        "violations": []
+      },
+      "trace_sha256": "079c1cf3b97e6ee4af6bec2a34f3ba23e560bdcfca96e2a80dbceff62590f793",
+      "passed": false
+    },
+    {
+      "id": "v9-118",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 92376.15694908891,
+      "complete_leaf_read": true,
+      "clarification": true,
+      "text": "Based on the standalone [Resource example](xcsh://terraform-documentation/documentation/resources/rate_limiter/examples/resource/index.md?view=context#resource), using only your supplied resource values:\n\n```hcl\nterraform {\n  required_version = \">= 1.14\"\n\n  required_providers {\n    xcsh = {\n      source  = \"f5-sales-demo/xcsh\"\n      version = \"= 12.4.0\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_rate_limiter\" \"synthetic_rate\" {\n  name      = \"synthetic-rate\"\n  namespace = \"synthetic-lab\"\n}\n```\n\n**Provider requirements:** Pinned to bundled provider **v12.4.0**. Terraform \u22651.14 follows the maintained [provider requirements](xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context), superseding the example\u2019s older \u22651.0 declaration. Supply authentication and `XCSH_API_URL` through environment variables.\n\n**Supplied field constraints:**\n\n| Field | Provider schema | Documented upstream constraints |\n|---|---|---|\n| [`name`](xcsh://terraform-documentation/documentation/resources/rate_limiter/properties/index.md?view=context#schema-name) | Required string; `NameValidator()` | Unique within namespace; immutable through replace API; 1\u201363 characters; pattern below |\n| [`namespace`](xcsh://terraform-documentation/documentation/resources/rate_limiter/properties/index.md?view=context#schema-namespace) | Required string; `NamespaceValidator()` | DNS label; 1\u201363 characters; pattern below |\n\nBoth fields\u2019 upstream pattern is `^[a-z]([-a-z0-9]*[a-z0-9])?$`: lowercase-letter start, lowercase letters/digits/hyphens, alphanumeric end. Both supplied values satisfy it. These exact bounds are upstream metadata, not independently verified provider-validator behavior.\n\nDocumentation-checked draft only; `terraform validate` and live apply were not run. No limits or identification settings were invented.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 54535,
+        "max_bytes": 24741,
+        "measured_results": 11,
+        "violations": []
+      },
+      "trace_sha256": "0222a40edf32e4e1bd1d9221d899811dfe6d68d2323893933a2b46f17c2dbc9d",
+      "passed": false
+    }
+  ],
+  "complete": true
+}

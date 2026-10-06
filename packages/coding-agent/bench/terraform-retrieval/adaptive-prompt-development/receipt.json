@@ -1,0 +1,10 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "artifact_predates_current_source": true,
+  "route": "Ubuntu openai-codex/gpt-6.1-sol",
+  "three_case_result": "Answerable exactread/citation passed;unsupportedfieldabsencereported;ambiguousbranchomissionfailedbeforeexplicitsharedleafwarning.",
+  "raw_traces": "Preserved task-local;hashes included;not qualification",
+  "python_protocol_tests": 36,
+  "branch_correction": "One same-case developmentrerun reads both exactleaves andasks whicharchitecture;doesnotqualifyindependentlyheldoutsuite."
+}

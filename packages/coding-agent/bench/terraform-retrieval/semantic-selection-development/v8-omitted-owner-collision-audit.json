@@ -1,0 +1,156 @@
+{
+  "source_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "findings": [
+    {
+      "id": "tf1240-036",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/fleet/properties/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--decryption_provider",
+      "shared_schema_path": "storage_device_list.storage_devices.netapp_trident.netapp_backend_ontap_san.use_chap.chap_initiator_secret.blindfold_secret_info.decryption_provider",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-custom_storage_config--storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--decryption_provider"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-053",
+      "expected": "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--decryption_provider",
+      "shared_schema_path": "storage_device_list.storage_devices.netapp_trident.netapp_backend_ontap_san.use_chap.chap_initiator_secret.blindfold_secret_info.decryption_provider",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_initiator_secret/blindfold_secret_info/index.md#schema-custom_storage_config--storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_initiator_secret--blindfold_secret_info--decryption_provider"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-079",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/api_testing/properties/domains/credentials/api_key/index.md#schema-domains--credentials--api_key--key",
+      "shared_schema_path": "domains.credentials.api_key.key",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/index.md#schema-api_testing--domains--credentials--api_key--key"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-080",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/authentication/properties/cookie_params/auth_hmac/index.md#schema-cookie_params--auth_hmac--prim_key_expiry",
+      "shared_schema_path": "cookie_params.auth_hmac.prim_key_expiry",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/virtual_host/properties/authentication/cookie_params/auth_hmac/index.md#schema-authentication--cookie_params--auth_hmac--prim_key_expiry"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-081",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_secret_key--secret_key--blindfold_secret_info--decryption_provider",
+      "shared_schema_path": "aws_secret_key.secret_key.blindfold_secret_info.decryption_provider",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_user_account/properties/aws_provider/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_provider--aws_secret_key--secret_key--blindfold_secret_info--decryption_provider"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-082",
+      "expected": "xcsh://terraform-documentation/documentation/resources/api_testing/properties/domains/credentials/api_key/index.md#schema-domains--credentials--api_key--key",
+      "shared_schema_path": "domains.credentials.api_key.key",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/index.md#schema-api_testing--domains--credentials--api_key--key"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-083",
+      "expected": "xcsh://terraform-documentation/documentation/resources/authentication/properties/cookie_params/auth_hmac/index.md#schema-cookie_params--auth_hmac--prim_key_expiry",
+      "shared_schema_path": "cookie_params.auth_hmac.prim_key_expiry",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/virtual_host/properties/authentication/cookie_params/auth_hmac/index.md#schema-authentication--cookie_params--auth_hmac--prim_key_expiry"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-084",
+      "expected": "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_secret_key--secret_key--blindfold_secret_info--decryption_provider",
+      "shared_schema_path": "aws_secret_key.secret_key.blindfold_secret_info.decryption_provider",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/cloud_user_account/properties/aws_provider/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_provider--aws_secret_key--secret_key--blindfold_secret_info--decryption_provider"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-085",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/api_testing/properties/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-domains--credentials--api_key--value--blindfold_secret_info--decryption_provider",
+      "shared_schema_path": "domains.credentials.api_key.value.blindfold_secret_info.decryption_provider",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-api_testing--domains--credentials--api_key--value--blindfold_secret_info--decryption_provider"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-086",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/authentication/properties/cookie_params/auth_hmac/index.md#schema-cookie_params--auth_hmac--sec_key_expiry",
+      "shared_schema_path": "cookie_params.auth_hmac.sec_key_expiry",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/virtual_host/properties/authentication/cookie_params/auth_hmac/index.md#schema-authentication--cookie_params--auth_hmac--sec_key_expiry"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-087",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_secret_key--secret_key--blindfold_secret_info--location",
+      "shared_schema_path": "aws_secret_key.secret_key.blindfold_secret_info.location",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_user_account/properties/aws_provider/aws_secret_key/secret_key/blindfold_secret_info/index.md#schema-aws_provider--aws_secret_key--secret_key--blindfold_secret_info--location"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-088",
+      "expected": "xcsh://terraform-documentation/documentation/resources/api_testing/properties/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-domains--credentials--api_key--value--blindfold_secret_info--decryption_provider",
+      "shared_schema_path": "domains.credentials.api_key.value.blindfold_secret_info.decryption_provider",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-api_testing--domains--credentials--api_key--value--blindfold_secret_info--decryption_provider"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-097",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/api_testing/properties/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-domains--credentials--api_key--value--blindfold_secret_info--location",
+      "shared_schema_path": "domains.credentials.api_key.value.blindfold_secret_info.location",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/http_loadbalancer/properties/api_testing/domains/credentials/api_key/value/blindfold_secret_info/index.md#schema-api_testing--domains--credentials--api_key--value--blindfold_secret_info--location"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-100",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/authentication/properties/cookie_params/auth_hmac/prim_key/blindfold_secret_info/index.md#schema-cookie_params--auth_hmac--prim_key--blindfold_secret_info--decryption_provider",
+      "shared_schema_path": "cookie_params.auth_hmac.prim_key.blindfold_secret_info.decryption_provider",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/virtual_host/properties/authentication/cookie_params/auth_hmac/prim_key/blindfold_secret_info/index.md#schema-authentication--cookie_params--auth_hmac--prim_key--blindfold_secret_info--decryption_provider"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-114",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--session_name",
+      "shared_schema_path": "aws_assume_role.session_name",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/cloud_user_account/properties/aws_provider/aws_assume_role/index.md#schema-aws_provider--aws_assume_role--session_name"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    },
+    {
+      "id": "tf1240-127",
+      "expected": "xcsh://terraform-documentation/documentation/data-sources/fast_acl_rule/properties/action/index.md#schema-action--simple_action",
+      "shared_schema_path": "action.simple_action",
+      "other_provider_destinations": [
+        "xcsh://terraform-documentation/documentation/data-sources/fast_acl/properties/re_acl/fast_acl_rules/action/index.md#schema-re_acl--fast_acl_rules--action--simple_action",
+        "xcsh://terraform-documentation/documentation/data-sources/fast_acl/properties/site_acl/fast_acl_rules/action/index.md#schema-site_acl--fast_acl_rules--action--simple_action"
+      ],
+      "finding": "Omitted provider may need explicit root or owning product distinction; full source semantic adjudication required."
+    }
+  ],
+  "limitations": [
+    "Exact or suffix schema overlap is a candidate collision inventory, not proof of semantic ambiguity.",
+    "Frozen labels, prompts and scores unchanged."
+  ]
+}

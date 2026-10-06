@@ -1,0 +1,7 @@
+One finding blocks approval:
+
+- **P2 — Conflict alternatives silently disappear at either limit.** [terraform-conflict-context.ts:20](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-conflict-context.ts:20) limits results to four; line 35 drops remaining records at 2 KiB. In-memory probes reproduced five peers yielding four links, and three 1,000-character descriptions yielding one link—without an omission notice or continuation. The surrounding context cursor advances by section, so it cannot resume omitted peers. Provide an explicit recovery path and test both limits.
+
+Otherwise, the narrow comparison behaves correctly: exact destination joins, provider-name/type isolation, rejection of self/missing targets and non-conflict enforcement, complete emitted records, and oversized-description fallback. No prerequisite or validation inference was added. Source-section existence is guaranteed by the context caller, rather than the helper itself.
+
+All three supplied tests passed. Full context pagination/oversized-section integration was inspected, not executed. No edits made.

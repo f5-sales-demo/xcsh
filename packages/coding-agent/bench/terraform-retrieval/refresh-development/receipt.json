@@ -1,0 +1,10 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 74,
+  "v7_top5": 102,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "change": "Refreshverbformsretainreadlifecycleoperation",
+  "original_firstscores_preserved": true
+}

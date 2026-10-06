@@ -1,0 +1,17 @@
+{
+  "qualification_passed": false,
+  "source_full_package": {
+    "pass": 9650,
+    "skip": 562,
+    "fail": 0,
+    "source": "755e1f9f79f88357c66dbc20d89f758b4eedd36a"
+  },
+  "review_attempt_capacity_error_preserved": true,
+  "reviewer_full_test_readonly_EROFS_not_authoritative": true,
+  "findings_fixed": [
+    "trailingmalformedexcludedbranch",
+    "negationfollowingallowlistfamily"
+  ],
+  "focused_repair_tests": 178,
+  "first_heldout_scores_unchanged": true
+}

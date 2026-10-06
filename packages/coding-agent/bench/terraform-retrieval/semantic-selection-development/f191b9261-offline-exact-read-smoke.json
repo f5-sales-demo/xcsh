@@ -1,0 +1,26 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "network_disabled": true,
+  "results": [
+    {
+      "view": "context",
+      "exit_code": 0,
+      "bytes": 570,
+      "oversized_notice": true,
+      "sha256": "19348948a40f6bc2c88e940e45e69495f0f2fad39213d6e58d7558079b9dad45",
+      "stderr": ""
+    },
+    {
+      "view": "full",
+      "exit_code": 0,
+      "bytes": 1028831,
+      "oversized_notice": false,
+      "sha256": "a1336c812c3ba791464b323688aaa336ac4ddba0285337fd51098d996f5b4845",
+      "stderr": ""
+    }
+  ],
+  "complete_section_matches_source": true,
+  "complete_section_bytes": 1026633,
+  "ends_with_complete_section": true
+}

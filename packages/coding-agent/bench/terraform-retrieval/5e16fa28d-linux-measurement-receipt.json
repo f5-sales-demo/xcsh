@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "source_commit": "5e16fa28dc49b3a425370602f0e31c49e4d1dbed",
+  "binary_sha256": "29da14cbb2ae52621e9cdccc38f33a47119c2a5eda6da572430cbbf1652aa2a5",
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "complete_response_hashes_match": true,
+  "reports": [
+    {
+      "report": "5e16fa28d-linux-normal-measurement.json.gz",
+      "report_sha256": "1866380342c2e6eec17aeccc57a494e7eb01a636fd379c4e11fa0734b2b11d28",
+      "query_count": 200,
+      "repetitions": 5,
+      "warm_route_p95_ms": 58.723152999999,
+      "materialization_ms": 1795.879516,
+      "max_discovery_bytes": 3725,
+      "max_context_bytes": 7853
+    },
+    {
+      "report": "5e16fa28d-linux-offline-measurement.json.gz",
+      "report_sha256": "80afc60662c8bb5e66b103c9eb52dbc3bf36c4cd4a5115f30372aeb9722c6897",
+      "query_count": 200,
+      "repetitions": 5,
+      "warm_route_p95_ms": 54.99451999999974,
+      "materialization_ms": 1807.929552,
+      "max_discovery_bytes": 3725,
+      "max_context_bytes": 7853
+    }
+  ],
+  "limitations": [
+    "Exposed-query performance regression only",
+    "Model/network time excluded",
+    "Final Mac parity and accuracy qualification outstanding"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "correct_leaf_count": 101,
+  "answerable": 140,
+  "top5_count": 126,
+  "complete_response_p95_ms": 64.840847,
+  "index_changed": false,
+  "source_review": "approve retention",
+  "scope": "Credential storage noun phrases in request heads;scoreunchanged;conditional/corrective representations remain choices;unsupportedliteralguardretained",
+  "limitations": "Regressiononly;doesnotqualify95percent orfinalinstalled artifact"
+}

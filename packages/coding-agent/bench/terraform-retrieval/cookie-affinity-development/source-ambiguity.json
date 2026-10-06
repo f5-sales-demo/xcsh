@@ -1,0 +1,55 @@
+{
+  "development_only": true,
+  "original_labels_unchanged": true,
+  "same_description_peers": [
+    [
+      "data-sources",
+      "http_loadbalancer",
+      "cookie_stickiness",
+      "documentation/data-sources/http_loadbalancer/properties/cookie_stickiness/index.md",
+      "section",
+      "Two types of cookie affinity: 1. Passive. Takes a cookie that's present in the cookies header and hashes on its value. 2. Generated. Generates and sets a cookie with an expiration (TTL) on the first request from the client in its response to the client, based on the endpoint the request gets sent to. The client then"
+    ],
+    [
+      "data-sources",
+      "http_loadbalancer",
+      "ring_hash.hash_policy.cookie",
+      "documentation/data-sources/http_loadbalancer/properties/ring_hash/hash_policy/cookie/index.md",
+      "section",
+      "Two types of cookie affinity: 1. Passive. Takes a cookie that's present in the cookies header and hashes on its value. 2. Generated. Generates and sets a cookie with an expiration (TTL) on the first request from the client in its response to the client, based on the endpoint the request gets sent to. The client then"
+    ],
+    [
+      "data-sources",
+      "http_loadbalancer",
+      "routes.simple_route.advanced_options.specific_hash_policy.hash_policy.cookie",
+      "documentation/data-sources/http_loadbalancer/properties/routes/simple_route/advanced_options/specific_hash_policy/hash_policy/cookie/index.md",
+      "section",
+      "Two types of cookie affinity: 1. Passive. Takes a cookie that's present in the cookies header and hashes on its value. 2. Generated. Generates and sets a cookie with an expiration (TTL) on the first request from the client in its response to the client, based on the endpoint the request gets sent to. The client then"
+    ],
+    [
+      "resources",
+      "http_loadbalancer",
+      "cookie_stickiness",
+      "documentation/resources/http_loadbalancer/properties/cookie_stickiness/index.md",
+      "section",
+      "Two types of cookie affinity: 1. Passive. Takes a cookie that's present in the cookies header and hashes on its value. 2. Generated. Generates and sets a cookie with an expiration (TTL) on the first request from the client in its response to the client, based on the endpoint the request gets sent to. The client then"
+    ],
+    [
+      "resources",
+      "http_loadbalancer",
+      "ring_hash.hash_policy.cookie",
+      "documentation/resources/http_loadbalancer/properties/ring_hash/hash_policy/cookie/index.md",
+      "section",
+      "Two types of cookie affinity: 1. Passive. Takes a cookie that's present in the cookies header and hashes on its value. 2. Generated. Generates and sets a cookie with an expiration (TTL) on the first request from the client in its response to the client, based on the endpoint the request gets sent to. The client then"
+    ],
+    [
+      "resources",
+      "http_loadbalancer",
+      "routes.simple_route.advanced_options.specific_hash_policy.hash_policy.cookie",
+      "documentation/resources/http_loadbalancer/properties/routes/simple_route/advanced_options/specific_hash_policy/hash_policy/cookie/index.md",
+      "section",
+      "Two types of cookie affinity: 1. Passive. Takes a cookie that's present in the cookies header and hashes on its value. 2. Generated. Generates and sets a cookie with an expiration (TTL) on the first request from the client in its response to the client, based on the endpoint the request gets sent to. The client then"
+    ]
+  ],
+  "finding": "Passive cookie affinity wording alone does not choose configuration scope or algorithm."
+}

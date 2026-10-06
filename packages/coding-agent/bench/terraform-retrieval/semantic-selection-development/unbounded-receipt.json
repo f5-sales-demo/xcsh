@@ -1,0 +1,9 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "exit_code": 0,
+  "model_network_wall_ms": 60516.43464504741,
+  "route": "Ubuntu ChatGPT-authenticated Codex",
+  "expected_destinations_withheld": true,
+  "scope_supplied": true
+}

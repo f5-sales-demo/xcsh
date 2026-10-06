@@ -1,0 +1,15 @@
+{
+  "qualification_passed": false,
+  "retained": false,
+  "improved": [
+    "A035",
+    "A104",
+    "A131"
+  ],
+  "regressed": [
+    "A078",
+    "A091",
+    "A127"
+  ],
+  "reason": "Genericrefexpansionchangedlocalfieldranking;rejectbroadrule"
+}

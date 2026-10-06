@@ -1,0 +1,31 @@
+{
+  "qualification_passed": false,
+  "development_only": true,
+  "counts": {
+    "valid": 94,
+    "ambiguous": 46
+  },
+  "quote_and_peer_accounting_errors": 0,
+  "files": [
+    {
+      "path": "repaired-source-review.json.gz",
+      "sha256": "8316d1bd0e5ee83a10764f24cfaf1bec23afaa8f56b1a893cf6b1b5ab86abd5f",
+      "gzip_sha256": "62d1d2570ae9ddab96a1dc49f05306753acdfd86a11ac68c5faa0424d7cd6e75"
+    },
+    {
+      "path": "repaired-validation.json.gz",
+      "sha256": "23605e0ddc3941fea736fd325343bfd39ee178a0323115419c500e56840328b4",
+      "gzip_sha256": "b99434af299833911ed680d49186ea9f2edeab60cec0caa99108342d15e130a5"
+    },
+    {
+      "path": "valid-development.json.gz",
+      "sha256": "0fbb30835cb6c1dd71d21e4f079f86e24a3be24a1a6cbc341c7f82a702c7d0de",
+      "gzip_sha256": "a78d41386bbc0bed23175fca57990767680f8e9c7686fd8e4a588900ba35d5ca"
+    }
+  ],
+  "limitations": [
+    "Originalfrozenlabels/scoresunchanged.",
+    "Sourceauditdevelopmentonly;semanticclaimsremainboundedbysourcepeerreview.",
+    "Reportedvalidsliceusedfordevelopmentonly,neverqualification."
+  ]
+}

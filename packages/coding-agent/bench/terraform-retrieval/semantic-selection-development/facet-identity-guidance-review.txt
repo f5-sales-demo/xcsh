@@ -1,0 +1,7 @@
+Approve with limits. No findings in the three-file diff.
+
+- Exact facet guidance agrees with source: indexing uses metadata’s `provider_type` and `provider_name` directly; display names add `xcsh_`.
+- Copying returned refinement URIs preserves existing caller filters while applying the documented refinement.
+- Changes add retrieval guidance only; they do not change filter logic, select benchmark answers, or infer schema fields.
+
+Limit: the generated index is absent locally, so indexed values—including the `workload` example—were not independently verified against the artifact. No models or benchmark cases were inspected. Draft/no release and the independent qualification gate remain in effect.

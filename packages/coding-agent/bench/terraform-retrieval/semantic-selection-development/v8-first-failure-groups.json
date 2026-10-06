@@ -1,0 +1,25 @@
+{
+  "qualification_passed": false,
+  "regression_only": true,
+  "groups": {
+    "hcl-drafting": {
+      "total": 4,
+      "selected_correct": 0,
+      "top5": 1
+    },
+    "named-provider": {
+      "total": 43,
+      "selected_correct": 38,
+      "top5": 39
+    },
+    "omitted-provider": {
+      "total": 93,
+      "selected_correct": 32,
+      "top5": 54
+    }
+  },
+  "limitations": [
+    "Grouping is descriptive; frozen labels and original scores unchanged.",
+    "Multi-field HCL requests require adaptive/model evaluation beyond a single selected-leaf search."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_before_correct": 59,
+  "v7_after_correct": 61,
+  "v7_top5": 95,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "regressed_cases": [],
+  "changes": "Ordinary setting and placement clauses; duration query terminology",
+  "original_first_scores_preserved": true
+}

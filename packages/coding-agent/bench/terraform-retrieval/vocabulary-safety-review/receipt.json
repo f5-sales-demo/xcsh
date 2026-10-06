@@ -1,0 +1,15 @@
+{
+  "qualification_passed": false,
+  "v7_correct": 88,
+  "v7_top5": 117,
+  "post_analysis_regression": true,
+  "review_finding_fixed": "Inactive-state vocabulary remains original; idle expansion only in duration context",
+  "full_package": {
+    "pass": 9654,
+    "skip": 562,
+    "fail": 0,
+    "source": "0e7266c1289695e582701e3a1f050d3b51d1bb64"
+  },
+  "focused_repair_tests": 77,
+  "first_heldout_scores_unchanged": true
+}

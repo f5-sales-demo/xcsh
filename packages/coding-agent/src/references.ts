@@ -9,6 +9,7 @@
  */
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import type { ChatReference } from "./browser/chat-protocol";
+import { projectAssistantDocumentationCitations } from "./internal-urls/public-citations";
 
 export function classifyReferenceKind(url: string): "doc" | "console" {
 	try {
@@ -41,6 +42,7 @@ function trimTrailingMarkup(url: string): string {
 	return url.replace(/[*_~`,.;:!?'")\]}>]+$/, "");
 }
 export function extractReferences(msg: AssistantMessage): ChatReference[] {
+	const display = projectAssistantDocumentationCitations(msg);
 	const refs: ChatReference[] = [];
 	const seen = new Set<string>();
 
@@ -48,7 +50,7 @@ export function extractReferences(msg: AssistantMessage): ChatReference[] {
 	// it beats the regex scrape below — which can only guess a title from the URL path, and finds
 	// nothing at all when the model cites a source without printing its URL in the prose. Done as
 	// its own pass so a citation in a later block still wins over a scrape in an earlier one.
-	for (const block of msg.content) {
+	for (const block of display.content) {
 		if (block.type !== "text" || !block.citations) continue;
 		for (const citation of block.citations) {
 			const url = citation.url;
@@ -62,7 +64,7 @@ export function extractReferences(msg: AssistantMessage): ChatReference[] {
 		}
 	}
 
-	for (const block of msg.content) {
+	for (const block of display.content) {
 		if (block.type !== "text") continue;
 
 		const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;

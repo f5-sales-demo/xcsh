@@ -1,40 +1,41 @@
 {
-	"schema_version": 1,
+	"schema_version": 2,
 	"source_repository": "f5-sales-demo/html-to-markdown",
-	"release_tag": "content-20260928T200055Z",
-	"source_commit": "5a4c19ff8970496bb8c93762165ca0c5f066b5a0",
-	"receipt_sha256": "845cafea1389487dc5487fd9652005ab676085eecb4e17e4fc5506b8fedac6be",
+	"release_tag": "content-20261005T134122Z",
+	"source_commit": "cf7c552a056c6fa4441a01a164b316325a3c1a2d",
+	"receipt_sha256": "281d82bb7841b4ad58cdf3958ffca09ebf2497d8dc4817a0f9ce713979876aae",
 	"assets": {
 		"html-to-markdown-content.tar.gz": {
-			"sha256": "94ce65e48a4d2c6b023f36352264c345f1bde202b02b3f41ec0cd0e13fa83f03",
-			"size_bytes": 174233309
+			"sha256": "fb30b0730e60e13d86ea2aa7447219105d249838b49d599cf73086564118b314",
+			"size_bytes": 596344641
 		},
 		"html-to-markdown-content.tar.gz.sha256": {
-			"sha256": "abb1450492b95de12e2b31d688ac39cb8a0ae8487cb5ec980db2373c3c3f3a39",
+			"sha256": "ef1d55d6e88ffe4e31e93663234223f33db9004bb594e019da932d6ba8962cfb",
 			"size_bytes": 98
 		},
 		"manifest.json": {
-			"sha256": "85b7b24a3412bc201faf38a000ca19b92c1254393391a8764c3e1d0076cfa46d",
-			"size_bytes": 1691324
+			"sha256": "63564f1ad17377037d6208bc7117b34d4e67ab1299c412f89d956f820456eafc",
+			"size_bytes": 1633008
 		},
 		"publication.json": {
-			"sha256": "845cafea1389487dc5487fd9652005ab676085eecb4e17e4fc5506b8fedac6be",
+			"sha256": "281d82bb7841b4ad58cdf3958ffca09ebf2497d8dc4817a0f9ce713979876aae",
 			"size_bytes": 1061
 		},
 		"quality-report.json": {
-			"sha256": "11b6f3c8c6cf79b5f139378067a333d595e6529245e7130e5460199a36cd4008",
-			"size_bytes": 760619
+			"sha256": "5098a814221aaec39aeedde3ca7ee16ad6b861db54a57e1253356adb17e824de",
+			"size_bytes": 584287
 		},
 		"quality-report.md": {
-			"sha256": "24ecf8d3cb7068a97806ad25242df29e33b3f49743dd946b4b6c3e80f5bd27b7",
-			"size_bytes": 83201
+			"sha256": "5a4cf3009c7a216e54039d99a6a70f6b3d54b825ca946656dd53df175f840a39",
+			"size_bytes": 63956
 		}
 	},
 	"manifest": {
 		"schema_version": 2,
-		"document_count": 1063,
-		"asset_count": 2824,
+		"document_count": 739,
+		"asset_count": 3822,
 		"source_roots": [
+			"community-f5-com",
 			"docs-cloud-f5-com",
 			"my-f5-com",
 			"www-f5-com"
@@ -42,8 +43,14 @@
 	},
 	"index": {
 		"qmd_version": "2.8.3",
-		"fingerprint": "e68ceb0043a29d184775565794ab5760ab54851c72ad1c21af5984fbde967304",
-		"sha256": "aced64acf907a8a655716044cb0d227ae6de52e29ee38dc7d5cd733a8ec76fda",
-		"size_bytes": 52338688
+		"fingerprint": "051b38f27ee7653ce31c710a9a04462e9764ba52f2388eafaa1f9e1bd0c768c0",
+		"sha256": "5ee231a864752a399dacbf120d53b70fd9d7867dfb46222ff609bc6b7eca1b8d",
+		"size_bytes": 46952448
+	},
+	"packaging": {
+		"mode": "text-only-sqlite",
+		"text_manifest_sha256": "eb4e326d16b9c836dcf114ae96e8caad22a884bdd94aa3cdd23a33c0d59ed700",
+		"source_media_count": 3822,
+		"bundled_media_count": 0
 	}
 }

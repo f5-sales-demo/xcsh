@@ -1,0 +1,30 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "total_relationships": 15227,
+  "indexed_property_relationships": 15183,
+  "nonproperty_advisory_relationships": 44,
+  "populate_ms": 200.487051,
+  "counts": [
+    {
+      "type": "choice",
+      "enforcement": "provider-choice",
+      "count": 6
+    },
+    {
+      "type": "choice",
+      "enforcement": "provider-schema",
+      "count": 48
+    },
+    {
+      "type": "conflicts",
+      "enforcement": "provider-schema",
+      "count": 12622
+    },
+    {
+      "type": "requires",
+      "enforcement": "provider-schema",
+      "count": 2507
+    }
+  ]
+}

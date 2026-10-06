@@ -1,0 +1,31 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "header-ambiguous",
+      "kind": "ambiguous",
+      "exit_code": 0,
+      "model_ms": 62477.18857706059,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "In `xcsh_workload`, the setting is:\n\n```text\nstateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.server_name\n```\n\nOptional string; sets the `Server` response-header value, **overwriting any existing value**. Maximum length: **8096**, enforced by the provider validator. Mutually exclusive with `append_server_name`, `default_header`, and `pass_through`.\n\nVerified in bundled provider **v12.4.0**: [exact field reference](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 15074,
+        "max_bytes": 3970,
+        "measured_results": 6,
+        "violations": []
+      },
+      "trace_sha256": "38439e0ed3a5577c6f2f6c75342d7c3c71c3dc1d4e946c1be567c3cb037d50ea",
+      "passed": false
+    }
+  ],
+  "complete": true
+}

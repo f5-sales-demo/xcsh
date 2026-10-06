@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "change": "Quoted requested scalar excludes incidental fields while retaining identical leaf branch and role peers",
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "checks": {
+    "focused_tests": 125,
+    "typescript": "passed"
+  },
+  "regressions": [
+    {
+      "suite": "v8",
+      "report": "v8-quoted-scalar-regression.json.gz",
+      "report_sha256": "b95cdab5a740eb334a67b1cfa4d25609526c01b7c5b2ecc179ba1db6a02eb3fe",
+      "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+      "answerable_accuracy": 0.8642857142857143,
+      "answerable_top5": 0.9857142857142858
+    },
+    {
+      "suite": "v9",
+      "report": "v9-quoted-scalar-regression.json.gz",
+      "report_sha256": "fdccaf7bcaad08d8e164215690e5593fbed2f423f202ef8beb5c33b8b1c0c9d7",
+      "suite_sha256": "b80248156fbc699586bfedd7636c7ed3073e70b3d9960000fde5759337392640",
+      "answerable_accuracy": 0.9714285714285714,
+      "answerable_top5": 0.9928571428571429
+    }
+  ]
+}

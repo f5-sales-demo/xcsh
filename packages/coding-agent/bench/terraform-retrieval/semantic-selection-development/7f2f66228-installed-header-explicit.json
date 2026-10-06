@@ -1,0 +1,49 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "header-preserve",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 60177.45375295635,
+      "complete_leaf_read": false,
+      "clarification": false,
+      "text": "Use **`append_server_name`** in `xcsh_workload`:\n\n```text\nstateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.append_server_name\n```\n\nIt preserves an existing `Server` header and sets your configured value only when absent. Do **not** use `server_name`, which overwrites existing values.\n\nThe optional string conflicts with `server_name`, `default_header`, and `pass_through`.\n\nVerified in bundled provider **v12.4.0**: [exact field reference](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 36189,
+        "max_bytes": 20242,
+        "measured_results": 6,
+        "violations": []
+      },
+      "trace_sha256": "6e1999d1ec3cf6401af086a8f9691ab4b84fdcc64dee8839d0662e6455a36f84",
+      "passed": false
+    },
+    {
+      "id": "header-overwrite",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 57442.72720697336,
+      "complete_leaf_read": false,
+      "clarification": false,
+      "text": "Use **`server_name`** in `xcsh_workload` at:\n\n```text\nstateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.server_name\n```\n\nIt sets the `Server` response-header value and **overwrites any existing value**. Unlike `append_server_name`, it does not preserve the existing header.\n\nIt is an optional string, with a provider-enforced maximum length of 8,096, and conflicts with `append_server_name`, `default_header`, and `pass_through`.\n\nVerified in bundled provider **v12.4.0**: [exact field reference](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 33192,
+        "max_bytes": 20242,
+        "measured_results": 5,
+        "violations": []
+      },
+      "trace_sha256": "bb8662ee40782b0339f85b2fdbcf75e5a48824c2984d24b2b7f2bd7baf06c4bd",
+      "passed": false
+    }
+  ],
+  "complete": true
+}

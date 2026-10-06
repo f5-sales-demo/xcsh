@@ -1,0 +1,17 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": "9bcd5ce51f420185325ba2065bc268feb55ab533687b5e33246005883204a15d",
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "answerable_correct": 104,
+  "answerable_total": 140,
+  "answerable_top5": 124,
+  "route_p95_ms": 97.94308799999999,
+  "change": "Require ownership evidence for single-word provider nouns in explicitly labeled field queries; exact xcsh identities remain authoritative.",
+  "answerable_regressions": [],
+  "limitations": [
+    "Exposed regression only; below95 percent.",
+    "Installed final-source verification remains required."
+  ]
+}

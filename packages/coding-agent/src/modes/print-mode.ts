@@ -7,6 +7,7 @@
  */
 import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent, Model } from "@f5-sales-demo/pi-ai";
+import { projectDocumentationTranscript } from "../internal-urls/public-citations";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { finalAnswerText } from "../session/final-answer";
 import type { SessionHeader } from "../session/session-manager";
@@ -218,7 +219,8 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 	}
 
 	const state = session.state;
-	const lastMessage = state.messages[state.messages.length - 1];
+	const projected = projectDocumentationTranscript(state.messages);
+	const lastMessage = projected[projected.length - 1];
 	const assistantMsg = lastMessage?.role === "assistant" ? (lastMessage as AssistantMessage) : undefined;
 	const failed = assistantMsg?.stopReason === "error" || assistantMsg?.stopReason === "aborted";
 

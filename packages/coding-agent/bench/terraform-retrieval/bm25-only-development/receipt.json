@@ -1,0 +1,21 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "production_changed": false,
+  "decision": "Reject BM25-only replacement; candidate recall and top-one worse than current lexical route.",
+  "summaries": [
+    {
+      "file": "/tmp/terraform-current-hybrid-development/suite.json",
+      "total": 48,
+      "top1": 27,
+      "top5": 35
+    },
+    {
+      "file": "/tmp/terraform-v1240-qualification-v7-corrected-frozen/heldout.json",
+      "total": 140,
+      "top1": 65,
+      "top5": 103
+    }
+  ]
+}

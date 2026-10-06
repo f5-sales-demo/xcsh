@@ -1,0 +1,43 @@
+{
+  "results": [
+    {
+      "id": "A036",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md#schema-vsite_refs--namespace",
+      "clarification": null,
+      "reason": "vsite_refs.namespace holds each referenced virtual site's namespace. The parent identifies virtual-site references; the root namespace belongs to virtual_k8s itself, and default_flavor_ref.namespace belongs to a different reference.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#schema-vsite_refs--namespace",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/index.md?view=context#schema-namespace",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/default_flavor_ref/index.md?view=context#schema-default_flavor_ref--namespace",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/default_flavor_ref/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A070",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md#schema-tunnel_type",
+      "clarification": null,
+      "reason": "tunnel_type selects GRE or IPSEC_PSK and defaults to IPSEC_PSK. params.ipsec supplies IPsec configuration, including the pre-shared key.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md?view=context#schema-tunnel_type",
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/ipsec/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A093",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+      "clarification": null,
+      "reason": "The question identifies custom networking, Ethernet interfaces, and the DHCP server branch. Its pools.start_ip defines the beginning of an IPv4 pool range. pool_settings controls inclusion or exclusion; the IPv6 start_ip belongs to the separate IPv6 auto-configuration branch.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/index.md?view=context#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md?view=context#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--start_ip",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md?view=context#section"
+      ]
+    }
+  ]
+}

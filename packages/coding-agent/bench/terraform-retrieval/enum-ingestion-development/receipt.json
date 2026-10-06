@@ -1,0 +1,11 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "provider_pin_changed": false,
+  "ranking_changed": false,
+  "enum_tests": 9,
+  "snapshot_resolver_tests": 38,
+  "workspace_check_passed": true,
+  "source_review": "approve narrow ingestion validation",
+  "remaining": "New immutable producer artifact, indexed enum use and final qualification remain required."
+}

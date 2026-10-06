@@ -1,0 +1,13 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "source": "generated source-matched provider corpus",
+  "enum_fields": {
+    "n": 628
+  },
+  "checks": 5124,
+  "mismatches": 0,
+  "build_ms": 2212.420492,
+  "lookup_p95_ms": 0.5952300000003561,
+  "generated_source_sha256": "sha256:91f1f59eea655a6c590f78ed4268a220705d493985f63baaed758be2965fb408"
+}

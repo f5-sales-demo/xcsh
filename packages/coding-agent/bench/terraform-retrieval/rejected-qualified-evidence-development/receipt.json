@@ -1,0 +1,11 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "adopted": false,
+  "v7_correct": 91,
+  "v7_top5": 122,
+  "v6_correct": 77,
+  "v6_top5": 98,
+  "prior_v7_correct": 95,
+  "reason": "Complete-route losses and source review: truncated candidate pools, uncertainty, duplicate evidence hydration, lifecycle precedence and literal branch matching"
+}

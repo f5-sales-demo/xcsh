@@ -1,0 +1,40 @@
+{
+  "results": [
+    {
+      "id": "A036",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md#schema-vsite_refs--namespace",
+      "clarification": null,
+      "reason": "The question identifies virtual-site references. Within vsite_refs, namespace holds each referenced object's namespace. The resource-level namespace identifies where Virtual K8S is created; default_flavor_ref.namespace belongs to a different reference.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md#schema-vsite_refs--namespace",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/vsite_refs/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/index.md#schema-namespace",
+        "xcsh://terraform-documentation/documentation/resources/virtual_k8s/properties/default_flavor_ref/index.md#schema-default_flavor_ref--namespace"
+      ]
+    },
+    {
+      "id": "A070",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md#schema-tunnel_type",
+      "clarification": null,
+      "reason": "tunnel_type selects encapsulation through the documented GRE and IPSEC_PSK values. params and params.ipsec configure encapsulation parameters and the IPsec pre-shared key, rather than selecting between GRE and IPsec.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/index.md#schema-tunnel_type",
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/tunnel/properties/params/ipsec/index.md#section"
+      ]
+    },
+    {
+      "id": "A093",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+      "clarification": null,
+      "reason": "Custom networking, Ethernet interfaces, and DHCP server networks identify the custom_network_config Ethernet dhcp_server branch. Its pools.start_ip defines the beginning of a range. pool_settings controls inclusion or exclusion, end_ip defines the ending, and the storage-interface and IPv6 autoconfiguration branches describe different contexts. No additional branch input is needed.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pools--start_ip",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/pools/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/index.md#section",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/dhcp_server/dhcp_networks/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--dhcp_server--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_network_config/interface_list/interfaces/ethernet_interface/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#schema-custom_network_config--interface_list--interfaces--ethernet_interface--ipv6_auto_config--router--stateful--dhcp_networks--pools--start_ip"
+      ]
+    }
+  ]
+}

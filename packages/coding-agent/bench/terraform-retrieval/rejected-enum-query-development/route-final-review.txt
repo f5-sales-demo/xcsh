@@ -1,0 +1,11 @@
+**Not approved yet: three reproducible P2 bugs against HEAD.**
+
+- **Duplicate enum evidence bypasses shape/flag validation.** The new `continue` skips existing conflict checks. Two projections with identical enum evidence but conflicting `string/optional` versus `number/computed` metadata are accepted, affecting type and field-access filtering. Deduplicate enum inserts while retaining property validation. [terraform-property-index.ts:131](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts:131)
+
+- **Excluded schema scope is ignored.** `search=find field outside nested_scope&value=GRE` returns `nested_scope.protocol`. The route omits the exclusion gates used by ordinary property search. [terraform-documentation.ts:1686](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1686)
+
+- **Bare provider names become required field identifiers.** `search=find field in test_provider&value=GRE` returns no destinations, while `xcsh_test_provider` returns both valid matches. Provider inference succeeds, but `propertySchemaIdentifiers` subsequently requires `test_provider` in the schema path. Preserve ordinary search’s provider-name exemption. [terraform-documentation.ts:1694](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1694)
+
+Verification: **11 tests passed**, including actual-query EXPLAIN checks for both value indexes; **23 additional in-memory assertions passed** covering role/facets/node, malformed requests, coverage, Unicode, response bounds, and cautious no-match wording. Positive literal-path, type, and field-access checks also behaved correctly. Canonical-value validation, conjunctive evaluation, and partial-table rejection passed.
+
+No pin change or query-text enum extraction was added. No edits, contacts, subagents, benchmark-prompt inspection, qualification, or release work performed.

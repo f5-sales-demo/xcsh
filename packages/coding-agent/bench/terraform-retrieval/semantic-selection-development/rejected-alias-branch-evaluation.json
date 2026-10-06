@@ -1,0 +1,456 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "before_top5": 126,
+  "after_top5": 122,
+  "before_top20": 128,
+  "after_top20": 124,
+  "changes": [
+    {
+      "id": "A003",
+      "branch": [
+        "aws_assume_role"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--session_name",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--session_tags",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--duration_seconds",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/index.md#schema-id",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/index.md#schema-labels"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--session_name",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--session_tags",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--duration_seconds",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--role_arn",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--custom_external_id"
+        ]
+      }
+    },
+    {
+      "id": "A005",
+      "branch": [
+        "aws_assume_role"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--custom_external_id",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/index.md#schema-id",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/external_id_is_optional/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/external_id_is_tenant_id/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/azure_client_secret/index.md#schema-azure_client_secret--client_id"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--custom_external_id",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/external_id_is_optional/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/external_id_is_tenant_id/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--role_arn",
+          "xcsh://terraform-documentation/documentation/resources/cloud_credentials/properties/aws_assume_role/index.md#schema-aws_assume_role--session_tags"
+        ]
+      }
+    },
+    {
+      "id": "A007",
+      "branch": [
+        "certificate_chain",
+        "private_key"
+      ],
+      "before": {
+        "rank": 2,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/index.md#schema-certificate_url",
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md#schema-private_key--clear_secret_info--url",
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md#schema-private_key--blindfold_secret_info--location",
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/blindfold_secret_info/index.md#schema-private_key--blindfold_secret_info--store_provider",
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/private_key/clear_secret_info/index.md#schema-private_key--clear_secret_info--provider_ref"
+        ]
+      },
+      "after": {
+        "rank": 0,
+        "top": []
+      }
+    },
+    {
+      "id": "A009",
+      "branch": [
+        "custom_hash_algorithms"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/custom_hash_algorithms/index.md#schema-custom_hash_algorithms--hash_algorithms",
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/custom_hash_algorithms/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/certificate_chain/index.md#schema-certificate_chain--name",
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/certificate_chain/index.md#schema-certificate_chain--namespace",
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/certificate_chain/index.md#schema-certificate_chain--tenant"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/custom_hash_algorithms/index.md#schema-custom_hash_algorithms--hash_algorithms",
+          "xcsh://terraform-documentation/documentation/resources/certificate/properties/custom_hash_algorithms/index.md#section"
+        ]
+      }
+    },
+    {
+      "id": "A021",
+      "branch": [
+        "custom_anonymization"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/cookie/index.md#schema-custom_anonymization--anonymization_config--cookie--cookie_name",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/cookie/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-labels",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/http_header/index.md#schema-custom_anonymization--anonymization_config--http_header--header_name",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/query_parameter/index.md#schema-custom_anonymization--anonymization_config--query_parameter--query_param_name"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/cookie/index.md#schema-custom_anonymization--anonymization_config--cookie--cookie_name",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/cookie/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/http_header/index.md#schema-custom_anonymization--anonymization_config--http_header--header_name",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/query_parameter/index.md#schema-custom_anonymization--anonymization_config--query_parameter--query_param_name",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/index.md#section"
+        ]
+      }
+    },
+    {
+      "id": "A022",
+      "branch": [
+        "custom_anonymization"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/http_header/index.md#schema-custom_anonymization--anonymization_config--http_header--header_name",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/http_header/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/detection_settings/violations_view/index.md#schema-detection_settings--violations_view--name",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-name"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/http_header/index.md#schema-custom_anonymization--anonymization_config--http_header--header_name",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/http_header/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/cookie/index.md#schema-custom_anonymization--anonymization_config--cookie--cookie_name",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/custom_anonymization/anonymization_config/query_parameter/index.md#schema-custom_anonymization--anonymization_config--query_parameter--query_param_name"
+        ]
+      }
+    },
+    {
+      "id": "A024",
+      "branch": [
+        "bot_protection_setting",
+        "detection_settings"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/bot_protection_setting/index.md#schema-bot_protection_setting--good_bot_action",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/bot_protection_setting/index.md#schema-bot_protection_setting--malicious_bot_action",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/bot_protection_setting/index.md#schema-bot_protection_setting--suspicious_bot_action",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/bot_protection_setting/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-name"
+        ]
+      },
+      "after": {
+        "rank": 0,
+        "top": []
+      }
+    },
+    {
+      "id": "A038",
+      "branch": [
+        "fallback_pool"
+      ],
+      "before": {
+        "rank": 2,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/fallback_pool/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/fallback_pool/index.md#schema-fallback_pool--name",
+          "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/rule_list/rules/pool/index.md#schema-rule_list--rules--pool--name",
+          "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/index.md#schema-name",
+          "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/rule_list/rules/asn_matcher/asn_sets/index.md#schema-rule_list--rules--asn_matcher--asn_sets--name"
+        ]
+      },
+      "after": {
+        "rank": 2,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/fallback_pool/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/fallback_pool/index.md#schema-fallback_pool--name",
+          "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/fallback_pool/index.md#schema-fallback_pool--namespace",
+          "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/fallback_pool/index.md#schema-fallback_pool--tenant"
+        ]
+      }
+    },
+    {
+      "id": "A068",
+      "branch": [
+        "bgp_parameters"
+      ],
+      "before": {
+        "rank": 2,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/peers/external/index.md#schema-peers--external--asn",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/index.md#schema-bgp_parameters--asn",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/where/site/index.md#schema-where--site--network_type",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/where/virtual_site/index.md#schema-where--virtual_site--network_type"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/index.md#schema-bgp_parameters--asn",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/from_site/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/index.md#schema-bgp_parameters--ip_address",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/local_address/index.md#section"
+        ]
+      }
+    },
+    {
+      "id": "A069",
+      "branch": [
+        "bgp_parameters"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/index.md#schema-bgp_parameters--ip_address",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/index.md#schema-id",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/peers/external/family_inet/enable/aggregation/index.md#schema-peers--external--family_inet--enable--aggregation--ip_prefix",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/peers/external/index.md#schema-peers--external--address",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/where/site/index.md#schema-where--site--network_type"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/index.md#schema-bgp_parameters--ip_address",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/index.md#schema-bgp_parameters--asn",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/local_address/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/bgp/properties/bgp_parameters/from_site/index.md#section"
+        ]
+      }
+    },
+    {
+      "id": "A080",
+      "branch": [
+        "cloud_credentials"
+      ],
+      "before": {
+        "rank": 2,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/cloud_credentials/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/cloud_credentials/index.md#schema-cloud_credentials--namespace",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/private_connectivity/cloud_link/index.md#schema-private_connectivity--cloud_link--namespace",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/index.md#schema-namespace",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/active_enhanced_firewall_policies/enhanced_firewall_policies/index.md#schema-ingress_egress_gw--active_enhanced_firewall_policies--enhanced_firewall_policies--namespace"
+        ]
+      },
+      "after": {
+        "rank": 2,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/cloud_credentials/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/cloud_credentials/index.md#schema-cloud_credentials--namespace",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/cloud_credentials/index.md#schema-cloud_credentials--name",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/cloud_credentials/index.md#schema-cloud_credentials--tenant"
+        ]
+      }
+    },
+    {
+      "id": "A083",
+      "branch": [
+        "allow_list"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/allow_list/index.md#schema-allow_list--country_list",
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/deny_list/index.md#schema-deny_list--country_list",
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/rule_list/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/allow_list/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/allow_list/asn_list/index.md#schema-allow_list--asn_list--as_numbers"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/allow_list/index.md#schema-allow_list--country_list",
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/allow_list/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/allow_list/asn_list/index.md#schema-allow_list--asn_list--as_numbers",
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/allow_list/asn_set/index.md#schema-allow_list--asn_set--name",
+          "xcsh://terraform-documentation/documentation/resources/service_policy/properties/allow_list/asn_set/index.md#schema-allow_list--asn_set--namespace"
+        ]
+      }
+    },
+    {
+      "id": "A104",
+      "branch": [
+        "ingress_egress_gw",
+        "ingress_egress_gw_ar"
+      ],
+      "before": {
+        "rank": 2,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/hub/express_route_enabled/connections/other_subscription/authorized_key/blindfold_secret_info/index.md#schema-ingress_egress_gw_ar--hub--express_route_enabled--connections--other_subscription--authorized_key--blindfold_secret_info--store_provider",
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/hub/express_route_enabled/connections/other_subscription/authorized_key/clear_secret_info/index.md#schema-ingress_egress_gw_ar--hub--express_route_enabled--connections--other_subscription--authorized_key--clear_secret_info--provider_ref",
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/hub/express_route_enabled/connections/other_subscription/authorized_key/blindfold_secret_info/index.md#schema-ingress_egress_gw_ar--hub--express_route_enabled--connections--other_subscription--authorized_key--blindfold_secret_info--location",
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/hub/express_route_enabled/connections/other_subscription/authorized_key/clear_secret_info/index.md#schema-ingress_egress_gw_ar--hub--express_route_enabled--connections--other_subscription--authorized_key--clear_secret_info--url",
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/ingress_egress_gw_ar/hub/express_route_enabled/connections/other_subscription/authorized_key/clear_secret_info/index.md#section"
+        ]
+      },
+      "after": {
+        "rank": 0,
+        "top": []
+      }
+    },
+    {
+      "id": "A114",
+      "branch": [
+        "https_auto_cert",
+        "stateful_service"
+      ],
+      "before": {
+        "rank": 3,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https--append_server_name",
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https--server_name",
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name",
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name",
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/https/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--https--append_server_name"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name",
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name",
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--https_auto_cert--append_server_name",
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_custom--ports--http_loadbalancer--https_auto_cert--server_name",
+          "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--add_hsts"
+        ]
+      }
+    },
+    {
+      "id": "A116",
+      "branch": [
+        "voltstack_cluster"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-voltstack_cluster--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-voltstack_cluster--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv6/index.md#schema-voltstack_cluster--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv6--addr",
+          "xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/index.md#section"
+        ]
+      }
+    },
+    {
+      "id": "A121",
+      "branch": [
+        "voltstack_cluster"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-voltstack_cluster--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-ingress_egress_gw--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/ingress_egress_gw/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#schema-voltstack_cluster--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv6--addr",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv6/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv6/index.md#schema-voltstack_cluster--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv6--addr",
+          "xcsh://terraform-documentation/documentation/resources/gcp_vpc_site/properties/voltstack_cluster/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/index.md#section"
+        ]
+      }
+    },
+    {
+      "id": "A126",
+      "branch": [
+        "voltstack_cluster",
+        "voltstack_cluster_ar"
+      ],
+      "before": {
+        "rank": 2,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--dual_stack--ipv4--addr",
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--nexthop_address--ipv4--addr",
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/index.md#schema-voltstack_cluster_ar--outside_static_routes--static_route_list--custom_static_route--nexthop--type",
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/ipv4/index.md#section",
+          "xcsh://terraform-documentation/documentation/resources/azure_vnet_site/properties/voltstack_cluster_ar/outside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/ipv4/index.md#section"
+        ]
+      },
+      "after": {
+        "rank": 0,
+        "top": []
+      }
+    },
+    {
+      "id": "A133",
+      "branch": [
+        "local_vrf"
+      ],
+      "before": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/local_vrf/slo_config/static_routes/static_routes/node_interface/list/interface/index.md#schema-local_vrf--slo_config--static_routes--static_routes--node_interface--list--interface--uid",
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/local_vrf/slo_config/static_v6_routes/static_routes/node_interface/list/interface/index.md#schema-local_vrf--slo_config--static_v6_routes--static_routes--node_interface--list--interface--uid",
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/local_vrf/sli_config/static_routes/static_routes/node_interface/list/interface/index.md#schema-local_vrf--sli_config--static_routes--static_routes--node_interface--list--interface--uid",
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/local_vrf/sli_config/static_v6_routes/static_routes/node_interface/list/interface/index.md#schema-local_vrf--sli_config--static_v6_routes--static_routes--node_interface--list--interface--uid",
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/segment_vrf/segment_config/static_routes/static_routes/node_interface/list/interface/index.md#schema-segment_vrf--segment_config--static_routes--static_routes--node_interface--list--interface--uid"
+        ]
+      },
+      "after": {
+        "rank": 1,
+        "top": [
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/local_vrf/slo_config/static_routes/static_routes/node_interface/list/interface/index.md#schema-local_vrf--slo_config--static_routes--static_routes--node_interface--list--interface--uid",
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/local_vrf/slo_config/static_v6_routes/static_routes/node_interface/list/interface/index.md#schema-local_vrf--slo_config--static_v6_routes--static_routes--node_interface--list--interface--uid",
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/local_vrf/sli_config/static_routes/static_routes/node_interface/list/interface/index.md#schema-local_vrf--sli_config--static_routes--static_routes--node_interface--list--interface--uid",
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/local_vrf/sli_config/static_v6_routes/static_routes/node_interface/list/interface/index.md#schema-local_vrf--sli_config--static_v6_routes--static_routes--node_interface--list--interface--uid",
+          "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/local_vrf/slo_config/static_routes/static_routes/node_interface/list/interface/index.md#section"
+        ]
+      }
+    }
+  ],
+  "verdict": "rejected",
+  "reason": "Hard branch aliases lose recall on alternative/overlapping phrases; do not infer all matched aliases as conjunctive scope."
+}

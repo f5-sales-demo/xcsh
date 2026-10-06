@@ -1,0 +1,23 @@
+{
+  "qualification_passed": false,
+  "v7_correct": 89,
+  "v7_top5": 118,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "post_analysis_regression": true,
+  "review_findings_fixed": [
+    "quotedkeys",
+    "compoundkeys",
+    "actualkeyrelationship",
+    "negation",
+    "rolepeers"
+  ],
+  "full_package": {
+    "pass": 9659,
+    "skip": 562,
+    "fail": 0,
+    "source": "41c4464c6f1e6d69a383a0d40e04c17c69467b49"
+  },
+  "focused_repair_tests": 260,
+  "first_heldout_scores_unchanged": true
+}

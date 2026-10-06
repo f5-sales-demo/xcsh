@@ -1,0 +1,66 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "v9-117",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 87002.60141596664,
+      "complete_leaf_read": true,
+      "required_read_coverage": true,
+      "required_citations": false,
+      "clarification": false,
+      "text": "Adapted from the [standalone Resource example](xcsh://terraform-documentation/documentation/resources/healthcheck/examples/resource/index.md?view=context#resource), using only your six supplied resource values:\n\n```hcl\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    xcsh = {\n      source  = \"f5-sales-demo/xcsh\"\n      version = \">= 0.1.0\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_healthcheck\" \"synthetic_probe\" {\n  name      = \"synthetic-probe\"\n  namespace = \"synthetic-lab\"\n\n  healthy_threshold   = 3\n  interval            = 10\n  timeout             = 3\n  unhealthy_threshold = 2\n}\n```\n\n### Supplied field constraints\n\nAll six fields are **required** in the bundled **v12.4.0** provider schema.\n\n| Field | Constraint |\n|---|---|\n| [`name`](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-name) | String; provider `NameValidator()`. Upstream documents DNS-1035 format, 1\u201363 characters, uniqueness within the namespace, and no rename during replacement. |\n| [`namespace`](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-namespace) | String; provider `NamespaceValidator()`. Upstream documents a 1\u201363-character DNS label. |\n| [`healthy_threshold`](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-healthy_threshold) | Provider-enforced integer **1\u201316**; successful checks before healthy. Startup requires only one success. |\n| [`interval`](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-interval) | Provider-enforced integer **1\u2013600 seconds** between requests. |\n| [`timeout`](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-timeout) | Provider-enforced integer **1\u2013600 seconds**; expiry counts as failure. |\n| [`unhealthy_threshold`](xcsh://terraform-documentation/documentation/resources/healthcheck/properties/index.md?view=context#schema-unhealthy_threshold) | Provider-enforced integer **1\u201316**; failed checks before unhealthy. HTTP 503 bypasses this threshold. |\n\nThe supplied values satisfy these documented constraints. No protocol-specific configuration was added.\n\nConfigure `XCSH_API_URL` and one supported authentication method externally. [Prerequisites](xcsh://terraform-documentation/documentation/resources/healthcheck/index.md?view=context#prerequisites) document Standard tier and target-namespace access.\n\n**Validation:** documentation-checked draft; Terraform validation and live apply were not run.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 64568,
+        "max_bytes": 37460,
+        "measured_results": 12,
+        "violations": []
+      },
+      "trace_sha256": "8fd84ff905bdce898e7ec4dbb0d6af52db02a298948f2ac94d181ec86c81ccce",
+      "passed": false
+    },
+    {
+      "id": "v9-118",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 92540.15648795757,
+      "complete_leaf_read": true,
+      "required_read_coverage": true,
+      "required_citations": false,
+      "clarification": false,
+      "text": "Adapted from the [standalone Resource example](xcsh://terraform-documentation/documentation/resources/rate_limiter/examples/resource/index.md?view=context#resource), using bundled provider **v12.4.0**:\n\n```hcl\nterraform {\n  required_version = \">= 1.14\"\n\n  required_providers {\n    xcsh = {\n      source  = \"f5-sales-demo/xcsh\"\n      version = \"= 12.4.0\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_rate_limiter\" \"synthetic_rate\" {\n  name      = \"synthetic-rate\"\n  namespace = \"synthetic-lab\"\n}\n```\n\nOnly the supplied resource values are included; optional settings are omitted.\n\n**Supplied field constraints**\n- [`name`](xcsh://terraform-documentation/documentation/resources/rate_limiter/properties/index.md?view=context#schema-name): required string; provider declares `NameValidator()`. Upstream documentation requires namespace uniqueness and prohibits changing the name through replace API.\n- [`namespace`](xcsh://terraform-documentation/documentation/resources/rate_limiter/properties/index.md?view=context#schema-namespace): required string; provider declares `NamespaceValidator()`.\n- Documented upstream constraints for both: **1\u201363 characters**, matching `^[a-z]([-a-z0-9]*[a-z0-9])?$`. Both supplied values satisfy these constraints; uniqueness was not checked.\n\n[Provider requirements](xcsh://terraform-documentation/documentation/provider/setup/index.md?view=context#requirements) specify Terraform **\u22651.14**, superseding the example\u2019s older minimum. Supply `XCSH_API_URL` and exactly one authentication method through the environment.\n\n**[blocked] CLI validation:** execution tools are unavailable, so `terraform fmt`, `init`, and `validate` were not run. No plan or apply was performed.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 53715,
+        "max_bytes": 24741,
+        "measured_results": 14,
+        "violations": []
+      },
+      "trace_sha256": "bd0554f44bec6b9b8412e80cc64d976bf4ed59611fd42379d741cfe0e72fc845",
+      "passed": false
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "c0c4f0c143f3a0f520203ad9e7ff3889f731830a",
+    "binary_sha256": "47c501ca24b98facc11b5ae390cf5f0640937adbfbfbe22bda78abc3bccb8913",
+    "binary_bytes": 621942240,
+    "provider_version": "v12.4.0"
+  },
+  "limitations": [
+    "Both required-read contracts pass; both citation contracts fail. Original prompts and results unchanged.",
+    "Healthcheck copied broad provider constraint from example; followup prompt fix requires exact bundled pin.",
+    "Exposed regression only; no qualification."
+  ]
+}

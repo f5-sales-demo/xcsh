@@ -1,0 +1,85 @@
+{
+  "source_review_only": true,
+  "development_only": true,
+  "qualification_passed": false,
+  "provider_version": "v12.4.0",
+  "consumer_commit": "814ac27f5386e815e0f1e39174b99403f28033fe",
+  "results": [
+    {
+      "id": "tf1240-002",
+      "required_schema_reads": [
+        {
+          "schema_path": "name",
+          "destination": "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-name",
+          "exact_read": true
+        },
+        {
+          "schema_path": "namespace",
+          "destination": "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-namespace",
+          "exact_read": true
+        },
+        {
+          "schema_path": "allowed_response_codes.response_code",
+          "destination": "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md#schema-allowed_response_codes--response_code",
+          "exact_read": true
+        },
+        {
+          "schema_path": "blocking",
+          "destination": "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md#section",
+          "exact_read": true,
+          "documented_syntax": "\n\n```terraform\nblocking = {}\n```\n"
+        },
+        {
+          "schema_path": "allowed_response_codes",
+          "destination": "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md#section",
+          "exact_read": true,
+          "documented_syntax": "\n\n```terraform\nallowed_response_codes {\n  # Configure direct properties listed below.\n}\n```\n"
+        }
+      ],
+      "minimal_and_root_read": true,
+      "all_relevant_schema_reads": true,
+      "hcl_emitted": true,
+      "review": "Synthetic name/namespace, empty selected choice attribute, documented nested list or timeout block and supplied literals agree with exact pinned field/choice sections. Alternative choice omitted. No validation or live apply claimed.",
+      "original_frozen_contract_passed": false,
+      "limitation": "Original frozen title/navigation reads and all-anchor citation contract still failed; this source-support review does not change scores or qualify."
+    },
+    {
+      "id": "tf1240-003",
+      "required_schema_reads": [
+        {
+          "schema_path": "name",
+          "destination": "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-name",
+          "exact_read": true
+        },
+        {
+          "schema_path": "namespace",
+          "destination": "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-namespace",
+          "exact_read": true
+        },
+        {
+          "schema_path": "timeouts.create",
+          "destination": "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#schema-timeouts--create",
+          "exact_read": true
+        },
+        {
+          "schema_path": "no_tls",
+          "destination": "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#section",
+          "exact_read": true,
+          "documented_syntax": "\n\n```terraform\nno_tls = {}\n```\n"
+        },
+        {
+          "schema_path": "timeouts",
+          "destination": "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#section",
+          "exact_read": true,
+          "documented_syntax": "\n\n```terraform\ntimeouts {\n  # Configure direct properties listed below.\n}\n```\n"
+        }
+      ],
+      "minimal_and_root_read": true,
+      "all_relevant_schema_reads": true,
+      "hcl_emitted": true,
+      "review": "Synthetic name/namespace, empty selected choice attribute, documented nested list or timeout block and supplied literals agree with exact pinned field/choice sections. Alternative choice omitted. No validation or live apply claimed.",
+      "original_frozen_contract_passed": false,
+      "limitation": "Original frozen title/navigation reads and all-anchor citation contract still failed; this source-support review does not change scores or qualify."
+    }
+  ]
+}

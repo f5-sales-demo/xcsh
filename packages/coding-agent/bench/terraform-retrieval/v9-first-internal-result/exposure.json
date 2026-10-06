@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "regression_only": true,
+  "review_mode": "internal-user-waived",
+  "suite_sha256": "b80248156fbc699586bfedd7636c7ed3073e70b3d9960000fde5759337392640",
+  "model_subset_sha256": "dc2fb39b1cae7b3f62902854f6072a670ba48b103e3ec78f0acc532adc0e74b7",
+  "answerable_correct": 40,
+  "answerable_total": 140,
+  "answerable_top5": 66,
+  "reason": "First frozen retrieval evaluation failed; suite and model subset inspected during authoring and analysis. Original freeze preserved.",
+  "continuation_preflight": "Passed exact frozen record validation; installed model run not yet performed."
+}

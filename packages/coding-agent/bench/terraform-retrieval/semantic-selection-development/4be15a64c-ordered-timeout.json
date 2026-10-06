@@ -1,0 +1,11 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "consumer_commit": "4be15a64cb78f61adf118982dd639a4bf38790f6",
+  "binary_sha256": "3b26635cbfb5440cd81e4b61d7835b016cf4ce1cd4c618a35257a4bb5da89591",
+  "case_id": "v9-089",
+  "result": "timeout",
+  "timeout_seconds": 180,
+  "partial_trace_preserved": false,
+  "limitation": "Original local runner lost trace at terminal timeout; failure remains, harness corrected separately."
+}

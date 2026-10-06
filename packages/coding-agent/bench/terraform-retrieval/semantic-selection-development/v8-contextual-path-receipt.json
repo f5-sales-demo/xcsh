@@ -1,0 +1,15 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": "20392dfa38f6c2b1d0104e526fd382f0fd99630b3bfa3b70ee7b7e4bd3274445",
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "answerable_correct": 95,
+  "answerable_total": 140,
+  "answerable_top5": 117,
+  "route_p95_ms": 95.82835499999783,
+  "change": "Recognize literal schema paths in contextual sentence positions; retain negation and exact path adjacency.",
+  "limitations": [
+    "Exposed regression only; no installed final-source or heldout qualification."
+  ]
+}

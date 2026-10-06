@@ -1,0 +1,34 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "installed_diagnostic": true,
+  "consumer_commit": "6f1e6eab0a49b69553f5318fb4cdb093ff7c8d79",
+  "automated_pass": 1,
+  "total": 10,
+  "answerable_exact_reads": 6,
+  "answerable_total": 7,
+  "all_response_budgets_passed": true,
+  "failures": [
+    "Incomplete required ancillary reads",
+    "A107 misses per-range exclusion destination",
+    "M001/M021 alternatives without focused role clarification",
+    "A135 placeholders instead of missing-value question"
+  ],
+  "report_sha256": "e9a3af7e5094b1bf7104bc5795d8caaa066a9d61c2c29e920912f9b14fe805a7",
+  "manual_review_pending": false,
+  "manual_review": {
+    "verified_citations": 13,
+    "false_live_apply_claims": 0,
+    "semantic_target_omission": "A107 per-range pools.exclude",
+    "missing_role_questions": [
+      "M001",
+      "M021"
+    ],
+    "ancillary_read_contract_issues": [
+      "Several lookup cases require unrelated configuration reads",
+      "A058 complete overview contains required sections without individual anchor reads"
+    ],
+    "A135": "Honest placeholder environment template; no invented credentials, but version constraint absent"
+  },
+  "scores_unchanged": true
+}

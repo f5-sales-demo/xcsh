@@ -1,0 +1,67 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "results": [
+    {
+      "id": "tf1240-002",
+      "missing_required_reads": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md#blocking",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md#allowed_response_codes",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-name",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-namespace"
+      ],
+      "missing_required_citations": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/index.md#minimal-configuration",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md#blocking",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md#allowed_response_codes",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-name",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-namespace",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md#schema-allowed_response_codes--response_code"
+      ],
+      "full_contract_passed": false,
+      "final_text": "```hcl\nterraform {\n  required_providers {\n    xcsh = {\n      source = \"f5-sales-demo/xcsh\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_app_firewall\" \"synthetic\" {\n  name      = \"synthetic-waf\"\n  namespace = \"synthetic-lab\"\n  blocking  = {}\n\n  allowed_response_codes {\n    response_code = [200, 204]\n  }\n}\n```\n\nVerified against bundled provider documentation **v12.4.0**: [`allowed_response_codes` is a nested block](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md?view=context#section), and [`blocking`](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md?view=context#section) is selected without `monitoring`.\n\n[blocked] CLI validation: no execution tool is available to run `terraform fmt`, `init`, or `validate`. Nothing was applied."
+    },
+    {
+      "id": "tf1240-003",
+      "missing_required_reads": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#no_tls",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#timeouts",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-name",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-namespace"
+      ],
+      "missing_required_citations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/index.md#minimal-configuration",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#no_tls",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#timeouts",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-name",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-namespace"
+      ],
+      "full_contract_passed": false,
+      "final_text": "```hcl\nterraform {\n  required_providers {\n    xcsh = {\n      source = \"f5-sales-demo/xcsh\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_origin_pool\" \"synthetic\" {\n  name      = \"synthetic-pool\"\n  namespace = \"synthetic-lab\"\n  no_tls    = {}\n\n  timeouts {\n    create = \"20m\"\n  }\n}\n```\n\nVerified against bundled provider v12.4.0: [`no_tls`](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#section) is the only TLS choice selected; [`create`](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#schema-timeouts--create) belongs inside the nested `timeouts` block.\n\nSchema-checked draft; not CLI-validated or applied."
+    },
+    {
+      "id": "tf1240-111",
+      "missing_required_reads": [
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_purge_command/properties/virtual_host/index.md#schema-virtual_host--name"
+      ],
+      "missing_required_citations": [
+        "xcsh://terraform-documentation/documentation/data-sources/cdn_purge_command/properties/virtual_host/index.md#schema-virtual_host--name"
+      ],
+      "full_contract_passed": false,
+      "final_text": "Do you mean the top-level `name` of `data \"xcsh_virtual_host\"`, or a nested `virtual_host.name` reference inside another data source? If nested, which data source contains it?"
+    }
+  ],
+  "limitations": [
+    "Frozen requirements and scores unchanged.",
+    "This exact-coverage audit supersedes no original diagnostic; original retained."
+  ]
+}

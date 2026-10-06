@@ -1,0 +1,8 @@
+{
+  "qualification_passed": false,
+  "adopted": false,
+  "post_analysis_regression": true,
+  "v7_correct": 100,
+  "v7_top5": 126,
+  "reason": "Prose support and early selector bypass caused false support, unsupported dotted alternatives, lost constraints, and duplicate order dependence"
+}

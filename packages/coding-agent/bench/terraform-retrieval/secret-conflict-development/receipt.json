@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 98,
+  "v7_top5": 124,
+  "focused_pass": 133,
+  "type_lint_pass": true,
+  "prior_package_pass": 9703,
+  "source_findings_covered": true,
+  "range_expansion_rejected": true,
+  "change": "Same-clause conflicting secret qualifiers preserve selection and hydration ambiguity"
+}

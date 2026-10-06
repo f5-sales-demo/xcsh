@@ -1,0 +1,43 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "v9-096",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 90367.36773094162,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "Verified against the **v12.4.0** read-only `xcsh_bot_endpoint_policy` data-source reference:\n\n```text\nendpoint_policy_content.protected_mobile_endpoints.protected_mobile_endpoints.transaction_result_criteria.transaction_result_failure.cookie_v2.cookies_none.cookie_operator.cookie.cookie_or.cookie_match_v2.case_sensitive\n```\n\n- **Type:** `bool`\n- **Status:** Computed \u2014 returned by the data source, not a configurable input.\n- **Description:** \u201cConfiguration parameter for case sensitive.\u201d\n\n[Exact reference](xcsh://terraform-documentation/documentation/data-sources/bot_endpoint_policy/properties/endpoint_policy_content/protected_mobile_endpoints/protected_mobile_endpoints/transaction_result_criteria/transaction_result_failure/cookie_v2/cookies_none/cookie_operator/cookie/cookie_or/cookie_match_v2/index.md?view=context#schema-endpoint_policy_content--protected_mobile_endpoints--protected_mobile_endpoints--transaction_result_criteria--transaction_result_failure--cookie_v2--cookies_none--cookie_operator--cookie--cookie_or--cookie_match_v2--case_sensitive)",
+      "budget": {
+        "passed": true,
+        "total_bytes": 13806,
+        "max_bytes": 3488,
+        "measured_results": 9,
+        "violations": []
+      },
+      "trace_sha256": "e45122adfec63e03c3c7b83b2b89041dc9865877a32a12cc967224b19482a9b9",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "4be15a64cb78f61adf118982dd639a4bf38790f6",
+    "binary_sha256": "3b26635cbfb5440cd81e4b61d7835b016cf4ce1cd4c618a35257a4bb5da89591",
+    "binary_bytes": 621942240,
+    "provider_version": "v12.4.0"
+  },
+  "limitations": [
+    "One ordered case passes; the first diagnostic case timed out and remains failed.",
+    "Exposed regression only; no qualification."
+  ]
+}

@@ -1,21 +1,29 @@
 // Group equivalent leaves by the first undecided schema branch.
-import { type PropertyCandidate, propertyQueryTerms, propertyTerms } from "./terraform-property-ranking";
+import {
+	type PropertyCandidate,
+	propertyMatchesWorkloadArchitecture,
+	propertyQueryTerms,
+	propertyTerms,
+	propertyWorkloadArchitecture,
+} from "./terraform-property-ranking";
 
 export function terraformBranchChoices(rows: readonly PropertyCandidate[], limit = 5, query = ""): string[] {
 	const terms = new Set(propertyQueryTerms(query));
-	rows = rows.filter(row => {
-		const path = new Set(propertyTerms(row.schema_path));
-		return ![
-			["mobile", "web"],
-			["success", "failure"],
-			["inside", "outside"],
-			["ipv4", "ipv6"],
-		].some(
-			([a, b]) =>
-				(terms.has(a!) && !terms.has(b!) && path.has(b!) && !path.has(a!)) ||
-				(terms.has(b!) && !terms.has(a!) && path.has(a!) && !path.has(b!)),
-		);
-	});
+	rows = rows
+		.filter(row => propertyMatchesWorkloadArchitecture(query, row))
+		.filter(row => {
+			const path = new Set(propertyTerms(row.schema_path));
+			return ![
+				["mobile", "web"],
+				["success", "failure"],
+				["inside", "outside"],
+				["ipv4", "ipv6"],
+			].some(
+				([a, b]) =>
+					(terms.has(a!) && !terms.has(b!) && path.has(b!) && !path.has(a!)) ||
+					(terms.has(b!) && !terms.has(a!) && path.has(a!) && !path.has(b!)),
+			);
+		});
 	if (limit < 2 || rows.length <= limit) return [];
 	const first = rows[0];
 	if (
@@ -37,10 +45,18 @@ export function terraformBranchChoices(rows: readonly PropertyCandidate[], limit
 		if (!paths.every(parts => depth < parts.length - 1)) return [];
 		const segments = [...new Set(paths.map(parts => parts[depth]!))];
 		const vocabulary = segments.map(segment => propertyTerms(segment));
-		const named = segments.filter((_segment, index) =>
-			vocabulary[index]!.some(
-				term => terms.has(term) && !vocabulary.some((other, peer) => peer !== index && other.includes(term)),
-			),
+		const named = segments.filter(
+			(segment, index) =>
+				!(
+					first.provider_name === "workload" &&
+					segments.includes("service") &&
+					segments.includes("stateful_service") &&
+					!propertyWorkloadArchitecture(query) &&
+					["service", "stateful_service"].includes(segment)
+				) &&
+				vocabulary[index]!.some(
+					term => terms.has(term) && !vocabulary.some((other, peer) => peer !== index && other.includes(term)),
+				),
 		);
 		if (named.length === 1 && !["and", "or", "none"].some(operator => named[0]!.endsWith(`_${operator}`))) {
 			paths = paths.filter(parts => parts[depth] === named[0]);
@@ -57,7 +73,6 @@ export function terraformRoleChoices(rows: readonly PropertyCandidate[], limit =
 	const first = rows[0];
 	if (
 		!first ||
-		rows.length <= limit ||
 		rows.some(
 			row =>
 				row.provider_name !== first.provider_name ||
@@ -68,4 +83,20 @@ export function terraformRoleChoices(rows: readonly PropertyCandidate[], limit =
 		return [];
 	const roles = [...new Set(rows.map(row => row.provider_type))].sort();
 	return roles.length > 1 && roles.length <= limit ? roles : [];
+}
+
+export function terraformLeadingRoleHint(rows: readonly PropertyCandidate[]): string {
+	const first = rows[0],
+		second = rows[1];
+	if (
+		!first ||
+		!second ||
+		first.provider_name !== second.provider_name ||
+		first.schema_path !== second.schema_path ||
+		first.description !== second.description ||
+		new Set([first.provider_type, second.provider_type]).size !== 2 ||
+		![first.provider_type, second.provider_type].every(role => ["resources", "data-sources"].includes(role))
+	)
+		return "";
+	return "Provider role is unresolved for the leading equivalent field. Compare its meaning with the request, then ask whether the user means a resource input or a data-source output. Listing both roles does not resolve that choice.";
 }

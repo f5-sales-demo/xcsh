@@ -1,0 +1,19 @@
+{
+  "verified": true,
+  "files": [
+    {
+      "name": "xcsh-darwin-arm64",
+      "sha256": "e57a9b5f42a5e7433081c2bf95ca9d89a5a93a5de3d8c4d4c433cdb935c7013a",
+      "size": 591340000
+    },
+    {
+      "name": "pi_natives.darwin-arm64.node",
+      "sha256": "7f4a97e6594cb396140529fa1b4bf7b02eb6e60f1a42d901153bee3362d6958e",
+      "size": 100976848
+    }
+  ],
+  "team": "97ZYL78T5F",
+  "artifact_source": "af2ea2c2ec2e75585baf5fda9a251ac9e5127e5c",
+  "workflow_run": "37190608097",
+  "qualification_passed": false
+}

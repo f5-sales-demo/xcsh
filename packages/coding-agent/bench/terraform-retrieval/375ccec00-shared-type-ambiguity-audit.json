@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "case_id": "v9-145",
+  "purpose": "Source/request audit; original ambiguous score preserved",
+  "original_passed": false,
+  "prompt_request": "What type is deny_list in the read-only data source xcsh_bot_endpoint_policy?",
+  "answer": "list(string), Computed, for both mobile and web branches",
+  "finding": "The requested type is identical for both destinations, so selecting a branch is not necessary to answer the requested fact. This benchmark label requires clarification beyond the information needed.",
+  "raw_trace_sha256": "55c8032ae4920d347c4ceb91a5bd4fa10f03c0fbb32ce3778aab70bced42e1a8",
+  "original_report_modified": false,
+  "qualification_passed": false
+}

@@ -1,0 +1,18 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 88,
+  "v7_top5": 117,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "improved": [
+    "A078",
+    "A079",
+    "A109",
+    "A124"
+  ],
+  "regressed": [],
+  "focused_tests": 261,
+  "changes": "Queryexpansionkeepsoriginalvocabularyanddocumentedmin/max/cred/decryption/idleterms;originalindexunchanged",
+  "firstscorespreserved": true
+}

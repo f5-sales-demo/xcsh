@@ -60,7 +60,7 @@ const LANGUAGE = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
 const PRODUCT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const SAFE_PATH = /^[A-Za-z0-9._~-]+(?:\/[A-Za-z0-9._~-]+)*$/;
-const SOURCE_SET = new Set<DocumentationSource>(["docs-cloud-f5-com", "my-f5-com", "www-f5-com"]);
+const SOURCE_SET = new Set<DocumentationSource>(["community-f5-com", "docs-cloud-f5-com", "my-f5-com", "www-f5-com"]);
 
 function record(value: unknown, field: string): Record<string, unknown> {
 	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${field} must be an object`);

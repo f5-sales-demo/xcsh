@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 94,
+  "v7_top5": 122,
+  "focused_pass": 179,
+  "type_lint_pass": true,
+  "unchanged_tui_audit_pass": true,
+  "prior_package_failure": "False text association with events in Terraform test title; preserved and reworded",
+  "model_reviews": "Ubuntu Codex ChatGPT",
+  "source_review_findings_covered": true
+}

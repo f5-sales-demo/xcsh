@@ -1,0 +1,9 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "alias_provider_keys": 42459,
+  "verified_destinations": 48091,
+  "max_destinations_per_key": 366,
+  "missing_anchors": 0,
+  "total_lookup_ms": 694.086695
+}

@@ -1,0 +1,6 @@
+{
+  "qualification_passed": false,
+  "adopted": false,
+  "reason": "Concept-only extraction loses alternatives and unsupported values; adding type lacks grounded discriminator evidence",
+  "original_scores_unchanged": true
+}

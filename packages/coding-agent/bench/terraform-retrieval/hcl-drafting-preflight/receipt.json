@@ -1,0 +1,16 @@
+{
+  "qualification_passed": false,
+  "schema_version": 1,
+  "minimum_positive_drafting_contract": true,
+  "python_protocol_tests": 43,
+  "score_tests": 10,
+  "requirements": [
+    "reviewed answerable requires_hcl case",
+    "field-associated synthetic scalar values supplied in prompt",
+    "exact documentation and nonempty anchor reads",
+    "nonempty HCL in final assistant answer",
+    "shared HCL fence parser for emission and source-review flags"
+  ],
+  "limitations": "Minimum nonvacuouscoverage only;independentfield/nesting/value review and95percentqualificationstillrequired",
+  "production_retrieval_changed": false
+}

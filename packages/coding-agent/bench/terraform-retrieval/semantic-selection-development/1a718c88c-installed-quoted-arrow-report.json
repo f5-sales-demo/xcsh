@@ -1,0 +1,60 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "v9-013",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 98649.4220889872,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "In **`xcsh_fleet` data source, provider v12.4.0**, the exact field is:\n\n```text\nstorage_device_list.storage_devices.netapp_trident.netapp_backend_ontap_san.use_chap.chap_target_initiator_secret.blindfold_secret_info.decryption_provider\n```\n\n- **Type:** string, **Computed**\u2014a read-only result, not a configurable data-source argument.\n- **Meaning:** name of the **Secret Management Access object** describing the backend secret-management service\u2014not the CHAP secret itself.\n- **Restrictions:** receipt-pinned upstream metadata lists **maximum length 1,024**. This constraint is marked **inferred**, not documented as a provider-enforced validator. No enum, pattern, or minimum length is listed.\n- Upstream metadata marks it **not required** for create, minimum configuration, read, or update.\n\n[Exact field documentation](xcsh://terraform-documentation/documentation/data-sources/fleet/properties/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/use_chap/chap_target_initiator_secret/blindfold_secret_info/index.md?view=context#schema-storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--use_chap--chap_target_initiator_secret--blindfold_secret_info--decryption_provider)",
+      "budget": {
+        "passed": true,
+        "total_bytes": 15183,
+        "max_bytes": 2339,
+        "measured_results": 12,
+        "violations": []
+      },
+      "trace_sha256": "d402d4c849bc9e6838375a0b4ee0c5ce5c9c3bce576ecd771c134ad44df3affc",
+      "passed": true
+    },
+    {
+      "id": "v9-057",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 62359.42419106141,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "The exact reference is [**`cores` property**](xcsh://terraform-documentation/documentation/data-sources/site_registrations/properties/items/object/spec/gc_spec/infra/hw_info/cpu/index.md?view=context#schema-items--object--spec--gc_spec--infra--hw_info--cpu--cores) for data source `xcsh_site_registrations`, provider **v12.4.0**.\n\nPath: `items.object.spec.gc_spec.infra.hw_info.cpu.cores`\n\nIt is a **computed number**: \u201cNumber of physical CPU cores.\u201d",
+      "budget": {
+        "passed": true,
+        "total_bytes": 9095,
+        "max_bytes": 2853,
+        "measured_results": 6,
+        "violations": []
+      },
+      "trace_sha256": "0bee4348f7b3f0ba041dc4df0f9b2a1daacabcbb61746d699cd856ef100df248",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "1a718c88c202702252ba0d757ced7bb0de3d0b53",
+    "binary_sha256": "f97127ce16b7e76923de8cebe830442145d6a8cb18c9043c456ac0407986babd",
+    "binary_bytes": 621938144,
+    "provider_version": "v12.4.0"
+  },
+  "limitations": [
+    "Two exposed development cases; no heldout qualification."
+  ]
+}

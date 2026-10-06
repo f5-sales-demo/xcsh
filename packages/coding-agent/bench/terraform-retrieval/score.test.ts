@@ -1,9 +1,11 @@
 import { expect, test } from "bun:test";
 import {
 	scoreDestinations,
+ validateHclDraftingCoverage,
 	validateIndependentFreeze,
 	validateModelActivation,
  validateModelSubsetPreflight,
+ validateModelSubsetIdentity,
 	validatePreviewEvidence,
 	validateQualificationEligibility,
 	validateQualificationSource,
@@ -100,9 +102,43 @@ test("model acceptance requires explicit Terraform activation while ordinary con
 
 test("fresh retrieval qualification requires a complete activated model subset",()=>{
  const rows=[...Array.from({length:28},(_,i)=>({id:`a${i}`,kind:"answerable",prompt:"Terraform fixture"})),...Array.from({length:8},(_,i)=>({id:`b${i}`,kind:"ambiguous",prompt:"Terraform fixture"})),...Array.from({length:4},(_,i)=>({id:`c${i}`,kind:"control",prompt:"Ordinary API docs"}))];
+ expect(()=>validateModelSubsetPreflight(rows,rows.map(c=>c.id),false)).toThrow("positive mandatory HCL");
+ rows[0]={...rows[0]!,prompt:"Draft Terraform HCL with name = acceptance-fixture",model_expectations:{requires_hcl:true,supported_fields:["name"],must_read:["xcsh://terraform-documentation/documentation/fixture/index.md#schema-name"],synthetic_values:{name:"acceptance-fixture"}}} as typeof rows[number];
  expect(()=>validateModelSubsetPreflight(rows,rows.map(c=>c.id),false)).not.toThrow();
  expect(()=>validateModelSubsetPreflight(rows.slice(1),rows.map(c=>c.id),false)).toThrow("28/8/4");
  expect(()=>validateModelSubsetPreflight([{...rows[0]!,prompt:"Which field?"},...rows.slice(1)],rows.map(c=>c.id),false)).toThrow("activation");
  expect(()=>validateModelSubsetPreflight(rows,[],false)).toThrow("IDs");
  expect(()=>validateModelSubsetPreflight([],[],true)).not.toThrow();
 });
+
+test("installed model cases cannot be edited after selecting the frozen subset",()=>{
+ const original={id:"one",kind:"answerable",prompt:"Terraform name",expected:["exact#anchor"],model_expectations:{must_read:["exact#anchor"]}};
+ expect(()=>validateModelSubsetIdentity([{expected:["exact#anchor"],prompt:"Terraform name",kind:"answerable",id:"one",model_expectations:{must_read:["exact#anchor"]}}],[original])).not.toThrow();
+ expect(()=>validateModelSubsetIdentity([{...original,prompt:"Terraform edited name"}],[original])).toThrow("changed frozen case");
+ expect(()=>validateModelSubsetIdentity([{...original,expected:["other#anchor"]}],[original])).toThrow("changed frozen case");
+ expect(()=>validateModelSubsetIdentity([{...original,model_expectations:{must_read:[]}}],[original])).toThrow("changed frozen case");
+});
+
+test("HCL preflight rejects null declarations and raw traversal destinations",()=>{
+ const fixture={kind:"answerable",prompt:"Draft Terraform HCL with name = fixture",model_expectations:{requires_hcl:true,supported_fields:["name"],must_read:["xcsh://terraform-documentation/documentation/fixture.md#name"],synthetic_values:{name:"fixture"}}};
+ expect(()=>validateHclDraftingCoverage([fixture])).not.toThrow();
+ for(const e of [null,{...fixture.model_expectations,requires_hcl:null},{...fixture.model_expectations,must_read:["xcsh://terraform-documentation/documentation/../index.md#name"]},{...fixture.model_expectations,must_read:["xcsh://terraform-documentation/documentation/index.md#bad anchor"]}])expect(()=>validateHclDraftingCoverage([{...fixture,model_expectations:e}])).toThrow();
+});
+
+test("known exposed suite remains regression only despite a stale eligibility file", () => {
+ const hash="67b255f1f24956cc6989dc7bee8756c949eed69848bcefa7fcebdac6e9244c5a";
+ const audit={suite_sha256:hash,qualification_eligible:true,reason:"Original untouched freeze"};
+ expect(()=>validateQualificationEligibility(audit,hash,false)).toThrow("exposed");
+ expect(()=>validateQualificationEligibility(undefined,hash,false)).toThrow("exposed");
+ expect(()=>validateQualificationEligibility(audit,hash,true)).not.toThrow();
+});
+
+ test("internal freeze preserves review hashes and requires explicit user waiver",()=>{
+ const freeze={schema_version:3,internal_review_sha256:"review",independent_review_waived_by_user:true,retrieval_results_withheld:true};
+ const review={verdict:"approve",findings:[],reviewed_case_ids:["case"]};
+ expect(()=>validateIndependentFreeze(freeze,review,"review",["case"])).not.toThrow();
+ expect(()=>validateIndependentFreeze({...freeze,independent_review_waived_by_user:false},review,"review",["case"])).toThrow();
+ expect(()=>validateIndependentFreeze({...freeze,retrieval_results_withheld:false},review,"review",["case"])).toThrow();
+ expect(()=>validateIndependentFreeze(freeze,review,"changed",["case"])).toThrow();
+ expect(()=>validateIndependentFreeze(freeze,review,"review",["other"])).toThrow();
+ });

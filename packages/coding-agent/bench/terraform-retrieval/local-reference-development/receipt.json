@@ -1,0 +1,14 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 95,
+  "v7_top5": 122,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "focused_pass": 169,
+  "type_lint_pass": true,
+  "query_wide_expansion_rejected": true,
+  "acronym_change_rejected": true,
+  "source_review_findings_covered_by_tests": true,
+  "change": "Affirmative local reference branch context requires documented leaf evidence and complete branch qualifiers"
+}

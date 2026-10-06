@@ -1,0 +1,16 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "provider_version": "v12.4.0",
+  "alternative_groups_verified": 9798,
+  "all_alternative_sets_identical": true,
+  "complete_responses_verified": 200,
+  "complete_response_hashes_rankings_selections_identical": true,
+  "baseline_p95_ms": 70.165595,
+  "optimized_p95_ms": 62.605525,
+  "correct_leaf_count": 100,
+  "answerable": 140,
+  "index_changed": false,
+  "scope": "Existing leafindex predicate narrows lookup;exactliteral suffix retained;one matched5repetition regression run;performance notfullqualification."
+}

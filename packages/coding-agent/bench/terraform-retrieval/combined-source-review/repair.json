@@ -1,0 +1,21 @@
+{
+  "qualification_passed": false,
+  "source_review_findings_fixed": [
+    "newliterallookupforms",
+    "refreshdocumentationverbforms"
+  ],
+  "full_package_failure": "oneTUIinventoryfreshnessfailurecausedbytesttitlenounmatching;renamedtestandcheckpassed",
+  "focused_checks": 83,
+  "firstheldoutscoresunchanged": true,
+  "additional_family_findings_fixed": [
+    "where-do/does-placementliteralpath",
+    "pluraltimeoutsdocumentation"
+  ],
+  "full_package_pre_family_repairs": {
+    "pass": 9636,
+    "skip": 562,
+    "fail": 0,
+    "source": "9c432529fbf8002827e94bf7cfd3f163fd2e9b42"
+  },
+  "focused_family_repair_tests": 173
+}

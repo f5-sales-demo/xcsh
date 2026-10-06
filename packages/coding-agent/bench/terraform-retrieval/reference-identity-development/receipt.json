@@ -1,0 +1,10 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "query_changed": false,
+  "pin_changed": false,
+  "focused_tests": 31,
+  "workspace_check": true,
+  "review": "approve ingestion validation",
+  "remaining": "Dedicated reference index, structured scope selection and fresh immutable qualification."
+}

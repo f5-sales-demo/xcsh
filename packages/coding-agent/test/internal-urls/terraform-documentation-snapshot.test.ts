@@ -7,12 +7,14 @@ import { createGzip, gzipSync } from "node:zlib";
 import tar from "tar-stream";
 import {
 	buildTerraformIndex,
+	type TerraformDocument,
 	TerraformDocumentationRepository,
 	type TerraformMetadata,
 	type TerraformPin,
 	terraformHash,
 	verifyTerraformSnapshot,
 } from "../../src/internal-urls/terraform-documentation";
+import { searchPropertyIndex } from "../../src/internal-urls/terraform-property-index";
 import type { InternalUrl } from "../../src/internal-urls/types";
 
 async function fixture(
@@ -563,6 +565,21 @@ test("selected property blocks refine to direct fields without changing explicit
 		expect((await read("specify public IP address for origin server")).content).toContain(
 			"#schema-origin_servers--public_ip--ip",
 		);
+		const materialized = (await repo.database()).filename;
+		const writable = new Database(materialized);
+		writable
+			.query("UPDATE property_terms SET leaf=?,context=?,description_terms=?,alias_terms=? WHERE anchor=?")
+			.run("[]", "[]", "[]", "[]", "schema-origin_servers--public_ip--ip");
+		writable.close();
+		const query = "specify public IP address for origin server";
+		const ranked = searchPropertyIndex(await repo.database(), query, {
+			providerName: "fixture",
+			providerType: "resources",
+		});
+		const field = ranked.find(row => row.anchor === "schema-origin_servers--public_ip--ip")!;
+		expect(field.score).toBe(0);
+		expect((await read(query)).content).toContain("Score: " + field.score);
+		expect((await read(query)).content).toContain("Narrowing choices");
 		expect((await read("configure public IP origin server block")).content).toContain("#section");
 		const selected = (await read("Select public IP origin server configuration")).content;
 		const enabled = (await read("Enable public IP origin server configuration")).content;
@@ -656,7 +673,21 @@ test("verified parent choice groups return storage alternatives instead of a fal
 				) as InternalUrl,
 			)
 		).content;
-		expect(explicit).not.toContain("private_key/blindfold_secret_info/index.md");
+		const hinted = await repo.resolve(
+			Object.assign(
+				new URL(
+					"xcsh://terraform-documentation/documentation/resources/fixture/properties/private_key/clear_secret_info/index.md?view=context#section",
+				),
+				{ rawHost: "terraform-documentation" },
+			) as InternalUrl,
+		);
+		expect(hinted.content).toContain("- conflicts (provider-schema):");
+		expect(hinted.content).toContain("private_key/blindfold_secret_info/index.md?view=hint#section");
+		expect(explicit).toContain("Selected leaf;");
+		expect(explicit).toContain("- conflicts (provider-schema):");
+		expect(explicit).not.toContain(
+			"Read: xcsh://terraform-documentation/documentation/resources/fixture/properties/private_key/blindfold_secret_info/index.md",
+		);
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });
@@ -1107,6 +1138,23 @@ test("direct field refinement preserves literal schema branch prefixes", async (
 		).content;
 		expect(content).not.toContain("#schema-branchxa--port");
 		expect(content).toContain("branch_a/index.md?view=context#section");
+		for (const suffix of ["", "&node=branch_a"]) {
+			const normalizedAlias = (
+				await repo.resolve(
+					Object.assign(
+						new URL(
+							"xcsh://terraform-documentation/?search=" +
+								encodeURIComponent("configure backend-servers port") +
+								"&provider_name=fixture&provider_type=resources" +
+								suffix,
+						),
+						{ rawHost: "terraform-documentation" },
+					) as InternalUrl,
+				)
+			).content;
+			expect(normalizedAlias).toContain("branch_a/index.md?view=context#section");
+			expect(normalizedAlias).not.toContain("#schema-branchxa--port");
+		}
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });
@@ -1526,6 +1574,16 @@ test("lifecycle fields share interpretation through the complete resolver and bi
 			const uri = result.content.match(/^Read: (\S+)/m)![1]!;
 			expect((await read(uri)).content).toContain(`Timeout duration for ${op} operation.`);
 		}
+		for (const [word, op] of [
+			["creation", "create"],
+			["read", "read"],
+			["update", "update"],
+			["deletion", "delete"],
+		]) {
+			const result = await query(`Configure the ${word} timeout duration in the timeouts block for xcsh_fixture.`);
+			expect(result.content).toContain(`schema-timeouts--${op}`);
+			expect(result.content).toContain("Selected leaf;");
+		}
 		const multi = (
 			await query(
 				"Which timeout field controls creation and destruction?",
@@ -1667,6 +1725,608 @@ test("exact provider identities resolve their documented role before inferred co
 			"No results.",
 		);
 		expect((await query("Configure object_id in xcsh_fixture resource.")).content).toContain("No results.");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("querying an object name selects the root property rather than nested names", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-query-phrase-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		doc.path = "documentation/data-sources/fixture/properties/index.md";
+		doc.metadata.path = doc.path;
+		doc.metadata.provider_type = "data-sources";
+		doc.metadata.role = "properties";
+		const body =
+			'<a id="schema-name"></a>\n### name\nType: "string". Required.\n\nName of the object.\n\n<a id="schema-services--name"></a>\n### service name\nType: "string". Computed.\n\nName of a referred service.\n\n<a id="schema-domains"></a>\n### domains\nType: "list". Computed.\n\nServed domains.\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.sections = [
+			{
+				schema_path: ["name"],
+				document_id: doc.metadata.id,
+				anchor: "schema-name",
+				description: "Name of the object.",
+				aliases: [],
+				relationships: [],
+				flags: ["required"],
+				type: "string",
+			},
+			{
+				schema_path: ["services", "name"],
+				document_id: doc.metadata.id,
+				anchor: "schema-services--name",
+				description: "Name of a referred service.",
+				aliases: [],
+				relationships: [],
+				flags: ["computed"],
+				type: "string",
+			},
+		];
+		doc.metadata.sections.push({
+			schema_path: ["domains"],
+			document_id: doc.metadata.id,
+			anchor: "schema-domains",
+			description: "Served domains.",
+			aliases: [],
+			relationships: [],
+			flags: ["computed"],
+			type: "list",
+		});
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const query = (text: string, suffix = "") =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?search=${encodeURIComponent(text)}${suffix}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const result = await query("Query the name of an existing fixture using data source xcsh_fixture");
+		expect(result.content).toContain("Selected leaf;");
+		expect(result.content).toContain("#schema-name");
+		const articleVariant = await query("Query a name of an existing fixture using data source xcsh_fixture");
+		expect(articleVariant.content).toContain("Selected leaf;");
+		expect(articleVariant.content).toContain("#schema-name");
+		const nested = await query("Query the service name of an existing fixture using data source xcsh_fixture");
+		expect(nested.content).toContain("#schema-services--name");
+		expect(
+			(
+				await query(
+					"Query the name of an existing fixture using data source xcsh_fixture",
+					"&provider_type=resources",
+				)
+			).content,
+		).toContain("No results.");
+		for (const text of [
+			"Query the name of an existing object using data source xcsh_fixture to read served domains",
+			"Query the name of an existing object using data source xcsh_fixture to inspect existing object to read served domains",
+			"Query the name of an existing object to read served domains",
+			"Query the name of an existing certificate using data source xcsh_fixture to inspect existing certificate to read served domains",
+			"Read served domains from data source xcsh_fixture.\nExplain the result.",
+		]) {
+			const response = await query(text, "&provider_name=fixture&provider_type=data-sources");
+			expect(response.content).toContain("Selected leaf;");
+			expect(response.content).toContain("#schema-domains");
+		}
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("generic configure requests retain ancestor context through indexed property routing", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-configure-context-"));
+	try {
+		const pin = await fixture(root);
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const doc = docs[0]!;
+		doc.metadata.role = "properties";
+		const body =
+			'<a id="schema-domains"></a>\n### domains\nType: `list`.\n\nDomains for the proxy.\n\n<a id="schema-check_policy--domains"></a>\n### check_policy domains\nType: `list`.\n\nDomains for request origin checking.\n';
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.sections = [
+			{
+				schema_path: ["domains"],
+				document_id: doc.metadata.id,
+				anchor: "schema-domains",
+				description: "Domains for the proxy.",
+				aliases: [],
+				relationships: [],
+				flags: ["required"],
+				type: "list",
+			},
+			{
+				schema_path: ["check_policy", "domains"],
+				document_id: doc.metadata.id,
+				anchor: "schema-check_policy--domains",
+				description: "Domains for request origin checking.",
+				aliases: [],
+				relationships: [],
+				flags: ["optional"],
+				type: "list",
+			},
+		];
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const content = (
+			await repo.resolve(
+				Object.assign(
+					new URL(
+						"xcsh://terraform-documentation/?search=" +
+							encodeURIComponent("Configure check policy domains on xcsh_fixture"),
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			)
+		).content;
+		expect(content).toContain("#schema-check_policy--domains");
+		expect(content).not.toContain(
+			"Read: xcsh://terraform-documentation/documentation/resources/fixture/index.md?view=context#schema-domains\n",
+		);
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("explicit input and output requests use field flags through complete resolver", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-field-access-"));
+	try {
+		const pin = await fixture(root),
+			docs = await verifyTerraformSnapshot(root, pin),
+			doc = docs[0]!;
+		doc.metadata.role = "properties";
+		const fields = [
+			{ name: "regions", flags: ["optional", "computed"], description: "Published regions to include." },
+			{ name: "published_regions", flags: ["computed"], description: "Published regions included." },
+		];
+		const body = fields
+			.map(f => `<a id="schema-${f.name}"></a>\n### ${f.name}\nType: \`list\`.\n\n${f.description}\n`)
+			.join("\n");
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.sections = fields.map(f => ({
+			schema_path: [f.name],
+			document_id: doc.metadata.id,
+			anchor: `schema-${f.name}`,
+			description: f.description,
+			aliases: [],
+			relationships: [],
+			flags: f.flags,
+			type: "list",
+		}));
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const read = async (q: string) =>
+			(
+				await repo.resolve(
+					Object.assign(
+						new URL(
+							"xcsh://terraform-documentation/?provider_type=resources&provider_name=fixture&search=" +
+								encodeURIComponent(q),
+						),
+						{ rawHost: "terraform-documentation" },
+					) as InternalUrl,
+				)
+			).content;
+		const input = await read("Locate the input argument for published regions on xcsh_fixture");
+		expect(input).toContain("#schema-regions");
+		expect(input).not.toContain("#schema-published_regions");
+		const output = await read("Find the output field published regions on xcsh_fixture");
+		expect(output).toContain("#schema-published_regions");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("credential storage request heads select the documented clear representation", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-storage-head-"));
+	try {
+		const pin = await fixture(root),
+			docs = await verifyTerraformSnapshot(root, pin),
+			doc = docs[0]!;
+		const fields = [
+			{ schema_path: ["token", "clear_secret_info", "provider_ref"], description: "Secret store reference." },
+			{ schema_path: ["token", "blindfold_secret_info", "store_provider"], description: "Secret store provider." },
+		];
+		const body = fields
+			.map(
+				f =>
+					`<a id="schema-${f.schema_path.join("--")}"></a>\n### ${f.schema_path.at(-1)}\nType: \`string\`.\n\n${f.description}\n`,
+			)
+			.join("\n");
+		doc.metadata.role = "properties";
+		doc.body = body;
+		doc.markdown = body;
+		doc.sha256 = terraformHash(body);
+		doc.metadata.sections = fields.map(f => ({
+			...f,
+			document_id: doc.metadata.id,
+			anchor: "schema-" + f.schema_path.join("--"),
+			aliases: [],
+			relationships: [],
+			flags: ["optional"],
+			type: "string",
+		}));
+		const file = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, file);
+		const repo = await fixtureRepository(root, pin, file);
+		const read = async (q: string) =>
+			(
+				await repo.resolve(
+					Object.assign(
+						new URL(
+							"xcsh://terraform-documentation/?provider_name=fixture&provider_type=resources&search=" +
+								encodeURIComponent(q),
+						),
+						{ rawHost: "terraform-documentation" },
+					) as InternalUrl,
+				)
+			).content;
+		const clear = await read("Locate the clear token store reference");
+		expect(clear).toContain("Selected leaf;");
+		expect(clear).toContain("#schema-token--clear_secret_info--provider_ref");
+		const conflict = await read("Locate the store reference for clear secrets, then use encrypted storage");
+		expect(conflict).not.toContain("Selected leaf;");
+		expect(conflict).toContain("Uncertain secret representation");
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("verified reference ownership appears in compact and contextual anchored reads", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-reference-read-"));
+	try {
+		const pin = await fixture(root, manifest => {
+			manifest.documents[0].metadata.sections = [
+				{
+					schema_path: ["backend", "name"],
+					document_id: "fixture",
+					anchor: "schema-value",
+					description: "Referenced name",
+					aliases: [],
+					flags: ["optional"],
+					relationships: [],
+					reference_identity: {
+						version: 1,
+						scope_path: ["backend"],
+						member: "name",
+						upstream_message: "ves.io.schema.ObjectRefType",
+						source: "receipt-pinned-schema-identity",
+					},
+				},
+			];
+		});
+		const documents = await verifyTerraformSnapshot(root, pin);
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(documents, pin, index);
+		const bytes = await readFile(index),
+			compressed = gzipSync(bytes);
+		const indexed = {
+			...pin,
+			index: {
+				sha256: terraformHash(bytes),
+				size_bytes: bytes.length,
+				gzip_sha256: terraformHash(compressed),
+				gzip_size_bytes: compressed.length,
+			},
+		};
+		const gzipPath = path.join(root, "index.gz");
+		await writeFile(gzipPath, compressed);
+		const repo = new TerraformDocumentationRepository(
+			{ pin: indexed, indexGzipPath: gzipPath },
+			path.join(root, "cache"),
+		);
+		const read = (view: string) =>
+			repo.resolve(
+				Object.assign(
+					new URL(
+						`xcsh://terraform-documentation/documentation/resources/fixture/index.md?view=${view}#schema-value`,
+					),
+					{ rawHost: "terraform-documentation" },
+				) as InternalUrl,
+			);
+		const hint = await read("hint"),
+			context = await read("context"),
+			full = await read("full");
+		expect(hint.content).toContain("backend.name identifies the referenced object's name");
+		expect(context.content).toContain("receipt-pinned-schema-identity");
+		expect(context.content).toContain("Complete value.");
+		expect(full.content).not.toContain("Ownership:");
+		expect(hint.size).toBeLessThanOrEqual(4096);
+		expect(context.size).toBeLessThanOrEqual(16384);
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("explicit reference scope uses verified ownership and preserves all caller filters", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-reference-scope-"));
+	try {
+		const pin = await fixture(root, manifest => {
+			manifest.documents[0].metadata.sections = [
+				{
+					schema_path: ["backend", "name"],
+					document_id: "fixture",
+					anchor: "schema-value",
+					description: "Referenced name",
+					aliases: [],
+					flags: ["optional"],
+					relationships: [],
+					reference_identity: {
+						version: 1,
+						scope_path: ["backend"],
+						member: "name",
+						upstream_message: "ves.io.schema.ObjectRefType",
+						source: "receipt-pinned-schema-identity",
+					},
+				},
+			];
+		});
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const bytes = await readFile(index),
+			compressed = gzipSync(bytes);
+		const indexed = {
+			...pin,
+			index: {
+				sha256: terraformHash(bytes),
+				size_bytes: bytes.length,
+				gzip_sha256: terraformHash(compressed),
+				gzip_size_bytes: compressed.length,
+			},
+		};
+		const gzipPath = path.join(root, "index.gz");
+		await writeFile(gzipPath, compressed);
+		const repo = new TerraformDocumentationRepository(
+			{ pin: indexed, indexGzipPath: gzipPath },
+			path.join(root, "cache"),
+		);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?${query}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const scope = "provider_type=resources&provider_name=fixture&reference_scope=backend";
+		const exact = await read(scope + "&reference_member=name");
+		expect(exact.content).toContain("schema-value");
+		expect(exact.content).toContain("Verified reference member");
+		expect(exact.content).not.toContain("Selected leaf;");
+		expect(exact.size).toBeLessThanOrEqual(4096);
+		expect(exact.content).toContain("count or byte budget");
+		expect((await read(scope + "&task=troubleshooting")).content).toContain("No verified reference");
+		expect((await read(scope + "&reference_member=namespace")).content).toContain("No verified reference");
+		await expect(read("reference_scope=backend")).rejects.toThrow();
+		await expect(read(scope + "&reference_member=unsupported")).rejects.toThrow();
+		await expect(read(scope + "&view=hint")).rejects.toThrow();
+		await expect(read(scope + "&facet=task")).rejects.toThrow();
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("explicit enum value discovery never interprets literals as roles or paths", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-enum-explicit-"));
+	try {
+		const pin = await fixture(root, manifest => {
+			manifest.documents[0].metadata.sections = [
+				{
+					schema_path: ["mode"],
+					document_id: "fixture",
+					anchor: "schema-value",
+					description: "Mode",
+					aliases: [],
+					flags: ["optional"],
+					relationships: [],
+					enum_extraction_complete: true,
+					enum_validators: [
+						{
+							version: 1,
+							validator: "OneOf",
+							values: ["RESOURCE", "ROUND_ROBIN", "xcsh_missing"],
+							complete: true,
+							case_sensitive: true,
+							source:
+								"ast-validator:github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator.OneOf",
+						},
+					],
+				},
+			];
+		});
+		const docs = await verifyTerraformSnapshot(root, pin);
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const bytes = await readFile(index),
+			compressed = gzipSync(bytes);
+		const indexed = {
+			...pin,
+			index: {
+				sha256: terraformHash(bytes),
+				size_bytes: bytes.length,
+				gzip_sha256: terraformHash(compressed),
+				gzip_size_bytes: compressed.length,
+			},
+		};
+		const gzipPath = path.join(root, "index.gz");
+		await writeFile(gzipPath, compressed);
+		const repo = new TerraformDocumentationRepository(
+			{ pin: indexed, indexGzipPath: gzipPath },
+			path.join(root, "cache"),
+		);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?${query}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const scope = "provider_type=resources&provider_name=fixture";
+		for (const value of ["RESOURCE", "ROUND_ROBIN", "xcsh_missing"]) {
+			const result = await read(`${scope}&enum_value=${value}`);
+			expect(result.content).toContain("schema-value");
+			expect(result.content).toContain("Verified enum");
+			expect(result.content).not.toContain("Selected leaf;");
+			expect(result.size).toBeLessThanOrEqual(4096);
+		}
+		expect((await read(scope + "&enum_value=unsupported")).content).toContain("No verified enum");
+		expect((await read(scope + "&enum_value=RESOURCE&task=troubleshooting")).content).toContain("No verified enum");
+		await expect(read("enum_value=RESOURCE")).rejects.toThrow();
+		await expect(read(scope + "&enum_value=")).rejects.toThrow();
+		await expect(read(scope + "&enum_value=RESOURCE&enum_value=ROUND_ROBIN")).rejects.toThrow();
+		await expect(read(scope + "&enum_value=" + encodeURIComponent("x".repeat(513)))).rejects.toThrow();
+		await expect(read(scope + "&enum_value=RESOURCE&view=hint")).rejects.toThrow();
+
+		await expect(read(scope + "&enum_value=RESOURCE&search=question")).rejects.toThrow();
+		await expect(read(scope + "&enum_value=RESOURCE&reference_scope=backend")).rejects.toThrow();
+		(await repo.database()).close();
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("reference context omits a resolved self destination", async () => {
+	const db = new Database(":memory:");
+	db.exec(
+		"CREATE TABLE terraform_documents(path,metadata,markdown,id,parent_id,summary);CREATE TABLE terraform_sections(path,anchor,heading,context_markdown,ordinal,context_alias);CREATE TABLE terraform_relationships(path,anchor,type,target_path,target_anchor,enforcement);CREATE TABLE terraform_destinations(provider_type,provider_name,schema_path,path,anchor)",
+	);
+	db.exec(
+		"CREATE TABLE property_reference_provenance(schema_version);INSERT INTO property_reference_provenance VALUES(1);CREATE TABLE property_references(provider_type,provider_name,schema_path,scope_path,member,upstream_message,source);CREATE INDEX property_reference_scope ON property_references(scope_path,member,provider_name,provider_type)",
+	);
+	const path = "documentation/resources/fixture/index.md",
+		anchor = "schema-backend--name";
+	const identity = {
+		version: 1,
+		scope_path: ["backend"],
+		member: "name",
+		upstream_message: "ves.io.schema.ObjectRefType",
+		source: "receipt-pinned-schema-identity",
+	};
+	const metadata = {
+		id: "fixture",
+		summary: "Fixture",
+		provider_type: "resources",
+		provider_name: "fixture",
+		sections: [{ anchor, schema_path: ["backend", "name"], reference_identity: identity }],
+	};
+	db.prepare("INSERT INTO terraform_documents VALUES(?,?,?,?,?,?)").run(
+		path,
+		JSON.stringify(metadata),
+		"Complete",
+		"fixture",
+		null,
+		"Fixture",
+	);
+	db.prepare("INSERT INTO terraform_sections VALUES(?,?,?,?,?,?)").run(path, anchor, "name", "Complete", 0, 0);
+	db.prepare("INSERT INTO terraform_destinations VALUES(?,?,?,?,?)").run(
+		"resources",
+		"fixture",
+		"backend",
+		path,
+		anchor,
+	);
+	db.prepare("INSERT INTO property_references VALUES(?,?,?,?,?,?,?)").run(
+		"resources",
+		"fixture",
+		"backend.name",
+		JSON.stringify(["backend"]),
+		"name",
+		identity.upstream_message,
+		identity.source,
+	);
+	const pin = {
+		provider_version: "test",
+		release_tag: "test",
+		source_commit: "a".repeat(40),
+		receipt_sha256: "b".repeat(64),
+	} as TerraformPin;
+	const repo = new TerraformDocumentationRepository({ pin } as any, "unused");
+	repo.database = async () => db;
+	for (const view of ["hint", "context"]) {
+		const result = await repo.resolve(
+			Object.assign(new URL(`xcsh://terraform-documentation/${path}?view=${view}#${anchor}`), {
+				rawHost: "terraform-documentation",
+			}) as InternalUrl,
+		);
+		expect(result.content).toContain("Ownership:");
+		expect(result.content).not.toContain("Reference context:");
+	}
+	db.close();
+});
+
+test("explicit alias discovery returns complete verified destinations and rejects mixed requests", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "terraform-alias-route-"));
+	const pin = await fixture(root);
+	pin.document_count = 2;
+	const docs = ["a", "b"].map(name => {
+		const documentPath = `documentation/resources/fixture/properties/${name}/index.md`;
+		const body = `<a id="section"></a>\n# ${name}\nComplete branch ${name}.\n`;
+		return {
+			path: documentPath,
+			body,
+			markdown: body,
+			size_bytes: Buffer.byteLength(body),
+			sha256: terraformHash(body),
+			body_sha256: terraformHash(body),
+			metadata: {
+				id: name,
+				canonical_id: name,
+				path: documentPath,
+				provider_type: "resources",
+				provider_name: "fixture",
+				role: "properties",
+				schema_path: [name],
+				summary: name,
+				aliases: ["automatic certificates"],
+				parent_id: null,
+				child_ids: [],
+			},
+		} as TerraformDocument;
+	});
+	try {
+		const index = path.join(root, "index.sqlite");
+		await buildTerraformIndex(docs, pin, index);
+		const repo = await fixtureRepository(root, pin, index);
+		const read = (query: string) =>
+			repo.resolve(
+				Object.assign(new URL(`xcsh://terraform-documentation/?${query}`), {
+					rawHost: "terraform-documentation",
+				}) as InternalUrl,
+			);
+		const scope = "alias=automatic%20certificates&provider_type=resources&provider_name=fixture";
+		const response = await read(scope);
+		expect(response.content).toContain("Verified alias destinations");
+		expect(response.content).not.toContain("Selected leaf;");
+		expect(response.content).toContain("/a/index.md?view=context#section");
+		expect(response.content).toContain("/b/index.md?view=context#section");
+		expect(response.size).toBeLessThanOrEqual(3000);
+		expect((await read(`${scope}&category=dns`)).content).toContain("No verified alias destinations");
+		expect((await read(`${scope}&node=a`)).content).not.toContain("/b/index.md");
+		for (const query of [
+			"alias=x",
+			`${scope}&search=question`,
+			`${scope}&enum_value=value`,
+			`${scope}&reference_scope=ref`,
+			`${scope}&view=hint`,
+			`${scope}&facet=category`,
+			`${scope}&choice_after=99`,
+		])
+			await expect(read(query)).rejects.toThrow();
 		(await repo.database()).close();
 	} finally {
 		await rm(root, { recursive: true, force: true });

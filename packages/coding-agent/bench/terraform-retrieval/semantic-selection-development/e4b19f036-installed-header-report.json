@@ -1,0 +1,67 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "header-ambiguous",
+      "kind": "ambiguous",
+      "exit_code": 0,
+      "model_ms": 89637.96644110698,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "For `xcsh_workload`, the setting is:\n\n```text\nstateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.server_name\n```\n\n- Optional string; sets the `Server` response-header value, **overwriting existing values**.\n- Provider-enforced maximum length: **8096 characters**.\n- Mutually exclusive with `append_server_name`, `default_header`, and `pass_through`.\n\nVerified in bundled provider **v12.4.0**: [exact field reference](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 27246,
+        "max_bytes": 7784,
+        "measured_results": 8,
+        "violations": []
+      },
+      "trace_sha256": "dd8e3b1b290301c4ca827d1ca73255bae55127dbd847c6ffb805cadcdf76d1b5",
+      "passed": false
+    },
+    {
+      "id": "header-preserve",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 89385.7552310219,
+      "complete_leaf_read": false,
+      "clarification": false,
+      "text": "Use **`append_server_name`** in resource **`xcsh_workload`**:\n\n```text\nstateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.append_server_name\n```\n\nIt sets the `Server` response-header value **only when absent**, preserving existing values unchanged.\n\n- Optional string; provider-enforced maximum: **8,096 characters**.\n- Mutually exclusive with `default_header`, `pass_through`, and `server_name`.\n- Do **not** use `server_name`: it overwrites existing values.\n\nVerified in bundled provider **v12.4.0**: [exact field reference](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=full#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 44865,
+        "max_bytes": 20242,
+        "measured_results": 13,
+        "violations": []
+      },
+      "trace_sha256": "6d76a4a9bf176395b7671834b4ab8c34dad675397354ad422db5f3ccb544e5c1",
+      "passed": false
+    },
+    {
+      "id": "header-overwrite",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 97229.72324001603,
+      "complete_leaf_read": false,
+      "clarification": false,
+      "text": "Use **`server_name`** in resource **`xcsh_workload`**:\n\n```text\nstateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.server_name\n```\n\nIt sets the `Server` response-header value and **overwrites any existing value**. Unlike `append_server_name`, it does not preserve the existing header.\n\nOptional string; provider-enforced maximum: **8,096 characters**. Mutually exclusive with `append_server_name`, `default_header`, and `pass_through`.\n\nVerified in bundled provider **v12.4.0**: [exact field reference](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=full#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 46553,
+        "max_bytes": 20242,
+        "measured_results": 14,
+        "violations": []
+      },
+      "trace_sha256": "f204818ae9b6006706343b7d73077056937189ab2a2c4858fd9e952bc2fcfbba",
+      "passed": false
+    }
+  ],
+  "complete": true
+}

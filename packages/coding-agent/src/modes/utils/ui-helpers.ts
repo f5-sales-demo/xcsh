@@ -3,6 +3,7 @@ import type { AssistantMessage, ImageContent, Message } from "@f5-sales-demo/pi-
 import { Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
 import type { AsyncQuestionItem } from "../../../../chat-ui/src/interactions/contract";
 import { settings } from "../../config/settings";
+import { projectDocumentationTranscript } from "../../internal-urls/public-citations";
 import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
 import { BashExecutionComponent } from "../../modes/components/bash-execution";
@@ -562,7 +563,7 @@ export class UiHelpers {
 		this.ctx.pendingPythonComponents = [];
 
 		// Get aligned messages and entries from session context
-		const context = this.ctx.sessionManager.buildSessionContext();
+		const context = this.ctx.session.buildDisplaySessionContext();
 		this.ctx.renderSessionContext(context, {
 			updateFooter: true,
 			populateHistory: true,
@@ -773,8 +774,9 @@ export class UiHelpers {
 	}
 
 	findLastAssistantMessage(): AssistantMessage | undefined {
-		for (let i = this.ctx.session.messages.length - 1; i >= 0; i--) {
-			const message = this.ctx.session.messages[i];
+		const messages = projectDocumentationTranscript(this.ctx.session.messages);
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const message = messages[i];
 			if (message?.role === "assistant") {
 				return message as AssistantMessage;
 			}

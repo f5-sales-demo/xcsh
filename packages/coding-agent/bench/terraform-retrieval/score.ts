@@ -1,3 +1,4 @@
+import exposedInputs from "./exposed-inputs.json";
 export function scoreDestinations(
 	kind: "answerable" | "ambiguous" | "control",
 	selected: boolean,
@@ -49,6 +50,8 @@ export function validateQualificationEligibility(
 	suiteHash: string,
 	regression: boolean,
 ): void {
+	if (!regression && exposedInputs.records.some(record => record.sha256 === suiteHash))
+		throw new Error("Known exposed input is regression only");
 	if (!audit) return;
 	if (audit.suite_sha256 !== suiteHash) throw new Error("Benchmark eligibility audit digest mismatch");
 	if (!audit.qualification_eligible && !regression) throw new Error("Benchmark cannot qualify: " + audit.reason);
@@ -82,16 +85,23 @@ export function validateIndependentFreeze(
 	freeze: {
 		schema_version?: number;
 		independent_review_sha256?: string;
+		internal_review_sha256?: string;
+		independent_review_waived_by_user?: boolean;
+		retrieval_results_withheld?: boolean;
 		implementation_and_retrieval_outputs_withheld?: boolean;
 	},
 	review: { verdict: string; findings: unknown[]; reviewed_case_ids: string[] },
 	reviewHash: string,
 	caseIds: string[],
 ): void {
-	if (freeze.schema_version !== 2) return;
-	if (freeze.independent_review_sha256 !== reviewHash) throw new Error("Independent review digest mismatch");
+	if (freeze.schema_version !== 2 && freeze.schema_version !== 3) return;
+	const internal = freeze.schema_version === 3;
+	if (internal && (freeze.independent_review_waived_by_user !== true || freeze.retrieval_results_withheld !== true))
+		throw new Error("Internal freeze requires user review waiver and withheld retrieval results");
+	if ((internal ? freeze.internal_review_sha256 : freeze.independent_review_sha256) !== reviewHash)
+		throw new Error("Frozen review digest mismatch");
 	if (
-		freeze.implementation_and_retrieval_outputs_withheld !== true ||
+		(!internal && freeze.implementation_and_retrieval_outputs_withheld !== true) ||
 		review.verdict !== "approve" ||
 		review.findings.length
 	)
@@ -120,4 +130,33 @@ export function validateModelSubsetPreflight(cases:Array<{id:string;kind:string;
  if(cases.length!==40||JSON.stringify(counts)!==JSON.stringify([28,8,4]))throw new Error("Frozen model subset must be28/8/4");
  if(new Set(cases.map(c=>c.id)).size!==40||cases.some(c=>!suiteIds.includes(c.id)))throw new Error("Frozen model subset IDs do not match suite");
  validateModelActivation(cases);
+ validateHclDraftingCoverage(cases);
+}
+
+export function validateModelSubsetIdentity(
+ subset: readonly {id:string;[key:string]:unknown}[],
+ suite: readonly {id:string;[key:string]:unknown}[],
+): void {
+ const canonical=(value:unknown):string=>{
+ const normalize=(item:unknown):unknown=>Array.isArray(item)?item.map(normalize):item && typeof item === "object"?Object.fromEntries(Object.entries(item).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,v])=>[key,normalize(v)])):item;
+ return JSON.stringify(normalize(value));
+ };
+ const byId=new Map(suite.map(c=>[c.id,c]));
+ for(const c of subset){const original=byId.get(c.id);if(!original || canonical(c)!==canonical(original))throw new Error(`Model subset changed frozen case ${c.id}`);}
+}
+
+export function validateHclDraftingCoverage(cases:readonly {kind:string;prompt:string;model_expectations?:unknown}[]):void{
+ let required=0;
+ for(const c of cases){
+ const raw=c.model_expectations===undefined?{}:c.model_expectations;
+ if(!raw||typeof raw!=="object"||Array.isArray(raw))throw new Error("Model expectations must be an object");
+ const e=raw as Record<string,unknown>;
+ const marker=e.requires_hcl===undefined?false:e.requires_hcl;
+ if(typeof marker!=="boolean")throw new Error("HCL drafting expectation must be boolean");
+ if(!marker)continue;
+ const strings=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(x=>typeof x==="string"&&x.trim());
+ if(c.kind!=="answerable"||!/\b(?:draft|write|generate|create)\b.*\b(?:hcl|terraform)\b/i.test(c.prompt)||!strings(e.supported_fields)||!strings(e.must_read)||!(e.must_read as string[]).every(uri=>/^xcsh:\/\/terraform-documentation\/documentation\/[A-Za-z0-9_./-]+\.md#[A-Za-z0-9_.-]+$/.test(uri)&&!uri.slice("xcsh://terraform-documentation".length).split("#")[0]!.split("/").includes(".."))||!e.synthetic_values||typeof e.synthetic_values!=="object"||Array.isArray(e.synthetic_values)||!Object.keys(e.synthetic_values).length||!Object.entries(e.synthetic_values).every(([field,value])=>(e.supported_fields as string[]).includes(field)&&c.prompt.includes(field)&&["string","number","boolean"].includes(typeof value)&&String(value).trim()&&c.prompt.includes(String(value))))throw new Error("Mandatory HCL cases require answerable drafting intent, fields, exact reads and synthetic values");
+ required++;
+ }
+ if(!required)throw new Error("Model qualification requires positive mandatory HCL drafting coverage");
 }

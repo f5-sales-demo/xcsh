@@ -1,0 +1,9 @@
+Not approved yet. Three reproducible issues remain:
+
+- **P2 — URI bypass:** [model_trace.py:225](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/model_trace.py:225) skips valid slashless discovery URIs such as `xcsh://terraform-documentation?search=port`. A 5 KiB response passes with zero measured results.
+- **P2 — Incomplete pairing validation:** [model_trace.py:228](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/model_trace.py:228) accepts numeric IDs, misses IDs reused by other calls, and ignores orphan results. List-valued IDs raise `TypeError`. Validate nonempty string IDs and uniqueness across all calls before filtering Terraform reads.
+- **P2 — Escaped Unicode crash:** [model_trace.py:255](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/bench/terraform-retrieval/model_trace.py:255) raises `UnicodeEncodeError` for valid JSON containing an escaped lone surrogate (`\ud800`); runtime `JSON.stringify` safely escapes it. Serialization should match that behavior.
+
+Otherwise sound: complete-envelope counting, ordinary Unicode/control-character escaping, exact 4/16 KiB boundaries, unrestricted full reads, duplicate/order rejection, failed-result measurement, and budget-failure propagation through both evidence paths. Genuine no-read traces pass vacuously; required-read checks remain separate.
+
+Verified **22 model-trace tests**, Ruff, and mypy on all four changed files. The reported 47-test suite was not rerun. No edits, contacts, benchmark prompts, qualification, or release actions.

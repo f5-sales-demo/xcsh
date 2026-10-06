@@ -1,0 +1,7 @@
+Approve the narrow fix; no blocking findings.
+
+- Empty, whitespace-only, and oversized-notice Terraform results receive no complete leaf-read credit.
+- The continuation success fixture contains an actual synthetic section body.
+- Both prompts require source-grounded reformulation, exact leaf/anchor reads, and following oversized notices to complete sections before selecting or drafting.
+
+Verification: 8 focused tests and 6 body-to-credit probes passed. No edits, subagents, web, benchmark-suite reads, or releases. This is not independent benchmark qualification.

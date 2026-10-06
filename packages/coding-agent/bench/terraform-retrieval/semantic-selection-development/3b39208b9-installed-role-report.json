@@ -1,0 +1,57 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "tf1240-145",
+      "kind": "ambiguous",
+      "exit_code": 0,
+      "model_ms": 43314.35431400314,
+      "complete_leaf_read": true,
+      "clarification": true,
+      "text": "Do you mean configuring allowed cipher suites in an `xcsh_advertise_policy` **resource**, or reading them from an `xcsh_advertise_policy` **data source**?",
+      "budget": {
+        "passed": true,
+        "total_bytes": 13208,
+        "max_bytes": 5290,
+        "measured_results": 3,
+        "violations": []
+      },
+      "trace_sha256": "d1718488b1c0c15f895730721d5400d65650e29a9c04893a7500db330f7fdbc1",
+      "passed": true
+    },
+    {
+      "id": "tf1240-147",
+      "kind": "ambiguous",
+      "exit_code": 0,
+      "model_ms": 61672.49058699235,
+      "complete_leaf_read": true,
+      "clarification": true,
+      "text": "Do you mean the `xcsh_advertise_policy` **resource** (configurable list) or **data source** (computed list)? Both are documented in provider v12.4.0, but their schema behavior differs.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 11659,
+        "max_bytes": 2907,
+        "measured_results": 6,
+        "violations": []
+      },
+      "trace_sha256": "abb4a22fd8360df745d56b57e21e4d6e42f5d818833998c9adfba19574d78d24",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "3b39208b9e8b4cc5b7a9926f5931c00dfed71753",
+    "binary_sha256": "94c9eeba4bf9052933bc4a24e16f3723a2cf0de2a4670c88225a5824152cde43",
+    "binary_bytes": 621934048,
+    "provider_version": "v12.4.0"
+  }
+}

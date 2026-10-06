@@ -1,0 +1,11 @@
+Two **P2 bugs remain**, so I cannot approve the narrow source yet:
+
+- **Dotted exclusions reverse the requested scope** — [terraform-documentation.ts:1699](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1699). With both `value_scope.protocol` and `other_scope.protocol` accepting `GRE`, searching `Which field outside value_scope.protocol accepts GRE` with `value=GRE` returns only the excluded `value_scope.protocol`. The exclusion helper misses the dotted path, then identifier filtering requires its `value_scope` component.
+
+- **The literal exemption also removes explicit branch constraints** — [terraform-documentation.ts:1711](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1711). If both branches accept literal `value_scope`, searching `Which field under value_scope accepts value_scope` with `value=value_scope` returns both branches. Exempting the literal must preserve its separate occurrence as an explicit branch constraint.
+
+Both reproduced through `resolve()` using an in-memory index.
+
+Validation: **12 focused tests passed**, plus in-memory checks for facets/node, type/access, malformed requests, Unicode/conjunctive evidence, long descriptions and compact-link fallback. `git diff --check` passed. The filesystem-writing snapshot suite was not run.
+
+No edits, contacts, subagents, benchmark-prompt inspection, or qualification/release work.

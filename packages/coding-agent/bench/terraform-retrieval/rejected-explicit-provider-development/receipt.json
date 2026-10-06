@@ -1,0 +1,6 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "production_restored": true,
+  "decision": "Reject regexidentity guard:negationoverscoped,quotedvaluesandenv/function collisions,role ambiguity. Requires sharedtoken/spanparser;113focusedtests missed currentreviewcounterexamples."
+}

@@ -1,0 +1,8 @@
+{
+  "source_commit": "6c08ebb5e96f9f3b2724dae08680023109b02e23",
+  "exit_code": 0,
+  "seconds": 492.0287160873413,
+  "log_sha256": "3a1ceaab6c28dac637bef87cfc274a5085b7114b4528192b1c58a5635a7f08e8",
+  "qualification_passed": false,
+  "repair": "Verified pinned gzip restored; no source changes"
+}

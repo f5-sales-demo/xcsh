@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { AgentState } from "@f5-sales-demo/pi-agent-core";
 import { APP_NAME, isEnoent } from "@f5-sales-demo/pi-utils";
+import { projectAssistantDocumentationCitations, SessionCitationRegistry } from "../../internal-urls/public-citations";
 import { listMediaAssets, listMediaDescriptors, projectMediaDescriptorForTransport } from "../../media/transport";
 import { getResolvedThemeColors, getThemeExportColors } from "../../modes/theme/theme";
 import { parseBlobRef } from "../../session/blob-store";
@@ -114,7 +115,12 @@ async function generateHtml(sessionData: SessionData, themeName?: string): Promi
 }
 
 function projectMediaEntries(entries: SessionEntry[]): SessionEntry[] {
+	const registry = new SessionCitationRegistry();
 	return entries.map(entry => {
+		if (entry.type === "message") registry.observe(entry.message);
+		if (entry.type === "message" && entry.message.role === "assistant") {
+			return { ...entry, message: projectAssistantDocumentationCitations(entry.message, registry.resolve) };
+		}
 		if (entry.type !== "message" || entry.message.role !== "media") return entry;
 		return {
 			...entry,

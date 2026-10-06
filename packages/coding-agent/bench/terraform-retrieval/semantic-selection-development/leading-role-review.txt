@@ -1,0 +1,7 @@
+Approve the narrow fix. No concrete defects found.
+
+- Equivalent role leaves now narrow regardless of candidate count, subject to the role-choice limit.
+- Leading hint requires matching provider, full schema path, description, resource/data-source roles, and no resolved caller role.
+- Other candidates retain the existing rendering and limits; exact reads are unchanged.
+
+Validation: 9 tests passed, additional read-only guard/count probes passed, and diff checks passed. No edits.

@@ -1,0 +1,27 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": "ebb95c2fafd888633b2a5eaf06504d7e85fe7a903ce3c021296b53542d62c82b",
+  "v9": {
+    "correct": 107,
+    "total": 140,
+    "top5": 125,
+    "gains": [
+      "v9-036",
+      "v9-047",
+      "v9-048"
+    ],
+    "regressions": []
+  },
+  "v8": {
+    "correct": 121,
+    "total": 140,
+    "top5": 138
+  },
+  "change": "An explicit ordered breadcrumb scopes retrieval even without a leading location verb; negated/multiple paths stay undecided.",
+  "limitations": [
+    "Exposed regression only; no fresh qualification.",
+    "Final installed verification required."
+  ]
+}

@@ -20,8 +20,8 @@ import { DOCUMENTATION_SOURCES, type DocumentationSource } from "./documentation
 
 const MIB = 1024 * 1024;
 export const DOCUMENTATION_LIMITS = {
-	archiveBytes: 256 * MIB,
-	expandedBytes: 512 * MIB,
+	archiveBytes: 768 * MIB,
+	expandedBytes: 1024 * MIB,
 	members: 10_000,
 	markdownBytes: 2 * MIB,
 	assetBytes: 20 * MIB,
@@ -41,7 +41,7 @@ const COMMIT = /^[a-f0-9]{40}$/;
 const RELEASE_TAG = /^content-[0-9]{8}T[0-9]{6}Z$/;
 const TIMESTAMP = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/;
 const FIXED_TIME = "2000-01-01T00:00:00.000Z";
-const DOCUMENTATION_INDEX_SCHEMA_VERSION = 2;
+const DOCUMENTATION_INDEX_SCHEMA_VERSION = 3;
 const MANIFEST_KEYS = [
 	"asset_count",
 	"assets",
@@ -75,6 +75,7 @@ const DOCUMENT_PROVENANCE_KEYS = [
 	"terminal_confirmation_count",
 ] as const;
 const SOURCE_ROOT_URLS: Readonly<Record<DocumentationSource, string>> = {
+	"community-f5-com": "https://community.f5.com",
 	"docs-cloud-f5-com": "https://docs.cloud.f5.com/docs-v2",
 	"my-f5-com": "https://my.f5.com/manage/s",
 	"www-f5-com": "https://www.f5.com/products/distributed-cloud-services",
@@ -91,7 +92,7 @@ export interface DocumentationReleaseAssetPin {
 }
 
 export interface DocumentationReleasePin {
-	readonly schema_version: 1;
+	readonly schema_version: 1 | 2;
 	readonly source_repository: "f5-sales-demo/html-to-markdown";
 	readonly release_tag: string;
 	readonly source_commit: string;
@@ -102,6 +103,12 @@ export interface DocumentationReleasePin {
 		readonly document_count: number;
 		readonly asset_count: number;
 		readonly source_roots: readonly DocumentationSource[];
+	};
+	readonly packaging?: {
+		readonly mode: "text-only-sqlite";
+		readonly text_manifest_sha256: string;
+		readonly source_media_count: number;
+		readonly bundled_media_count: 0;
 	};
 	readonly index: {
 		readonly qmd_version: "2.8.3";
@@ -200,9 +207,11 @@ function validateOriginalUrl(value: unknown, source: DocumentationSource, field:
 	const result = string(value, field);
 	const root = SOURCE_ROOT_URLS[source];
 	const allowed =
-		source === "www-f5-com"
-			? result === root || result.startsWith(`${root}/`) || MARKETING_SOLUTION_URLS.has(result)
-			: result === root || result.startsWith(`${root}/`) || result.startsWith(`${root}?`);
+		source === "community-f5-com"
+			? /^https:\/\/community\.f5\.com\/t\/[0-9]+$/.test(result)
+			: source === "www-f5-com"
+				? result === root || result.startsWith(`${root}/`) || MARKETING_SOLUTION_URLS.has(result)
+				: result === root || result.startsWith(`${root}/`) || result.startsWith(`${root}?`);
 	if (!allowed) {
 		throw new Error(`${field} is outside the declared source root`);
 	}
@@ -254,6 +263,8 @@ async function sha256File(filePath: string): Promise<string> {
 
 export function parseDocumentationReleasePin(value: unknown): DocumentationReleasePin {
 	const pin = object(value, "documentation release pin");
+	if (pin.schema_version !== 1 && pin.schema_version !== 2)
+		throw new Error("documentation release pin schema version is invalid");
 	exactKeys(
 		pin,
 		[
@@ -265,10 +276,10 @@ export function parseDocumentationReleasePin(value: unknown): DocumentationRelea
 			"assets",
 			"manifest",
 			"index",
+			...(pin.schema_version === 2 ? ["packaging"] : []),
 		],
 		"documentation release pin",
 	);
-	if (pin.schema_version !== 1) throw new Error("documentation release pin schema version is invalid");
 	if (pin.source_repository !== "f5-sales-demo/html-to-markdown")
 		throw new Error("documentation source repository is invalid");
 	const releaseTag = string(pin.release_tag, "release_tag");
@@ -311,9 +322,28 @@ export function parseDocumentationReleasePin(value: unknown): DocumentationRelea
 		const digest = string(indexValue[field], `documentation index ${field}`);
 		if (digest !== "pending" && !SHA256.test(digest)) throw new Error(`documentation index ${field} is invalid`);
 	}
+	let packaging: DocumentationReleasePin["packaging"];
+	if (pin.schema_version === 2) {
+		const value = object(pin.packaging, "documentation text packaging");
+		exactKeys(
+			value,
+			["mode", "text_manifest_sha256", "source_media_count", "bundled_media_count"],
+			"documentation text packaging",
+		);
+		if (value.mode !== "text-only-sqlite" || value.bundled_media_count !== 0)
+			throw new Error("documentation text packaging mode or bundled media count is invalid");
+		const digest = string(value.text_manifest_sha256, "text_manifest_sha256");
+		if (!SHA256.test(digest)) throw new Error("documentation text packaging digest is invalid");
+		packaging = {
+			mode: "text-only-sqlite",
+			text_manifest_sha256: digest,
+			source_media_count: count(value.source_media_count, "source_media_count"),
+			bundled_media_count: 0,
+		};
+	}
 
 	return {
-		schema_version: 1,
+		schema_version: pin.schema_version as 1 | 2,
 		source_repository: "f5-sales-demo/html-to-markdown",
 		release_tag: releaseTag,
 		source_commit: sourceCommit,
@@ -325,6 +355,7 @@ export function parseDocumentationReleasePin(value: unknown): DocumentationRelea
 			asset_count: count(manifestValue.asset_count, "manifest.asset_count"),
 			source_roots: roots as DocumentationSource[],
 		},
+		...(packaging ? { packaging } : {}),
 		index: {
 			qmd_version: "2.8.3",
 			fingerprint: indexValue.fingerprint as string,
@@ -692,6 +723,17 @@ export async function verifyDocumentationRelease(
 		};
 	});
 	validateDocumentationGraph(documents);
+	if (pin.packaging) {
+		const textManifest = documents
+			.map(document => `${document.archivePath}\0${document.fileSha256}\n`)
+			.sort()
+			.join("");
+		if (
+			sha256Bytes(textManifest) !== pin.packaging.text_manifest_sha256 ||
+			pin.packaging.source_media_count !== pin.manifest.asset_count
+		)
+			throw new Error("documentation text packaging provenance mismatch");
+	}
 
 	const marketingDocumentPaths = new Set(
 		documents.filter(document => document.source === "www-f5-com").map(document => document.stablePath),
@@ -999,6 +1041,11 @@ export async function buildDocumentationIndex(
 			dbPath: databasePath,
 			config: {
 				collections: {
+					"community-f5-com": {
+						path: path.join(documentsRoot, "community-f5-com"),
+						pattern: "**/*.md",
+						context: { "/": "F5 community examples and troubleshooting discussions" },
+					},
 					"docs-cloud-f5-com": {
 						path: path.join(documentsRoot, "docs-cloud-f5-com"),
 						pattern: "**/*.md",
@@ -1068,12 +1115,17 @@ export async function verifyPrebuiltDocumentationAssets(
 		throw new Error("prebuilt documentation index requires a complete index pin");
 	}
 	const archivePath = path.join(root, "html-to-markdown-content.tar.gz");
-	const archive = await stat(archivePath);
-	if (
-		archive.size !== pin.assets["html-to-markdown-content.tar.gz"].size_bytes ||
-		(await sha256File(archivePath)) !== pin.assets["html-to-markdown-content.tar.gz"].sha256
-	) {
-		throw new Error("prebuilt documentation archive disagrees with pin");
+	try {
+		const archive = await stat(archivePath);
+		if (pin.packaging?.mode === "text-only-sqlite")
+			throw new Error("text-only documentation bundle must not include the source archive");
+		if (
+			archive.size !== pin.assets["html-to-markdown-content.tar.gz"].size_bytes ||
+			(await sha256File(archivePath)) !== pin.assets["html-to-markdown-content.tar.gz"].sha256
+		)
+			throw new Error("prebuilt documentation archive disagrees with pin");
+	} catch (error) {
+		if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
 	}
 	const indexGzip = await readFile(path.join(root, "documentation-index.sqlite.gz"));
 	if (indexGzip.byteLength > pin.index.size_bytes) {

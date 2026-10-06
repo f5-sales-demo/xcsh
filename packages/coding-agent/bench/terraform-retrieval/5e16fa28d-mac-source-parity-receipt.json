@@ -1,0 +1,12 @@
+{
+  "source_commit": "5e16fa28dc49b3a425370602f0e31c49e4d1dbed",
+  "source_parity_only": true,
+  "qualification_passed": false,
+  "query_count": 200,
+  "complete_response_mismatch_indices": [],
+  "warm_p95_ms": 40.91245899999967,
+  "max_discovery_bytes": 3725,
+  "max_context_bytes": 7853,
+  "source_archive_sha256": "2aff4be9c911326c666b6eb53238d32b18309103d2667c1daa15cc89da5d8450",
+  "report_sha256": "535878ca44245bdc81ddef2d401f1374f00af331f4800c5f9680bf0751bd35b2"
+}

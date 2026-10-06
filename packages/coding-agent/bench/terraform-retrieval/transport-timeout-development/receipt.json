@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 92,
+  "v7_top5": 121,
+  "improved": [
+    "A039",
+    "A040"
+  ],
+  "regressed": [],
+  "firstscorespreserved": true
+}

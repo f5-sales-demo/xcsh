@@ -1,0 +1,15 @@
+Four concrete findings, reproduced with in-memory probes:
+
+- **P2 — Independent aliases share constraints within one sentence.** [terraform-alias-hints.ts:111](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-alias-hints.ts:111) applies the entire clause to each alias. “automatic certificates for a stateless workload and client credentials for a stateful workload” returns both architectures for both aliases. With the production two-hint limit, both slots go to client credentials, losing the automatic-certificates hint. Using a semicolon produces the intended two destinations.
+
+- **P2 — Common negative wording produces affirmative hints.** [terraform-alias-hints.ts:27](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-alias-hints.ts:27) handles selected contractions but misses `shouldn't`; the rejection filter also misses `exclude`. Both “automatic certificates shouldn't be used” and “exclude automatic certificates” return certificate hints.
+
+- **P2 — Quoted paths suppress unrelated affirmative hints.** [terraform-alias-hints.ts:23](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-alias-hints.ts:23) checks the entire raw query before masking quotes/examples. `automatic certificates; "old.service" is just an example` returns no hints; replacing `old.service` with `old service` returns both expected hints. Literal-path precedence consequently extends into explicitly opaque text.
+
+- **P2 — The word bound precedes token normalization.** [terraform-alias-hints.ts:41](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-alias-hints.ts:41) counts whitespace-separated words, while phrase generation splits all punctuation. A 639-byte query containing 150 hyphen-separated tokens bypasses the 100-word guard and produces 742 SQL bindings. `LIMIT 101` bounds returned rows, not phrase generation or lookup parameters.
+
+The diff preserves existing ranking, candidate selection, and rendered candidate entries. Hints append afterward only when complete UTF-8 entries fit within 4096 bytes. Facets remain ANDed, descendant scope is applied, and lookup predicates match the existing alias index. Owner inference is reused unchanged; aliases do not introduce a new owner scope.
+
+The supplied tests miss these cases: independent architectures use semicolons, and quoted/example coverage lacks embedded dotted paths. No ranked-candidate recall regression found; the reproduced recall losses concern hints.
+
+Read-only development review with synthetic probes; no suite execution, web, edits, or benchmark approval.

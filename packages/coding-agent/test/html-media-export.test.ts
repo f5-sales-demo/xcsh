@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import type { AssistantMessage, ToolResultMessage } from "@f5-sales-demo/pi-ai";
 import { exportSessionToHtml, prepareSessionHtmlExport } from "../src/export/html";
 import { createMediaId, type MediaMessage } from "../src/media/types";
 import { SessionManager } from "../src/session/session-manager";
@@ -85,4 +86,87 @@ test("HTML export records a missing media asset without failing", async () => {
 	const encoded = html.match(/<script id="session-data" type="application\/json">([^<]+)<\/script>/)?.[1];
 	const data = JSON.parse(Buffer.from(encoded!, "base64").toString("utf8"));
 	expect(data.mediaAssets[`blob:sha256:${hash}`]).toBeNull();
+});
+
+test("HTML export projects assistant citations while preserving the original session evidence", async () => {
+	const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-html-citation-"));
+	roots.push(root);
+	const sm = SessionManager.create(root, root);
+	const internal = "xcsh://documentation/community-f5-com/t/65170/index.md";
+	const message = {
+		role: "assistant",
+		content: [{ type: "text", text: `See [community article](${internal}).` }],
+		api: "anthropic-messages",
+		provider: "anthropic",
+		model: "fixture",
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
+		stopReason: "stop",
+		timestamp: 1,
+	} as AssistantMessage;
+	sm.appendMessage(message);
+	await sm.ensureOnDisk();
+	const prepared = await prepareSessionHtmlExport(sm, undefined, { outputPath: path.join(root, "citation.html") });
+	const html = Buffer.from(prepared.files.at(-1)!.bytes).toString("utf8");
+	const encoded = html.match(/<script id="session-data" type="application\/json">([^<]+)<\/script>/)?.[1];
+	const data = JSON.parse(Buffer.from(encoded!, "base64").toString("utf8"));
+	const exported = JSON.stringify(data.entries);
+	expect(exported).toContain("https://community.f5.com/t/65170");
+	expect(exported).not.toContain(internal);
+	expect(JSON.stringify(sm.getEntries())).toContain(internal);
+});
+
+test("HTML export fails closed for older sessions without a public citation mapping", async () => {
+	const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-html-old-citation-"));
+	roots.push(root);
+	const sm = SessionManager.create(root, root);
+	const internal = "xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#schema-domains";
+	sm.appendMessage({
+		role: "toolResult",
+		toolCallId: "old-read",
+		toolName: "read",
+		isError: false,
+		timestamp: 1,
+		details: { meta: { source: { type: "internal", value: "xcsh://terraform-documentation/?search=domains" } } },
+		content: [
+			{
+				type: "text",
+				text: "Snapshot: documentation-v12.4.0\nRead: xcsh://terraform-documentation/documentation/resources/http_loadbalancer/index.md#schema-domains",
+			},
+		],
+	} as ToolResultMessage);
+	sm.appendMessage({
+		role: "assistant",
+		content: [{ type: "text", text: `See ${internal}` }],
+		api: "anthropic-messages",
+		provider: "anthropic",
+		model: "fixture",
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
+		stopReason: "stop",
+		timestamp: 2,
+	} as AssistantMessage);
+	await sm.ensureOnDisk();
+	const prepared = await prepareSessionHtmlExport(sm, undefined, { outputPath: path.join(root, "old.html") });
+	const html = Buffer.from(prepared.files.at(-1)!.bytes).toString("utf8");
+	const encoded = html.match(/<script id="session-data" type="application\/json">([^<]+)<\/script>/)?.[1];
+	const data = JSON.parse(Buffer.from(encoded!, "base64").toString("utf8"));
+	const assistantEntry = data.entries.find(
+		(entry: { message?: { role?: string } }) => entry.message?.role === "assistant",
+	);
+	expect(JSON.stringify(assistantEntry)).toContain("[unverified documentation citation]");
+	expect(JSON.stringify(assistantEntry)).not.toContain(internal);
+	expect(JSON.stringify(sm.getEntries())).toContain(internal);
 });

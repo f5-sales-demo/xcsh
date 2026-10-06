@@ -1,0 +1,9 @@
+{
+  "qualification_passed": false,
+  "production_retained": false,
+  "reason": "No complete-route selection or top-five gain; unsupported contextual filtering risks additional complexity",
+  "v7_correct": 84,
+  "v7_top5": 115,
+  "v6_correct": 79,
+  "v6_top5": 98
+}

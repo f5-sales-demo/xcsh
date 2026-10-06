@@ -1,0 +1,19 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "provider_version": "v12.4.0",
+  "source_commit": "c0169b220fe41a707260a88378dfb4d0b339f9b3",
+  "previous_index": {
+    "sha256": "727e3a7a02316ddf0b65beee926e014221cce93e6618e32e1d64a16238c42a3e",
+    "size_bytes": 800915456,
+    "gzip_sha256": "4cac4cda89d79163b3cbd532b2d3588d7f7663d473c147676e3e90f35755e577",
+    "gzip_size_bytes": 72608838
+  },
+  "index": {
+    "sha256": "0f4fa5c7f752eca1c53b6cd085a59574007543665d2047c76170374e7dbbad00",
+    "size_bytes": 800972800,
+    "gzip_sha256": "6c24c251db13b386d09ffe1e6a31471a6c8804cc4d38619d3a7b8f74a17cf8e3",
+    "gzip_size_bytes": 72609189
+  },
+  "deterministic": true
+}

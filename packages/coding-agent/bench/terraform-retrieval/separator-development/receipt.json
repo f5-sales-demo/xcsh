@@ -1,0 +1,14 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "shared_schema_tokenizer_changed": false,
+  "provider_version": "v12.4.0",
+  "correct": 100,
+  "answerable": 140,
+  "top5": 125,
+  "complete_response_p95_ms": 62.689677,
+  "scope": "Query prose spellings for existing autonomous system number and regular expression terminology only; literals and paths protected.",
+  "review_repairs": "Comparison originaltextfirst;singlequotes,doublequotes,backticks,curlyquotesandmultiplepathsegments retained. Exactcounterexamplespass.",
+  "full_regression_receipt_scope": "Finalregressionpredateslastliteralprotectionrepair; finalfocusedchecks cover repairs; required CI afterpush remains necessary."
+}

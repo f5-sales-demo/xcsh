@@ -1,0 +1,20 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "correct_answerable": 4,
+  "answerable_total": 7,
+  "role_clarifications": 2,
+  "controls_rejected": 3,
+  "strict_audit_passed": false,
+  "tool_calls": 83,
+  "model_network_wall_ms": 694453.9199089631,
+  "response_envelope_bytes": 214796,
+  "source_review_pending": [],
+  "remaining": "Malformed requests and three allegedly unique cases prevent passing evidence. Source review investigates genuine ambiguity without relabeling exposed suite.",
+  "source_review_findings": {
+    "A107": "Missing address family and per-range versus network exclusion scope",
+    "A114": "Missing preserve-versus-overwrite server-header behavior",
+    "A130": "Missing backend defaults versus virtual-pool defaults"
+  },
+  "scores_and_labels_unchanged": true
+}

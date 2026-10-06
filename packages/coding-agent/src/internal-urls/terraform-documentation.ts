@@ -1,24 +1,48 @@
 import { Database } from "bun:sqlite";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
-import { gunzipSync } from "node:zlib";
+import { createGunzip, gunzipSync } from "node:zlib";
 import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
-import { terraformBranchChoices, terraformRoleChoices } from "./terraform-branch-choices";
+import { citationLine, publicCitationForInternalUri } from "./public-citations";
+import { lookupTerraformAlias } from "./terraform-alias-lookup";
+import { terraformBranchChoices, terraformLeadingRoleHint, terraformRoleChoices } from "./terraform-branch-choices";
+import { verifiedChoiceEdges } from "./terraform-choice-edges";
 import { terraformChoiceResponse } from "./terraform-choice-response";
+import { terraformConflictContext } from "./terraform-conflict-context";
+import { type EnumValidatorEvidence, validateEnumEvidence } from "./terraform-enum-evidence";
+import { terraformExampleContext } from "./terraform-example-context";
+import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
 import { interpretTerraformLifecycle } from "./terraform-lifecycle";
-import { populatePropertyIndex, searchPropertyIndex, validatePropertyIndex } from "./terraform-property-index";
 import {
+	populatePropertyIndex,
+	searchPropertyEnumValue,
+	searchPropertyIndex,
+	validatePropertyIndex,
+} from "./terraform-property-index";
+import {
+	propertyBreadcrumbText,
+	propertyInstructionText,
 	propertyRequestedBlockText,
 	propertyRequestedText,
 	propertyRequestsBlock,
 	propertyRequestsCollection,
+	propertyWithoutBreadcrumbs,
+	propertyWithoutSingleSchemaScope,
 } from "./terraform-property-ranking";
+import { refineRankedProperty } from "./terraform-property-refinement";
 import { type RankedProperty, selectPropertyDestination } from "./terraform-property-selection";
+import {
+	referenceOwnershipHint,
+	type TerraformReferenceIdentity,
+	validateReferenceIdentity,
+} from "./terraform-reference-evidence";
+import { lookupReferenceMembers, referenceScopeDestination } from "./terraform-reference-index";
+import { filterSecretRepresentation } from "./terraform-secret-representation";
 import { resolveIndexedTask } from "./terraform-task-route";
 import type { InternalResource, InternalUrl } from "./types";
 
@@ -44,6 +68,9 @@ export interface TerraformRelationship {
 	group?: string;
 }
 export interface TerraformSection {
+	reference_identity?: TerraformReferenceIdentity;
+	enum_validators?: EnumValidatorEvidence[];
+	enum_extraction_complete?: boolean;
 	schema_path: string[];
 	document_id: string;
 	anchor: string;
@@ -114,6 +141,16 @@ export function validateTerraformRetrievalMetadata(m: TerraformMetadata): void {
 			!Array.isArray(section.relationships)
 		)
 			throw new Error("Invalid Terraform retrieval section");
+	for (const section of m.sections) {
+		if (section.reference_identity !== undefined)
+			validateReferenceIdentity(section.reference_identity, section.schema_path);
+		if (section.enum_validators === undefined && section.enum_extraction_complete === undefined) continue;
+		if (typeof section.enum_extraction_complete !== "boolean" || !Array.isArray(section.enum_validators))
+			throw new Error("Invalid Terraform enum coverage");
+		const evidence = validateEnumEvidence(section.enum_validators);
+		if (section.enum_extraction_complete && evidence.some(rule => !rule.complete))
+			throw new Error("Unresolved Terraform enum with complete coverage");
+	}
 	for (const r of [...m.relationships, ...m.sections.flatMap(v => v.relationships)])
 		if (
 			!r ||
@@ -217,6 +254,16 @@ export async function verifyTerraformSnapshot(root: string, inputPin: TerraformP
 	const pin = parseTerraformPin(inputPin);
 	const files = new Map<string, Buffer>();
 	for (const name of Object.keys(pin.assets)) {
+		if (name === "terraform-docs.tar.gz") {
+			const archivePath = path.join(root, name);
+			if ((await stat(archivePath)).size !== pin.assets[name]!.size_bytes)
+				throw new Error(`Terraform asset verification failed: ${name}`);
+			const hash = createHash("sha256");
+			for await (const chunk of createReadStream(archivePath)) hash.update(chunk);
+			if (hash.digest("hex") !== pin.assets[name]!.sha256)
+				throw new Error(`Terraform asset verification failed: ${name}`);
+			continue;
+		}
 		const data = await readFile(path.join(root, name));
 		const expected = pin.assets[name]!;
 		if (data.length !== expected.size_bytes || terraformHash(data) !== expected.sha256)
@@ -365,11 +412,14 @@ export async function verifyTerraformSnapshot(root: string, inputPin: TerraformP
 			next();
 		});
 	});
-	const archive = gunzipSync(files.get("terraform-docs.tar.gz")!, { maxOutputLength: 1024 * 1024 * 1024 });
+	const source = createReadStream(path.join(root, "terraform-docs.tar.gz"));
+	const gunzip = createGunzip();
 	await new Promise<void>((resolve, reject) => {
 		extract.on("finish", resolve);
 		extract.on("error", reject);
-		Readable.from(archive).pipe(extract);
+		source.on("error", reject);
+		gunzip.on("error", reject);
+		source.pipe(gunzip).pipe(extract);
 	});
 	if (failure) throw failure;
 	if (expected.size || documents.length !== pin.document_count) throw new Error("Missing Terraform archive documents");
@@ -596,6 +646,27 @@ export async function buildTerraformIndex(
 							r.group ?? null,
 						);
 					}
+				for (const edge of verifiedChoiceEdges(m.relationships ?? [])) {
+					const source = identities.get(edge.source_id),
+						target = identities.get(edge.target_id);
+					if (
+						!source ||
+						!target ||
+						!anchors.get(source)?.has(edge.source_anchor) ||
+						!anchors.get(target)?.has(edge.anchor)
+					)
+						throw new Error("Missing Terraform exact choice destination");
+					insertRelationship.run(
+						source,
+						edge.source_anchor,
+						edge.type,
+						target,
+						edge.anchor,
+						edge.enforcement,
+						edge.source,
+						edge.group ?? null,
+					);
+				}
 				const title = [
 					m.provider_name,
 					m.provider_name.replaceAll("_", " "),
@@ -695,7 +766,6 @@ export function terraformNamedChoice(
 	const exact = mentioned.filter(index => !["https", "http"].includes(choices[index]!.schema_path.at(-1) ?? ""));
 	if (exact.length === 1) return exact[0];
 	if (exact.length > 1) return undefined;
-
 	const phrases = choices.map(
 		choice =>
 			new Set(
@@ -715,6 +785,14 @@ export function terraformNamedChoice(
 	);
 	const indices = matches.flatMap((matched, index) => (matched ? [index] : []));
 	return indices.length === 1 ? indices[0] : undefined;
+}
+
+export function terraformAliasQueryText(query: string): string {
+	return ` ${query
+		.toLowerCase()
+		.replace(/\btimestamp\b/g, "time")
+		.replace(/[^a-z0-9]+/g, " ")
+		.trim()} `;
 }
 
 export function rankTerraformDirectProperties(
@@ -746,7 +824,8 @@ export function rankTerraformDirectProperties(
 				),
 		),
 	];
-	const requested = terms(query);
+	const comparisonOperation = /\b(?:response[ -])?comparison[ -]operation\b/i.test(query);
+	const requested = terms(query).map(term => (comparisonOperation && term === "operation" ? "operator" : term));
 	const parentTerms = new Set(terms(parentPath.join(" ")));
 	const ranked = sections
 		.filter(
@@ -820,23 +899,95 @@ export function scoreTerraformAliasContext(
 }
 
 export function terraformProviderSetupDestination(query: string): string | undefined {
+	if (/\b(?:aws|azure|gcp|google|oci|oracle)\s+(?:terraform\s+)?provider\b/i.test(query)) return undefined;
+	query = query.replace(
+		/\bso\s+(?:the\s+)?xcsh\s+provider\s+can\s+(?:manage|read|configure)\s+(?:resources|data sources|actions)\b/gi,
+		" xcsh provider ",
+	);
+	const env: string[] = query.match(/\bXCSH_[A-Z0-9_]+\b/g) ?? [];
+	if (
+		/\bprovider\b/i.test(query) &&
+		/\b(?:authentication|authenticate|credentials?|environment|argument reference)\b/i.test(query) &&
+		env.length &&
+		!/\b(?:resources?|data[ -]sources?|actions?|ephemeral|decryption|secret store|store provider|storage provider)\b/i.test(
+			query,
+		)
+	) {
+		const anchors = new Set<string>();
+		if (/\bpem\b/i.test(query)) anchors.add("option-3-pem-certificate-authentication");
+		if (/\bp12\b|\bpkcs[ #_-]?12\b/i.test(query)) anchors.add("option-2-p12-certificate-authentication");
+		if (/\bapi[ -]token\b/i.test(query)) anchors.add("option-1-api-token-authentication");
+		if (env.includes("XCSH_API_TOKEN")) anchors.add("option-1-api-token-authentication");
+		if (env.some(name => ["XCSH_P12_FILE", "XCSH_P12_PASSWORD"].includes(name)))
+			anchors.add("option-2-p12-certificate-authentication");
+		if (env.some(name => ["XCSH_CERT", "XCSH_KEY", "XCSH_CACERT"].includes(name)))
+			anchors.add("option-3-pem-certificate-authentication");
+		return anchors.size === 1 ? [...anchors][0] : "authentication-options";
+	}
+	query = query.replace(
+		/\bXCSH_(?:API_URL|API_TOKEN|P12_FILE|P12_PASSWORD|CACERT|CERT|KEY)\b/g,
+		" environment variable ",
+	);
 	if (/\b(?:decryption|secret store|store provider|storage provider)\b/i.test(query)) return undefined;
-	if (/\b(?:resource|data[ -]source|action|ephemeral)\b/i.test(query)) return undefined;
+	if (/\b(?:resources?|data[ -]sources?|actions?|ephemeral)\b/i.test(query)) return undefined;
 	if (/\bxcsh_(?!provider\b)[a-z][a-z0-9_]*\b/i.test(query)) return undefined;
-	if (!/\bprovider\b/i.test(query) || !/\bauthenticat(?:ion|e|ing)\b|\bcredentials?\b|\bapi[ -]token\b/i.test(query))
+	if (!/\bprovider\b/i.test(query) || !/\bauthenticat(?:ion|e|ing)\b|\bcredentials?\b|\bapi[ _-]token\b/i.test(query))
 		return undefined;
 	if (/\benvironment\b.*\bvariables?\b/i.test(query)) return "argument-reference";
 	const methods = [
-		{ present: /\bapi[ -]token\b/i.test(query), anchor: "option-1-api-token-authentication" },
-		{ present: /\bp12\b|\bpkcs[ #_-]?12\b/i.test(query), anchor: "option-2-p12-certificate-authentication" },
+		{ present: /\bapi[ _-]token\b/i.test(query), anchor: "option-1-api-token-authentication" },
+		{
+			present: /\bp12(?:_file|_password)?\b|\bpkcs[ #_-]?12\b/i.test(query),
+			anchor: "option-2-p12-certificate-authentication",
+		},
 		{ present: /\bpem\b/i.test(query), anchor: "option-3-pem-certificate-authentication" },
 	].filter(method => method.present);
 	return methods.length === 1 ? methods[0]!.anchor : "authentication-options";
 }
 
+export function terraformCompleteDraft(query: string): boolean {
+	return (
+		/\b(?:draft|write|generate)\s+(?:terraform\s+)?hcl\b/i.test(query) &&
+		(/\b(?:resource|ephemeral)\s+"?xcsh_[a-z0-9_]+/i.test(query) ||
+			/\bxcsh_[a-z0-9_]+\s+(?:resource|ephemeral)\b/i.test(query)) &&
+		!/\b(?:snippet|fragment)\b/i.test(query)
+	);
+}
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
+	if (propertyInstructionText(query) !== query) return undefined;
+	if (terraformCompleteDraft(query))
+		return /\bstandalone\s+resource\s+example\b/i.test(query)
+			? { role: "example", anchor: "resource" }
+			: { role: "fundamentals", anchor: "minimal-configuration" };
 	if (propertyRequestedBlockText(query) && !/\b(?:example|usage)\b/i.test(query)) return undefined;
+	if (
+		propertyRequestedText(query) &&
+		/`[a-z][a-z0-9_]*`/.test(query) &&
+		!/\b(?:import|example|usage|guidance|minimal|root)\b/i.test(query)
+	)
+		return undefined;
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
+	// An ordered, explicitly supplied schema trail is field evidence even when
+	// the question calls the terminal field a "leaf" or "setting". Keep the
+	// selected branch for property retrieval rather than routing to a generic
+	// data-source root page.
+	if (
+		propertyBreadcrumbText(query) !== query &&
+		/\b(?:leaf|field|setting|property|attribute|parameter|value)\b/i.test(query) &&
+		!/\b(?:example|usage|guidance|minimal|root)\b/i.test(query)
+	)
+		return undefined;
+	const valueLookup =
+		/\b(?:find|locate|point me to)\b|\bwhere\s+(?:is|are|do I put)\b/i.test(query) &&
+		!/\b(?:resource|data[ -]source|action)\b\s+(?:is\s+)?(?:documented|defined|specification)\b|\b(?:minimal|root)\s+configuration\b|\b(?:example|usage|guidance)\b/i.test(
+			query,
+		);
+	if (
+		valueLookup ||
+		(/\bwhere\s+(?:is|are)\s+(?!(?:(?:an?|the)\s+)?(?:resource\b|data[ -]source\b|action\b|xcsh_))/i.test(query) &&
+			propertyRequestedText(query))
+	)
+		return undefined;
 	if (
 		/\bresource\b.*\b(?:documented|specification)\b/i.test(query) &&
 		!/\b(?:attributes?|fields?|property|properties|parameters?|schema path)\b/i.test(query)
@@ -898,6 +1049,14 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 			return { role: "fundamentals", anchor: "root-configuration" };
 	}
 
+	if (
+		/\b(?:timeouts?|operation(?:s)? wait limits|wait limits.*operations)\b/i.test(query) &&
+		/\b(?:duration.*format|how.*(?:written|configure)|customize|expose.*wait limits)\b/i.test(query) &&
+		!/\b(?:field|attribute|property|parameter|schema|create|delete|read|update|connection|idle|handshake)\b/i.test(
+			query,
+		)
+	)
+		return { role: "timeouts" };
 	if (
 		/\btimeouts?\b/i.test(query) &&
 		/\blifecycle\b|\busage\b|\bduration string format\b|\bguidance\b/i.test(query) &&
@@ -979,25 +1138,91 @@ export function terraformProviderMention(search: string, names: readonly string[
 	];
 	if (exact.length === 1 && names.includes(exact[0]!)) return exact[0];
 	if (exact.length > 1) return undefined;
+	search = propertyWithoutSingleSchemaScope(propertyWithoutBreadcrumbs(search));
+	const explicitFieldLabel = /\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`[a-z][a-z0-9_]*`/i.test(
+		search,
+	);
+	const requestedField = propertyRequestedText(search);
+	if (requestedField && /^[a-z][a-z0-9_]*$/i.test(requestedField))
+		search = search.replace(/`([a-z][a-z0-9_]*)`/gi, (literal, name) =>
+			name.toLowerCase() === requestedField.toLowerCase() ? " " : literal,
+		);
+	const literalNames = names.filter(name => name.includes("_") && new RegExp(`\\b${name}\\b`, "i").test(search));
+	if (literalNames.length === 1) return literalNames[0];
+	if (literalNames.length > 1) return undefined;
+
+	if (/\ballowlists?\b|\bnetwork[ -]list\b/i.test(search) && !/\b(?:compare|versus|vs|between)\b/i.test(search)) {
+		const families: Array<[string, RegExp]> = [
+			["network_regional_edges", /\bregional[ -]edges?\b/i],
+			["network_cdn", /\bcdn\b/i],
+			["network_bot_defense", /\bbot[ -]defense\b/i],
+			["network_customer_edge_egress", /\bcustomer[ -]edge\b.*\begress\b|\bsecure[ -]mesh\s+v2\b/i],
+			["network_data_intelligence", /\bdata[ -]intelligence\b/i],
+			["network_secondary_dns_zone_transfer", /\bsecondary[ -]dns\b/i],
+			["network_dnslb_health_checks", /\bdns[ -]load[ -]balancer\b.*\bhealth[ -]checks?\b/i],
+		];
+		const aliasQuery = search.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+		const requestedAllowlist =
+			/\ballowlists?\s+data[ -]source\b|\bdata[ -]source\b[^.!?;]*\ballowlists?\b|\ballowlist\s+(?:discovery|input|output)\b/i.test(
+				aliasQuery,
+			);
+		const negated = /\b(?:not|no|never|without|excluding)\b/i.test(aliasQuery);
+		const matching =
+			requestedAllowlist && !negated
+				? families.filter(([name, expression]) => names.includes(name) && expression.test(aliasQuery))
+				: [];
+		if (matching.length === 1) return matching[0]![0];
+		if (matching.length > 1) return undefined;
+	}
+
 	const normalize = (value: string) =>
 		value
 			.toLowerCase()
-			.replace(/load\s+balancer/g, "loadbalancer")
+			.replace(/load[ _-]+balancer/g, "loadbalancer")
 			.replace(/health[ -]+check/g, "healthcheck")
 			.replace(/application[ _-]+firewall/g, "app firewall")
+			.replace(/application settings?/g, "app setting")
 			.replace(/transit[ _-]+gateway/g, "tgw")
 			.replace(/kubernetes/g, "k8s")
 			.replace(/big[ _-]+ip/g, "bigip")
 			.replace(/secure[ _-]+mesh/g, "securemesh")
 			.replace(/[^a-z0-9]+/g, " ")
 			.trim();
-	const query = ` ${normalize(search)} `;
+	const providerSearch = search
+		.replace(/\bsecure[ _-]*mesh\s+v2\b/gi, "securemesh site v2")
+		.split(/[,;!?]|\.(?=\s)/)
+		.map(clause => {
+			const intent = clause.split(
+				/\b(?:to|for)\s+(?:support|handle|serve|provide|configure|enable)\b|\bfor\s+http\s+health\s+checks?\b/i,
+			)[0]!;
+			return /\bhttp\b/i.test(intent) && !/\b(?:not|no|without)\s+(?:using\s+)?http\b/i.test(intent)
+				? clause.replace(/\bapplication[ -]+balancer\b/gi, "HTTP load balancer")
+				: clause;
+		})
+		.join(" ");
+	const query = ` ${normalize(providerSearch)} `;
 	const found = names
 		.filter(name => query.includes(` ${normalize(name)} `))
+		.filter(name => !(name === "route" && /\balert routing\b/i.test(search)))
+		.filter(name => !new RegExp(`\\b(?:assigned|allocated) ${normalize(name)}\\b`).test(query))
+		.filter(name => {
+			if (!explicitFieldLabel || name.includes("_")) return true;
+			const phrase = normalize(name);
+			return (
+				new RegExp(
+					`\\b(?:${phrase} (?:managed )?(?:resource|data source|action)|(?:resource|data source|action) ${phrase})\\b`,
+				).test(query) || new RegExp(`\\b(?:on|in|under) (?:a |an |the |my |our )${phrase}\\b`).test(query)
+			);
+		})
 		.filter(name => {
 			if (!["endpoint", "authentication", "setup", "xcsh"].includes(name)) return true;
 			const phrase = normalize(name);
-			return ["resource", "data source", "action"].some(role => query.includes(` ${phrase} ${role} `));
+			return (
+				["resource", "data source", "action", "configuration"].some(role =>
+					query.includes(` ${phrase} ${role} `),
+				) ||
+				(name === "authentication" && /\b(?:managed|resource)\s+oidc\s+authentication\b/i.test(search))
+			);
 		})
 		.sort((a, b) => normalize(b).length - normalize(a).length || (a < b ? -1 : a > b ? 1 : 0));
 	if (found.length > 1) {
@@ -1007,8 +1232,25 @@ export function terraformProviderMention(search: string, names: readonly string[
 			return (
 				query.includes(` ${phrase} resource `) ||
 				query.includes(` ${phrase} managed resource `) ||
+				["stateless", "stateful", "stateless service", "stateful service"].some(modifier => {
+					const ownership = ` ${phrase} ${modifier} resource `;
+					const affirmative = search
+						.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "")
+						.replace(/\be\.g\./gi, "for example");
+					return affirmative
+						.split(/[.!?;,]+/)
+						.some(
+							clause =>
+								` ${normalize(clause)} `.includes(ownership) &&
+								!/\b(?:not|no|never|without|excluding|unrelated|for example|such as|instead of|rather than)\b/i.test(
+									clause,
+								),
+						);
+				}) ||
 				query.includes(` ${phrase} data source `) ||
-				query.includes(` ${phrase} action `)
+				query.includes(` ${phrase} action `) ||
+				query.includes(` ${phrase} configuration `) ||
+				(name === "authentication" && /\b(?:managed|resource)\s+oidc\s+authentication\b/i.test(search))
 			);
 		});
 		if (declaredOwners.length === 1) return declaredOwners[0];
@@ -1028,32 +1270,44 @@ export function terraformProviderMention(search: string, names: readonly string[
 }
 
 export function terraformQueryIdentity(search: string): { providerPhrase?: string; providerType?: string } {
+	search = propertyInstructionText(search);
+	const ordinaryRoleText = search.replace(/\bephemeral\s+resource\b/gi, "ephemeral");
 	const exact = [...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)];
 	const names = [...new Set(exact.map(match => match[1]!.toLowerCase()))];
 	const explicitRoles = new Set<string>();
-	if (/\b(?:data[ -]source|data\.xcsh_[a-z0-9_]+)\b/i.test(search)) explicitRoles.add("data-sources");
+	if (
+		/\b(?:data[ -]source|data\.xcsh_[a-z0-9_]+)\b/i.test(search) ||
+		(/\bterraform\b|\bxcsh_[a-z0-9_]+\b/i.test(search) && /\bread[ -]only\b/i.test(search))
+	)
+		explicitRoles.add("data-sources");
+	if (/\bterraform\s+managed\b/i.test(search)) explicitRoles.add("resources");
 	if (/\bephemeral(?: resource)?\b|\bephemeral\.xcsh_[a-z0-9_]+\b/i.test(search))
 		explicitRoles.add("ephemeral-resources");
 	if (
 		/\bresource\b|\bresource\.xcsh_[a-z0-9_]+\b|\b(?:managed|existing)\s+(?:xcsh_[a-z0-9_]+\s+)?resource\b|\bxcsh_[a-z0-9_]+\s+resource\b|\bmanaged\s+xcsh_[a-z0-9_]+\b/i.test(
-			search,
+			ordinaryRoleText,
 		)
 	)
 		explicitRoles.add("resources");
 	if (/\b(?:action\s+xcsh_[a-z0-9_]+|xcsh_[a-z0-9_]+\s+action)\b/i.test(search)) explicitRoles.add("actions");
 	const competingRoles =
+		/\b(?:not chosen|not selected|unspecified|undecided)\b[^.!?;]*\b(?:role|declaration|lookup)\b/i.test(search) ||
 		/\b(?:read|retrieve|inspect|lookup|query|check)\b[^.!?]*\bor\b[^.!?]*\b(?:declare|define|configure|specify|set|create)\b|\b(?:declare|define|configure|specify|set|create)\b[^.!?]*\bor\b[^.!?]*\b(?:read|retrieve|inspect|lookup|query|check)\b/i.test(
 			search,
 		) ||
 		/\b(?:configure|set|specify)\b.*\bor\b.*\b(?:reference|inspect|read)\b|\bresource\b.*\bdata[ -]source\b|\bdata[ -]source\b.*\bresource\b/i.test(
 			search,
 		);
+	const documentationLookup =
+		/\b(?:read|look up|lookup|inspect|query)\b.*\b(?:documentation|docs|schema|examples?|reference)\b/i.test(
+			search,
+		) && !/\bexisting\b/i.test(search);
 	const providerType =
 		explicitRoles.size > 1
 			? undefined
 			: explicitRoles.size === 1
 				? [...explicitRoles][0]
-				: competingRoles
+				: competingRoles || documentationLookup
 					? undefined
 					: /\bephemeral(?: resource)?\b/i.test(search)
 						? "ephemeral-resources"
@@ -1063,7 +1317,7 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 								? "actions"
 								: /\bresource\b/i.test(search) ||
 										/\b(?:draft|generate|write)\b.*\b(?:hcl|terraform)\b/i.test(search) ||
-										/\b(?:(?:declare|declaring)|(?:define|defining)|suppl(?:y|ying)|(?:specify|specifying)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set(?:ting)?|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
+										/\b(?:(?:declare|declaring)|(?:define|defining)|suppl(?:y|ying)|(?:specify|specifying)|configur(?:e|ing)|provision(?:ing)?|creat(?:e|ing)|deploy(?:ing)?|set|setting(?=\s+(?:up|the|a|an|my|our|your)\b)|enabl(?:e|ing)|(?:disable|disabling)|attach(?:ing)?|register(?:ing)?)\b/i.test(
 											search,
 										)
 									? "resources"
@@ -1288,6 +1542,10 @@ export class TerraformDocumentationRepository {
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const allowed = new Set([
 			"search",
+			"enum_value",
+			"alias",
+			"reference_scope",
+			"reference_member",
 			"choice_after",
 			"provider_type",
 			"provider_name",
@@ -1316,12 +1574,61 @@ export class TerraformDocumentationRepository {
 		const search = url.searchParams.get("search")?.trim();
 		if (search !== undefined && (!search || Buffer.byteLength(search) > 512))
 			throw new Error("Terraform search must contain 1 to 512 UTF-8 bytes");
+		const exactAlias = url.searchParams.get("alias");
+		if (
+			exactAlias !== null &&
+			(!exactAlias.trim() ||
+				Buffer.byteLength(exactAlias) > 512 ||
+				!url.searchParams.has("provider_type") ||
+				!url.searchParams.has("provider_name") ||
+				["search", "enum_value", "reference_scope", "reference_member", "cursor", "facet", "view", "after"].some(
+					key => url.searchParams.has(key),
+				) ||
+				documentPath ||
+				url.hash)
+		)
+			throw new Error("Invalid explicit alias discovery");
+		const enumValue = url.searchParams.get("enum_value");
+		if (
+			enumValue !== null &&
+			(!enumValue ||
+				Buffer.byteLength(enumValue) > 512 ||
+				!url.searchParams.has("provider_type") ||
+				!url.searchParams.has("provider_name") ||
+				["search", "reference_scope", "reference_member", "choice_after", "cursor", "facet", "view", "after"].some(
+					key => url.searchParams.has(key),
+				) ||
+				documentPath ||
+				url.hash)
+		)
+			throw new Error("Invalid explicit enum discovery");
+		const referenceScope = url.searchParams.get("reference_scope");
+		const referenceMember = url.searchParams.get("reference_member");
+		if (referenceMember !== null && referenceScope === null)
+			throw new Error("Reference member requires reference scope");
+		if (referenceScope !== null) {
+			if (
+				!/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*$/.test(referenceScope) ||
+				Buffer.byteLength(referenceScope) > 512 ||
+				!url.searchParams.has("provider_type") ||
+				!url.searchParams.has("provider_name") ||
+				["search", "choice_after", "cursor", "facet", "view", "after"].some(key => url.searchParams.has(key)) ||
+				documentPath ||
+				url.hash
+			)
+				throw new Error("Invalid explicit reference discovery");
+			if (referenceMember !== null && !["name", "namespace", "tenant", "kind", "uid"].includes(referenceMember))
+				throw new Error("Invalid reference member");
+		}
 		const limitValue = url.searchParams.get("limit");
 		if (limitValue !== null && !/^(?:[1-9]|10)$/.test(limitValue))
 			throw new Error("Terraform search limit must be 1 to 10");
 		const limit = limitValue === null ? 5 : Number(limitValue);
 		const choiceAfter = url.searchParams.get("choice_after");
-		if (choiceAfter !== null && (!search || documentPath || !/^(?:0|[1-9][0-9]*)$/.test(choiceAfter)))
+		if (
+			choiceAfter !== null &&
+			((!search && exactAlias === null) || documentPath || !/^(?:0|[1-9][0-9]*)$/.test(choiceAfter))
+		)
 			throw new Error("Invalid Terraform choice continuation");
 		const view = url.searchParams.get("view");
 		if (view !== null && !["hint", "context", "full"].includes(view)) throw new Error("Invalid Terraform view");
@@ -1341,7 +1648,16 @@ export class TerraformDocumentationRepository {
 			throw new Error("Terraform view requires a document path");
 		if (!facet && !node && url.searchParams.has("cursor"))
 			throw new Error("Terraform cursor requires facets or navigation");
-		if (!documentPath && !search && !node && !facet && url.searchParams.size)
+		if (
+			!documentPath &&
+			!search &&
+			!node &&
+			!facet &&
+			referenceScope === null &&
+			enumValue === null &&
+			exactAlias === null &&
+			url.searchParams.size
+		)
 			throw new Error("Terraform filters and limit require discovery");
 		const filters: Array<{ key: string; value: string }> = [];
 		for (const key of facetNames) {
@@ -1354,6 +1670,10 @@ export class TerraformDocumentationRepository {
 		const provenance = `Provider: ${this.assets.pin.provider_version}\nSnapshot: ${this.assets.pin.release_tag}\nCommit: ${this.assets.pin.source_commit}\nReceipt SHA-256: ${this.assets.pin.receipt_sha256}`;
 		const uri = (p: string, a = "", v = "") =>
 			`xcsh://terraform-documentation/${p}${v ? `?view=${v}` : ""}${a ? `#${encodeURIComponent(a)}` : ""}`;
+		const readAndCite = (p: string, a = "", v = "") => {
+			const read = uri(p, a, v);
+			return `Read: ${read}\n${citationLine(publicCitationForInternalUri(read) ?? { readUri: read, reason: "missing-public-mapping" }, false)}`;
+		};
 		const prerequisites = (p: string, a: string) =>
 			(
 				db
@@ -1364,6 +1684,84 @@ export class TerraformDocumentationRepository {
 			)
 				.map(r => `- ${r.type} (${r.enforcement}): ${uri(r.target_path, r.target_anchor, "hint")}`)
 				.join("\n");
+		if (exactAlias !== null) {
+			const rows = lookupTerraformAlias(db, exactAlias, {
+				providerType: url.searchParams.get("provider_type")!,
+				providerName: url.searchParams.get("provider_name")!,
+				filters,
+				node: node ?? undefined,
+			});
+			const prefix = `${provenance}\n\nVerified alias destinations: ${exactAlias}\nCompare exact sections and the original request before selecting. Alias matches do not establish support or resolve missing branches.`;
+			const content = rows.length
+				? terraformChoiceResponse(
+						prefix,
+						rows.map(row => {
+							const refine = new URL("xcsh://terraform-documentation/");
+							refine.searchParams.set("node", row.id);
+							refine.searchParams.set("search", exactAlias);
+							for (const filter of filters) refine.searchParams.set(filter.key, filter.value);
+							return `${readAndCite(row.path, row.anchor, "context")}\nRefine: ${refine.href}`;
+						}),
+						url,
+						choiceAfter,
+						3000,
+					)
+				: `${prefix}\nNo verified alias destinations within caller scope.`;
+			if (!rows.length && choiceAfter !== null) throw new Error("Invalid Terraform alias continuation");
+			return { url: url.href, content, contentType: "text/markdown", size: Buffer.byteLength(content) };
+		}
+		if (enumValue !== null) {
+			const rows = searchPropertyEnumValue(
+				db,
+				enumValue,
+				{
+					providerType: filters.find(f => f.key === "provider_type")!.value,
+					providerName: filters.find(f => f.key === "provider_name")!.value,
+					filters,
+					node: node ?? undefined,
+				},
+				10000,
+			);
+			const content = boundedTerraformResponse(
+				`${provenance}\n\nEnum value: ${JSON.stringify(enumValue)}\n${rows.length ? "Verified enum destinations; compare exact field sections before selecting a destination." : "No verified enum destinations in caller scope. Coverage may be unresolved; this does not establish unsupported input."}`,
+				rows
+					.slice(0, limit)
+					.map(
+						row =>
+							`${readAndCite(row.path, row.anchor, "context")}\nVerified enum field: ${row.schema_path}\n${prerequisites(row.path, row.anchor)}`,
+					),
+				4096,
+				"If destinations are omitted by count or byte budget, narrow node/facets.",
+			);
+			return { url: url.href, content, contentType: "text/markdown", size: Buffer.byteLength(content) };
+		}
+		if (referenceScope !== null) {
+			const rows = lookupReferenceMembers(
+				db,
+				{
+					providerType: filters.find(f => f.key === "provider_type")!.value,
+					providerName: filters.find(f => f.key === "provider_name")!.value,
+					scopePath: referenceScope.split("."),
+					member: (referenceMember as TerraformReferenceIdentity["member"] | undefined) ?? undefined,
+					filters,
+					node: node ?? undefined,
+				},
+				10000,
+			);
+			const entries = rows
+				.slice(0, limit)
+				.map(
+					row =>
+						`${readAndCite(row.path, row.anchor, "context")}\nVerified reference member: ${row.schema_path}\n${prerequisites(row.path, row.anchor)}`,
+				);
+			const content = boundedTerraformResponse(
+				`${provenance}\n\nReference scope: ${referenceScope}\n${rows.length ? "Verified reference members; compare exact sections before selecting a destination." : "No verified reference members in caller scope. Missing evidence does not establish unsupported input."}`,
+				entries,
+				4096,
+				"If reference members are omitted by count or byte budget, specify reference_member or narrow node/facets.",
+			);
+			return { url: url.href, content, contentType: "text/markdown", size: Buffer.byteLength(content) };
+		}
 		let content: string;
 		if (documentPath) {
 			const row = db.query("SELECT metadata,markdown FROM terraform_documents WHERE path=?").get(documentPath) as {
@@ -1385,6 +1783,24 @@ export class TerraformDocumentationRepository {
 					} | null)
 				: null;
 			if (anchor && !selected) throw new Error(`Terraform anchor not found: ${anchor}`);
+			const metadata = JSON.parse(row.metadata) as TerraformMetadata;
+			const ownershipScope = (sectionAnchor: string): string => {
+				const section = metadata.sections?.find(section => section.anchor === sectionAnchor);
+				if (!section?.reference_identity) return "";
+				const target = referenceScopeDestination(
+					db,
+					metadata.provider_type,
+					metadata.provider_name,
+					section.schema_path.join("."),
+				);
+				return target && !(target.path === documentPath && target.anchor === sectionAnchor)
+					? `Reference context: ${uri(target.path, target.anchor, "context")}`
+					: "";
+			};
+			const ownershipHint = (sectionAnchor: string) => {
+				const section = metadata.sections?.find(section => section.anchor === sectionAnchor);
+				return section ? referenceOwnershipHint(section.reference_identity, section.schema_path) : "";
+			};
 			if (view === "hint") {
 				const m = JSON.parse(row.metadata) as TerraformMetadata;
 				const children = db
@@ -1398,8 +1814,10 @@ export class TerraformDocumentationRepository {
 					)
 					.all(documentPath) as Array<{ anchor: string; heading: string }>;
 				content = boundedTerraformResponse(
-					`${provenance}\n\n${m.summary}\nRead: ${uri(documentPath, anchor, "context")}\nFull: ${uri(documentPath, anchor, "full")}\n${prerequisites(documentPath, anchor || "section")}`,
+					`${provenance}\n\n${m.summary}\n${readAndCite(documentPath, anchor, "context")}\nFull: ${uri(documentPath, anchor, "full")}\n${prerequisites(documentPath, anchor || "section")}\n${metadata.role === "example" ? terraformExampleContext(db, documentPath) : ""}`,
 					[
+						...(ownershipHint(anchor) ? [ownershipHint(anchor)] : []),
+						...(ownershipScope(anchor) ? [ownershipScope(anchor)] : []),
 						...children.map(c => `- ${c.summary}: ${uri(c.path, "", "hint")}`),
 						...sections.map(c => `- ${c.heading}: ${uri(documentPath, c.anchor, "context")}`),
 					],
@@ -1440,7 +1858,7 @@ export class TerraformDocumentationRepository {
 						}>);
 				const pieces: string[] = [];
 				let last: string | undefined;
-				const prefix = `${provenance}\nDocument: ${documentPath}\nFull: ${uri(documentPath, anchor, "full")}\n\n`;
+				const prefix = `${provenance}\nDocument: ${documentPath}\nFull: ${uri(documentPath, anchor, "full")}\n${metadata.role === "example" ? terraformExampleContext(db, documentPath) : ""}\n\n`;
 				const reserve = 1500;
 				const seen = new Set<string>();
 				for (const section of sections) {
@@ -1448,7 +1866,16 @@ export class TerraformDocumentationRepository {
 					const canonical = section.markdown.replace(/^\s*<a[^>]+><\/a>\s*\n/, "").trim();
 					if (seen.has(canonical)) continue;
 					seen.add(canonical);
-					const body = rewriteTerraformLinks(section.markdown, documentPath);
+					const ownership = ownershipHint(section.anchor);
+					const body = [
+						prerequisites(documentPath, section.anchor),
+						terraformConflictContext(db, documentPath, section.anchor),
+						ownership,
+						ownershipScope(section.anchor),
+						rewriteTerraformLinks(section.markdown, documentPath),
+					]
+						.filter(Boolean)
+						.join("\n\n");
 					const link = uri(documentPath, section.anchor, "full");
 					if (Buffer.byteLength(prefix + body) > 16384 - reserve) {
 						const notice = `Oversized section: ${section.heading}. Complete section: ${link}`;
@@ -1479,6 +1906,7 @@ export class TerraformDocumentationRepository {
 					.all(documentPath) as Array<{ heading: string; anchor: string }>;
 				content = `${provenance}\nDocument: ${documentPath}\n${this.#trace(db, documentPath)}\nProperty sections:\n${sections.map(p => `- [${p.heading}](${uri(documentPath, p.anchor)})`).join("\n")}\nPinned source: https://github.com/${this.assets.pin.source_repository}/blob/${this.assets.pin.source_commit}/${documentPath}\n\n${rewriteTerraformLinks(anchor ? terraformPassages(splitMarkdown(row.markdown).body).find(p => p.anchor === anchor)!.markdown : row.markdown, documentPath)}`;
 			}
+			content = `${citationLine(publicCitationForInternalUri(url.href) ?? { readUri: url.href, reason: "missing-public-mapping" })}\n\n${content}`;
 		} else if (facet) {
 			const cursor = url.searchParams.get("cursor") ?? "";
 			if (cursor && (!/^[A-Za-z0-9_.-]+$/.test(cursor) || Buffer.byteLength(cursor) > 256))
@@ -1530,7 +1958,7 @@ export class TerraformDocumentationRepository {
 			).map(r => r.provider_name);
 			let taskProvider =
 				filters.find(f => f.key === "provider_name")?.value ?? terraformProviderMention(search, taskNames);
-			if (!taskProvider && inferredTaskRole === "actions") {
+			if (!taskProvider && inferredTaskRole === "actions" && !propertyRequestedText(search)) {
 				const matches = rankTerraformProviderNames(search, taskNames);
 				if (matches[0] && (!matches[1] || matches[0].score >= matches[1].score + 10))
 					taskProvider = matches[0].name;
@@ -1542,15 +1970,15 @@ export class TerraformDocumentationRepository {
 				filters,
 				node: node ?? undefined,
 			});
-			if (taskDecision?.destinations.length) {
+			if (taskDecision && (taskDecision.destinations.length || taskDecision.kind === "none")) {
 				if (choiceAfter !== null) throw new Error("Terraform choice continuation requires branch choices");
 				const taskContent = boundedTerraformResponse(
-					`${provenance}\n\n# Terraform search: ${search}\n${taskDecision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : "Narrowing choices; clarify the missing authentication method, provider role, or action cardinality."}\nReason: ${taskDecision.reason}${taskDecision.reason === "Missing authentication method" ? `\nOverview: ${uri("documentation/provider/setup/index.md", "authentication-options", "context")}` : ""}`,
+					`${provenance}\n\n# Terraform search: ${search}\n${taskDecision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : taskDecision.kind === "none" ? "No results. Caller scope has no compatible destination." : "Narrowing choices; clarify the missing authentication method, provider role, or action cardinality."}\nReason: ${taskDecision.reason}${taskDecision.reason === "Missing authentication method" ? `\nOverview: ${uri("documentation/provider/setup/index.md", "authentication-options", "context")}` : ""}`,
 					taskDecision.destinations
 						.slice(0, limit)
 						.map(
 							row =>
-								`Read: ${uri(row.path, row.anchor, "context")}\n${row.description}\n${prerequisites(row.path, row.anchor)}`,
+								`${readAndCite(row.path, row.anchor, "context")}\n${row.description}\n${prerequisites(row.path, row.anchor)}`,
 						),
 					4096,
 				);
@@ -1563,8 +1991,10 @@ export class TerraformDocumentationRepository {
 			}
 			if (
 				(Boolean(propertyRequestedText(search)) ||
+					/\bconfigure\b/i.test(search) ||
 					Boolean(propertyRequestedBlockText(search)) ||
 					/\b(?:select|choose|enable|disable)\b/i.test(search) ||
+					(/\bcookie\b/i.test(search) && /\b(?:persistence|affinity|stickiness)\b/i.test(search)) ||
 					/\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(search) ||
 					/\blistening\b.*\bport\b|\b(?:fields?|attributes?|property|properties|parameters?|arguments?|flags?)\b|\bschema block\b|\bblock\b.*\b(?:secret|credentials?)\b|\bwhere\b.*\b(?:specify|set|configure or reference)\b/i.test(
 						search,
@@ -1573,12 +2003,14 @@ export class TerraformDocumentationRepository {
 				(!propertyRequestsBlock(search) ||
 					Boolean(propertyRequestedBlockText(search)) ||
 					/\b(?:select|choose|enable|disable)\b/i.test(search) ||
+					(/\bcookie\b/i.test(search) && /\b(?:persistence|affinity|stickiness)\b/i.test(search)) ||
 					/\b(?:secret|credentials?)\b|\b(?:configuration|schema) block\b|\bwhich block\b|\b(?:which|what)\b.*\bblock\b/i.test(
 						search,
 					)) &&
 				!terraformTaskDestination(search) &&
 				!terraformProviderSetupDestination(search) &&
-				!/\b(?:guidance|help|begin|start|explain)\b/i.test(search) &&
+				(!/\b(?:guidance|help|begin|start|explain)\b/i.test(search) ||
+					(Boolean(propertyRequestedText(search)) && /`[a-z][a-z0-9_]*`/.test(search))) &&
 				db.query("SELECT 1 FROM sqlite_master WHERE name=?").get("property_terms")
 			) {
 				const role = filters.find(f => f.key === "provider_type")?.value ?? resolvedIdentityRole;
@@ -1593,187 +2025,235 @@ export class TerraformDocumentationRepository {
 						: ["timeouts"]
 					: [];
 
-				const ranked = searchPropertyIndex(db, search, {
-					providerType: role,
-					providerName: provider,
-					schemaPaths: timeoutPaths,
-					filters,
-					node: node ?? undefined,
-				}).filter(row => !propertyRequestsBlock(search) || row.anchor === "section");
-				if (ranked[0]?.anchor === "section" && !propertyRequestsBlock(search)) {
-					const record = db.query("SELECT metadata FROM terraform_documents WHERE path=?").get(ranked[0].path) as {
-						metadata: string;
-					};
-					const metadata = JSON.parse(record.metadata) as TerraformMetadata;
-					const refined = rankTerraformDirectProperties(search, metadata.schema_path, metadata.sections ?? []);
-					if (refined[0]?.document_id === metadata.id) {
-						const field = db
-							.query(
-								"SELECT provider_type,provider_name,schema_path,path,anchor,description FROM terraform_destinations WHERE path=? AND anchor=?",
-							)
-							.get(ranked[0].path, refined[0].anchor) as RankedProperty | null;
-						if (field) ranked.splice(0, 1, { ...field, score: ranked[0].score, coverage: ranked[0].coverage });
-					}
-				}
-				const first = ranked[0];
-				const leaf = first?.schema_path.split(".").at(-1);
-				const clauses = filters.map(
-					() => "EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=dest.path AND f.facet=? AND f.value=?)",
-				);
-				const alternativeScope = lifecycle
-					? `dest.schema_path IN (${timeoutPaths.map(() => "?").join(",")})`
-					: "(schema_path=? OR substr(schema_path,-length(?))=?)";
-				const values: Array<string | null> = [
-					first?.provider_name ?? null,
-					role ?? null,
-					role ?? null,
-					...(lifecycle ? timeoutPaths : [leaf ?? null, `.${leaf}`, `.${leaf}`]),
-					...filters.flatMap(f => [f.key, f.value]),
+				const poolStatus: { truncated?: boolean } = {};
+				const ranked = searchPropertyIndex(
+					db,
+					search,
+					{
+						providerType: role,
+						providerName: provider,
+						schemaPaths: timeoutPaths,
+						filters,
+						node: node ?? undefined,
+					},
+					2000,
+					poolStatus,
+				).filter(row => lifecycle?.field || !propertyRequestsBlock(search) || row.anchor === "section");
+				const genericConfigure =
+					/\bconfigure\b/i.test(search) && !propertyRequestedText(search) && !propertyRequestedBlockText(search);
+				const aliasClauses = [
+					"provider_name=?",
+					"(? IS NULL OR provider_type=?)",
+					"instr(alias,' ')>0",
+					"instr(?, ' ' || alias || ' ')>0",
 				];
-				if (node) {
-					clauses.push(
-						"dest.path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT d.id,d.path FROM terraform_documents d JOIN descendants p ON d.parent_id=p.id) SELECT path FROM descendants)",
+				const aliasValues = [provider ?? "", role ?? null, role ?? null, terraformAliasQueryText(search)];
+				for (const filter of filters) {
+					aliasClauses.push(
+						"EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=terraform_aliases.path AND f.facet=? AND f.value=?)",
 					);
-					values.push(node);
+					aliasValues.push(filter.key, filter.value);
 				}
-				const alternatives = first
-					? (
-							db
-								.query(
-									`SELECT provider_type,provider_name,schema_path,path,anchor,description,type,nesting,flags FROM property_terms dest WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND ${alternativeScope} ${clauses.length ? `AND ${clauses.join(" AND ")}` : ""} ORDER BY provider_type,schema_path`,
-								)
-								.all(...values) as RankedProperty[]
-						).map(row => ({
-							...row,
-							...(row.flags == null ? {} : { flags: JSON.parse(row.flags as unknown as string) as string[] }),
-							score: 0,
-							coverage: 0,
-						}))
-					: [];
-				const decision = selectPropertyDestination(search, ranked.slice(0, 5), alternatives, {
-					lifecycle,
-					identityResolved: Boolean(provider && role),
-				});
+				if (node) {
+					aliasClauses.push(
+						"path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT d.id,d.path FROM terraform_documents d JOIN descendants p ON d.parent_id=p.id) SELECT path FROM descendants)",
+					);
+					aliasValues.push(node);
+				}
+				const aliasNavigation =
+					genericConfigure &&
+					provider &&
+					db
+						.query(`SELECT 1 FROM terraform_aliases WHERE ${aliasClauses.join(" AND ")} LIMIT 1`)
+						.get(...aliasValues);
+				if (!genericConfigure || (ranked.length > 0 && !aliasNavigation)) {
+					if (ranked[0]?.anchor === "section" && !propertyRequestsBlock(search)) {
+						const record = db
+							.query("SELECT metadata FROM terraform_documents WHERE path=?")
+							.get(ranked[0].path) as {
+							metadata: string;
+						};
+						const metadata = JSON.parse(record.metadata) as TerraformMetadata;
+						const refined = rankTerraformDirectProperties(search, metadata.schema_path, metadata.sections ?? []);
+						if (refined[0]?.document_id === metadata.id) {
+							const refinedRows = refineRankedProperty(ranked, ranked[0].path, refined[0].anchor);
+							ranked.splice(0, ranked.length, ...refinedRows);
+						}
+					}
+					const first = ranked[0];
+					const leaf = first?.schema_path.split(".").at(-1);
+					const clauses = filters.map(
+						() => "EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=dest.path AND f.facet=? AND f.value=?)",
+					);
 
-				if (decision.kind === "choices" && first) {
-					const equivalent = [
-						...new Map(
-							[...decision.destinations, ...alternatives]
-								.filter(
-									row => row.provider_name === first.provider_name && row.description === first.description,
-								)
-								.map(row => [`${row.provider_type}:${row.schema_path}`, row]),
-						).values(),
+					const preparedLeaf =
+						first && !lifecycle
+							? (db
+									.query(
+										"SELECT leaf FROM property_terms WHERE provider_type=? AND provider_name=? AND schema_path=?",
+									)
+									.get(first.provider_type, first.provider_name, first.schema_path) as { leaf: string } | null)
+							: null;
+					const alternativeScope = lifecycle
+						? `dest.schema_path IN (${timeoutPaths.map(() => "?").join(",")})`
+						: "leaf=? AND (schema_path=? OR substr(schema_path,-length(?))=?)";
+					const values: Array<string | null> = [
+						first?.provider_name ?? null,
+						role ?? null,
+						role ?? null,
+						...(lifecycle ? timeoutPaths : [preparedLeaf?.leaf ?? null, leaf ?? null, `.${leaf}`, `.${leaf}`]),
+						...filters.flatMap(f => [f.key, f.value]),
 					];
-					const roles = terraformRoleChoices(equivalent, limit);
+					if (node) {
+						clauses.push(
+							"dest.path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT d.id,d.path FROM terraform_documents d JOIN descendants p ON d.parent_id=p.id) SELECT path FROM descendants)",
+						);
+						values.push(node);
+					}
+					const alternatives = first
+						? (
+								db
+									.query(
+										`SELECT provider_type,provider_name,schema_path,path,anchor,description,type,nesting,flags FROM property_terms dest WHERE provider_name=? AND (? IS NULL OR provider_type=?) AND ${alternativeScope} ${clauses.length ? `AND ${clauses.join(" AND ")}` : ""} ORDER BY provider_type,schema_path`,
+									)
+									.all(...values) as RankedProperty[]
+							).map(row => ({
+								...row,
+								...(row.flags == null ? {} : { flags: JSON.parse(row.flags as unknown as string) as string[] }),
+								score: 0,
+								coverage: 0,
+							}))
+						: [];
+					const decision = selectPropertyDestination(search, ranked, alternatives, {
+						lifecycle,
+						identityResolved: Boolean(provider && role),
+						candidatePoolComplete: poolStatus.truncated !== true,
+					});
+
+					const allowedAlternatives = filterSecretRepresentation(search, alternatives).filter(row =>
+						matchesFieldAccess(row, requestedFieldAccess(search)),
+					);
+					if (decision.kind === "choices" && first) {
+						const equivalent = [
+							...new Map(
+								[...decision.destinations, ...allowedAlternatives]
+									.filter(
+										row => row.provider_name === first.provider_name && row.description === first.description,
+									)
+									.map(row => [`${row.provider_type}:${row.schema_path}`, row]),
+							).values(),
+						];
+						const roles = terraformRoleChoices(equivalent, limit);
+						if (
+							roles.length &&
+							decision.destinations.every(
+								row => row.provider_name === first.provider_name && row.description === first.description,
+							)
+						) {
+							const roleContent = terraformChoiceResponse(
+								`${provenance}\n\n# Terraform search: ${search}\nNarrowing choices; clarify the missing provider role.\nReason: Equivalent property destinations span provider roles.`,
+								roles.map(role => {
+									const next = new URL(url.href);
+									next.searchParams.delete("choice_after");
+									next.searchParams.set("provider_type", role);
+									next.searchParams.set("provider_name", first.provider_name);
+									return `## ${role}: xcsh_${first.provider_name}\nRefine: ${next.href}`;
+								}),
+								url,
+								choiceAfter,
+								4096,
+							);
+							return {
+								url: url.href,
+								content: roleContent,
+								contentType: "text/markdown",
+								size: Buffer.byteLength(roleContent),
+							};
+						}
+					}
 					if (
-						roles.length &&
+						decision.kind === "choices" &&
+						first &&
 						decision.destinations.every(
-							row => row.provider_name === first.provider_name && row.description === first.description,
+							row =>
+								row.provider_type === first.provider_type &&
+								row.provider_name === first.provider_name &&
+								row.description === first.description,
 						)
 					) {
-						const roleContent = terraformChoiceResponse(
-							`${provenance}\n\n# Terraform search: ${search}\nNarrowing choices; clarify the missing provider role.\nReason: Equivalent property destinations span provider roles.`,
-							roles.map(role => {
-								const next = new URL(url.href);
-								next.searchParams.delete("choice_after");
-								next.searchParams.set("provider_type", role);
-								next.searchParams.set("provider_name", first.provider_name);
-								return `## ${role}: xcsh_${first.provider_name}\nRefine: ${next.href}`;
-							}),
-							url,
-							choiceAfter,
-							4096,
+						const equivalent = [
+							...new Map(
+								[...decision.destinations, ...allowedAlternatives]
+									.filter(
+										row =>
+											row.provider_type === first.provider_type &&
+											row.provider_name === first.provider_name &&
+											row.description === first.description,
+									)
+									.map(row => [row.schema_path, row]),
+							).values(),
+						];
+						const branches = terraformBranchChoices(equivalent, limit, search);
+						const destinations = branches.map(
+							schemaPath =>
+								db
+									.query(
+										"SELECT td.id,td.path,td.summary,dest.anchor FROM terraform_destinations dest JOIN terraform_documents td ON td.path=dest.path WHERE dest.provider_type=? AND dest.provider_name=? AND dest.schema_path=? AND dest.anchor=?",
+									)
+									.get(first.provider_type, first.provider_name, schemaPath, "section") as {
+									id: string;
+									path: string;
+									summary: string;
+									anchor: string;
+								} | null,
 						);
-						return {
-							url: url.href,
-							content: roleContent,
-							contentType: "text/markdown",
-							size: Buffer.byteLength(roleContent),
-						};
+						if (destinations.length && destinations.every(row => row !== null)) {
+							const branchContent = terraformChoiceResponse(
+								`${provenance}\n\n# Terraform search: ${search}\nNarrowing choices; clarify the missing schema branch.\nReason: ${decision.reason}\nEquivalent property destinations require a branch decision.`,
+								destinations.map(row => {
+									const next = new URL(url.href);
+									next.searchParams.delete("choice_after");
+									next.searchParams.set("node", row!.id);
+									next.searchParams.set("provider_type", first.provider_type);
+									next.searchParams.set("provider_name", first.provider_name);
+									return `## ${row!.summary}\nHint: ${uri(row!.path, row!.anchor, "hint")}\nRefine: ${next.href}`;
+								}),
+								url,
+								choiceAfter,
+								4096,
+							);
+							return {
+								url: url.href,
+								content: branchContent,
+								contentType: "text/markdown",
+								size: Buffer.byteLength(branchContent),
+							};
+						}
 					}
-				}
-				if (
-					decision.kind === "choices" &&
-					first &&
-					decision.destinations.every(
-						row =>
-							row.provider_type === first.provider_type &&
-							row.provider_name === first.provider_name &&
-							row.description === first.description,
-					)
-				) {
-					const equivalent = [
-						...new Map(
-							[...decision.destinations, ...alternatives]
-								.filter(
-									row =>
-										row.provider_type === first.provider_type &&
-										row.provider_name === first.provider_name &&
-										row.description === first.description,
-								)
-								.map(row => [row.schema_path, row]),
-						).values(),
-					];
-					const branches = terraformBranchChoices(equivalent, limit, search);
-					const destinations = branches.map(
-						schemaPath =>
-							db
-								.query(
-									"SELECT td.id,td.path,td.summary,dest.anchor FROM terraform_destinations dest JOIN terraform_documents td ON td.path=dest.path WHERE dest.provider_type=? AND dest.provider_name=? AND dest.schema_path=? AND dest.anchor=?",
-								)
-								.get(first.provider_type, first.provider_name, schemaPath, "section") as {
-								id: string;
-								path: string;
-								summary: string;
-								anchor: string;
-							} | null,
+					if (choiceAfter !== null)
+						throw new Error("Terraform choice continuation no longer matches branch choices");
+					const shown =
+						decision.kind === "leaf" || (lifecycle?.operations.length ?? 0) > 1
+							? decision.destinations
+							: decision.destinations.slice(0, limit);
+					const continuation = new URL(url.href);
+					continuation.searchParams.set("node", node ?? "xcsh-docs:provider:xcsh:navigation");
+					const prepared = boundedTerraformResponse(
+						`${provenance}\n\n# Terraform search: ${search}\n${decision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : shown.length ? "Narrowing choices; compare these candidates with the full request. Clarify only an unspecified role or branch." : "No results."}\nReason: ${decision.reason}${decision.kind === "choices" && !role && provider ? `\n${terraformLeadingRoleHint(shown)}` : ""}\nScores are ranking values, not probabilities.`,
+						shown.map(
+							row =>
+								`## ${row.provider_type}: xcsh_${row.provider_name}\nSchema path: ${row.schema_path}${row.flags?.length ? `\nDocumented flags: ${row.flags.join(", ")}` : ""}\nScore: ${Number(row.score.toFixed(12))}\n${readAndCite(row.path, row.anchor, "context")}\n${prerequisites(row.path, row.anchor)}\n${row.description}`,
+						),
+						4096,
+						`Refine: ${continuation.href}`,
 					);
-					if (destinations.length && destinations.every(row => row !== null)) {
-						const branchContent = terraformChoiceResponse(
-							`${provenance}\n\n# Terraform search: ${search}\nNarrowing choices; clarify the missing schema branch.\nReason: ${decision.reason}\nEquivalent property destinations require a branch decision.`,
-							destinations.map(row => {
-								const next = new URL(url.href);
-								next.searchParams.delete("choice_after");
-								next.searchParams.set("node", row!.id);
-								next.searchParams.set("provider_type", first.provider_type);
-								next.searchParams.set("provider_name", first.provider_name);
-								return `## ${row!.summary}\nHint: ${uri(row!.path, row!.anchor, "hint")}\nRefine: ${next.href}`;
-							}),
-							url,
-							choiceAfter,
-							4096,
-						);
-						return {
-							url: url.href,
-							content: branchContent,
-							contentType: "text/markdown",
-							size: Buffer.byteLength(branchContent),
-						};
-					}
+					return {
+						url: url.href,
+						content: prepared,
+						contentType: "text/markdown",
+						size: Buffer.byteLength(prepared),
+					};
 				}
-				if (choiceAfter !== null) throw new Error("Terraform choice continuation no longer matches branch choices");
-				const shown =
-					decision.kind === "leaf" || (lifecycle?.operations.length ?? 0) > 1
-						? decision.destinations
-						: decision.destinations.slice(0, limit);
-				const continuation = new URL(url.href);
-				continuation.searchParams.set("node", node ?? "xcsh-docs:provider:xcsh:navigation");
-				const prepared = boundedTerraformResponse(
-					`${provenance}\n\n# Terraform search: ${search}\n${decision.kind === "leaf" ? "Selected leaf; read its complete section before drafting." : shown.length ? "Narrowing choices; clarify the missing product, provider role, or configuration choice." : "No results."}\nReason: ${decision.reason}\nScores are ranking values, not probabilities.`,
-					shown.map(
-						row =>
-							`## ${row.provider_type}: xcsh_${row.provider_name}\nSchema path: ${row.schema_path}${row.flags?.length ? `\nDocumented flags: ${row.flags.join(", ")}` : ""}\nScore: ${Number(row.score.toFixed(12))}\nRead: ${uri(row.path, row.anchor, "context")}\n${prerequisites(row.path, row.anchor)}\n${row.description}`,
-					),
-					4096,
-					`Refine: ${continuation.href}`,
-				);
-				return {
-					url: url.href,
-					content: prepared,
-					contentType: "text/markdown",
-					size: Buffer.byteLength(prepared),
-				};
 			}
 			const navigationRequest =
 				/(?:which|what).*documentation|where.*(?:begin|start)|need.*(?:help|guidance)|(?:resource.*data[ -]source|data[ -]source.*resource)|explain.*fields/i.test(
@@ -1791,11 +2271,7 @@ export class TerraformDocumentationRepository {
 						.replace(/[^a-z0-9]+/g, " ")
 						.trim()} `
 				: undefined;
-			const normalizedSearch = ` ${search
-				.toLowerCase()
-				.replace(/\btimestamp\b/g, "time")
-				.replace(/[^a-z0-9]+/g, " ")
-				.trim()} `;
+			const normalizedSearch = terraformAliasQueryText(search);
 			if (!setupAnchor && !filters.some(f => f.key === "provider_name")) {
 				const identityRole = filters.find(filter => filter.key === "provider_type")?.value;
 				const names = db
@@ -1909,7 +2385,7 @@ export class TerraformDocumentationRepository {
 					broadened = false;
 				}
 			}
-			if (providerFilter && !navigationRequest && !node && !propertyMention) {
+			if (providerFilter && !navigationRequest && !propertyMention) {
 				const aliasClauses = ["a.provider_name=?", "instr(?, ' ' || a.alias || ' ')>0"];
 				const aliasArgs: Array<string | number> = [providerFilter.value, normalizedSearch];
 				for (const f of filters) {
@@ -1917,6 +2393,12 @@ export class TerraformDocumentationRepository {
 						"EXISTS(SELECT 1 FROM terraform_facets f WHERE f.path=a.path AND f.facet=? AND f.value=?)",
 					);
 					aliasArgs.push(f.key, f.value);
+				}
+				if (node) {
+					aliasClauses.push(
+						"a.path IN (WITH RECURSIVE descendants(id,path) AS (SELECT id,path FROM terraform_documents WHERE id=? UNION SELECT d.id,d.path FROM terraform_documents d JOIN descendants p ON d.parent_id=p.id) SELECT path FROM descendants)",
+					);
+					aliasArgs.push(node);
 				}
 				let aliasRows = db
 					.query(
@@ -1996,7 +2478,11 @@ export class TerraformDocumentationRepository {
 					}
 				}
 			}
-			if (rows.length === 1 && rows[0]?.anchor === "section" && !navigationRequest) {
+			const leadingMetadata = rows[0] ? (JSON.parse(rows[0].metadata) as TerraformMetadata) : undefined;
+			const exactBreadcrumbScope =
+				(leadingMetadata?.schema_path.length ?? 0) > 0 &&
+				propertyBreadcrumbText(search).includes(leadingMetadata!.schema_path.join("."));
+			if (rows[0]?.anchor === "section" && !navigationRequest && (rows.length === 1 || exactBreadcrumbScope)) {
 				const parent = rows[0];
 				const metadata = JSON.parse(parent.metadata) as TerraformMetadata;
 				const refined = rankTerraformDirectProperties(search, metadata.schema_path, metadata.sections ?? []);
@@ -2397,14 +2883,14 @@ export class TerraformDocumentationRepository {
 				broadened || unresolvedChoice,
 				search,
 			);
-			const prefix = `${provenance}\n\n# Terraform search: ${search}\n${selection === "leaf" ? "Selected leaf; read its complete section before drafting." : rows.length ? "Narrowing choices; clarify the missing product, provider role, or configuration choice." : "No results."}\n${broadened ? "Broader word matching was needed; verify candidates.\n" : ""}Scores are ranking values, not probabilities.`;
+			const prefix = `${provenance}\n\n# Terraform search: ${search}\n${selection === "leaf" ? "Selected leaf; read its complete section before drafting." : rows.length ? "Narrowing choices; compare these candidates with the full request. Clarify only an unspecified role or branch." : "No results."}\n${broadened ? "Broader word matching was needed; verify candidates.\n" : ""}Scores are ranking values, not probabilities.`;
 			const continuation = new URL(url.href);
 			continuation.searchParams.set("node", node ?? "xcsh-docs:provider:xcsh:navigation");
 			content = boundedTerraformResponse(
 				prefix,
 				rows.map(r => {
 					const m = JSON.parse(r.metadata) as TerraformMetadata;
-					return `## ${m.provider_type}: xcsh_${m.provider_name} — ${m.role}\nSchema path: ${m.schema_path.join(".") || "root"}\nScore: ${Number(r.score.toFixed(12))}\nRead: ${uri(r.path, r.anchor, "context")}\n${prerequisites(r.path, r.anchor)}\n${rewriteTerraformLinks(r.markdown, r.path).replace(/\s+/g, " ").slice(0, 100)}`;
+					return `## ${m.provider_type}: xcsh_${m.provider_name} — ${m.role}\nSchema path: ${m.schema_path.join(".") || "root"}\nScore: ${Number(r.score.toFixed(12))}\n${readAndCite(r.path, r.anchor, "context")}\n${prerequisites(r.path, r.anchor)}\n${rewriteTerraformLinks(r.markdown, r.path).replace(/\s+/g, " ").slice(0, 100)}`;
 				}),
 				4096,
 				`Refine: ${continuation.href}`,
@@ -2434,7 +2920,7 @@ export class TerraformDocumentationRepository {
 			const next = new URL(url.href);
 			if (shown.length) next.searchParams.set("cursor", shown.at(-1)!.path);
 			content = boundedTerraformResponse(
-				`${provenance}\n\n${selected.summary}\nRead: ${uri(selected.path, "", "hint")}`,
+				`${provenance}\n\n${selected.summary}\n${readAndCite(selected.path, "", "hint")}`,
 				shown.map(
 					r =>
 						`- ${r.summary}: xcsh://terraform-documentation/?node=${encodeURIComponent(r.id)}\n  Hint: ${uri(r.path, "", "hint")}`,
@@ -2443,7 +2929,7 @@ export class TerraformDocumentationRepository {
 				rows.length > limit ? `Continue: ${next.href}` : "",
 			);
 		} else {
-			content = `${provenance}\n\n# Offline Terraform documentation\n${this.assets.pin.document_count} Markdown documents from documentation/.\n\nSearch: xcsh://terraform-documentation/?search=<query>&provider_type=<type>&provider_name=<name>&role=<role>&category=<category>&capability=<capability>&task=<task>&limit=<1-10>\nFilters combine with AND. Default limit: five.\nFacets: ${facetNames.map(f => `xcsh://terraform-documentation/?facet=${f}`).join("\n")}\nNavigation: xcsh://terraform-documentation/?node=xcsh-docs%3Aprovider%3Axcsh%3Anavigation\nExact reads: xcsh://terraform-documentation/documentation/<path>/index.md#<heading-or-explicit-anchor>\nViews: view=hint (4 KiB), view=context (16 KiB, complete sections and continuations), view=full (complete read). Existing exact reads remain complete.\nGuidance reflects documented schema validation; it is not live-apply evidence.`;
+			content = `${provenance}\n\n# Offline Terraform documentation\n${this.assets.pin.document_count} Markdown documents from documentation/.\n\nSearch: xcsh://terraform-documentation/?search=<query>&provider_type=<type>&provider_name=<name>&role=<role>&category=<category>&capability=<capability>&task=<task>&limit=<1-10>\nFilters combine with AND. Default limit: five. Use exact facet values from inventory or returned links; provider_name omits the xcsh_ Terraform type prefix.\nFacets: ${facetNames.map(f => `xcsh://terraform-documentation/?facet=${f}`).join("\n")}\nNavigation: xcsh://terraform-documentation/?node=xcsh-docs%3Aprovider%3Axcsh%3Anavigation\nExact reads: xcsh://terraform-documentation/documentation/<path>/index.md#<heading-or-explicit-anchor>\nViews: view=hint (4 KiB), view=context (16 KiB, complete sections and continuations), view=full (complete read). Existing exact reads remain complete.\nGuidance reflects documented schema validation; it is not live-apply evidence.`;
 		}
 		return {
 			url: url.href,

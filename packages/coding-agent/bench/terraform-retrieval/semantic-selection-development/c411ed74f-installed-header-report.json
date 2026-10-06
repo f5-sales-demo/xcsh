@@ -1,0 +1,82 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "c411ed74fe2319d958a3b42f064331519aaf1a58",
+    "binary_sha256": "883f03e31d595dd3f62aab3e919445f5b7e160659a5752042ba1638333d295f9",
+    "binary_bytes": 621929952,
+    "provider_version": "v12.4.0"
+  },
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "suite_sha256": "9056d6f714ba6f8731b8ec92bcd54288777af1a45088f3ef59600e30eb2f5813",
+  "complete": true,
+  "results": [
+    {
+      "id": "header-ambiguous",
+      "kind": "ambiguous",
+      "exit_code": 0,
+      "model_ms": 76882.82533595338,
+      "complete_leaf_read": true,
+      "clarification": true,
+      "text": "In `xcsh_workload` (provider v12.4.0), the branch is:\n\n`stateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert`\n\nTwo mutually exclusive settings fit:\n\n- [`server_name`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name): sets `Server`, overwriting an existing value.\n- [`append_server_name`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name): sets it only when absent, preserving an existing value.\n\nShould an existing `Server` value be **overwritten or preserved**?",
+      "budget": {
+        "passed": true,
+        "total_bytes": 51073,
+        "max_bytes": 20242,
+        "measured_results": 10,
+        "violations": []
+      },
+      "trace_sha256": "b27e9b143c84bad6da2c05d5b04c33c9fa81b2c7225482e7f4fc82072acf8e6e",
+      "passed": true
+    },
+    {
+      "id": "header-preserve",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 97200.84844296798,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "Use **`append_server_name`** in resource **`xcsh_workload`**:\n\n```text\nstateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.append_server_name\n```\n\nThis optional string sets the `Server` response-header value only when absent, preserving an existing value. **Do not use `server_name`**: it overwrites existing values.\n\nProvider-enforced conflicts: `default_header`, `pass_through`, and `server_name`.\n\nVerified in bundled provider **v12.4.0**: [exact field reference](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 49031,
+        "max_bytes": 15154,
+        "measured_results": 15,
+        "violations": []
+      },
+      "trace_sha256": "d5ef40ab0c44662f4e6a99590004a075b108c2c08cfcbf4e5fe1b27f3d0131dc",
+      "passed": true
+    },
+    {
+      "id": "header-overwrite",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 77961.65558800567,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "Use **`server_name`** in resource **`xcsh_workload`** at:\n\n`stateful_service.advertise_options.advertise_on_public.multi_ports.ports.http_loadbalancer.https_auto_cert.server_name`\n\nIt sets the `Server` response-header value and **overwrites any existing value**. Do not use `append_server_name`, which preserves existing values.\n\nThe optional string has a provider-enforced maximum length of **8096** and conflicts with `append_server_name`, `default_header`, and `pass_through`.\n\nVerified against bundled provider **v12.4.0**: [exact field documentation](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 49076,
+        "max_bytes": 20242,
+        "measured_results": 12,
+        "violations": []
+      },
+      "trace_sha256": "ff98281dc30c86db8357ca0da0a6897a719f19a3fd1ca1e83fd78f4e6cba533e",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Three exposed development cases only; no held-out qualification.",
+    "Ambiguous case used 10 reads and explicit preserve used 15; retrieval efficiency remains open.",
+    "Exact/full reads are unlimited; 4 KiB discovery/hint and 16 KiB context envelopes passed.",
+    "Raw model traces remain task-local; trace hashes preserved."
+  ]
+}

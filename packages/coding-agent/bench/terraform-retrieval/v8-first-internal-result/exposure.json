@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "regression_only": true,
+  "review_mode": "internal-user-waived",
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "model_subset_sha256": "9c2ec71da89748bc31b9b147b832ac7a934e5aafad6fbf2847251f4d32b027a0",
+  "answerable_correct": 70,
+  "answerable_total": 140,
+  "answerable_top5": 94,
+  "reason": "First frozen retrieval evaluation failed; suite and model subset inspected during authoring and analysis. Original freeze preserved.",
+  "continuation_preflight_failure": "Terminal expected destination omitted; no installed model qualification run."
+}

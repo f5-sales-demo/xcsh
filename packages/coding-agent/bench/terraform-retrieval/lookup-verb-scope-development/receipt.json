@@ -1,0 +1,11 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 96,
+  "v7_top5": 122,
+  "focused_pass": 204,
+  "type_lint_pass": true,
+  "prior_package_failure": "Two worker launch timeouts; both passed focused rerun",
+  "source_review_findings_covered": true,
+  "change": "Lookup-verb scoped negation and literal location field preservation"
+}

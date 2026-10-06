@@ -1,0 +1,12 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "exposed_suite": true,
+  "provider_scope_supplied": true,
+  "expected_answers_withheld": true,
+  "correct_selections": 3,
+  "selected_leaf_reads": 3,
+  "bounded_response_requirement_passed": false,
+  "max_tool_output_bytes": 31064,
+  "remaining": "Correct diagnostic selections do not qualify model UAT. Bounded candidate packet and complete tool-response enforcement required."
+}

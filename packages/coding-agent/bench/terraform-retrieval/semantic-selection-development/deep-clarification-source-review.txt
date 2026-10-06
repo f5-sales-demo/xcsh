@@ -1,0 +1,46 @@
+**None of the three prompts uniquely selects its expected destination.** The model’s clarification decisions are supported by the indexed documentation, with an additional distinction missing from its A107 explanation.
+
+Reviewed [heldout.json](/tmp/terraform-v1240-qualification-v7-corrected-frozen/heldout.json), [result.json](/tmp/terraform-semantic-deep-adaptive-development/result.json), and the SQLite index using `mode=ro` and `PRAGMA query_only=ON`. Links below identify exact indexed source URIs.
+
+**A107 — genuinely underspecified: address family and exclusion scope.**
+
+Prompt: “Where is the DHCP pool exclusion setting for unmanaged AWS node interfaces in a managed securemesh_site_v2 resource in Terraform?”
+
+Three documented destinations satisfy that general description:
+
+- **Expected: IPv4 per-range [`pools.exclude`](xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--exclude).** Optional boolean: “Exclude this address range from DHCP allocation.”
+- **IPv4 network-level [`pool_settings`](xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/index.md#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pool_settings).** Optional string accepting `INCLUDE_IP_ADDRESSES_FROM_DHCP_POOLS` or `EXCLUDE_IP_ADDRESSES_FROM_DHCP_POOLS`.
+- **IPv6 stateful network-level [`pool_settings`](xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings).** The same documented inclusion/exclusion choices.
+
+The [IPv4 network parent](xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/index.md#section) explicitly describes IPv4 allocation; the [IPv6 stateful parent](xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/index.md#section) says “DHCPIPV6 Stateful Server.” Both occur beneath the specified unmanaged AWS interface branch. “Managed … resource” distinguishes Terraform resource role; it supplies no address-family distinction.
+
+**Judgment:** Clarification is justified. However, the model only asks IPv4 versus IPv6. Even after selecting IPv4, the prompt does not distinguish **one range’s `exclude` flag from the network’s pool-list exclusion mode**. The [IPv6 pool block](xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md#section) documents `start_ip` and `end_ip`, with **no `exclude` field**; these are not symmetric per-range alternatives.
+
+**A114 — genuinely underspecified: preserve versus overwrite.**
+
+Prompt: “Terraform workload resource, stateful service on multiple public ports with automatic-certificate HTTPS: locate the server response-header value setting.”
+
+Within the specified branch:
+
+- **Expected: [`append_server_name`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name)** defines the `server` header value while preserving an existing value.
+- **Alternative: [`server_name`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name)** defines the same header’s value and overwrites an existing value.
+- The other direct server-header choices, [`default_header`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/default_header/index.md#section) and [`pass_through`](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/pass_through/index.md#section), are empty-object options, not configurable string values.
+
+The [parent section](xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md#section) documents all four as mutually conflicting choices. Its description anomalously says “bring your own certificates” despite the `https_auto_cert` path; that inconsistency supplies no preference between the two value fields.
+
+**Judgment:** The model’s clarification is directly supported. The prompt selects the surrounding branch but never specifies what happens when the header already exists.
+
+**A130 — genuinely underspecified: backend versus virtual-pool defaults.**
+
+Prompt: “For custom storage on a Terraform voltstack_site resource using NetApp Trident with the ONTAP SAN backend, locate volume-default encryption.”
+
+Both destinations are optional booleans with the identical description, “Enable NetApp volume encryption”:
+
+- **Expected: virtual-pool [`storage.volume_defaults.encryption`](xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/storage/volume_defaults/index.md#schema-custom_storage_config--storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--storage--volume_defaults--encryption).**
+- **Alternative: backend [`volume_defaults.encryption`](xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/volume_defaults/index.md#schema-custom_storage_config--storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--volume_defaults--encryption).**
+
+The [backend parent](xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/index.md#section) describes ONTAP SAN backend configuration. The nested [storage parent](xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/storage/index.md#section) specifically describes virtual storage pools selected through Storage Class label matching. Both `volume_defaults` parents describe default volume provisioning identically.
+
+**Judgment:** The model’s clarification is supported. “Custom storage” identifies the outer configuration; it does not select the nested virtual-pool level. Nothing in the prompt uniquely selects the expected additional `storage` segment.
+
+No suite, labels, code, files, or releases were modified. This is diagnostic evidence only: **the exposed suite remains permanently regression-only, and these findings do not qualify it.**

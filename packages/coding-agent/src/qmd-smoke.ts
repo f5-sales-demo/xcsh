@@ -150,7 +150,7 @@ export function parseQmdSmokeOutput(output: string): QmdSmokeTraceEntry[] {
 	if (trace[8]?.outcome !== "no-match-no-fetch") throw new Error("QMD smoke trace did not fail closed");
 	if (trace[9]?.outcome !== DOCUMENTATION_TOOLS_DISABLED_MESSAGE)
 		throw new Error("QMD smoke trace omitted the tools-disabled explanation");
-	if (trace[10]?.source !== SOURCE || trace[10].outcome !== "image/png")
+	if (trace[10]?.source !== SOURCE || !["image/png", "public-media-link"].includes(trace[10].outcome ?? ""))
 		throw new Error("QMD smoke trace contains an unexpected SVG conversion result");
 	if (trace[11]?.outcome !== "ok") throw new Error("QMD smoke trace did not confirm SQLite startup");
 	return trace;
@@ -243,15 +243,23 @@ export async function runQmdSmoke(options: QmdSmokeOptions = {}): Promise<string
 	emit({ event: "documentation-tools-disabled", outcome: DOCUMENTATION_TOOLS_DISABLED_MESSAGE });
 
 	const svg = await documentation.readAsset(SOURCE, SVG_PATH, SVG_FILENAME);
-	const png = svg ? await convertToPng(svg.data, svg.mimeType) : null;
-	if (png?.mimeType !== "image/png") {
-		throw new Error("Documentation QMD smoke could not read and convert an SVG asset");
+	if (!svg) throw new Error("Documentation QMD smoke could not locate the verified SVG asset");
+	let outcome: "public-media-link" | "image/png";
+	if ("publicUrl" in svg) {
+		if (!svg.publicUrl.startsWith("https://"))
+			throw new Error("Documentation QMD smoke media link is not public HTTPS");
+		outcome = "public-media-link";
+	} else {
+		const png = await convertToPng(svg.data, svg.mimeType);
+		if (png?.mimeType !== "image/png")
+			throw new Error("Documentation QMD smoke could not read and convert an SVG asset");
+		outcome = "image/png";
 	}
 	emit({
 		event: "documentation-svg-convert",
 		resource: assetUri(SVG_PATH, SVG_FILENAME),
 		source: SOURCE,
-		outcome: "image/png",
+		outcome,
 	});
 
 	// QMD initializes first so this catches dependency code that changes Bun's

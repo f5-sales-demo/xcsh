@@ -17,6 +17,8 @@ import {
 	validateTerraformRetrievalMetadata,
 } from "../../src/internal-urls/terraform-documentation";
 
+import { propertyRequestedText } from "../../src/internal-urls/terraform-property-ranking";
+
 const metadata = (): TerraformMetadata => ({
 	id: "fixture",
 	canonical_id: "fixture",
@@ -809,4 +811,455 @@ test("on-a provider ownership outranks an incidental longer nested entity", () =
 		),
 	).toBe("cdn_loadbalancer");
 	expect(terraformProviderMention("Compare HTTP load balancer and protected application", names)).toBeUndefined();
+});
+
+test("documentation lookup does not imply the data-source role", () => {
+	expect(terraformQueryIdentity("Look up the schema and examples for xcsh_fixture").providerType).toBeUndefined();
+	expect(terraformQueryIdentity("Inspect documentation for xcsh_fixture").providerType).toBeUndefined();
+	expect(terraformQueryIdentity("Look up an existing xcsh_fixture object").providerType).toBe("data-sources");
+	expect(terraformQueryIdentity("Inspect data source xcsh_fixture schema").providerType).toBe("data-sources");
+	expect(terraformQueryIdentity("Read xcsh_fixture resource documentation").providerType).toBe("resources");
+});
+
+test("querying a schema identifier bypasses data-source root configuration", () => {
+	expect(terraformTaskDestination("Query auto_host_rewrite on a route in data source xcsh_fixture")).toBeUndefined();
+	expect(terraformTaskDestination("Query existing object using data source xcsh_fixture")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});
+
+test("object query and nested value query have distinct routes", () => {
+	expect(terraformTaskDestination("Query data source xcsh_fixture to read served domains")).toBeUndefined();
+	expect(
+		terraformTaskDestination("Query the existing object using data source xcsh_fixture to read served domains"),
+	).toBeUndefined();
+	expect(terraformTaskDestination("Query an existing certificate using data source xcsh_fixture")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});
+
+test("query property phrases bypass root configuration without changing role", () => {
+	expect(
+		terraformTaskDestination("Query the name of an existing gateway using data source xcsh_fixture"),
+	).toBeUndefined();
+	expect(
+		terraformQueryIdentity("Query the name of an existing gateway using data source xcsh_fixture").providerType,
+	).toBe("data-sources");
+	expect(terraformTaskDestination("Query an existing certificate using data source xcsh_fixture")).toEqual({
+		role: "fundamentals",
+		anchor: "root-configuration",
+	});
+});
+
+test("provider environment variable names are setup vocabulary rather than resource identities", () => {
+	expect(
+		terraformProviderSetupDestination(
+			"How do I configure environment variables XCSH_API_URL and XCSH_API_TOKEN to authenticate the xcsh provider?",
+		),
+	).toBe("option-1-api-token-authentication");
+	expect(
+		terraformProviderSetupDestination("Configure xcsh_cloud_credentials provider authentication"),
+	).toBeUndefined();
+});
+
+test("HTTP application-balancer phrasing identifies documented HTTP provider without replacing explicit identities", () => {
+	expect(
+		terraformProviderMention("Set up HTTP cookie persistence in our application balancer", [
+			"http_loadbalancer",
+			"cdn_loadbalancer",
+		]),
+	).toBe("http_loadbalancer");
+	expect(
+		terraformProviderMention("Set up HTTP cookie persistence in xcsh_cdn_loadbalancer application balancer", [
+			"http_loadbalancer",
+			"cdn_loadbalancer",
+		]),
+	).toBe("cdn_loadbalancer");
+	expect(
+		terraformProviderMention("application balancer cookie persistence", ["http_loadbalancer", "cdn_loadbalancer"]),
+	).toBeUndefined();
+});
+
+test("negated HTTP qualification cannot identify an application balancer provider", () => {
+	expect(
+		terraformProviderMention("Configure application balancer for TCP, not HTTP", [
+			"http_loadbalancer",
+			"tcp_loadbalancer",
+		]),
+	).toBeUndefined();
+});
+
+test("literal provider names and HTTP purpose qualifiers remain authoritative", () => {
+	const names = ["http_loadbalancer", "cdn_loadbalancer"];
+	expect(
+		terraformProviderMention("Configure HTTP cookie persistence in cdn_loadbalancer application balancer", names),
+	).toBe("cdn_loadbalancer");
+	expect(terraformProviderMention("Configure application balancer to provide HTTP support", names)).toBeUndefined();
+	expect(terraformProviderMention("Configure application balancer without using HTTP", names)).toBeUndefined();
+});
+
+test("HTTP provider evidence excludes purpose-only HTTP but retains unrelated negation", () => {
+	const names = ["http_loadbalancer", "cdn_loadbalancer"];
+	expect(terraformProviderMention("Configure application balancer to enable HTTP support", names)).toBeUndefined();
+	expect(terraformProviderMention("Configure application balancer without cookies using HTTP", names)).toBe(
+		"http_loadbalancer",
+	);
+});
+
+test("HTTP in a separate health-check clause is not provider identity", () => {
+	expect(
+		terraformProviderMention("Configure application balancer for TCP, and configure HTTP health checks", [
+			"http_loadbalancer",
+			"tcp_loadbalancer",
+		]),
+	).toBeUndefined();
+});
+
+test("HTTP health-check purpose does not identify application balancer type", () => {
+	expect(
+		terraformProviderMention("Configure application balancer for HTTP health checks", [
+			"http_loadbalancer",
+			"tcp_loadbalancer",
+		]),
+	).toBeUndefined();
+});
+
+test("qualified value lookups retain property routing without field nouns", () => {
+	for (const query of [
+		"For the sensor resource, where is the calibration adjustment documented?",
+		"Locate the retry ceiling documented for the queue resource.",
+		"Find the deletion timeout documented for the sensor resource.",
+	])
+		expect(terraformTaskDestination(query)).toBeUndefined();
+	expect(terraformTaskDestination("Where is the resource documented for creating a sensor?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+});
+
+test("value lookup preserves explicit lifecycle guidance", () => {
+	expect(terraformTaskDestination("Find lifecycle guidance on writing operation timeout durations.")).toEqual({
+		role: "timeouts",
+	});
+});
+
+test("value lookup clauses retain dotted paths and separate requested values from followups", () => {
+	expect(
+		propertyRequestedText("Terraform sensor resource: locate calibration.offset; I still need to supply its value."),
+	).toBe("calibration.offset");
+	expect(propertyRequestedText("Locate memory allocation and its unit.")).toBe("memory allocation");
+	expect(propertyRequestedText("Find the deployment example.")).toBeUndefined();
+	expect(propertyRequestedText("Find the resource documentation.")).toBeUndefined();
+	expect(propertyRequestedText("Which field sets port under listener?")).toBe("port under listener?");
+});
+
+test("lookup clauses preserve order and isolate sentence-local requests", () => {
+	expect(propertyRequestedText("Supply the retry ceiling; locate calibration.offset.")).toBe(
+		"the retry ceiling; locate calibration.offset.",
+	);
+	for (const boundary of ["?", "!", ";", "."])
+		expect(propertyRequestedText(`Locate calibration.offset${boundary} Supply retry ceiling.`)).toBe(
+			"calibration.offset",
+		);
+	expect(propertyRequestedText("Locate the actual calibration offset.")).toBe("the actual calibration offset");
+	expect(propertyRequestedText("Locate calibration.offset; show a usage example.")).toBe("calibration.offset");
+	expect(propertyRequestedText("Locate memory allocation and   its unit.")).toBe("memory allocation");
+});
+
+test("ordinary setting and placement questions identify requested schema values", () => {
+	expect(propertyRequestedText("Which setting controls the sensor calibration interval?")).toBe(
+		"the sensor calibration interval?",
+	);
+	expect(propertyRequestedText("Where do I put the retry ceiling?")).toBe("the retry ceiling");
+	expect(propertyRequestedText("Where do I put the resource declaration?")).toBeUndefined();
+	expect(propertyRequestedText("Which setting controls how long the worker session lasts?")).toBe(
+		"how long the worker session lasts?",
+	);
+});
+
+test("placement questions retain the requested collection or field", () => {
+	expect(propertyRequestedText("Where do DNS server addresses go for the router?")).toBe("DNS server addresses");
+	expect(propertyRequestedText("Where does the retry ceiling belong?")).toBe("the retry ceiling");
+});
+
+test("secure mesh product version identifies its documented site provider", () => {
+	const names = ["securemesh_site", "securemesh_site_v2", "network_interface"];
+	expect(terraformProviderMention("Terraform secure mesh v2 resource router DNS servers", names)).toBe(
+		"securemesh_site_v2",
+	);
+	expect(terraformProviderMention("Compare secure mesh v2 and network interface", names)).toBeUndefined();
+	expect(terraformProviderMention("xcsh_network_interface with secure mesh v2", names)).toBe("network_interface");
+});
+
+test("provider names normalize load balancer spaces and underscores consistently", () => {
+	expect(terraformProviderMention("Terraform DNS load balancer resource", ["dns_load_balancer", "dns_proxy"])).toBe(
+		"dns_load_balancer",
+	);
+	expect(
+		terraformProviderMention("Terraform HTTP load balancer resource", ["http_loadbalancer", "dns_load_balancer"]),
+	).toBe("http_loadbalancer");
+});
+
+test("passive value documentation queries are not resource declaration examples", () => {
+	expect(
+		terraformTaskDestination("Where is the email for a Terraform container registry resource documented?"),
+	).toBeUndefined();
+	expect(terraformTaskDestination("Where is the resource documented for creating a registry?")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
+});
+
+test("passive placement and need statements extract values without provider-only intent", () => {
+	expect(propertyRequestedText("Where is the allowed response-code list?")).toBe("the allowed response-code list");
+	expect(propertyRequestedText("I need the upstream idle timeout.")).toBe("the upstream idle timeout");
+	expect(propertyRequestedText("I need an origin pool resource.")).toBeUndefined();
+	expect(propertyRequestedText("Where is the resource documented?")).toBe("the resource");
+	expect(propertyRequestedText("Which field names the receiver?")).toBe("the receiver?");
+});
+
+test("a specific lookup follows a general need statement without replacing its target", () => {
+	expect(propertyRequestedText("I need a storage location. Locate the certificate URL; I will supply it later.")).toBe(
+		"the certificate URL",
+	);
+	expect(propertyRequestedText("Locate the retry value in a queue resource.")).toBe(
+		"the retry value in a queue resource",
+	);
+});
+
+test("allowlist product-role wording resolves the maintained network data source", () => {
+	const names = ["network_regional_edges", "network_cdn", "network_dnslb_health_checks", "dns_load_balancer"];
+	expect(terraformProviderMention("Regional Edge allowlist data source regions", names)).toBe(
+		"network_regional_edges",
+	);
+	expect(terraformProviderMention("CDN allowlist data source CIDRs", names)).toBe("network_cdn");
+	expect(terraformProviderMention("DNS load-balancer health-check ingress allowlist data source", names)).toBe(
+		"network_dnslb_health_checks",
+	);
+	expect(terraformProviderMention("xcsh_dns_load_balancer reference to CDN allowlist", names)).toBe(
+		"dns_load_balancer",
+	);
+	expect(terraformProviderMention("dns_load_balancer reference to CDN allowlist", names)).toBe("dns_load_balancer");
+	expect(terraformProviderMention("Compare CDN allowlist with Regional Edge allowlist", names)).toBeUndefined();
+});
+
+test("allowlist references cannot capture a prose resource owner", () => {
+	const names = ["http_loadbalancer", "network_cdn"];
+	for (const q of [
+		"Find the field on an HTTP load balancer resource that references the CDN allowlist",
+		"HTTP load balancer resource without a CDN allowlist",
+		"HTTP load balancer resource (for example CDN allowlist)",
+	])
+		expect(terraformProviderMention(q, names)).toBe("http_loadbalancer");
+});
+
+test("passing and writing values retain schema value intent", () => {
+	expect(propertyRequestedText("How do I pass session tags into the worker?")).toBe("session tags into the worker?");
+	expect(propertyRequestedText("Where do I write the custom response body?")).toBe("the custom response body?");
+	expect(propertyRequestedText("How is the protocol enabled or disabled on the service?")).toBe("the protocol");
+});
+
+test("negated allowlist family mentions do not become product owners", () => {
+	for (const q of ["Find the allowlist data source, not CDN", "Find the allowlist data source without CDN"])
+		expect(terraformProviderMention(q, ["network_cdn"])).toBeUndefined();
+});
+
+test("field selection verbs describe scalar meaning rather than block selection", () => {
+	expect(propertyRequestedText("Which field selects the query parameter whose value is masked?")).toBe(
+		"the query parameter whose value is masked?",
+	);
+	expect(propertyRequestedText("Which field chooses the protocol version?")).toBe("the protocol version?");
+});
+
+test("provider ownership preserves stateful and stateless resource modifiers", () => {
+	const names = ["http_loadbalancer", "workload"];
+	for (const modifier of ["stateless-service", "stateless service", "stateful-service", "stateful service"]) {
+		expect(
+			terraformProviderMention(
+				"Find HTTP load balancer TLS on a Terraform workload " + modifier + " resource",
+				names,
+			),
+		).toBe("workload");
+		expect(
+			terraformProviderMention("For a workload " + modifier + " resource, locate HTTP load balancer TLS", names),
+		).toBe("workload");
+	}
+	expect(
+		terraformProviderMention("Compare workload stateless service resource and HTTP load balancer resource", names),
+	).toBeUndefined();
+	expect(
+		terraformProviderMention("xcsh_http_loadbalancer referencing a workload stateless service resource", names),
+	).toBe("http_loadbalancer");
+});
+
+test("resource modifier examples and rejected owners cannot capture identity", () => {
+	for (const q of [
+		"Locate HTTP load balancer TLS, not a workload stateless service resource",
+		"Locate HTTP load balancer TLS (for example a workload stateless service resource)",
+		"Locate HTTP load balancer TLS. A workload stateless service resource is unrelated.",
+	])
+		expect(terraformProviderMention(q, ["http_loadbalancer", "workload"])).toBe("http_loadbalancer");
+});
+
+test("unparenthesized examples and rejected modifier owners preserve identity", () => {
+	for (const word of ["for example", "instead of", "rather than", "such as"])
+		expect(
+			terraformProviderMention("Locate HTTP load balancer TLS, " + word + " a workload stateless service resource", [
+				"http_loadbalancer",
+				"workload",
+			]),
+		).toBe("http_loadbalancer");
+});
+
+test("abbreviated provider examples cannot capture identity", () => {
+	for (const modifier of ["stateless service", "stateful-service"])
+		expect(
+			terraformProviderMention("Locate HTTP load balancer TLS, e.g. a workload " + modifier + " resource", [
+				"http_loadbalancer",
+				"workload",
+			]),
+		).toBe("http_loadbalancer");
+});
+test("data source value lookup labels require a substantive property target", () => {
+	expect(propertyRequestedText("Find data source output addresses")).toBe("addresses");
+	expect(propertyRequestedText("Find the data-source input name")).toBe("name");
+	expect(propertyRequestedText("Find data source output field addresses")).toBe("addresses");
+	expect(propertyRequestedText("Find the data-source output preserving IPv4 entries")).toBe("preserving IPv4 entries");
+	for (const q of [
+		"Find data source output for CDN",
+		"Find data source output of xcsh_network_cdn",
+		"Find data source output using xcsh_network_cdn",
+		"Find data source output",
+		"Find data source",
+	])
+		expect(propertyRequestedText(q)).toBeUndefined();
+	expect(propertyRequestedText("Find data source output addresses for CDN")).toBe("addresses");
+});
+
+test("data source labels preserve collections and literal fields", () => {
+	expect(propertyRequestedText("Find data source output list of addresses")).toBe("list of addresses");
+	expect(propertyRequestedText("Find data source field output")).toBe("output");
+	expect(propertyRequestedText("Find data source field `output`")).toBe("`output`");
+	for (const q of [
+		"Find data source output input",
+		"Find data source output the input from CDN",
+		"Find data source output field",
+	])
+		expect(propertyRequestedText(q)).toBeUndefined();
+});
+
+test("data source label requests retain negation and reject location-only targets", () => {
+	for (const q of [
+		"Do not find data source field name",
+		"Never locate data source output addresses",
+		"Find data source output in CDN",
+		"Find data source output within xcsh_network_cdn",
+		"Find data source output under xcsh_network_cdn",
+	])
+		expect(propertyRequestedText(q)).toBeUndefined();
+	expect(propertyRequestedText("Find data source output addresses in CDN")).toBe("addresses in CDN");
+});
+
+test("lookup negation is verb-local and literal location field names remain valid", () => {
+	expect(propertyRequestedText("Without changing the resource, find data source output addresses")).toBe("addresses");
+	expect(propertyRequestedText("Do not use CDN, but find data source output addresses")).toBe("addresses");
+	for (const field of ["inside", "in", "within", "under"])
+		expect(propertyRequestedText("Find data source attribute " + field)).toBe(field);
+	expect(propertyRequestedText("Do not find data source output addresses. Find data source output domains")).toBe(
+		"domains",
+	);
+});
+test("terminal ownership qualifiers preserve request and nesting structure", () => {
+	expect(propertyRequestedText("Find raw IPv4 entries on the network data source")).toBe("raw IPv4 entries");
+	for (const q of [
+		"find timeout on the compute resource and locate name on the other resource",
+		"find timeout on the resource under retry on the compute resource",
+		"do not find timeout on the compute resource",
+		"find timeout on the compute resource and its name or id",
+	])
+		expect(propertyRequestedText(q)).toContain("on the");
+	expect(propertyRequestedText("Which field holds on demand resource allocation policy?")).toBe(
+		"on demand resource allocation policy?",
+	);
+	expect(propertyRequestedText("Find input within transform")).toBe("input within transform");
+	expect(propertyRequestedText('Find "on the resource" label')).toBe('"on the resource" label');
+});
+
+test("a value-setting noun does not infer managed-resource intent", () => {
+	expect(
+		terraformQueryIdentity("For xcsh_advertise_policy. Which setting lists allowed TLS ciphers?").providerType,
+	).toBeUndefined();
+	expect(
+		terraformQueryIdentity("For xcsh_advertise_policy. How is the ordered hash-algorithm list represented?")
+			.providerType,
+	).toBeUndefined();
+	expect(terraformQueryIdentity("I am setting up xcsh_advertise_policy").providerType).toBe("resources");
+	expect(terraformQueryIdentity("I am setting the allowed TLS ciphers on xcsh_advertise_policy").providerType).toBe(
+		"resources",
+	);
+});
+
+test("general operation timeout format requests use lifecycle guidance", () => {
+	for (const q of [
+		"How do I configure operation wait limits for xcsh_fixture in HCL?",
+		"Which duration format is accepted by xcsh_fixture timeouts in HCL?",
+		"Can HCL customize operation timeouts for xcsh_fixture, and how are they written?",
+	])
+		expect(terraformTaskDestination(q)).toEqual({ role: "timeouts" });
+	expect(terraformTaskDestination("Which create timeout field controls xcsh_fixture creation?")).not.toEqual({
+		role: "timeouts",
+	});
+});
+
+test("ephemeral resource wording retains only ephemeral role", () => {
+	expect(terraformQueryIdentity("In the ephemeral resource at root, find expiration_time").providerType).toBe(
+		"ephemeral-resources",
+	);
+	expect(terraformQueryIdentity("Compare an ephemeral resource and a managed resource").providerType).toBeUndefined();
+});
+
+test("complete resource HCL drafting starts from documented minimal configuration", () => {
+	expect(
+		terraformTaskDestination('Draft HCL for resource "xcsh_fixture" with name = "sample" and nested.field = 2'),
+	).toEqual({ role: "fundamentals", anchor: "minimal-configuration" });
+	expect(terraformTaskDestination("Draft HCL snippet for only the nested.field property on xcsh_fixture")).not.toEqual(
+		{ role: "fundamentals", anchor: "minimal-configuration" },
+	);
+});
+
+test("complete ephemeral declaration can restrict supplied inputs", () => {
+	expect(
+		terraformTaskDestination(
+			'Draft HCL for ephemeral "xcsh_fixture" "example" with namespace = "lab". Use only this supported input field.',
+		),
+	).toEqual({ role: "fundamentals", anchor: "minimal-configuration" });
+});
+
+test("exact provider credential input identifies documented authentication method", () => {
+	expect(terraformProviderSetupDestination('Draft HCL provider xcsh with api_token = "sample"')).toBe(
+		"option-1-api-token-authentication",
+	);
+	expect(terraformProviderSetupDestination('Provider xcsh authentication with p12_file = "sample.p12"')).toBe(
+		"option-2-p12-certificate-authentication",
+	);
+	expect(
+		terraformProviderSetupDestination(
+			'Provider xcsh authentication with api_token = "sample" and p12_file = "sample.p12"',
+		),
+	).toBe("authentication-options");
+	expect(terraformProviderSetupDestination("Resource xcsh_cloud_credentials uses api_token")).toBeUndefined();
+});
+
+test("complete Terraform HCL syntax preserves explicitly requested example view", () => {
+	expect(
+		terraformTaskDestination(
+			"Draft Terraform HCL for a synthetic xcsh_healthcheck resource. Use the standalone Resource example as the starting point.",
+		),
+	).toEqual({ role: "example", anchor: "resource" });
+	expect(terraformTaskDestination("Draft Terraform HCL for a synthetic xcsh_healthcheck resource.")).toEqual({
+		role: "fundamentals",
+		anchor: "minimal-configuration",
+	});
 });

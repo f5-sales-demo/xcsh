@@ -1,0 +1,6 @@
+{
+  "qualification_passed": false,
+  "stopped": true,
+  "reason": "PI_DEV native load message contaminates strict JSON stdout",
+  "failed_trace_preserved": true
+}

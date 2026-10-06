@@ -1,0 +1,14 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "focused_tests": 32,
+  "workspace_check": true,
+  "no_identity_byte_comparisons": 24,
+  "original_long_anchor_bytes": 3955,
+  "hint_budget": 4096,
+  "context_budget": 16384,
+  "exact_full_reads_unchanged": true,
+  "pin_changed": false,
+  "review": "approve narrow hint/context ownership labels",
+  "remaining": "Selection integration and fresh immutable qualification remain required."
+}

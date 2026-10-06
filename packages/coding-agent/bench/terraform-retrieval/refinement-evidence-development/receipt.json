@@ -1,0 +1,15 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 94,
+  "v7_top5": 122,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "focused_pass": 201,
+  "type_lint_pass": true,
+  "prior_package_pass": 9683,
+  "prior_package_source": "09c90229819735cae5cc45a0d0ad6bbb5bcf992e",
+  "change": "Refined direct fields retain actual ranked score/coverage and metadata; ancestor confidence is not transferred",
+  "known_regression": "One prior leaf becomes choices when actual field score trails a competing field; original result preserved",
+  "caller_verified_red_green": true
+}

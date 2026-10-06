@@ -1,0 +1,22 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "answerable_correct": 6,
+  "answerable_total": 9,
+  "answerable_leaf_reads": 6,
+  "justified_role_clarification": true,
+  "unsupported_field_rejected": true,
+  "strict_audit_passed": false,
+  "violations": [
+    {
+      "reason": "invalid-helper-result",
+      "id": "item_55",
+      "detail": "Helper returned an error or unsupported status"
+    }
+  ],
+  "model_network_wall_ms": 461466.4262520382,
+  "tool_calls": 57,
+  "top20_recall": 128,
+  "top20_recall_total": 140,
+  "remaining": "Wrong provider inference and missing terminology prevent three selections. Add bounded search reformulation; property-only candidates omit lifecycle/setup guidance."
+}

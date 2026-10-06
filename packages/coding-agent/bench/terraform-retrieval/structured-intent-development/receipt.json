@@ -1,0 +1,19 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "answerable_correct": 59,
+  "answerable_top5": 93,
+  "total_answerable": 140,
+  "v6_correct": 79,
+  "v6_top5": 98,
+  "first_scores_unchanged": true,
+  "changes": "Clause-scopedvalueextraction;leaf-specificancestorexclusion;unsupportedbarelookupdottedpathrejection",
+  "review_findings_fixed": [
+    "lookupalonefalsecertainty",
+    "clausescopeboundaries",
+    "unscopedfieldnoun",
+    "bareunsupportedpath"
+  ],
+  "rejected_parent_prose_preserved": true,
+  "focused_tests": 231
+}

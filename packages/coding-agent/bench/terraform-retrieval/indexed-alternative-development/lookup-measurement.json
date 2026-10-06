@@ -1,0 +1,17 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "provider_version": "v12.4.0",
+  "groups_verified": 9798,
+  "all_alternative_sets_identical": true,
+  "old_lookup_p95_ms": 3.274300000000949,
+  "indexed_lookup_p95_ms": 0.04683599999953003,
+  "plan": [
+    {
+      "id": 3,
+      "parent": 0,
+      "notused": 61,
+      "detail": "SEARCH property_terms USING INDEX property_leaf_lookup (leaf=? AND provider_name=?)"
+    }
+  ]
+}

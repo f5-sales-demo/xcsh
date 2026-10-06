@@ -1,0 +1,10 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "automated_pass": 3,
+  "total": 10,
+  "answerable_exact_reads": 7,
+  "answerable_total": 7,
+  "all_response_budgets_passed": true,
+  "remaining": "Ancillary read requirements remain unmet; exposed suite cannot qualify. Final envelope fix requires installed validation."
+}

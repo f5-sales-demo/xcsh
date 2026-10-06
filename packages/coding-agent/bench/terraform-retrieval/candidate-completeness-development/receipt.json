@@ -1,0 +1,14 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 87,
+  "v7_top5": 121,
+  "prior_v7_correct": 97,
+  "prior_v7_top5": 123,
+  "focused_pass": 155,
+  "type_lint_pass": true,
+  "change": "Scoped BM25 and exact-leaf limit probes report incompleteness; incomplete pool leaf demoted to choices; invalid candidate limits reject",
+  "known_regressions": "Ten selected heldout leaves now unresolved because candidate retrieval truncates; labels and original scores unchanged",
+  "expanded_pool_rejected": "Recovered 97/140 but route p95 248.19ms exceeded150ms; warm p95159.33ms",
+  "target_coverage_bypass_rejected": true
+}

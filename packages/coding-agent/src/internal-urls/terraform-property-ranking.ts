@@ -1,3 +1,4 @@
+import { matchesFieldAccess, requestedFieldAccess } from "./terraform-field-access";
 // Deterministic indexed property ranking. Scores are ranking values, never probabilities.
 export interface PropertyCandidate {
 	provider_type: string;
@@ -51,6 +52,8 @@ export function propertyTerms(text: string): string[] {
 			.replace(/fully qualified domain names/g, "domains")
 			.replace(/next[ -]hop/g, "nexthop")
 			.replace(/app stack/g, "voltstack")
+			.replace(/bare[ -]+metal/g, "baremetal")
+			.replace(/\bunmanaged\b/g, "not managed")
 			.replace(/flasharray/g, "flash array")
 			.replace(/flashblade/g, "flash blade")
 			.replace(/assisted routing/g, "ar")
@@ -70,7 +73,171 @@ export function propertyTerms(text: string): string[] {
 		),
 	];
 }
+// Canonical workload service is stateless; stateful_service is its parallel architecture.
+// Apply this distinction only within the workload provider, preserving missing/conflicting intent.
+/** Source-attributed field prose is meaning evidence, not caller-supplied schema scope. */
+export function propertyInstructionText(text: string): string {
+	return text.split(
+		/\b(?:find|locate|identify)\s+(?:the\s+)?(?:field|leaf|property)\s+(?:described as(?: follows)?|with (?:this|the following) (?:documented )?(?:meaning|description))\s*:/i,
+	)[0]!;
+}
+export function propertyWorkloadArchitecture(text: string): "stateless" | "stateful" | undefined {
+	text = propertyInstructionText(text);
+	text = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "").replaceAll("`", "");
+	const assertions = new Set<"stateless" | "stateful">();
+	const negative =
+		/\b(not|no|without)\s+([^,.!?;\n]*?)`?(stateless|stateful|stateful_service|service(?=[./]|\s+branch\b)|service(?=\s*$))\b/gi;
+	for (const match of text.matchAll(negative)) {
+		const between = match[2]!.replaceAll("`", "").trim().toLowerCase();
+		const tail = text.slice(match.index! + match[0].length);
+		if (
+			match[3]!.toLowerCase() === "service" &&
+			!/^[./]/.test(tail) &&
+			!/\b(?:under|in|within|branch|path)(?:\s+(?:a|an|the))?$/i.test(between)
+		)
+			continue;
+		const simpleOpposite =
+			match[1]!.toLowerCase() !== "without" &&
+			["", "a", "an", "the"].includes(between) &&
+			match[3]!.toLowerCase() !== "service" &&
+			!/^[./]/.test(tail);
+		if (!simpleOpposite) return undefined;
+		assertions.add(match[3]!.toLowerCase() === "stateless" ? "stateful" : "stateless");
+	}
+	const positiveText = text.replace(
+		/\b(?:not|no)\s+(?:(?:a|an|the)\s+)?(?:stateless|stateful|stateful_service)\b/gi,
+		"",
+	);
+	// The canonical workload service page explicitly calls its replicas fungible;
+	// the parallel StatefulService page gives each replica stable state and identity.
+	if (/\b(?:not|no|without)\b[^.!?;]*\bfungible\b/i.test(text)) return undefined;
+	if (/\bfungible(?:\s+(?:service|replicas?))?\b/i.test(positiveText)) assertions.add("stateless");
+	if (
+		/\bstateless\b|\bservice\s+branch\b|\bservice[./]|\b(?:under|in|within|branch|path)\s+(?:(?:a|an|the)\s+)?service\b/i.test(
+			positiveText,
+		)
+	)
+		assertions.add("stateless");
+	if (/\b(?:stateful|stateful_service)\b/i.test(positiveText)) assertions.add("stateful");
+	return assertions.size === 1 ? [...assertions][0] : undefined;
+}
+export function propertyWorkloadPortCount(text: string): "single" | "multiple" | undefined {
+	text = propertyInstructionText(text);
+	const query = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	if (
+		/\b(?:not|no|never|without|maybe|possibly)\b[^.!?;]*\b(?:one|single|multiple|multi)[ -]?(?:public[ -]?)?ports?\b/i.test(
+			query,
+		)
+	)
+		return undefined;
+	if (
+		/\b(?:one|single)\s+(?:or|and)\s+(?:multiple|multi)\b|\b(?:multiple|multi)\s+(?:or|and)\s+(?:one|single)\b/i.test(
+			query,
+		)
+	)
+		return undefined;
+	const single = /\b(?:one|single)[ -](?:public[ -])?port\b/i.test(query);
+	const multiple = /\b(?:multiple|multi)[ -](?:public[ -])?ports?\b/i.test(query);
+	return single === multiple ? undefined : single ? "single" : "multiple";
+}
+// These descriptions are from the canonical workload advertisement destinations.
+// Ambiguous or rejected descriptions cannot remove either branch.
+export function propertyMatchesWorkloadAdvertisement(text: string, candidate: PropertyCandidate): boolean {
+	if (candidate.provider_name !== "workload") return true;
+	const query = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	if (
+		/\b(?:either|compare|versus|maybe|possibly)\b/i.test(query) ||
+		/\b(?:not|no|never|without)\b[^.!?;]*\b(?:advertise|advertisement)\b/i.test(query)
+	)
+		return true;
+	const publicAdvertisement =
+		/\bInternet\s+advertisement\b[^.!?;]*\bdefault\s+VIP\b|\b(?:advertise|advertisement)\b[^.!?;]*\bon\s+(?:the\s+)?Internet\b[^.!?;]*\bdefault\s+VIP\b/i.test(
+			query,
+		);
+	const customAdvertisement = /\bcustom\s+advertisement\b|\badvertise\b[^.!?;]*\bon\s+specific\s+sites\b/i.test(query);
+	if (publicAdvertisement === customAdvertisement) return true;
+	const parts = candidate.schema_path.split(".");
+	if (!parts.some(part => ["advertise_on_public", "advertise_custom"].includes(part))) return true;
+	return parts.includes(publicAdvertisement ? "advertise_on_public" : "advertise_custom");
+}
+export function propertyMatchesWorkloadPortCount(text: string, candidate: PropertyCandidate): boolean {
+	if (candidate.provider_name !== "workload") return true;
+	const count = propertyWorkloadPortCount(text);
+	if (!count || !candidate.schema_path.split(".").includes("advertise_on_public")) return true;
+	const multi = candidate.schema_path.split(".").includes("multi_ports");
+	return count === "multiple" ? multi : !multi;
+}
+export function propertyMatchesWorkloadArchitecture(text: string, candidate: PropertyCandidate): boolean {
+	if (candidate.provider_name !== "workload") return true;
+	const architecture = propertyWorkloadArchitecture(text);
+	if (!architecture) return true;
+	const stateless = architecture === "stateless";
+	const parts = candidate.schema_path.split(".");
+	return stateless ? !parts.includes("stateful_service") : !parts.includes("service");
+}
+// Outer and inner cookie groups are separate schema levels. Require both assertions.
+export function propertyCookieOperators(text: string): [string, string] | undefined {
+	const assertions = [...text.matchAll(/\b(outer|inner)\s+cookie\s+group\s+(?:also\s+)?uses\s+(AND|OR|NONE)\b/gi)];
+	if (assertions.length !== 2 || new Set(assertions.map(m => m[1]!.toLowerCase())).size !== 2) return undefined;
+	if (/\b(?:not|never|without|either|versus|instead of|rather than|compare)\b/i.test(text)) return undefined;
+	const outer = assertions.find(m => m[1]!.toLowerCase() === "outer")!;
+	const inner = assertions.find(m => m[1]!.toLowerCase() === "inner")!;
+	return [outer[2]!.toLowerCase(), inner[2]!.toLowerCase()];
+}
+export function propertyMatchesCookieOperators(text: string, row: PropertyCandidate): boolean {
+	const operators = propertyCookieOperators(text);
+	if (!operators) return true;
+	const parts = row.schema_path.split(".");
+	const outer = parts.find(part => /^cookies_(?:and|or|none)$/.test(part));
+	const inner = parts.find(part => /^cookie_(?:and|or|none)$/.test(part));
+	return Boolean(outer && inner && outer === `cookies_${operators[0]}` && inner === `cookie_${operators[1]}`);
+}
 export function propertyQueryTerms(text: string): string[] {
+	text = text.replace(
+		/\b(?:locate|find)\s+(?:the\s+)?authorization endpoint URL,?\s+rather than\s+the\s+token or logout endpoint(?=[.!?]|$)/gi,
+		"locate authorization endpoint URL",
+	);
+	text = affirmativeComparisonText(text);
+	text = text
+		.split(/(`[^`]*`|"[^"]*"|\x27[^\x27]*\x27|‘[^’]*’|“[^”]*”|[a-z0-9_-]+(?:[./][a-z0-9_.-]+)+)/gi)
+		.map((part, index) =>
+			index % 2
+				? part
+				: part
+						.replace(/\bbeginning\b/gi, word => `${word} start`)
+						.replace(/\bdual[ -]family\b|\bboth\s+(?:address|IP)\s+families\b/gi, "dual stack")
+						.replace(/\b(ipv[46])[ -]only\b/gi, (phrase, family, offset) =>
+							/\b(?:not|never|without)\s*$/.test(part.slice(0, offset)) ? phrase : `${family} single stack`,
+						)
+						.replace(
+							/\b(primary|secondary)(?=\s+(?:(?:cookie|HMAC)\s+){1,3}keys?\b)/gi,
+							term => `${term} ${term.toLowerCase() === "primary" ? "prim" : "sec"}`,
+						)
+						.replace(/\bautonomous[-\u2010-\u2015]system number\b/gi, "autonomous system number")
+						.replace(/\bregular[-\u2010-\u2015]expressions?\b/gi, value =>
+							value.replace(/[-\u2010-\u2015]/, " "),
+						),
+		)
+		.join("");
+	text = text
+		.replace(/\bbasic authentication\b/gi, "basic auth")
+		.replace(/\bserver[ -]name indication\b/gi, "sni")
+		.replace(/\balert name\b/gi, "alertname")
+		.replace(/\bquery[ -]parameters?\b/gi, "query param")
+		.replace(/\bhow\s+long\b/gi, "duration")
+		.replace(/\b(?:lower|lowest)(?=\s+(?:supported\s+)?(?:TLS\s+)?version\b)/gi, "min minimum")
+		.replace(/\b(?:upper|highest)(?=\s+(?:supported\s+)?(?:TLS\s+)?version\b)/gi, "max maximum")
+		.replace(/\bbegan\b/gi, "start")
+		.replace(/\bminimum\b/gi, "min minimum")
+		.replace(/\bmaximum\b/gi, "max maximum")
+		.replace(/\bdecrypt(?:s|ing)?\b/gi, "decryption decrypt")
+		.replace(/\bcredential(?:s)?\b/gi, "cred credential")
+		.replace(/\b(inactive|no[ -]traffic)\b/gi, value =>
+			/\b(?:timeout|duration|period|interval)\b/i.test(text) ? `${value} idle` : value,
+		)
+		.replace(/\b(?:lasts|lasting)\b/gi, "duration")
+		.replace(/\bcookie\s+(?:session\s+)?(?:persistence|stickiness)\b/gi, "cookie affinity")
+		.replace(/\b(?:session\s+)?persistence(?=[^,.!?;]*\bcookie\b)/gi, "affinity");
 	return propertyTerms(
 		text
 			.toLowerCase()
@@ -78,17 +245,19 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\b(?:arguments?|flags?)\b/g, "")
 			.replace(/\b(?:whether|should)\b/g, "")
 			.replace(/\b(?:criteria|criterion)\b/g, "conditions")
+			.replace(/\bregular expressions\b/g, "regex values")
 			.replace(
 				/\b(?:active\s+)?hostnames?\s+(?:routed|served)\s+by\s+(?:the\s+)?(?:proxy|load[ -]?balancer)\b/g,
 				"domains matched host authority",
 			)
 			.replace(/\b(?:active\s+)?hostnames?\s+(?:routed|served)\s+by\b/g, "domains matched by")
-			.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "")
+			.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "")
 			.replace(/\bdata[ -]+sources?\b|\bmanaged\s+resource\b|\bresource\s+declaration\b|\bdeclaration\b/g, "")
 			.replace(/operating[ -]+system/g, "os")
 			.replace(/mutual[ -]+tls/g, "mtls")
 			.replace(/\badvertised\b/g, "advertise")
 			.replace(/http\/1\.1/g, "http v1")
+			.replace(/http\/2(?:\.0)?/g, "http2")
 			.replace(/\b(?:listening|listener)\b/g, "listen")
 			.replace(/\bdestination\s+port\b/g, "endpoint port")
 			.replace(/\bprefixes\b/g, "prefix")
@@ -102,35 +271,305 @@ export function propertyQueryTerms(text: string): string[] {
 			.replace(/\bpermits\b/g, "permit"),
 	);
 }
+function groupingRequest(text: string): { key: string; uncertain: boolean } | undefined {
+	const request = propertyRequestedText(text) ?? text;
+	const match =
+		/\b(?:grouped|keyed)\s+by\s+(?:the\s+)?(?:(`|")([^`"]+)\1|([a-z][a-z0-9_-]*(?:\s+[a-z][a-z0-9_-]*)*))/i.exec(
+			request,
+		);
+	if (!match) return undefined;
+	const key = (match[2] ?? match[3] ?? "").split(/[,;.!?]|\b(?:for|in|under|within|on|with|or|and)\b/i)[0]!.trim();
+	return { key, uncertain: /\b(?:not|no|never|without|maybe|possibly|or|and)\b/i.test(request) };
+}
+export function propertyUncertainGrouping(text: string): boolean {
+	return groupingRequest(text)?.uncertain ?? false;
+}
+export function propertyGroupingKey(text: string): string | undefined {
+	return groupingRequest(text)?.key;
+}
+export function propertyMatchesGrouping(text: string, candidate: PropertyCandidate): boolean {
+	const key = propertyGroupingKey(text);
+	if (!key) return true;
+	const terms = propertyTerms(key);
+	const relations = [...candidate.description.matchAll(/\bkeyed\s+by\s+([^.;\n]+)/gi)].map(match =>
+		propertyTerms(match[1]!),
+	);
+	return (
+		candidate.type === "map" &&
+		terms.length > 0 &&
+		relations.some(relation => terms.every(term => relation.includes(term)))
+	);
+}
 export function propertyRequestedType(text: string): string | undefined {
+	const query = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	const requested = propertyRequestedText(query) ?? query;
+	if (/\b(?:numeric|number)\s+(?:cap|limit|value)\b/i.test(requested)) {
+		const clause =
+			query.split(/[.!?;]+/).find(value => /\b(?:numeric|number)\s+(?:cap|limit|value)\b/i.test(value)) ?? requested;
+		const assertion = /\b(?:numeric|number)\s+(?:cap|limit|value)\b/i.exec(clause)!;
+		const before = clause.slice(0, assertion.index);
+		const after = clause.slice(assertion.index + assertion[0].length);
+		const tail = requested.slice(requested.search(/\b(?:numeric|number)\s+(?:cap|limit|value)\b/i));
+		if (
+			/\b(?:not|no|never|without|rather than|instead of|except|maybe|possibly|optional|for example|such as)\b/i.test(
+				before,
+			) ||
+			/\b(?:or|and)\s+(?:(?:an?|the)\s+)?(?:unlimited|numeric|number|boolean|bool|object)\b/i.test(after) ||
+			/\b(?:is|are)\s+(?:not|never)\s+(?:needed|required|wanted)\b/i.test(tail)
+		)
+			return undefined;
+		return "number";
+	}
 	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return undefined;
 	if (/\b(?:boolean|bool)\s+(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return "bool";
 	if (/\bscalar\s+list\b/i.test(text)) return "list";
 	if (/\b(?:numeric|number)\s+(?:field|attribute|property|parameter|argument)\b/i.test(text)) return "number";
 	return undefined;
 }
+// The caller can name a root schema block in prose; the index verifies this identity.
+export function propertyNamedRootPath(text: string): string | undefined {
+	if (/\broot\s+(?:property|schema|field)\s+reference\b/i.test(text)) return undefined;
+	const clause = text.split(/[.!?;]/).find(value => /\b(?:use|under|within|inside)\s+(?:the\s+)?root\s+/i.test(value));
+	if (!clause || /\b(?:not|no|never|without|compare|either|versus)\b/i.test(clause)) return undefined;
+	const match =
+		/\b(?:use|under|within|inside)\s+(?:the\s+)?root\s+([a-z][a-z0-9_]*(?:\s+[a-z][a-z0-9_]*){0,3}?)(?=\s+rather than|[,;.!?]|$)/i.exec(
+			clause,
+		);
+	return match?.[1]?.toLowerCase().replace(/\s+/g, "_");
+}
 export function propertyRequestsRootField(text: string): boolean {
 	return /\b(?:top[ -]level|root[ -]level|root|direct)\s+(?:attribute|field|property|parameter|argument|flag)\b/i.test(
 		text,
 	);
 }
-export function propertySchemaIdentifiers(text: string): string[] {
-	const request = text.replace(/\((?:such as|e\.g\.|for example)\b[^)]*\)/gi, "");
+export function propertyOrderedNestingPath(text: string): string | undefined {
+	const clauses = text.toLowerCase().split(/,\s*within\s+/);
+	if (clauses.length < 3) return undefined;
+	const segments = clauses.slice(1).map(clause => clause.split(/[.!?;,]|\s+(?:against|on|in)\s+/)[0]!.trim());
+	if (segments.some(segment => !/^([a-z][a-z0-9_]*)(?: +[a-z][a-z0-9_]*){0,3}$/.test(segment))) return undefined;
+	if (/\b(?:not|no|without|rather than|instead of|outside|excluding|either|versus|compare)\b/i.test(clauses[0]!))
+		return undefined;
+	return segments.map(segment => segment.replace(/ +/g, "_")).join(".");
+}
+export function propertyBreadcrumbText(text: string): string {
+	text = text.replace(
+		/`([a-z][a-z0-9_]*)`(?=\s*[>→])|(?<=[>→]\s*)`([a-z][a-z0-9_]*)`/gi,
+		(_, first, last) => first ?? last,
+	);
+	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi, value =>
+		value.replace(/\s*[>→]\s*/g, "."),
+	);
+}
+export function propertyWithoutBreadcrumbs(text: string): string {
+	return text.replace(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi, " ");
+}
+function singleSchemaScopeMentions(text: string) {
+	if (!/\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`[a-z][a-z0-9_]*`/i.test(text)) return [];
+	return [
+		...text.matchAll(
+			/\b(at|uses|inspecting|concerns|under)\s+(?:the\s+)?([a-z][a-z0-9_]*)(?=\s+(?:branch|on the|in the)|[:,!?]|\.(?=\s|$)|$)|;\s+([a-z][a-z0-9_]*)(?=[!?]|\.(?=\s|$))/gi,
+		),
+	].filter(m => !["root", "xcsh"].includes(m[2] ?? m[3] ?? "") && !(m[2] ?? m[3] ?? "").startsWith("xcsh_"));
+}
+export function propertyWithoutSingleSchemaScope(text: string): string {
+	for (const m of singleSchemaScopeMentions(text).reverse())
+		text = text.slice(0, m.index) + " " + text.slice(m.index! + m[0].length);
+	return text;
+}
+function schemaPathMentions(text: string) {
+	text = propertyInstructionText(text);
+	const breadcrumbSource = text.replace(/`([a-z][a-z0-9_]*)`/gi, "$1");
+	const query = propertyBreadcrumbText(text)
+		.toLowerCase()
+		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	const literalBreadcrumbs = new Set(
+		[...breadcrumbSource.matchAll(/\b(?:[a-z][a-z0-9_]*\s*[>→]\s*)+[a-z][a-z0-9_]*\b/gi)].map(m =>
+			propertyBreadcrumbText(m[0]).toLowerCase(),
+		),
+	);
+	const qualified = [
+		...query.matchAll(
+			/\b(under|within|inside|schema path|branch|path|or|and|locate|find|point me to|where is|where are|where do i put|where do|where does|i need|at|uses|inspecting|concerns|;)\s+(?:(?:the|its)\s+)?(`?)([a-z][a-z0-9_.-]*\.[a-z0-9_.-]+)\2/g,
+		),
+	];
+	const bare = [...query.matchAll(/\b[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+\b/g)].filter(
+		m =>
+			literalBreadcrumbs.has(m[0]) &&
+			!qualified.some(q => m.index! >= q.index! && m.index! < q.index! + q[0].length),
+	);
+	return [
+		...bare.map(m => Object.assign([m[0], "literal", "", m[0]], { index: m.index })),
+		...singleSchemaScopeMentions(query).map(m =>
+			Object.assign([m[0], m[1] ?? "scope", "", m[2] ?? m[3]], { index: m.index }),
+		),
+		...qualified,
+	]
+		.filter(match => !(match[2] === "" && /^e\.g\.?$/i.test(match[3]!)))
+		.map(match => {
+			const suffix = query.slice(match.index! + match[0].length);
+			const path = !match[2] && /^(?:\s+[a-z]|\s*[!?]|\s*$)/.test(suffix) ? match[3]!.replace(/\.$/, "") : match[3]!;
+			const clause =
+				query
+					.slice(0, match.index)
+					.split(/[;!?\n]|\.(?=\s)/)
+					.at(-1) ?? "";
+			return {
+				start: match.index!,
+				end: match.index! + match[0].length,
+				path,
+				qualifier: match[1]!,
+				negative: /\b(?:not|no|without)\s+(?:(?:necessarily|a|an|the)\s+){0,3}$/.test(clause),
+			};
+		});
+}
+export function propertyMentionedSchemaPaths(text: string): string[] {
+	return [...new Set(schemaPathMentions(text).map(match => match.path))];
+}
+export function propertyExplicitSchemaPaths(text: string): string[] {
+	const instructions = propertyInstructionText(text);
+	const follow = /\bfollow\s+`([a-z][a-z0-9_]*)`/i.exec(instructions);
+	if (
+		follow &&
+		!/[>→]/.test(instructions.slice(follow.index)) &&
+		!/\b(?:not|no|without|compare|either|or)\b/i.test(instructions.slice(0, follow.index))
+	)
+		return [follow[1]!.toLowerCase()];
+
+	const matches = schemaPathMentions(text);
+	if (matches.length !== 1) return [];
+	const match = matches[0]!;
+	return !match.negative && !["or", "and"].includes(match.qualifier) ? [match.path] : [];
+}
+export function propertyMatchesExplicitPaths(text: string, candidate: PropertyCandidate): boolean {
+	const ordered = propertyOrderedNestingPath(text);
+	return [...propertyExplicitSchemaPaths(text), ...(ordered ? [ordered] : [])].every(path =>
+		`.${candidate.schema_path}.`.includes(`.${path}.`),
+	);
+}
+export function propertyScopeText(text: string): string {
+	return text
+		.toLowerCase()
+		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "")
+		.replaceAll("`", "");
+}
+function excludedIdentifierMentions(text: string) {
+	const query = propertyScopeText(text).replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	return [
+		...query.matchAll(/\b(?:outside|excluding)\s+`?([a-z][a-z0-9]*_[a-z0-9_]+)`?(?=$|[\s,;!?]|\.(?:\s|$))/g),
+	].map(match => ({
+		identifier: match[1]!,
+		uncertain: /\b(?:not|no|without)\s+(?:(?:necessarily|always|usually|only)\s+)?$/.test(
+			query.slice(0, match.index),
+		),
+	}));
+}
+export function propertyExcludedSchemaIdentifiers(text: string): string[] {
+	return [
+		...new Set(
+			excludedIdentifierMentions(text)
+				.filter(match => !match.uncertain)
+				.map(match => match.identifier),
+		),
+	];
+}
+export function propertyUncertainExcludedIdentifiers(text: string): string[] {
+	return [
+		...new Set(
+			excludedIdentifierMentions(text)
+				.filter(match => match.uncertain)
+				.map(match => match.identifier),
+		),
+	];
+}
+export function propertyConflictingNamedScope(text: string): boolean {
+	const query = propertyScopeText(text);
+	return (
+		/\b(?:outside\s+and\s+(?:inside|under|within)|(?:inside|under|within)\s+and\s+outside)\s+[a-z][a-z0-9]*_[a-z0-9_]+\b/.test(
+			query,
+		) ||
+		propertyExcludedSchemaIdentifiers(text).some(identifier =>
+			new RegExp(`\\b(?:inside|under|within)\\s+${identifier}\\b`).test(query),
+		)
+	);
+}
+export function propertyInvalidExcludedScope(text: string): boolean {
+	return /\b(?:outside|excluding)\s+[a-z][a-z0-9]*_[a-z0-9_]*(?:[-/:])[a-z0-9_/-]*/.test(propertyScopeText(text));
+}
+export function propertySchemaIdentifiers(text: string, providerName?: string): string[] {
+	let request = propertyBreadcrumbText(propertyInstructionText(text))
+		.toLowerCase()
+		.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	request = request.replace(/\b(?:grouped|keyed)\s+by\s+(?:the\s+)?(?:`[^`]+`|"[^"]+"|[a-z][a-z0-9_-]*)/gi, " ");
+	const requiredPaths = propertyExplicitSchemaPaths(propertyInstructionText(text));
+	const excluded = new Set([
+		...propertyExcludedSchemaIdentifiers(text),
+		...propertyUncertainExcludedIdentifiers(text),
+	]);
+	const mentions = schemaPathMentions(request).filter(mention => !requiredPaths.includes(mention.path));
+	for (const mention of mentions.reverse())
+		request = request.slice(0, mention.start) + " " + request.slice(mention.end);
 	return [
 		...new Set(
 			(request.toLowerCase().match(/\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g) ?? []).filter(
-				term => !term.startsWith("xcsh_"),
+				term =>
+					!term.startsWith("xcsh_") &&
+					!excluded.has(term) &&
+					!(
+						providerName === "workload" &&
+						term === "stateful_service" &&
+						propertyWorkloadArchitecture(text) !== "stateful"
+					),
 			),
 		),
 	];
 }
 export function propertyRequestsBlock(text: string): boolean {
-	if (/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text)) return false;
+	if (
+		/\b(?:locate|find)\s+(?:the\s+)?basic authentication\s+(?:inside|under|within)\b/i.test(text) &&
+		!/\b(?:field|leaf|user[ _-]name|password|value)\b/i.test(text)
+	)
+		return true;
+	const terminal =
+		text
+			.split(/[?!]|\.(?=\s|$)/)
+			.filter(clause => clause.trim())
+			.at(-1) ?? text;
+	if (
+		/\b(?:find|locate|identify|point me to)\s+(?:(?:the|a|an)\s+)?[^.!?;]*\b(?:identifier|value|count|threshold|offset|URL|interval)\b/i.test(
+			terminal,
+		)
+	)
+		return false;
+	text = text.split(/\bto\s+(?:configure|enable|provide|handle|support)\b/i)[0]!;
+	if (
+		/\b(?:field|attribute|property|parameter|argument|flag|setting)\b/i.test(text) ||
+		/\b(?:find|locate|point me to)\s+(?:the\s+)?leaf\b/i.test(text) ||
+		/\b(?:which|what)\s+leaf\b/i.test(text) ||
+		/\b(?:which|what)\s+(?:fields|attributes|properties|parameters|arguments|flags)\b/i.test(text)
+	)
+		return false;
+	if (
+		/^\s*(?:specify|set|provide|supply|configure)\s+(?:(?:the|a|an)\s+)?(?:(?:listening|listener|target|cookie|session|idle)\s+)?(?:port|name|timeout|duration|value)\b/i.test(
+			text,
+		)
+	)
+		return false;
+	if (/\bblock[ -]page\s+(?:body|content)\b/i.test(text)) return false;
+	const intentText = text.split(/\bto\s+(?:configure|enable|provide|handle|support)\b/i)[0]!;
+	if (
+		/\bcookie\b/i.test(intentText) &&
+		/\b(?:persistence|affinity|stickiness)\b/i.test(intentText) &&
+		/\b(?:configure|set up|enable|specify)\b/i.test(intentText)
+	)
+		return true;
 	if (/\b(?:select|choose|enable|disable)\b/i.test(text)) return true;
 	return /\bblock\b/i.test(text.replace(/\b(?:resource|provider|existing)\s+block\b/gi, "container"));
 }
 export function propertyRequestedBlockText(text: string): string | undefined {
 	if (!propertyRequestsBlock(text)) return undefined;
+	const lookup = /\b(?:locate|find)\s+(?:(?:the|a|an)\s+)?(.+?)\s+(?:inside|under|within)\b/i.exec(text)?.[1];
+	if (lookup && !/\b(?:or|and|not|without|either)\b/i.test(lookup)) return lookup.trim();
+
 	const before = text.match(
 		/\b(?:declare|configure|specify|set|select|choose|enable|disable)\s+(.+?)\s+block\b/i,
 	)?.[1];
@@ -138,7 +577,94 @@ export function propertyRequestedBlockText(text: string): string | undefined {
 	const definition = text.match(/\bdefinition\s+of\s+(?:the\s+)?(.+?)\s+(?:list\s+|configuration\s+)?block\b/i)?.[1];
 	return (definition ?? before ?? after)?.split(/\b(?:during|when|to|in|under|within|for)\b/i)[0]?.trim();
 }
+export function propertyHasNestedQualifier(text: string): boolean {
+	return (
+		/\b(?:within|inside|under)\b/i.test(text) ||
+		/\bin\s+(?!(?:(?:an?|the)\s+)?(?:xcsh_|terraform\b|resource\b|data[ -]source\b|provider\b|action\b))[a-z][a-z0-9_]*(?:\b|[./])/i.test(
+			text,
+		)
+	);
+}
+export function propertyValueLookup(text: string): string | undefined {
+	const clauses = text.split(/;|[?!]|\.(?=\s|$)/);
+	let needValue: string | undefined;
+	for (const clause of clauses) {
+		const placement = /\bwhere\s+(?:do|does)\s+(.+?)\s+(?:go|belong)\b/i.exec(clause);
+		const lookup =
+			/\b(?:find|locate|identify|point me to|where do I put|where is|where are|I need)\s+(.+)/i.exec(clause) ??
+			placement;
+		const operation = /\b(?:specify|set|provide|supply)\b/i.exec(clause);
+		if (operation && (!lookup || operation.index < lookup.index)) return undefined;
+		if (!lookup) continue;
+		if (/\b(?:example|usage|guidance)\b/i.test(clause)) return undefined;
+		let target = lookup[1]!.split(/\band\s+its\b/i)[0]!.trim();
+		target = target.replace(/^(?:(?:the|a|an)\s+)?(?:setting|leaf)\s+(?:used\s+to\s+|for\s+)?/i, "");
+		const owner = /\s+on\s+(?:the|a|an)\s+((?:[a-z][a-z0-9_-]*\s+){0,8})(?:data[ -]source|resource)[.?!]?$/i.exec(
+			target,
+		);
+		if (
+			owner &&
+			!/[`"']|\b(?:not|no|never|without|or|and|either|instead|rather)\b/i.test(clause) &&
+			!/\b(?:find|locate|where|under|within|inside|on|resource|source)\b/i.test(owner[1]!)
+		)
+			target = target.slice(0, owner.index).trim();
+		const labeled =
+			/^(?:(?:the|a|an)\s+)?data[ -]source\s+((?:(?:input|output|field|attribute|property)\s+)+)(.+)/i.exec(target);
+		if (labeled) {
+			if (/\b(?:not|never|without)\s+(?:(?:ever|necessarily|also|please)\s+)*$/i.test(clause.slice(0, lookup.index)))
+				continue;
+			const explicitField = /^(?:field|attribute|property)\s+$/i.test(labeled[1]!);
+			target = labeled[2]!.split(/\b(?:for|from|using|via)\b|\bof\s+xcsh_/i)[0]!.trim();
+			const literal = explicitField && /^`?[a-z][a-z0-9_]*`?$/i.test(target);
+			if (!literal && /^(?:of|for|from|using|via|in|within|under|inside)\b/i.test(target)) return undefined;
+			if (
+				!literal &&
+				(!propertyTerms(target).length ||
+					/^(?:(?:the|a|an)\s+)?(?:input|output|field|attribute|property)\s*$/i.test(target))
+			)
+				return undefined;
+		}
+		if (/^I need\b/i.test(lookup[0]) && /\b(?:resource|data[ -]source|provider|action)\s*$/.test(target)) continue;
+		if (!target || /^(?:(?:an?|the)\s+)?(?:resource\b|data[ -]source\b|provider\b|action\b|xcsh_)/i.test(target))
+			return undefined;
+		if (/^I need\b/i.test(lookup[0])) {
+			needValue = target;
+			continue;
+		}
+		return target;
+	}
+	return needValue;
+}
 export function propertyRequestedText(text: string): string | undefined {
+	const described =
+		/\b(?:find|locate|identify)\s+(?:the\s+)?(?:field|leaf|property)\s+(?:described as(?: follows)?|with (?:this|the following) (?:documented )?(?:meaning|description))\s*:\s*(.+)/i.exec(
+			text,
+		)?.[1];
+	if (described?.trim()) return described.trim();
+
+	const quotedLookup = [
+		...text.matchAll(
+			/\b(?:what\s+does|verify|reference\s+explains|type\s+and\s+constraints\s+of|field\s+rules\s+for|understand|explain(?:\s+the\s+(?:type|rules?|restrictions?|constraints?|contract)(?:\s+and\s+(?:type|rules?|restrictions?|constraints?))?\s+of)?|check|rules?\s+apply\s+to|contract\s+for|(?:field|attribute|property|parameter|argument|flag))\s+`([a-z][a-z0-9_]*)`/gi,
+		),
+	].filter(match => !/\bdata[ -]source\s*$/i.test(text.slice(0, match.index)));
+	if (
+		quotedLookup.length === 1 &&
+		!/\b(?:not|never|excluding|example|such as)\b/i.test(
+			text
+				.slice(0, quotedLookup[0]!.index)
+				.split(/[.!?;]/)
+				.at(-1) ?? "",
+		)
+	)
+		return quotedLookup[0]![1];
+	const labels = [
+		...text.matchAll(
+			/(?:^|[.!?;]\s*)\b(?:field|attribute|property|parameter|argument|flag)\s*:\s*`([a-z][a-z0-9_]*)`(?=\s*(?:[.!?;]|$))/gi,
+		),
+	];
+	if (labels.length === 1) return labels[0]![1];
+	const passiveToggle = /\bhow\s+is\s+(.+?)\s+enabled\s+or\s+disabled\b/i.exec(text)?.[1];
+	if (passiveToggle) return passiveToggle.trim();
 	if (propertyRequestsBlock(text)) return undefined;
 	const fieldText = text.replace(
 		/\b(field|attribute|property|parameter|argument|flag)\b\s+(?:in|under|inside|within)\s+.+?\s+((?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\b)/i,
@@ -149,7 +675,7 @@ export function propertyRequestedText(text: string): string | undefined {
 		?.split(/\bin\b|\busing\b/i)[0]
 		?.trim();
 	const field = fieldText.match(
-		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag)\b\s+(?:(?:sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag|setting|leaf)\b\s+(?:(?:selects?|chooses?|names?|sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
 	)?.[1];
 	const identifierField =
 		field && /\bidentifier\s+(?:field|attribute|property|parameter|argument)\b/i.test(text)
@@ -160,27 +686,81 @@ export function propertyRequestedText(text: string): string | undefined {
 			? `type ${field}`
 			: undefined;
 	const operation =
-		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define)\b\s+(.+)/i)?.[1] ??
+		text.match(/\b(?:how|where)\b.*?\b(?:configure|specify|set|supply|define|pass|write)\b\s+(.+)/i)?.[1] ??
 		(/\bxcsh_[a-z0-9_]+\b/i.test(text)
 			? text.match(/\b(?:declare|configure|specify|set)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+)/i)?.[1]
 			: undefined) ??
 		text.match(
 			/\b(?:specify|set|provide|supply)\b\s+(?!(?:(?:an?|the)\s+)?(?:xcsh_|resource\b|data[ -]source\b|provider\b))(.+)/i,
 		)?.[1];
-	const lookup = /\bxcsh_[a-z0-9_]+\b/i.test(text)
-		? [...text.matchAll(/\b(?:read|fetch|retrieve|inspect|look up|lookup)\b\s+(.+)/gi)]
+	const rawLabeledField =
+		text.match(
+			/\b(?:with|using)\s+(?:the\s+)?([a-z][a-z0-9_]*)\s+(?:field|attribute|property|parameter|argument|flag)\b/i,
+		)?.[1] ??
+		text.match(
+			/\b(?:specify|set|provide|supply)\s+(?:the\s+)?([a-z][a-z0-9]*_[a-z0-9_]+)\s+(?:field|attribute|property|parameter|argument|flag)\b/i,
+		)?.[1] ??
+		text.match(
+			/\b(?:with|using)\s+([a-z][a-z0-9]*_[a-z0-9_]+)\s+when\s+(?:running|executing|adding|invoking)\b/i,
+		)?.[1];
+	const labeledField =
+		rawLabeledField &&
+		/\b(?:xcsh_[a-z0-9_]+\s+action|action\s+xcsh_[a-z0-9_]+)\b/i.test(text) &&
+		!/\b(?:resource|data[ -]source)\b/i.test(text) &&
+		!propertyHasNestedQualifier(text) &&
+		![
+			"numeric",
+			"number",
+			"string",
+			"boolean",
+			"bool",
+			"scalar",
+			"list",
+			"optional",
+			"required",
+			"computed",
+		].includes(rawLabeledField.toLowerCase())
+			? rawLabeledField
+			: undefined;
+	const queryProperty = text.match(
+		/\bquery\s+((?:(?:the|an?)\s+)?(?:[a-z][a-z0-9_-]*\s+){0,2}(?:name|id|status|address|port|token|value))\s+of\s+[^.!?]+/i,
+	)?.[1];
+	const lookup = /\bxcsh_[a-z0-9_]+\b|\bto\s+(?:read|fetch|retrieve|inspect|look up|lookup)\b/i.test(text)
+		? [
+				...text.matchAll(
+					/\b(?:read|fetch|retrieve|inspect|look up|lookup|query(?=\s+(?:(?:the|an?)\s+)?(?!xcsh_)[a-z][a-z0-9]*_[a-z0-9_]+\b))\b\s+(.+?)(?=\bto\s+(?:read|fetch|retrieve|inspect|look up|lookup)\b|\r?\n|$)/gi,
+				),
+			]
+				.filter(
+					(match, _index, matches) =>
+						!/^inspect\b/i.test(match[0]) ||
+						(!queryProperty && !matches.some(other => !/^inspect\b/i.test(other[0]))),
+				)
 				.map(match => match[1]!.split(/\b(?:from|using|via|for)\b/i)[0]!.trim())
+				.reverse()
 				.find(
 					value =>
-						!/^xcsh_|^(?:the |an? )?(?:data[ -]source|resource)\b/i.test(value) &&
+						!/^xcsh_|^(?:the |an? )?(?:data[ -]source|resource|existing)\b/i.test(value) &&
 						propertyTerms(value.replace(/\bxcsh_[a-z0-9_]+\b/gi, "").replace(/data[ -]source/gi, "")).length > 0,
 				)
 		: undefined;
+	const valueLookup = propertyValueLookup(text);
 	const passive =
 		/\bwhere\b.*?\b(?:is|are)\b\s+(?!(?:(?:an?|the)\s+)?xcsh_)(.+?)\s+\b(?:specified|configured|defined|set|documented)\b/i.exec(
 			text,
 		)?.[1];
-	return (filterCriterion ?? identifierField ?? classificationField ?? field ?? operation ?? lookup ?? passive)
+	return (
+		filterCriterion ??
+		identifierField ??
+		classificationField ??
+		field ??
+		labeledField ??
+		valueLookup ??
+		operation ??
+		lookup ??
+		queryProperty ??
+		passive
+	)
 		?.replace(/\bxcsh_[a-z0-9_]+\b/gi, "")
 		.split(/\bused\s+to\b|\bat\s+which\b|\bwhen\s+(?:handling|processing|matching|calling|invoking|executing)\b/i)[0]
 		?.split(
@@ -206,7 +786,12 @@ export function propertyNamesCollection(text: string, candidate: PropertyCandida
 }
 export function propertyRequestsDirectObjectField(queryText: string, candidate: PropertyCandidate): boolean {
 	if (candidate.schema_path.includes(".") || !candidate.anchor.startsWith("schema-")) return false;
-	if (!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText)) return false;
+	if (propertyHasNestedQualifier(queryText)) return false;
+	if (
+		!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText) &&
+		!/\bquery\s+(?:(?:the|an?)\s+)?(?:name|id|status|address|port|token|value)\s+of\b/i.test(queryText)
+	)
+		return false;
 	const request = propertyRequestedText(queryText);
 	if (!request) return false;
 	const generic = new Set(["object", "configured", "assigned", "computed", "value"]);
@@ -245,7 +830,13 @@ export function rankPropertyScope(
 	const query = propertyQueryTerms(queryText).filter(t => !providerTerms.has(t) || requested.has(t));
 	const target = propertyQueryTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
 	const requestedType = propertyRequestedType(queryText);
+	const access = requestedFieldAccess(queryText);
 	return scope.rows
+		.filter(row => matchesFieldAccess(row, access))
+		.filter(row => propertyMatchesCookieOperators(queryText, row))
+		.filter(row => propertyMatchesWorkloadArchitecture(queryText, row))
+		.filter(row => propertyMatchesWorkloadPortCount(queryText, row))
+		.filter(row => propertyMatchesWorkloadAdvertisement(queryText, row))
 		.filter(row => !requestedType || row.type == null || row.type === requestedType)
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {
@@ -279,15 +870,44 @@ export function rankPropertyScope(
 				if (localTerms.has(term)) precision += weight(term);
 				else if (row.aliasTerms.includes(term)) precision += weight(term) * 0.25;
 			}
+			const describedMeaning =
+				propertyInstructionText(queryText) !== queryText ? propertyRequestedText(queryText) : undefined;
+			const normalizedDescription = (text: string) =>
+				text
+					.toLowerCase()
+					.replace(/^exclusive with\s+/, "")
+					.replace(/[^a-z0-9]+/g, " ")
+					.trim();
+			const exactDescription =
+				describedMeaning && normalizedDescription(describedMeaning) === normalizedDescription(row.description);
 			const requestedLeaf = row.leaf.filter(term => target.includes(term)).length;
 			const leafComplete = row.leaf.length > 0 && row.leaf.every(term => target.includes(term));
 			let score =
 				(local + context * 0.6) * (total ? (coverage / total) ** 2 : 0) +
 				precision * 1.5 +
-				(leafComplete ? 12 : requestedLeaf * 3);
+				(leafComplete ? 12 : requestedLeaf * 3) +
+				(exactDescription ? 100 : 0);
+			const capabilityTerms = row.leaf.filter(term => !["enable", "disable"].includes(term));
+			const capabilityBlock =
+				row.anchor === "section" &&
+				row.leaf.some(term => ["enable", "disable"].includes(term)) &&
+				capabilityTerms.length >= 2 &&
+				capabilityTerms.every(term => target.includes(term)) &&
+				!scope.rows.some(
+					peer =>
+						peer.anchor.startsWith("schema-") &&
+						peer.schema_path
+							.replace(/(^|\.)(?:enable|disable)_/g, "$1")
+							.startsWith(`${row.schema_path.replace(/(^|\.)(?:enable|disable)_/g, "$1")}.`) &&
+						peer.leaf.length > 0 &&
+						peer.leaf.every(term => target.includes(term)),
+				) &&
+				/\b(?:configure|set|specify|enable|disable|select|choose)\b/i.test(queryText) &&
+				!/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(queryText);
+			if (capabilityBlock) score += 24;
 			if (propertyRequestsDirectObjectField(queryText, row)) score += 12;
 			if (propertyNamesCollection(queryText, row) && total > 0 && coverage / total >= 0.35) score += 36;
-			else if (asksField && row.anchor === "section") score -= 12;
+			else if (asksField && row.anchor === "section" && !capabilityBlock) score -= 12;
 			if (
 				row.anchor === "section" &&
 				row.leaf.length >= 2 &&
@@ -306,6 +926,8 @@ export function rankPropertyScope(
 			)
 				score += 20;
 			for (const [positive, negative] of [
+				["min", "max"],
+				["max", "min"],
 				["success", "failure"],
 				["failure", "success"],
 				["outside", "inside"],
@@ -354,4 +976,24 @@ export function rankPropertyScope(
 				(a.path < b.path ? -1 : a.path > b.path ? 1 : 0) ||
 				(a.anchor < b.anchor ? -1 : a.anchor > b.anchor ? 1 : 0),
 		);
+}
+export function affirmativeComparisonText(text: string): string {
+	if (/[`"'‘’“”()]|\b(?:not|no|never|without|or|either)\b/i.test(text)) return text;
+	const match = /\brather than\s+([a-z][a-z0-9_ -]*?)[.!?]?\s*$/i.exec(text);
+	if (
+		!match ||
+		/\b(?:and|with|which|what|where|find|locate|required|mandatory|must|but|while|for|supports?|supporting|rather|than|can|should|plus|requires?|excluding|lacking|except|unless)\b/i.test(
+			match[1]!,
+		)
+	)
+		return text;
+	const before = text.slice(0, match.index).trim().replace(/,$/, "").trim();
+	if (
+		!before ||
+		/[.!?;]/.test(before) ||
+		!/\b(?:locate|find|where|which|what)\b/i.test(before) ||
+		/\b(?:compare|contrast|excludes?|excluding|avoid)\b/i.test(before)
+	)
+		return text;
+	return before;
 }

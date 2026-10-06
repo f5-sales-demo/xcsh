@@ -1,0 +1,29 @@
+{
+  "route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "exit_code": 0,
+  "elapsed_seconds": 24.775623577996157,
+  "assistant_providers": [
+    "openai-codex"
+  ],
+  "assistant_models": [
+    "gpt-6.1-sol"
+  ],
+  "completed": true,
+  "binary_sha256": "5aaf209a2123d0e6052102f4d19daa9ecb3788543b2e4eb90d7ae72f9e810ac0",
+  "trace_sha256": "de6d544ed7afbe53c7a4dcef8e2e49a7a6531d0694dbc9101ca786b77dff971f",
+  "qualification_passed": false,
+  "scope": "Installed existing diagnostic binary verifies subscription-provider route; not final artifact or accuracy qualification",
+  "harness_source_commit": "5034a6675a58e9b84daa2df342be0d4d3ad98016",
+  "configuration_preflight": {
+    "config_status": "ok",
+    "subscription_provider_override_present": false,
+    "bundled_api": "openai-codex-responses",
+    "bundled_endpoint": "https://chatgpt.com/backend-api"
+  },
+  "guard_limitations": "Linux guard does not establish workstation identity or resolved endpoint; configuration preflight verified current Ubuntu route separately."
+}

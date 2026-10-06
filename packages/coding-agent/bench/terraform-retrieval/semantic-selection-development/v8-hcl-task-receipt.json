@@ -1,0 +1,18 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": {
+    "packages/coding-agent/src/internal-urls/terraform-documentation.ts": "f66b7a47cb5c7035d5c98f195b3215d2060d9f69fd778e5c5b77dfaf4ede0577",
+    "packages/coding-agent/src/internal-urls/terraform-task-route.ts": "5d0318a0d1b8fd29e174212e134ff07adb238acedcb6dc682480e59808f1d3ae"
+  },
+  "answerable_correct": 119,
+  "answerable_total": 140,
+  "answerable_top5": 137,
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "limitations": [
+    "Exposed regression only; below95 percent.",
+    "HCL field/component validation does not establish a valid configured document; exact field reads remain mandatory.",
+    "Installed drafting verification remains required."
+  ]
+}

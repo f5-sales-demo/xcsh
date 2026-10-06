@@ -1,0 +1,11 @@
+Two concrete **P2 bugs remain**, so I can’t approve the narrow source yet.
+
+1. **Literal enum values become schema constraints.** At [terraform-documentation.ts:1710](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1710), `search=Which field accepts ROUND_ROBIN?&value=ROUND_ROBIN` treats `round_robin` as a required schema identifier and discards a verified `value_scope.mode` destination. Reproduced with plain and backtick-quoted literals. Omitting the literal from `search` returns the destination, contrary to the prompt’s full-question preservation instruction.
+
+2. **Response budgeting can silently remove every destination.** At [terraform-documentation.ts:1715](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-documentation.ts:1715), a valid candidate with a 5,000-byte description produces “Verified enum destinations” but **no Read URI or truncation notice**. The helper drops the entire entry; the notice only considers candidate count. Preserve a compact destination link and report byte-budget omissions.
+
+Verification: **12 existing tests passed**, plus **33 additional in-memory assertions** covering scope, malformed requests, Unicode behavior, and index validation. The scoped SQL EXPLAIN regression passed. Conjunctive evidence, canonical-value validation, partial-table rejection, and the previously reported fixes look sound.
+
+Static prompt wording appropriately distinguishes candidates from selection and avoids unsupported-input claims. No enum extraction from query text or pin change was added.
+
+Reviewed against HEAD `3721ce2bf`. No files changed; the filesystem-writing snapshot suite was not rerun. No benchmark-prompt inspection or qualification/release work.

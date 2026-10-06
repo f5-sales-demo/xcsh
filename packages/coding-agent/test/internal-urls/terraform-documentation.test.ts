@@ -109,3 +109,44 @@ test("common protocol wording does not choose a certificate architecture", () =>
 	expect(terraformNamedChoice("Use existing certificates for HTTPS", choices)).toBe(0);
 	expect(terraformNamedChoice("Configure https_auto_cert", choices)).toBe(1);
 });
+
+test("schema breadcrumb component cannot masquerade as provider identity", () => {
+	const names = ["workload", "http_loadbalancer", "origin_pool"];
+	expect(
+		terraformProviderMention(
+			"data source under service > advertise_options > http_loadbalancer > https > certificates. Field name",
+			names,
+		),
+	).toBeUndefined();
+	expect(
+		terraformProviderMention("xcsh_workload under service > advertise_options > http_loadbalancer > https", names),
+	).toBe("workload");
+	expect(terraformProviderMention("HTTP load balancer under https > certificates", names)).toBe("http_loadbalancer");
+});
+
+test("explicit field lookup does not promote descriptive nouns to provider owners", () => {
+	const names = ["namespace", "subnet", "workload"];
+	expect(
+		terraformProviderMention("Which namespace does this reference use? Field: `namespace`.", names),
+	).toBeUndefined();
+	expect(
+		terraformProviderMention("Set prefix length of each allocated subnet. Field: `allocation_unit`.", names),
+	).toBeUndefined();
+	expect(terraformProviderMention("For the namespace resource. Field: `name`.", names)).toBe("namespace");
+	expect(terraformProviderMention("For xcsh_subnet. Field: `name`.", names)).toBe("subnet");
+});
+
+test("quoted requested fields cannot override prose provider ownership", () => {
+	const names = ["addon_service", "addon_service_activation_status"];
+	expect(
+		terraformProviderMention(
+			"For data source describing addon service activation status, find the field rules for `addon_service`.",
+			names,
+		),
+	).toBe("addon_service_activation_status");
+	expect(terraformProviderMention("Find field `addon_service`.", names)).toBeUndefined();
+	expect(terraformProviderMention("For addon_service data source, find field `name`.", names)).toBe("addon_service");
+	expect(
+		terraformProviderMention("For xcsh_addon_service, find field `addon_service_activation_status`.", names),
+	).toBe("addon_service");
+});

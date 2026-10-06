@@ -1,0 +1,80 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "tf1240-002",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 67548.16000105347,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "```hcl\nterraform {\n  required_providers {\n    xcsh = {\n      source = \"f5-sales-demo/xcsh\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_app_firewall\" \"synthetic\" {\n  name      = \"synthetic-waf\"\n  namespace = \"synthetic-lab\"\n  blocking  = {}\n\n  allowed_response_codes {\n    response_code = [200, 204]\n  }\n}\n```\n\nVerified against bundled provider documentation **v12.4.0**: [`allowed_response_codes` is a nested block](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md?view=context#section), and [`blocking`](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md?view=context#section) is selected without `monitoring`.\n\n[blocked] CLI validation: no execution tool is available to run `terraform fmt`, `init`, or `validate`. Nothing was applied.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 68586,
+        "max_bytes": 53621,
+        "measured_results": 8,
+        "violations": []
+      },
+      "trace_sha256": "d709fb03b2859391aed1ce2d818f6590d0290bd822a7967132d371c72936eb11",
+      "passed": true
+    },
+    {
+      "id": "tf1240-003",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 66523.11393304262,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "```hcl\nterraform {\n  required_providers {\n    xcsh = {\n      source = \"f5-sales-demo/xcsh\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_origin_pool\" \"synthetic\" {\n  name      = \"synthetic-pool\"\n  namespace = \"synthetic-lab\"\n  no_tls    = {}\n\n  timeouts {\n    create = \"20m\"\n  }\n}\n```\n\nVerified against bundled provider v12.4.0: [`no_tls`](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#section) is the only TLS choice selected; [`create`](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#schema-timeouts--create) belongs inside the nested `timeouts` block.\n\nSchema-checked draft; not CLI-validated or applied.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 26566,
+        "max_bytes": 15283,
+        "measured_results": 8,
+        "violations": []
+      },
+      "trace_sha256": "de2baece0df37527b41852f10057b7ffb47cb418ba7e54ca02b84b0b987ecfbb",
+      "passed": true
+    },
+    {
+      "id": "tf1240-111",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 67540.8628830919,
+      "complete_leaf_read": false,
+      "clarification": true,
+      "text": "Do you mean the top-level `name` of `data \"xcsh_virtual_host\"`, or a nested `virtual_host.name` reference inside another data source? If nested, which data source contains it?",
+      "budget": {
+        "passed": true,
+        "total_bytes": 12726,
+        "max_bytes": 3560,
+        "measured_results": 7,
+        "violations": []
+      },
+      "trace_sha256": "b2ede976a66c7198b525a5c760ff0fb099533b49f1e46c75d59ca6f4fcd4ee25",
+      "passed": false
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "13b6b91ee718eecf5dc66082aeb934782b139d76",
+    "binary_sha256": "75fff3e701e1f4d07f8be463cf84b7dc7cd391c917f59fe2ee265a67c179886a",
+    "binary_bytes": 621934048,
+    "provider_version": "v12.4.0"
+  },
+  "limitations": [
+    "Lightweight diagnostic checks expected destination read only; both HCL cases fail full frozen coverage audit.",
+    "Single-scope reference lookup asks clarification and fails frozen answerable label.",
+    "Exposed regression only; no qualification."
+  ]
+}

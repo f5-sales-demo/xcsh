@@ -432,14 +432,14 @@
       "15ff8c9e"
     ],
     "packages/coding-agent/src/modes/utils/ui-helpers.ts": [
-      "6055993c",
-      "e7b97f6b",
-      "12c002ef",
-      "bb4f55ce",
-      "49373c63",
-      "1e32b73f",
-      "fdc9c96b",
-      "ebce7e84"
+      "5045e9a0",
+      "df09d8b6",
+      "fda1b5c2",
+      "3daacd9e",
+      "e73096ac",
+      "0194d642",
+      "b10ebd65",
+      "1e1740b1"
     ],
     "packages/coding-agent/src/task/render.ts": [
       "f395a34f",
@@ -1967,13 +1967,13 @@
     },
     {
       "file": "packages/coding-agent/src/modes/utils/ui-helpers.ts",
-      "line": 643,
+      "line": 644,
       "sink": "TruncatedText",
       "entry": "coding-agent-previews"
     },
     {
       "file": "packages/coding-agent/src/modes/utils/ui-helpers.ts",
-      "line": 647,
+      "line": 648,
       "sink": "TruncatedText",
       "entry": "coding-agent-previews"
     },

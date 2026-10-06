@@ -1,0 +1,23 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": "8c6ddfb76e468ae261389de47513b74c22053d54d6a81811fb7c4f26fafa6377",
+  "verified_description": "DualStackAddressType represents both IPv4 and IPv6 together.",
+  "source_document": "documentation/data-sources/aws_tgw_site/properties/vn_config/inside_static_routes/static_route_list/custom_static_route/nexthop/nexthop_address/dual_stack/index.md#section",
+  "v9": {
+    "correct": 117,
+    "total": 140,
+    "top5": 129,
+    "regressions": []
+  },
+  "v8": {
+    "correct": 121,
+    "total": 140,
+    "top5": 138
+  },
+  "limitations": [
+    "Exposed regressions only; gate unmet.",
+    "Quoted literals and explicit paths do not receive prose normalization."
+  ]
+}

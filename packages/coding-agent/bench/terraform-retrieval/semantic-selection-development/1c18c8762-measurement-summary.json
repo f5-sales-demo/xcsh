@@ -1,0 +1,33 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "consumer_commit": "1c18c8762d45b06d8be81366693e512fd3c79df5",
+  "reports": [
+    {
+      "name": "measurement",
+      "query_count": 200,
+      "repetitions": 5,
+      "warm_route_p95_ms": 75.32482700000037,
+      "materialization_ms": 1787.3514670000002,
+      "max_discovery_bytes": 4048,
+      "max_context_bytes": 10312,
+      "validation_errors": []
+    },
+    {
+      "name": "offline-measurement",
+      "query_count": 200,
+      "repetitions": 5,
+      "warm_route_p95_ms": 70.78597400000217,
+      "materialization_ms": 1794.352852,
+      "max_discovery_bytes": 4048,
+      "max_context_bytes": 10312,
+      "validation_errors": []
+    }
+  ],
+  "complete_response_hashes_match": true,
+  "limitations": [
+    "Exposed 200-query performance regression only; no untouched accuracy qualification.",
+    "Resolver timing excludes model/network time.",
+    "Mac final-candidate parity and full installed qualification remain outstanding."
+  ]
+}

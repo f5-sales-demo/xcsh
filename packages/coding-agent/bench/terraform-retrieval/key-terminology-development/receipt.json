@@ -1,0 +1,19 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "correct_leaf_count": 103,
+  "answerable": 140,
+  "top5_count": 126,
+  "baseline_correct": 101,
+  "changed_cases": [
+    "A045",
+    "A046"
+  ],
+  "correct_to_wrong": [],
+  "route_p95_ms": 58.97144300000036,
+  "source_review": "approve narrow cookie/HMAC key terminology",
+  "pin_changed": false,
+  "property_terms_changed": false,
+  "focused_tests": 191,
+  "remaining": "Fresh independent qualification and final artifact acceptance required."
+}

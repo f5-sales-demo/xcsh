@@ -1,0 +1,25 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "network_disabled": true,
+  "pages": [
+    {
+      "uri": "xcsh://terraform-documentation/?alias=automatic%20certificates&provider_type=resources&provider_name=workload",
+      "bytes": 2896,
+      "sha256": "1ec9b83edce98b3a8d5ff06e99cd8787a7149cd4db8b3ef5bc275d1a315ca18e"
+    },
+    {
+      "uri": "xcsh://terraform-documentation/?alias=automatic+certificates&provider_type=resources&provider_name=workload&choice_after=5",
+      "bytes": 848,
+      "sha256": "c29cccc0e62d10bdb9910815ffb1583ffd1ebc7aeb0d6ca233232c6e48894f96"
+    }
+  ],
+  "verified_destinations": [
+    "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_custom/ports/http_loadbalancer/https_auto_cert/index.md?view=context#section",
+    "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#section",
+    "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/https_auto_cert/index.md?view=context#section",
+    "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_custom/ports/http_loadbalancer/https_auto_cert/index.md?view=context#section",
+    "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#section",
+    "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/port/http_loadbalancer/https_auto_cert/index.md?view=context#section"
+  ]
+}

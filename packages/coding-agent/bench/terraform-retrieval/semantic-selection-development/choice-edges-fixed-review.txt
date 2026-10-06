@@ -1,0 +1,9 @@
+Approve the narrow metadata consumption fix. No concrete defects found.
+
+- Only provider-schema `conflicts`/`choice` groups produce symmetric edges; no inferred requirements or advisory enforcement.
+- Grouping separates type, enforcement, source, and group ID within each page.
+- Exact document/anchor pairs identify participants; duplicates and self-edges are excluded.
+- Ingestion validates both endpoint anchors before insertion.
+- Sorting covers every edge identity field and is input-order independent.
+
+All 4 focused tests passed. Additional read-only checks passed for three-member choice symmetry and group isolation. Anchor validation was reviewed statically; index integration tests were not run. No files changed.

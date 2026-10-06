@@ -1,0 +1,13 @@
+{
+  "development_only": true,
+  "post_analysis_regression": true,
+  "qualification_passed": false,
+  "provider_version": "v12.4.0",
+  "production_fix": "Explicit input/output field requests filter schema flags; optionalcomputed supports both. Descriptive response-input prose remains unfiltered.",
+  "focused_tests": 295,
+  "complete_regression_correct": 99,
+  "complete_regression_top5": 125,
+  "accuracy_gain": false,
+  "remaining": "Coverage/operation evidence prevent correct input leaf selection; no qualification claim.",
+  "review_repairs": "Reject payload access words, dotted labels, quoted spans, e.g. and negative contractions; preserve backticked identifiers; apply access filter to alternatives before role/branch rendering."
+}

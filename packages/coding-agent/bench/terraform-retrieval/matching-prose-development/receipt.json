@@ -1,0 +1,12 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 96,
+  "v7_top5": 122,
+  "route_p95_ms": 76.453116,
+  "focused_pass": 174,
+  "type_lint_pass": true,
+  "source_findings_covered_by_red_green": true,
+  "query_wide_rewrite_rejected": true,
+  "change": "Matching inflection is evidence only in affirmative direct field description, excluding negative/alternative requests and negative/example prose"
+}

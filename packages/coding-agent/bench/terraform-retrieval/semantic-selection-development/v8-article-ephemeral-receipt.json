@@ -1,0 +1,17 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": {
+    "packages/coding-agent/src/internal-urls/terraform-documentation.ts": "fbd17517c77e67ca1a9203227a8fcb50f0d9a3aaae52743c0254d09ce149a591",
+    "packages/coding-agent/src/internal-urls/terraform-property-ranking.ts": "594dd64b62b0a9d65bdd5e341c3816457713747615cf8f576a4e68840d81b30a"
+  },
+  "answerable_correct": 120,
+  "answerable_total": 140,
+  "answerable_top5": 138,
+  "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+  "limitations": [
+    "Exposed regression only; below95 percent.",
+    "Remaining source-label collision and HCL contracts require audit."
+  ]
+}

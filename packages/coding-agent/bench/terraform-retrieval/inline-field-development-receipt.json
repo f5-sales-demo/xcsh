@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "change": "Recognize inline quoted field nouns and retain separate document owner evidence",
+  "qualification_passed": false,
+  "checks": {
+    "focused_tests": 147,
+    "typescript": "passed"
+  },
+  "regressions": [
+    {
+      "suite": "v8",
+      "report": "v8-inline-field-regression.json.gz",
+      "report_sha256": "33dcc2101898df8ee775f23d298fc160db45be8e3535a74f6e5619483c6de6ef",
+      "suite_sha256": "15aa3b0e0cc0bc3a642cc579be1da280dce7c2d5510f310c4441cc644c8b41aa",
+      "answerable_accuracy": 0.8642857142857143,
+      "answerable_top5": 0.9857142857142858,
+      "post_analysis_regression": true
+    },
+    {
+      "suite": "v9",
+      "report": "v9-inline-field-regression.json.gz",
+      "report_sha256": "9dec294b3bf0b4a0ebbbc4982e6b8352bbce57c9af634c430e197a71c3c67457",
+      "suite_sha256": "b80248156fbc699586bfedd7636c7ed3073e70b3d9960000fde5759337392640",
+      "answerable_accuracy": 0.9285714285714286,
+      "answerable_top5": 0.9857142857142858,
+      "post_analysis_regression": true
+    }
+  ]
+}

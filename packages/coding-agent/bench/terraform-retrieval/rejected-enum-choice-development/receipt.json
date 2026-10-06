@@ -1,0 +1,8 @@
+{
+  "qualification_passed": false,
+  "adopted": false,
+  "v7_correct": 99,
+  "v7_top5": 126,
+  "reason": "Runtime validator grammar required multiple repairs; final result gained only recall, no leaf selection improvement",
+  "source_findings_preserved": true
+}

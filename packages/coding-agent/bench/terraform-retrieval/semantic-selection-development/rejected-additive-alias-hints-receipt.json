@@ -1,0 +1,10 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "queries": 200,
+  "candidate_changes": [],
+  "hint_queries": 12,
+  "max_response_bytes": 4048,
+  "verdict": "rejected",
+  "reason": "Prose alias inference continues to leak rejection and mix independent scope. Explicit reviewed alias inventory replaces inference."
+}

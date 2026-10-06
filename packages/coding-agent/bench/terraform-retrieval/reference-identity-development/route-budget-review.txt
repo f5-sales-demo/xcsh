@@ -1,0 +1,8 @@
+Approved the narrow route fix.
+
+- In-memory 459-byte scope/five-member reproduction: two complete links, 3,943 bytes, with the count/byte omission notice and `reference_member`/node/facet guidance preserved.
+- All five members retrieved individually.
+- Unchanged 4,096-byte envelope; count limits and node/facet filtering passed.
+- Seven focused tests passed; diff check clean.
+
+No edits or qualification/release work performed.

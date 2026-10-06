@@ -1,0 +1,23 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "exit_code": 0,
+  "model_network_wall_ms": 130248.15754801966,
+  "route": "Ubuntu ChatGPT-authenticated Codex",
+  "expected_destinations_withheld": true,
+  "scope_supplied": true,
+  "packet_byte_budget": 16384,
+  "correct_selections": 3,
+  "cases": 3,
+  "selected_leaf_read": {
+    "A036": true,
+    "A070": true,
+    "A093": true
+  },
+  "max_tool_output_bytes": 31064,
+  "tool_output_bytes": 79963,
+  "tool_calls": 9,
+  "all_tool_outputs_within_16KiB": false,
+  "input_sha256": "ac954c2e0da4bac6d940f303c492fae4da52d16e942fa277bcafd3d24fa92a02",
+  "trace_sha256": "3aed6d72d9ebb55d4e66f8b9fd9565939439bfe54d08fd70806d8e35dd23dd1d"
+}

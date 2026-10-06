@@ -1,0 +1,6 @@
+Approved for the narrow retained index source. No concrete defects found in this fix.
+
+- [`canonicalEnumRecords`](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/src/internal-urls/terraform-property-index.ts:475) compares all six typed evidence fields in fixed positions, eliminating object-key-order sensitivity. Both sides use it; coverage differences still reject.
+- The [regression test](/data/robin-GIT/worktrees/xcsh-4682-postmerge-qualification/packages/coding-agent/test/internal-urls/terraform-enum-index.test.ts:198) reverses rule keys and verifies successful population with one lookup result, directly exercising the reported failure.
+
+Review was read-only; the ten passing tests are user-reported, not rerun. Approval covers this source fix only, not qualification or release.

@@ -8,6 +8,7 @@ import {
 import type { DocumentationSource } from "../../src/internal-urls/documentation-resolve";
 
 const ROOTS: Record<DocumentationSource, string> = {
+	"community-f5-com": "https://community.f5.com",
 	"docs-cloud-f5-com": "https://docs.cloud.f5.com/docs-v2",
 	"my-f5-com": "https://my.f5.com/manage/s",
 	"www-f5-com": "https://www.f5.com/products/distributed-cloud-services",

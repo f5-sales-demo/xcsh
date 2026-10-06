@@ -1,0 +1,115 @@
+{
+  "development_only": true,
+  "qualification_passed": false,
+  "execution_route": {
+    "platform": "linux",
+    "provider": "openai-codex",
+    "model": "openai-codex/gpt-6.1-sol",
+    "removed_environment_names": []
+  },
+  "results": [
+    {
+      "id": "tf1240-019",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 120585.24740999565,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "`namespace` identifies the **referenced certificate object\u2019s namespace**, not the enclosing workload\u2019s namespace.\n\nOn the read-only `xcsh_workload` data source, it is a **computed string**, not an input you configure.\n\nVerified in bundled provider **v12.4.0**: [exact field documentation](xcsh://terraform-documentation/documentation/data-sources/workload/properties/service/advertise_options/advertise_custom/ports/http_loadbalancer/https/tls_cert_params/certificates/index.md#schema-service--advertise_options--advertise_custom--ports--http_loadbalancer--https--tls_cert_params--certificates--namespace).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 34782,
+        "max_bytes": 9020,
+        "measured_results": 19,
+        "violations": []
+      },
+      "trace_sha256": "0bace31233f6fd0ade86af3ab8e7b974c028501f8cddb26473230479e4a4cebd",
+      "passed": true
+    },
+    {
+      "id": "tf1240-134",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 67303.41551091988,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "Add an optional **`timeouts` block inside your existing `xcsh_http_loadbalancer` resource**. For example:\n\n```hcl\ntimeouts {\n  create = \"30m\"\n  read   = \"5m\"\n  update = \"30m\"\n  delete = \"30m\"\n}\n```\n\nAll four fields are optional. Duration strings support `s`, `m`, and `h`, including combinations such as `\"2h45m\"`.\n\n- `read` applies during refresh and planning with refresh enabled.\n- A changed `delete` timeout must be saved into Terraform state before destroying the resource.\n\nVerified against bundled provider **v12.4.0**: [timeout schema](xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/timeouts/index.md?view=full#timeouts). These are illustrative limits, not documented defaults.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 12735,
+        "max_bytes": 4532,
+        "measured_results": 8,
+        "violations": []
+      },
+      "trace_sha256": "2b602b63ea6f503f4f374135fd567d120861e609053386333d26aba4b94c157b",
+      "passed": true
+    },
+    {
+      "id": "tf1240-136",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 49930.50529703032,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "Use **quoted duration strings** consisting of numbers and unit suffixes:\n\n- `\"30s\"` \u2014 seconds\n- `\"30m\"` \u2014 minutes\n- `\"2h\"` \u2014 hours\n- `\"2h45m\"` \u2014 combined units\n\nThis format applies to `create`, `read`, `update`, and `delete` timeouts.\n\nVerified in bundled provider **v12.4.0**: [timeout format](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md?view=context#schema-timeouts--create).",
+      "budget": {
+        "passed": true,
+        "total_bytes": 12300,
+        "max_bytes": 9020,
+        "measured_results": 4,
+        "violations": []
+      },
+      "trace_sha256": "90602cff22c7c6a27280f172c44b4956b752a6b661a5384ed774220e1a1e3d1f",
+      "passed": true
+    },
+    {
+      "id": "tf1240-138",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 56618.775801034644,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "In provider **v12.4.0**, `xcsh_aws_vpc_site` exposes wait limits through its optional **`timeouts` nested block**:\n\n- [`timeouts.create`](xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/timeouts/index.md?view=context#schema-timeouts--create)\n- [`timeouts.update`](xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/timeouts/index.md?view=context#schema-timeouts--update)\n- [`timeouts.read`](xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/timeouts/index.md?view=context#schema-timeouts--read) \u2014 refresh and planning with refresh enabled.\n- [`timeouts.delete`](xcsh://terraform-documentation/documentation/resources/aws_vpc_site/properties/timeouts/index.md?view=context#schema-timeouts--delete) \u2014 changes must be saved into state before destroy.\n\nAll are optional duration strings, such as `\"30m\"` or `\"2h45m\"`, using `s`, `m`, or `h`.",
+      "budget": {
+        "passed": true,
+        "total_bytes": 16029,
+        "max_bytes": 9044,
+        "measured_results": 7,
+        "violations": []
+      },
+      "trace_sha256": "b3fcdddb8b3e54c7f4ebea102c36c1abc07e5444a0857c186e73caa5f4e8a022",
+      "passed": true
+    },
+    {
+      "id": "tf1240-140",
+      "kind": "answerable",
+      "exit_code": 0,
+      "model_ms": 51756.751953973435,
+      "complete_leaf_read": true,
+      "clarification": false,
+      "text": "Yes. Provider **v12.4.0** documents an optional `timeouts` block inside `xcsh_app_firewall`, supporting `create`, `read`, `update`, and `delete`.\n\nFor example, inside your existing resource block:\n\n```hcl\ntimeouts {\n  create = \"30m\"\n  read   = \"5m\"\n  update = \"30m\"\n  delete = \"30m\"\n}\n```\n\nEach setting is optional and uses a quoted duration: `30s`, `30m`, or `2h45m`. These are example values, not defaults.\n\n- `read` applies during refresh and planning when refresh is enabled.\n- `delete` customization must be saved in Terraform state before destruction.\n\n[Timeout reference](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/timeouts/index.md?view=context#section)",
+      "budget": {
+        "passed": true,
+        "total_bytes": 6190,
+        "max_bytes": 3058,
+        "measured_results": 4,
+        "violations": []
+      },
+      "trace_sha256": "76da572c73261fbd67f4c591c156bf87ce8155e0bad525644bb7c7a520cb4429",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "candidate": {
+    "development_only": true,
+    "qualification_passed": false,
+    "consumer_commit": "3cec19824eb681abac74e68b85d4a87fe6d97aea",
+    "binary_sha256": "fb146b583c5e05809ab113fbb88e2548743ced45f533435256fb355c682a8e3e",
+    "binary_bytes": 621934048,
+    "provider_version": "v12.4.0"
+  },
+  "limitations": [
+    "Five exposed development cases; no broad qualification.",
+    "Namespace case used19 reads; efficiency remains open."
+  ]
+}

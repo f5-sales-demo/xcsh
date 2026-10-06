@@ -1,0 +1,5 @@
+Approved for draft, with no findings in the two static prompt diffs.
+
+The identical addition requires exact document-and-anchor verification for any selected Terraform leaf, including alias and parent-page discovery. It preserves complete parent reads, continuation requirements, caller filters, and existing branch-selection safeguards. It introduces no benchmark-specific answers or unsupported field inference.
+
+Limits: static review only, with relevant retrieval source checked; no models, benchmark cases, edits, or GitHub changes. This does not establish runtime compliance or authorize release. Draft/no release and the independent qualification gate remain in place.

@@ -1,0 +1,133 @@
+{
+  "results": [
+    {
+      "id": "A105",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--start_ip",
+      "clarification": null,
+      "reason": "pools.start_ip explicitly specifies the starting IPv4 address of the pool. pool_settings controls inclusion/exclusion; first_address is an empty-object option.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/pools/index.md?view=context#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pools--start_ip",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/first_address/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A107",
+      "selected_uri": null,
+      "clarification": "Is this the IPv4 DHCP server or the IPv6 router's stateful DHCP configuration?",
+      "reason": "Both AWS unmanaged-interface branches document pool_settings with EXCLUDE_IP_ADDRESSES_FROM_DHCP_POOLS. The resource role is specified, but the address-family branch is not.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/index.md?view=context#schema-aws--not_managed--node_list--interface_list--dhcp_server--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/index.md?view=context#schema-aws--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pool_settings",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/aws/not_managed/node_list/interface_list/dhcp_server/dhcp_networks/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A113",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md#section",
+      "clarification": null,
+      "reason": "automatic_from_start is the stateful allocation choice. Its parent distinguishes it from automatic_from_end and interface_ip_map; pools.start_ip instead specifies a pool boundary.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/automatic_from_start/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/securemesh_site_v2/properties/gcp/not_managed/node_list/interface_list/ipv6_auto_config/router/stateful/dhcp_networks/pools/index.md?view=context#schema-gcp--not_managed--node_list--interface_list--ipv6_auto_config--router--stateful--dhcp_networks--pools--start_ip"
+      ]
+    },
+    {
+      "id": "A114",
+      "selected_uri": null,
+      "clarification": "Should the configured server header overwrite an existing value, or only supply a value when absent?",
+      "reason": "Within the specified https_auto_cert branch, server_name overwrites existing values and append_server_name preserves them. Both configure a server-header value and are mutually exclusive.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#schema-stateful_service--advertise_options--advertise_on_public--multi_ports--ports--http_loadbalancer--https_auto_cert--append_server_name",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/stateful_service/advertise_options/advertise_on_public/multi_ports/ports/http_loadbalancer/https_auto_cert/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A120",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_array--flash_arrays--api_token--blindfold_secret_info--store_provider",
+      "clarification": null,
+      "reason": "blindfold_secret_info.store_provider names the Secret Management Access object for retrieving encrypted bytes. The alternative clear_secret_info branch describes an unencrypted secret.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/blindfold_secret_info/index.md?view=context#schema-storage_device_list--storage_devices--pure_service_orchestrator--arrays--flash_array--flash_arrays--api_token--blindfold_secret_info--store_provider",
+        "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/index.md?view=context#section",
+        "xcsh://terraform-documentation/documentation/resources/fleet/properties/storage_device_list/storage_devices/pure_service_orchestrator/arrays/flash_array/flash_arrays/api_token/clear_secret_info/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A125",
+      "selected_uri": "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md#schema-service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--path--path",
+      "clarification": null,
+      "reason": "simple_route.path.path is the exact-match string under the stateless service's single public port. Its parent distinguishes exact matching from prefix and regex matching.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md?view=context#schema-service--advertise_options--advertise_on_public--port--http_loadbalancer--specific_routes--routes--simple_route--path--path",
+        "xcsh://terraform-documentation/documentation/resources/workload/properties/service/advertise_options/advertise_on_public/port/http_loadbalancer/specific_routes/routes/simple_route/path/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "A130",
+      "selected_uri": null,
+      "clarification": "Should encryption be set in the ONTAP SAN backend's volume defaults or in a particular virtual storage pool's volume defaults?",
+      "reason": "Both volume_defaults.encryption and storage.volume_defaults.encryption are documented optional booleans. The storage branch contains virtual storage pool definitions; the question does not identify which level is intended.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/volume_defaults/index.md?view=context#schema-custom_storage_config--storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--volume_defaults--encryption",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/storage/volume_defaults/index.md?view=context#schema-custom_storage_config--storage_device_list--storage_devices--netapp_trident--netapp_backend_ontap_san--storage--volume_defaults--encryption",
+        "xcsh://terraform-documentation/documentation/resources/voltstack_site/properties/custom_storage_config/storage_device_list/storage_devices/netapp_trident/netapp_backend_ontap_san/storage/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "M020",
+      "selected_uri": null,
+      "clarification": "Do you mean the container_registry resource input or the data source output?",
+      "reason": "Both document user_name. It is a required string on the resource and a computed string on the data source; the question leaves that role unspecified.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/container_registry/properties/index.md?view=context#schema-user_name",
+        "xcsh://terraform-documentation/documentation/data-sources/container_registry/properties/index.md?view=context#schema-user_name"
+      ]
+    },
+    {
+      "id": "M025",
+      "selected_uri": null,
+      "clarification": "Do you mean fallback_pool.name on the dns_load_balancer resource or its data source?",
+      "reason": "fallback_pool.name identifies the referenced pool in both roles. The resource field is optional and the data-source field is computed; neither role is specified.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/fallback_pool/index.md?view=context#schema-fallback_pool--name",
+        "xcsh://terraform-documentation/documentation/data-sources/dns_load_balancer/properties/fallback_pool/index.md?view=context#schema-fallback_pool--name",
+        "xcsh://terraform-documentation/documentation/resources/dns_load_balancer/properties/fallback_pool/index.md?view=context#section"
+      ]
+    },
+    {
+      "id": "C001",
+      "selected_uri": null,
+      "clarification": null,
+      "reason": "This development snapshot documents no functions collection. Provider navigation and the complete provider-type facet omit functions, and reformulated searches found no formatting function. No provider-defined function syntax is supported by this evidence.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/?node=xcsh-docs%3Aprovider%3Axcsh%3Anavigation",
+        "xcsh://terraform-documentation/?node=xcsh-docs%3Aprovider%3Axcsh%3Anavigation&cursor=documentation%2Fprovider%2Fsetup%2Findex.md",
+        "xcsh://terraform-documentation/?facet=provider_type",
+        "xcsh://terraform-documentation/?facet=provider_type&cursor=provider"
+      ]
+    },
+    {
+      "id": "C003",
+      "selected_uri": null,
+      "clarification": null,
+      "reason": "Separate notify_addresses and transfer_addresses outputs are not documented. The source explicitly does not distinguish those purposes; cidr_blocks exposes combined, sorted unique IPv4 CIDRs.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/data-sources/network_secondary_dns_zone_transfer/index.md?view=context#xcsh_network_secondary_dns_zone_transfer",
+        "xcsh://terraform-documentation/documentation/data-sources/network_secondary_dns_zone_transfer/properties/index.md?view=context#schema-cidr_blocks"
+      ]
+    },
+    {
+      "id": "C010",
+      "selected_uri": null,
+      "clarification": null,
+      "reason": "The exact single-session action documents a required scalar string id, together with namespace. An ids list is not documented for this action; the batch action was not substituted.",
+      "evidence_uris": [
+        "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/properties/index.md?view=context#schema-id",
+        "xcsh://terraform-documentation/documentation/actions/access_active_session_terminate/index.md?view=context#root-configuration"
+      ]
+    }
+  ]
+}

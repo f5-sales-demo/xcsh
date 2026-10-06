@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { publicCitationForInternalUri } from "../src/internal-urls/public-citations";
 import { TerraformDocumentationRepository } from "../src/internal-urls/terraform-documentation";
 import { EMBEDDED_TERRAFORM_DOCUMENTATION } from "../src/internal-urls/terraform-documentation-assets.generated";
-import type { InternalUrl } from "../src/internal-urls/types";
 
 const scenarios = [
 	{
@@ -101,12 +101,24 @@ async function main(): Promise<void> {
 					if (!answer.toLowerCase().includes(field)) throw new Error(`Missing documented field: ${field}`);
 				if (!answer.includes(EMBEDDED_TERRAFORM_DOCUMENTATION.pin.provider_version.replace(/^v/, "")))
 					throw new Error(`Missing bundled version: ${scenario.id}`);
-				const citations = [...answer.matchAll(/xcsh:\/\/terraform-documentation\/[^\s)]+/g)].map(match => match[0]);
-				if (!citations.length) throw new Error(`Missing exact citations: ${scenario.id}`);
-				for (const uri of citations)
-					await repository.resolve(
-						Object.assign(new URL(uri), { rawHost: "terraform-documentation" }) as InternalUrl,
-					);
+				const visible = answer.replace(/^```[^\n]*\n[\s\S]*?^```\s*$/gm, "").replace(/`[^`\n]*`/g, "");
+				if (
+					/xcsh:\/\/(?:documentation|terraform-documentation|terraform|api-spec|api-catalog|docs)(?:[/?#\s)]|$)/i.test(
+						visible,
+					)
+				)
+					throw new Error(`Internal documentation citation: ${scenario.id}`);
+				const leafReads = reads.filter(
+					uri => uri.startsWith("xcsh://terraform-documentation/") && uri.includes(scenario.leaf!),
+				);
+				const citations = [...visible.matchAll(/https:\/\/[^\s)<>]+/g)].map(match =>
+					match[0].replace(/[.,;]+$/, ""),
+				);
+				const mapped = leafReads
+					.map(publicCitationForInternalUri)
+					.filter(result => result && "publicUrl" in result);
+				if (!mapped.some(result => result && "publicUrl" in result && citations.includes(result.publicUrl)))
+					throw new Error(`Missing verified public leaf citation: ${scenario.id}`);
 				if (scenario.id === "tls" && !answer.includes("?"))
 					throw new Error("Vague certificate location requires clarification");
 			}

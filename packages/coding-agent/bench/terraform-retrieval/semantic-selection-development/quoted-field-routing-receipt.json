@@ -1,0 +1,27 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": {
+    "packages/coding-agent/src/internal-urls/terraform-documentation.ts": "212e45de8b8d8236464e0d71f39b1c3a9df53c37e4dcff266e467b6d68a84640",
+    "packages/coding-agent/src/internal-urls/terraform-property-ranking.ts": "1374f648902bdfcc73bf3a034cb09d3fa95ca147f6fa8a1560be61a5d62bc20c"
+  },
+  "v9": {
+    "correct": 72,
+    "total": 140,
+    "top5": 103,
+    "baseline_correct": 40,
+    "baseline_top5": 66
+  },
+  "v8": {
+    "correct": 121,
+    "total": 140,
+    "top5": 138
+  },
+  "change": "Quoted contract lookup target is preserved and routed to properties rather than setup/task guidance; existing quoted output syntax retained.",
+  "limitations": [
+    "Exposed regressions only; no qualification claim.",
+    "MiniLM comparison showed routing loss rather than ranking improvement and remains separate.",
+    "Installed final-source verification and fresh heldout qualification remain outstanding."
+  ]
+}

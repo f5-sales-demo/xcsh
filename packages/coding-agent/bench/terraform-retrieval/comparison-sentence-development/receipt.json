@@ -1,0 +1,11 @@
+{
+  "qualification_passed": false,
+  "post_analysis_regression": true,
+  "v7_correct": 99,
+  "v7_top5": 125,
+  "focused_pass": 293,
+  "type_lint_pass": true,
+  "prior_package_pass": 9706,
+  "source_findings_covered": true,
+  "change": "Rejected comparison intent remains sentence local; requirements and negative constraints retain their terms"
+}

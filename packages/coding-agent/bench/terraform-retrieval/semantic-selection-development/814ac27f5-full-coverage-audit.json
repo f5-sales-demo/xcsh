@@ -1,0 +1,48 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "results": [
+    {
+      "id": "tf1240-002",
+      "missing_required_reads": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md#blocking",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md#allowed_response_codes"
+      ],
+      "missing_required_citations": [
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/index.md#minimal-configuration",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md#blocking",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md#allowed_response_codes",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-name",
+        "xcsh://terraform-documentation/documentation/resources/app_firewall/properties/index.md#schema-namespace"
+      ],
+      "full_contract_passed": false,
+      "final_text": "```hcl\nterraform {\n  required_providers {\n    xcsh = {\n      source = \"f5-sales-demo/xcsh\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_app_firewall\" \"synthetic\" {\n  name      = \"synthetic-waf\"\n  namespace = \"synthetic-lab\"\n  blocking  = {}\n\n  allowed_response_codes {\n    response_code = [200, 204]\n  }\n}\n```\n\nVerified against bundled provider **v12.4.0**: [required root fields](xcsh://terraform-documentation/documentation/resources/app_firewall/index.md?view=context#root-configuration), [blocking choice](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/blocking/index.md?view=context#section), and [response-code block](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md?view=context#section) with its [numeric list field](xcsh://terraform-documentation/documentation/resources/app_firewall/properties/allowed_response_codes/index.md?view=context#schema-allowed_response_codes--response_code). `monitoring` is omitted.\n\nDraft only; Terraform validation and deployment were not run."
+    },
+    {
+      "id": "tf1240-003",
+      "missing_required_reads": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#no_tls",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#timeouts"
+      ],
+      "missing_required_citations": [
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/index.md#minimal-configuration",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/index.md#root-configuration",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#property-reference",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#no_tls",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#timeouts",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-name",
+        "xcsh://terraform-documentation/documentation/resources/origin_pool/properties/index.md#schema-namespace"
+      ],
+      "full_contract_passed": false,
+      "final_text": "```hcl\nterraform {\n  required_providers {\n    xcsh = {\n      source = \"f5-sales-demo/xcsh\"\n    }\n  }\n}\n\nprovider \"xcsh\" {}\n\nresource \"xcsh_origin_pool\" \"synthetic\" {\n  name      = \"synthetic-pool\"\n  namespace = \"synthetic-lab\"\n  no_tls    = {}\n\n  timeouts {\n    create = \"20m\"\n  }\n}\n```\n\nVerified against bundled provider **v12.4.0**: [`no_tls` choice](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/no_tls/index.md#section), [`timeouts` block](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#section), and [`create` duration](xcsh://terraform-documentation/documentation/resources/origin_pool/properties/timeouts/index.md#schema-timeouts--create). `use_tls` is omitted.\n\nDraft only; not run or applied."
+    }
+  ],
+  "limitations": [
+    "Frozen requirements and scores unchanged.",
+    "This exact-coverage audit supersedes no original diagnostic; original retained."
+  ]
+}

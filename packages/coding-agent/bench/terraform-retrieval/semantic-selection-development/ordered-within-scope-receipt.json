@@ -1,0 +1,27 @@
+{
+  "development_only": true,
+  "regression_only": true,
+  "qualification_passed": false,
+  "source_sha256": {
+    "packages/coding-agent/src/internal-urls/terraform-property-ranking.ts": "eb96c5afb741db3743a56e7ba89249f98f6f0421d2355fc3b287349fdc571374",
+    "packages/coding-agent/src/internal-urls/terraform-property-index.ts": "84da6c78837bd6cdea94b629794801329d616b436119e635b124e5bbe7583a9b"
+  },
+  "v9": {
+    "correct": 127,
+    "total": 140,
+    "top5": 137,
+    "baseline_correct": 117,
+    "regressions": []
+  },
+  "v8": {
+    "correct": 121,
+    "total": 140,
+    "top5": 138
+  },
+  "change": "Repeated explicit within clauses form a contiguous ordered schema scope; repeated segment count and operator identity are preserved.",
+  "limitations": [
+    "Exposed regressions only; gate unmet.",
+    "No inferred product or logical choice from unordered prose.",
+    "Installed final-source verification remains required."
+  ]
+}
