@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "812398acb1a12eba0802cb1eec88e8c1de4364b7",
-  "fingerprint": "ded41e5c7c135f374687f06ed8f307abb511f56c5418682d2eb1248613549b2e",
+  "revision": "d92fbed94115a2dc2e31892aa23ebbb1613be936",
+  "fingerprint": "f1ef6245b8eea536ffa9a907f6abdad21dfab5917ca426187a25c8b65c221a6a",
   "counts": {
     "total": 238,
     "components": 96,
@@ -2230,6 +2230,7 @@
       "directTests": [
         "packages/coding-agent/test/codex-interaction-source.test.ts",
         "packages/coding-agent/test/hook-editor.test.ts",
+        "packages/coding-agent/test/normal-work-question-matrix.test.ts",
         "packages/coding-agent/test/remote-control/interaction-host.test.ts",
         "packages/coding-agent/test/request-user-input-contract.test.ts",
         "packages/coding-agent/test/request-user-input-polish.test.ts"
@@ -3772,7 +3773,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "26c33bce2b5d2b258b4e64eb447c0f23dbb663a57f98b1ada928c79dc17cbd03",
+      "sha256": "03360b9ff7b867536332ffc5b7623585b03733f449a46ecab4938c655f953ab7",
       "exports": [
         "PendingExtensionRequest",
         "requestRpcEditor",
@@ -3796,7 +3797,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "a3e10446d05b45b7390d7bb73625e55d3fdc634547b23f3892b4c4d0cf258867",
+      "sha256": "9721b9c8847093d9ad6c0ddced4d64de209d7b53e75102c3ff6a2ae61645102c",
       "exports": [
         "RpcCommand",
         "RpcCommandType",
@@ -4298,7 +4299,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "04ba2ac69ab75ab86ebc9a4db4024bf8537412e57c97d3380beae3b3adc0a929",
+      "sha256": "606a4c9781a11904a3aacb45678520c61b687249f32669a345f0a55bdea62eb2",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",

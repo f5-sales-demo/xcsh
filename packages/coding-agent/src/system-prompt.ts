@@ -28,6 +28,7 @@ import { defaultStartFolderDeps, resolveStartFolder, type StartFolder } from "./
 import { isApplicableToContext, loadSkills, type Skill, type SkillWarning } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import progressiveSystemPromptTemplate from "./prompts/system/progressive-system-prompt.md" with { type: "text" };
+import questionPolicyTemplate from "./prompts/system/question-policy.md" with { type: "text" };
 import startFolderTemplate from "./prompts/system/start-folder.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
 import workspaceBoundaryTemplate from "./prompts/system/workspace-boundary.md" with { type: "text" };
@@ -1138,6 +1139,10 @@ export function renderSystemPrompt(
 	const environment = prepared.environment;
 	const startFolder = prepared.startFolder;
 	const data = {
+		questionPolicy: prompt.render(questionPolicyTemplate, {
+			hasAsyncQuestions: toolNames.includes("request_user_input_async"),
+			hasWaitingQuestions: toolNames.includes("request_user_input"),
+		}),
 		systemPromptCustomization: effectiveSystemPromptCustomization,
 		customPrompt: resolvedCustomPrompt,
 		appendPrompt: resolvedAppendPrompt ?? "",

@@ -139,10 +139,12 @@ export function AsyncQuestionCard({
 	title,
 	options,
 	onRespond,
+	onDismiss,
 }: {
 	title: string;
 	options?: readonly string[];
 	onRespond: (answer: string) => Promise<{ accepted: boolean }>;
+	onDismiss?: () => void;
 }) {
 	const [choice, setChoice] = useState(options?.[0] ?? "");
 	const [text, setText] = useState("");
@@ -179,6 +181,11 @@ export function AsyncQuestionCard({
 			<button type="button" disabled={sending || !(text || choice).trim()} onClick={() => void submit()}>
 				Submit answer
 			</button>
+			{onDismiss ? (
+				<button type="button" disabled={sending} onClick={onDismiss}>
+					Answer later
+				</button>
+			) : null}
 			{error ? <p role="alert">{error}</p> : null}
 		</section>
 	);

@@ -16,6 +16,8 @@ export function InteractionPanel({
 	onFollowTranscript?: () => void;
 }) {
 	const [pending, setPending] = useState<PendingInteraction[]>([]);
+	const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
+	const [presented, setPresented] = useState<Set<string>>(() => new Set());
 	const [plan, setPlan] = useState<ConversationPlan>();
 	const revision = useRef(-1);
 	const sessionId = useRef<string | undefined>(undefined);
@@ -34,6 +36,8 @@ export function InteractionPanel({
 		revision.current = -1;
 		sessionId.current = undefined;
 		setPending([]);
+		setDismissed(new Set());
+		setPresented(new Set());
 		setPlan(undefined);
 		attempts.current.clear();
 		const unsubscribe = transport.onMessage(message => {
@@ -41,6 +45,8 @@ export function InteractionPanel({
 			if (message.type === "interaction_snapshot") {
 				if (sessionId.current !== message.sessionId) {
 					sessionId.current = message.sessionId;
+					setDismissed(new Set());
+					setPresented(new Set());
 					revision.current = -1;
 					attempts.current.clear();
 					for (const receipt of receipts.current.values()) {
@@ -103,52 +109,66 @@ export function InteractionPanel({
 				reject(error);
 			}
 		});
+	const active = pending.find(request => request.identity && !dismissed.has(request.id))?.id;
+	useEffect(() => {
+		if (active) setPresented(current => (current.has(active) ? current : new Set([...current, active])));
+	}, [active]);
 	return (
 		<aside aria-label="Questions and plans">
-			{pending.map(request => {
-				if (!request.identity) return null;
-				const respond = (value: unknown) => {
-					const serialized = JSON.stringify(value);
-					let attempt = attempts.current.get(request.id);
-					if (!attempt || attempt.serialized !== serialized) {
-						attempt = { serialized, responseId: crypto.randomUUID() };
-						attempts.current.set(request.id, attempt);
-					}
-					return submit({
-						type: "interaction_respond",
-						requestId: request.id,
-						identity: request.identity!,
-						value,
-						responseId: attempt.responseId,
-					});
-				};
-				if (request.delivery === "async")
-					return (
-						<AsyncQuestionCard
-							key={request.id}
-							title={request.title}
-							options={request.options}
-							onRespond={respond}
-						/>
-					);
-				if (request.kind === "request_user_input" && request.inputQuestions)
-					return (
-						<QuestionCard
-							key={request.id}
-							requestId={request.id}
-							questions={request.inputQuestions}
-							onRespond={respond}
-							onInterrupt={() =>
-								transport.send({
-									type: "interaction_cancel",
-									requestId: request.id,
-									identity: request.identity!,
-								})
-							}
-						/>
-					);
-				return null;
-			})}
+			{pending
+				.filter(request => request.identity && (request.id === active || presented.has(request.id)))
+				.map(request => {
+					if (!request.identity) return null;
+					const respond = (value: unknown) => {
+						const serialized = JSON.stringify(value);
+						let attempt = attempts.current.get(request.id);
+						if (!attempt || attempt.serialized !== serialized) {
+							attempt = { serialized, responseId: crypto.randomUUID() };
+							attempts.current.set(request.id, attempt);
+						}
+						return submit({
+							type: "interaction_respond",
+							requestId: request.id,
+							identity: request.identity!,
+							value,
+							responseId: attempt.responseId,
+						});
+					};
+					if (request.delivery === "async")
+						return (
+							<div key={request.id} hidden={request.id !== active}>
+								<AsyncQuestionCard
+									key={request.id}
+									title={request.title}
+									options={request.options}
+									onDismiss={() => setDismissed(current => new Set([...current, request.id]))}
+									onRespond={respond}
+								/>
+							</div>
+						);
+					if (request.id === active && request.kind === "request_user_input" && request.inputQuestions)
+						return (
+							<QuestionCard
+								key={request.id}
+								requestId={request.id}
+								questions={request.inputQuestions}
+								onRespond={respond}
+								onInterrupt={() =>
+									transport.send({
+										type: "interaction_cancel",
+										requestId: request.id,
+										identity: request.identity!,
+									})
+								}
+							/>
+						);
+					return null;
+				})}
+			{pending.some(request => dismissed.has(request.id)) ? (
+				<button type="button" onClick={() => setDismissed(new Set())}>
+					Reopen pending questions
+				</button>
+			) : null}
 			{plan?.status === "pending" ? (
 				<PlanDecision
 					key={plan.id}

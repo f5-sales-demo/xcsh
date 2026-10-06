@@ -54,7 +54,7 @@ describe("shared interaction completion", () => {
 	});
 });
 
-test("async terminal presentation is explicit and remote completion closes the selected form", async () => {
+test("async terminal presentation is automatic and remote completion closes the selected form", async () => {
 	const owner = new UserInteractions();
 	let shown = 0;
 	let signal: AbortSignal | undefined;
@@ -65,7 +65,7 @@ test("async terminal presentation is explicit and remote completion closes the s
 	});
 	const result = owner.request({ kind: "input", delivery: "async", title: "Preferred region?" });
 	const request = owner.pending()[0];
-	expect(shown).toBe(0);
+	expect(shown).toBe(1);
 	expect(owner.waitingOnUserInput).toBe(false);
 	expect(owner.presentAsync(request.id)).toBe(true);
 	expect(shown).toBe(1);
