@@ -25,6 +25,7 @@ from model_continuation_uat import (
     verify_provenance,
 )
 from model_trace import (
+    audit_public_citations,
     cites_provider_version,
     emitted_hcl,
     has_clarification_question,
@@ -220,7 +221,13 @@ for case in cases:
             for c in m.get("content", [])
             if c.get("type") == "toolCall" and c.get("name") == "read"
         ]
-        citations = re.findall(r"xcsh://terraform-documentation/[^\s)\]`]+", text)
+        citation_audit = audit_public_citations(
+            messages,
+            case.get("model_expectations", {}).get(
+                "required_citation_destinations", case["expected"]
+            ),
+        )
+        citations = citation_audit["citations"]
 
         def normalized(uri: str) -> str:
             """Remove view parameters while retaining exact property anchors."""
@@ -248,18 +255,7 @@ for case in cases:
             )
             for read in successful_reads
         )
-        cited = any(
-            any(
-                normalized(citation) == normalized(want)
-                or (
-                    case.get("match_document")
-                    and normalized(citation).split("#")[0]
-                    == normalized(want).split("#")[0]
-                )
-                for want in expected
-            )
-            for citation in citations
-        )
+        cited = citation_audit["required_public_citations_verified"]
         terraform_reads = [
             r for r in reads if r.startswith("xcsh://terraform-documentation/")
         ]
@@ -347,6 +343,7 @@ for case in cases:
             and completed_successfully
             and bool(final_text.strip())
             and response_budget["passed"]
+            and not citation_audit["internal_documentation_citations"]
         )
         results.append(
             {

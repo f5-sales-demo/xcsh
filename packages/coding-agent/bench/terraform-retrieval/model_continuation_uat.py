@@ -15,6 +15,7 @@ from model_continuation import (
     turn_messages,
 )
 from model_trace import (
+    audit_public_citations,
     has_clarification_question,
     required_read_coverage,
     successful_read_paths,
@@ -184,13 +185,11 @@ def transcript_summary(
     response_budget = terraform_tool_response_budget(messages)
     successful = successful and response_budget["passed"]
     reads = successful_read_paths(messages)
-    citations = re.findall(r"xcsh://terraform-documentation/[^\s)\]`]+", text)
-
-    def normalize(uri: str) -> str:
-        return re.sub(r"\?[^#]*", "", uri).rstrip(".,;")
-
     required = expected.get("must_read", [])
     cited = expected.get("required_citation_destinations", [])
+    citation_audit = audit_public_citations(messages, cited)
+    citations = citation_audit["citations"]
+    successful = successful and not citation_audit["internal_documentation_citations"]
     return {
         "completed": True,
         "completed_successfully": successful,
@@ -202,9 +201,7 @@ def transcript_summary(
         and required_read_coverage(reads, required),
         "required_citations_verified": successful
         and bool(cited)
-        and all(
-            normalize(uri) in {normalize(value) for value in citations} for uri in cited
-        ),
+        and citation_audit["required_public_citations_verified"],
         "clarification_question": has_clarification_question(text),
         "response_sha256": hashlib.sha256(text.encode()).hexdigest(),
         "hcl_fences": len(re.findall(r"```(?:hcl|terraform)\n", text)),

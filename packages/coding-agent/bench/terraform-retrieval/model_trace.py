@@ -3,6 +3,7 @@
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit, urlunsplit
@@ -393,3 +394,18 @@ def validate_known_suite_exposure(digest: str, regression: bool) -> None:
     ):
         message = "Known exposed input is regression only"
         raise ValueError(message)
+
+
+def audit_public_citations(
+    messages: list[dict[str, Any]], required: list[str]
+) -> dict[str, Any]:
+    """Use the production citation registry and reference extraction for qualification."""
+    script = Path(__file__).with_name("public-citation-audit.ts")
+    result = subprocess.run(  # noqa: S603 - repository-owned script; all transcript data travels through stdin
+        ["bun", str(script)],  # noqa: S607 - use the repository-verified Bun on PATH
+        input=json.dumps({"messages": messages, "required": required}),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return json.loads(result.stdout)

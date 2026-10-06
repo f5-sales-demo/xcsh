@@ -510,7 +510,8 @@ class ContinuationPlanTests(unittest.TestCase):
 
     def test_terminal_evidence_requires_completed_exact_read_and_citation(self) -> None:
         """Failed or hint-only reads do not count for complete evidence."""
-        uri = "xcsh://terraform-documentation/documentation/resources/fixture/index.md#schema-name"
+        uri = "xcsh://terraform-documentation/documentation/resources/address_allocator/index.md#schema-name"
+        public_url = "https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/address_allocator/"
         messages: list[dict[str, Any]] = [
             {
                 "role": "assistant",
@@ -522,7 +523,7 @@ class ContinuationPlanTests(unittest.TestCase):
                         "id": "read-1",
                         "arguments": {"path": uri},
                     },
-                    {"type": "text", "text": "See " + uri},
+                    {"type": "text", "text": "See " + public_url},
                 ],
             },
             {
