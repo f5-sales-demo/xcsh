@@ -90,5 +90,8 @@ describe("public documentation citations", () => {
 		expect(visible).toBe("See https://community.f5.com/t/65170 for the example.");
 		expect(visible).not.toContain("xcsh://");
 		expect(normalizeAssistantDocumentationCitations(visible)).toBe(visible);
+		expect(normalizeAssistantDocumentationCitations("See xcsh://docs/about and agent://output/123")).toBe(
+			"See [unverified documentation citation] and agent://output/123",
+		);
 	});
 });

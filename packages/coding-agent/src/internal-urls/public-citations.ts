@@ -27,6 +27,7 @@ export interface DocumentationCitationFailure {
 }
 
 const DOCUMENTATION_HOSTS = new Set([
+	"docs",
 	"documentation",
 	"terraform-documentation",
 	"terraform",
@@ -76,6 +77,7 @@ export function publicCitationForInternalUri(
 	}
 	if (url.protocol !== "xcsh:" || !DOCUMENTATION_HOSTS.has(url.hostname)) return null;
 	const pathname = url.pathname.replace(/^\//, "");
+	if (url.hostname === "docs") return { readUri, reason: "missing-public-mapping" };
 	if (url.hostname === "documentation") {
 		const key = pathname.replace(/\/index\.md$/, "");
 		const document = GENERAL_PUBLIC_DOCUMENTS[key];
@@ -125,7 +127,8 @@ export function citationLine(
 		: `Cite: unavailable (${result.reason}; no verified public destination)`;
 }
 
-const DOC_URI = /xcsh:\/\/(?:documentation|terraform-documentation|terraform|api-spec|api-catalog)\/[^\s<>)\]}`]+/g;
+const DOC_URI =
+	/xcsh:\/\/(?:docs|documentation|terraform-documentation|terraform|api-spec|api-catalog)\/[^\s<>)\]}`]+/g;
 
 /** Project assistant prose only. Tool inputs, tool results, fenced code, and inline protocol examples stay exact. */
 export function normalizeAssistantDocumentationCitations(text: string): string {

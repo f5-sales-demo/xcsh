@@ -1,7 +1,7 @@
 # ruff: noqa: INP001
 """Generate public citation destinations from verified release assets and saved sitemap bytes.
 
-Usage: python3 packages/coding-agent/scripts/generate-public-citation-destinations.py
+Usage: python3 packages/coding-agent/scripts/generate_public_citation_destinations.py
        --evidence-root /path/to/qmd-resume-evidence
 The evidence root contains sources/{content,provider,api} and assessment/source-receipts.json.
 """
@@ -27,22 +27,24 @@ args = parser.parse_args()
 root = args.evidence_root
 repo = pathlib.Path(__file__).resolve().parents[3]
 receipts = json.loads((root / "assessment/source-receipts.json").read_text())
-ns = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
+SITEMAP_NAMESPACE = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
 
 
 def sitemap(file: pathlib.Path) -> tuple[set[str], str]:
     """Read a bounded saved publication sitemap without XML entities or a DTD."""
-    data = file.read_bytes()
+    xml_bytes = file.read_bytes()
     if (
-        len(data) > 10 * 1024 * 1024
-        or b"<!DOCTYPE" in data.upper()
-        or b"<!ENTITY" in data.upper()
+        len(xml_bytes) > 10 * 1024 * 1024
+        or b"<!DOCTYPE" in xml_bytes.upper()
+        or b"<!ENTITY" in xml_bytes.upper()
     ):
-        message = "unsafe or oversized publication sitemap"
-        raise SystemExit(message)
-    root_xml = ET.fromstring(data)  # noqa: S314 - bounded, DTD and entities rejected above
-    urls = {x.text for x in root_xml.iter(ns + "loc")}
-    return urls, hashlib.sha256(data).hexdigest()
+        xml_error = "unsafe or oversized publication sitemap"
+        raise SystemExit(xml_error)
+    root_xml = ET.fromstring(xml_bytes)  # noqa: S314 - bounded, DTD and entities rejected above
+    urls = {
+        x.text for x in root_xml.iter(SITEMAP_NAMESPACE + "loc") if x.text is not None
+    }
+    return urls, hashlib.sha256(xml_bytes).hexdigest()
 
 
 provider_sitemap, provider_sitemap_digest = sitemap(
@@ -71,9 +73,9 @@ for row in provider["documents"]:
         raise SystemExit("provider source mapping mismatch " + p)
     provider_paths[p] = row["metadata"].get("summary") or p.split("/")[-2]
 # The generated SQLite contains the verified original title and URL, with no source media bytes.
-gzip_path = (
-    repo
-    / "packages/coding-agent/src/internal-urls/.documentation-generated/documentation-index.sqlite.gz"
+gzip_path = repo / (
+    "packages/coding-agent/src/internal-urls/.documentation-generated/"
+    "documentation-index.sqlite.gz"
 )
 with tempfile.NamedTemporaryFile(suffix=".sqlite") as tmp:
     with gzip.open(gzip_path, "rb") as f:
@@ -90,8 +92,8 @@ with tempfile.NamedTemporaryFile(suffix=".sqlite") as tmp:
     db.close()
 manifest = json.loads((root / "sources/content/manifest.json").read_text())
 if len(general) != len(manifest["documents"]):
-    message = "general document count mismatch"
-    raise SystemExit(message)
+    GENERAL_COUNT_ERROR = "general document count mismatch"
+    raise SystemExit(GENERAL_COUNT_ERROR)
 for row in manifest["documents"]:
     key = row["sourceId"] + "/" + row["path"].split("/", 2)[2].removesuffix("/index.md")
     if general.get(key, {}).get("url") != row["url"]:
@@ -100,39 +102,38 @@ api_domains = {}
 spec_operations = collections.defaultdict(set)
 
 
-def norm(p: str) -> str:
+def norm(api_path: str) -> str:
     """Normalize only the published metadata path placeholders."""
-    return re.sub(r"\{(?:metadata|system_metadata)\.(namespace|name)\}", r"{\1}", p)
+    return re.sub(
+        r"\{(?:metadata|system_metadata)\.(namespace|name)\}", r"{\1}", api_path
+    )
 
 
 api_zip = root / "sources/api/f5xc-api-specs-v12.0.0.zip"
-archive_digest = hashlib.sha256(api_zip.read_bytes()).hexdigest()
-if archive_digest != receipts["api"]["assets"][api_zip.name]["sha256"]:
-    message = "API source archive digest disagrees with the publication receipt"
-    raise SystemExit(message)
+ARCHIVE_DIGEST = hashlib.sha256(api_zip.read_bytes()).hexdigest()
+if receipts["api"]["assets"][api_zip.name]["sha256"] != ARCHIVE_DIGEST:
+    ARCHIVE_DIGEST_ERROR = (
+        "API source archive digest disagrees with the publication receipt"
+    )
+    raise SystemExit(ARCHIVE_DIGEST_ERROR)
 with zipfile.ZipFile(api_zip) as z:
     names: set[str] = set()
-    expanded = 0
+    EXPANDED_BYTES = 0
     member_hashes: list[str] = []
     for member in z.infolist():
         name = member.filename
-        if (
-            not name
-            or name.startswith("/")
-            or "\\" in name
-            or "%" in name
-            or any(part in ("", ".", "..") for part in name.split("/"))
-            or name in names
-            or member.file_size > 64 * 1024 * 1024
-        ):
+        invalid_path = not name or name.startswith("/") or "\\" in name or "%" in name
+        invalid_segments = any(part in ("", ".", "..") for part in name.split("/"))
+        duplicate_or_oversized = name in names or member.file_size > 64 * 1024 * 1024
+        if invalid_path or invalid_segments or duplicate_or_oversized:
             raise SystemExit(
                 "unsafe, duplicate, or oversized API archive member: " + name
             )
         names.add(name)
-        expanded += member.file_size
-        if expanded > 512 * 1024 * 1024:
-            message = "API archive expanded payload exceeds limit"
-            raise SystemExit(message)
+        EXPANDED_BYTES += member.file_size
+        if EXPANDED_BYTES > 512 * 1024 * 1024:
+            ARCHIVE_EXPANSION_ERROR = "API archive expanded payload exceeds limit"
+            raise SystemExit(ARCHIVE_EXPANSION_ERROR)
         payload = z.read(member)
         if len(payload) != member.file_size:
             raise SystemExit("API archive member size mismatch: " + name)

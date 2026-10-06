@@ -101,6 +101,10 @@ export function propertyWorkloadArchitecture(text: string): "stateless" | "state
 		/\b(?:not|no)\s+(?:(?:a|an|the)\s+)?(?:stateless|stateful|stateful_service)\b/gi,
 		"",
 	);
+	// The canonical workload service page explicitly calls its replicas fungible;
+	// the parallel StatefulService page gives each replica stable state and identity.
+	if (/\b(?:not|no|without)\b[^.!?;]*\bfungible\b/i.test(text)) return undefined;
+	if (/\bfungible(?:\s+(?:service|replicas?))?\b/i.test(positiveText)) assertions.add("stateless");
 	if (
 		/\bstateless\b|\bservice\s+branch\b|\bservice[./]|\b(?:under|in|within|branch|path)\s+(?:(?:a|an|the)\s+)?service\b/i.test(
 			positiveText,
