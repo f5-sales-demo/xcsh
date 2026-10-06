@@ -294,7 +294,7 @@ export function normalizeAssistantDocumentationCitations(
 			}
 			if (fenced) return line;
 			return line
-				.split(/(`[^`]*`)/g)
+				.split(/(`+[^`]*`+)/g)
 				.map((segment, index) => {
 					if (index % 2 === 1) return segment;
 					return segment.replace(DOC_URI, raw => {

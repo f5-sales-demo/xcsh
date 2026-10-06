@@ -235,3 +235,12 @@ test("unmapped collection citations cannot expose internal documentation roots",
 		"Use xcsh://documentation-helper/example",
 	);
 });
+
+test("double-backtick protocol examples remain literal during citation projection", () => {
+	const read = "xcsh://documentation/community-f5-com/t/65170/index.md";
+	const literal = "``protocol example: " + read + "``";
+	expect(normalizeAssistantDocumentationCitations(literal)).toBe(literal);
+	const fenced = "~~~~text\n" + read + "\n~~~~\nSource: [" + "community](" + read + ")";
+	expect(normalizeAssistantDocumentationCitations(fenced)).toContain("~~~~text\n" + read + "\n~~~~");
+	expect(normalizeAssistantDocumentationCitations(fenced)).toContain("(https://community.f5.com/t/65170)");
+});
