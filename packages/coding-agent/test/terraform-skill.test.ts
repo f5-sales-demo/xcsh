@@ -45,3 +45,14 @@ describe("runtime Terraform version policy", () => {
 		expect(skill).toContain("published binary");
 	});
 });
+
+describe("progressive Terraform policy", () => {
+	it("permits targeted release reads and runtime exact pins", async () => {
+		const file = path.resolve(import.meta.dir, "../src/prompts/system/progressive-system-prompt.md");
+		const content = await Bun.file(file).text();
+		expect(content).toContain("xcsh://terraform-release/");
+		expect(content).toContain("runtime Terraform preflight");
+		expect(content).not.toContain("Keep provider-corpus retrieval offline");
+		expect(content).not.toContain("Pin required_providers to the exact bundled provider version");
+	});
+});
