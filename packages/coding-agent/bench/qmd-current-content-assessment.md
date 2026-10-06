@@ -52,3 +52,14 @@ The new focused tests retain ambiguous provider roles, excluded lifecycle operat
 unrelated provider identities, and rejected advertisement branches. The legacy natural-language
 UAT checker now compares final public citations with exact internal leaf-read mappings instead of
 requiring internal citation URLs. Source-boundary, type-check, and retrieval/citation checks passed.
+
+
+The first new v15 source-reviewed 200-case freeze (digest
+`46145a8d3cb655c200cca004198b557efa14b4452d7a72584cb283a8f82a9fac`) failed on one
+712-byte query against the 512-byte request limit. Its first failure is preserved unchanged.
+Complete regression diagnostics reached 105/140 top-five and 96/140 first selection, with zero
+ambiguous cases selected. Every expected source section was read successfully and returned a
+verified public citation. Warm p95 was 31.85 ms. The exposed suite is regression-only; no
+qualification or installed-model acceptance is claimed. The full TypeScript command completed
+successfully, including 9,911 coding-agent tests. The frozen suite and failed first result are
+retained in `terraform-retrieval/current-v15-first-freeze/`.

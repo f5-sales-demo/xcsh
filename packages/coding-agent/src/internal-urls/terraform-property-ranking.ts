@@ -143,7 +143,7 @@ export function propertyMatchesWorkloadAdvertisement(text: string, candidate: Pr
 	)
 		return true;
 	const publicAdvertisement =
-		/\bInternet\s+advertisement\b[^.!?;]*\bdefault\s+VIP\b|\badvertise(?:ment)?\b[^.!?;]*\bon\s+(?:the\s+)?Internet\b[^.!?;]*\bdefault\s+VIP\b/i.test(
+		/\bInternet\s+advertisement\b[^.!?;]*\bdefault\s+VIP\b|\b(?:advertise|advertisement)\b[^.!?;]*\bon\s+(?:the\s+)?Internet\b[^.!?;]*\bdefault\s+VIP\b/i.test(
 			query,
 		);
 	const customAdvertisement = /\bcustom\s+advertisement\b|\badvertise\b[^.!?;]*\bon\s+specific\s+sites\b/i.test(query);
@@ -320,6 +320,7 @@ export function propertyRequestedType(text: string): string | undefined {
 }
 // The caller can name a root schema block in prose; the index verifies this identity.
 export function propertyNamedRootPath(text: string): string | undefined {
+	if (/\broot\s+(?:property|schema|field)\s+reference\b/i.test(text)) return undefined;
 	const clause = text.split(/[.!?;]/).find(value => /\b(?:use|under|within|inside)\s+(?:the\s+)?root\s+/i.test(value));
 	if (!clause || /\b(?:not|no|never|without|compare|either|versus)\b/i.test(clause)) return undefined;
 	const match =

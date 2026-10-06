@@ -140,6 +140,7 @@ test("affirmative endpoint and exact block vocabulary retain their meanings", ()
 		propertyNamedRootPath("Use the root notification parameters rather than a route override. Locate the interval."),
 	).toBe("notification_parameters");
 	expect(propertyNamedRootPath("Compare root notification parameters and route overrides.")).toBeUndefined();
+	expect(propertyNamedRootPath("Use the root property reference. Explain a field.")).toBeUndefined();
 });
 
 test("lifecycle operation intent survives an unrelated rejected transport timeout", () => {
