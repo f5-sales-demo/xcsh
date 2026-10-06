@@ -60,6 +60,18 @@
       "kind": "model-subset",
       "source": "current-v15-first-freeze/v15-first-frozen-failure.json.gz",
       "reason": "First v15 frozen run failed and subsequent source analysis exposed prompts; regression only."
+    },
+    {
+      "sha256": "a8a21b9585e0544d6c5506cd796814c19ddb59e6516f694bc24df5a6ce95ae3f",
+      "kind": "heldout",
+      "source": "current-v15-second-freeze/v15-second-first-retrieval.json.gz",
+      "reason": "First source-reviewed retrieval run failed top-five completeness and ambiguity; regression only."
+    },
+    {
+      "sha256": "81527158c33396b59577d479c05f7b36e280aa8669a91eb8d379182a8920fa01",
+      "kind": "model-subset",
+      "source": "current-v15-second-freeze/v15-second-first-retrieval.json.gz",
+      "reason": "First source-reviewed retrieval run failed top-five completeness and ambiguity; regression only."
     }
   ]
 }

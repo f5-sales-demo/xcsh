@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { terraformProviderMention, terraformQueryIdentity } from "../../src/internal-urls/terraform-documentation";
 import { interpretTerraformLifecycle } from "../../src/internal-urls/terraform-lifecycle";
 import {
+	propertyExplicitSchemaPaths,
 	propertyNamedRootPath,
 	propertyQueryTerms,
 	propertyRequestedBlockText,
@@ -186,4 +187,20 @@ test("source-attributed lookup extracts the requested field meaning", () => {
 		"duration in seconds.",
 	);
 	expect(propertyRequestedText("Which field describes the namespace?")).toBe("the namespace?");
+});
+
+test("literal single-parent and multi-parent trails remain affirmative caller scope", () => {
+	expect(
+		propertyExplicitSchemaPaths("Follow `headers`. Find the field described as follows: Invert the match result."),
+	).toEqual(["headers"]);
+	expect(
+		propertyExplicitSchemaPaths(
+			"Follow `cloudflare` → `js_insertion_rules`. Find the field described as follows: Insert before the first tag.",
+		),
+	).toEqual(["cloudflare.js_insertion_rules"]);
+	expect(
+		terraformQueryIdentity(
+			"For Terraform xcsh_secret_management_access, explain `role_id`. I have not chosen the Terraform declaration or lookup role.",
+		).providerType,
+	).toBeUndefined();
 });

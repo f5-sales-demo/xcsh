@@ -1290,6 +1290,7 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 		explicitRoles.add("resources");
 	if (/\b(?:action\s+xcsh_[a-z0-9_]+|xcsh_[a-z0-9_]+\s+action)\b/i.test(search)) explicitRoles.add("actions");
 	const competingRoles =
+		/\b(?:not chosen|not selected|unspecified|undecided)\b[^.!?;]*\b(?:role|declaration|lookup)\b/i.test(search) ||
 		/\b(?:read|retrieve|inspect|lookup|query|check)\b[^.!?]*\bor\b[^.!?]*\b(?:declare|define|configure|specify|set|create)\b|\b(?:declare|define|configure|specify|set|create)\b[^.!?]*\bor\b[^.!?]*\b(?:read|retrieve|inspect|lookup|query|check)\b/i.test(
 			search,
 		) ||

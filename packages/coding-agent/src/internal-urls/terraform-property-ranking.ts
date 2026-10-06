@@ -376,6 +376,7 @@ export function propertyWithoutSingleSchemaScope(text: string): string {
 	return text;
 }
 function schemaPathMentions(text: string) {
+	text = propertyInstructionText(text);
 	const breadcrumbSource = text.replace(/`([a-z][a-z0-9_]*)`/gi, "$1");
 	const query = propertyBreadcrumbText(text)
 		.toLowerCase()
@@ -424,6 +425,15 @@ export function propertyMentionedSchemaPaths(text: string): string[] {
 	return [...new Set(schemaPathMentions(text).map(match => match.path))];
 }
 export function propertyExplicitSchemaPaths(text: string): string[] {
+	const instructions = propertyInstructionText(text);
+	const follow = /\bfollow\s+`([a-z][a-z0-9_]*)`/i.exec(instructions);
+	if (
+		follow &&
+		!/[>→]/.test(instructions.slice(follow.index)) &&
+		!/\b(?:not|no|without|compare|either|or)\b/i.test(instructions.slice(0, follow.index))
+	)
+		return [follow[1]!.toLowerCase()];
+
 	const matches = schemaPathMentions(text);
 	if (matches.length !== 1) return [];
 	const match = matches[0]!;

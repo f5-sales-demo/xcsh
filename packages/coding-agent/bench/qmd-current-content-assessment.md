@@ -77,3 +77,11 @@ Extracting attributed field meaning separately from caller scope raised the expo
 regression to 139/140 top five and 137/140 correct automatic selections, with zero ambiguous
 selections. Expected exact reads and public mappings remain complete. This result remains
 regression-only. The 712-byte request remains unchanged in frozen evidence.
+
+
+A second 200-case freeze with distinct source-selected field destinations and bounded requests
+(digest `a8a21b9585e0544d6c5506cd796814c19ddb59e6516f694bc24df5a6ce95ae3f`)
+also failed its first run: 138/140 top five, 132/140 correct selections, and one ambiguous
+role incorrectly selected. Its first result is retained unchanged in
+`terraform-retrieval/current-v15-second-freeze/`, and its suite/subset digests are now
+regression-only. Expected exact reads and public citations passed; qualification remains false.
