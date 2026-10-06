@@ -200,19 +200,19 @@ for category in api_catalog["categories"]:
         api_categories[category["name"]] = next(iter(domains))
 source = {
     "general": {
-        "version": "content-20261005T134122Z",
+        "version": receipts["content"]["tag"],
         "digest": receipts["content"]["assets"]["html-to-markdown-content.tar.gz"][
             "sha256"
         ],
     },
     "terraform": {
-        "version": "documentation-v15.0.0",
+        "version": receipts["provider"]["tag"],
         "digest": receipts["provider"]["assets"]["canonical-documentation.tar.gz"][
             "sha256"
         ],
     },
     "api": {
-        "version": "v12.0.0",
+        "version": receipts["api"]["tag"],
         "digest": receipts["api"]["assets"]["f5xc-api-specs-v12.0.0.zip"]["sha256"],
     },
 }
