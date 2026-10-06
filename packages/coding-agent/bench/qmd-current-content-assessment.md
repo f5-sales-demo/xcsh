@@ -155,3 +155,32 @@ The retained hold keeps both linked PRs drafts, with no auto-merge, merge, or re
 Publishing still requires explicit removal of that hold, then provider enrichment
 publication, immutable successor verification, reviewed consumer pin update, release,
 and installed Homebrew/Ubuntu release acceptance.
+
+
+## Provider lifecycle successor acceptance
+
+Immutable provider/documentation v15.2.0 follows lifecycle #2445/#2330 delivery.
+The consumer pin binds all nine documentation asset digests and index SHA-256
+6de4f8410d0cec62c32a2e34ffa98f358f9b465a2ab4eed8efb13e11a08855d9.
+
+Fresh 200-case suite digest:
+897cf1c3ad63501eb0672e7ca4a611b2c0dbc3bf10236d4d17b7aa47def3c08e.
+It uses 66 providers, 140 answerables, 40 role clarifications and 20 controls.
+First retrieval: 140/140 expected top-five, 138/140 correct automatic selections,
+zero ambiguous selections; every exact section read and public citation passed.
+All 200 complete responses match Mac/Ubuntu. Warm p95: Ubuntu 32.24 ms,
+Mac 41.41 ms; Mac network-denied 43.86 ms. Maximum response: 4,032 bytes.
+Offline operation verified on both hosts.
+
+Installed candidate model matrix: 40/40 automated and source-reviewed passes,
+four canonical HCL drafts, zero unsupported field/configurability claims and zero
+false live-apply claims. All 16 installed continuation branches passed automated
+and source review. Qualification is source-scoped by explicit provider role and
+ordered parent context; unguided discovery is not claimed.
+
+Full TypeScript workspace command: coding-agent 9,926 passes, zero failures.
+One unchanged chat-ui scaling timing test failed under load; isolated package
+rerun passed all 269 tests. TypeScript and 62 focused retrieval/citation tests pass.
+Prior first failures, exposure histories and v15.1 provenance failure remain
+preserved. Raw traces stay outside Git. Release/installed successor delivery
+still follows this verified source result.
