@@ -38,6 +38,7 @@ import type { Model } from "@f5-sales-demo/pi-ai";
 import { logger, VERSION } from "@f5-sales-demo/pi-utils";
 import type { ExtensionUIContext } from "../../extensibility/extensions";
 import { loadSlashCommands } from "../../extensibility/slash-commands";
+import { projectDocumentationTranscript } from "../../internal-urls/public-citations";
 import { listMediaDescriptors, readMediaAssetChunk } from "../../media/transport";
 import { theme } from "../../modes/theme/theme";
 import type { AgentSession, AgentSessionEvent } from "../../session/agent-session";
@@ -852,7 +853,10 @@ export class AcpAgent implements Agent {
 	}
 
 	async #replaySessionHistory(record: ManagedSessionRecord): Promise<void> {
-		for (const message of record.session.buildDisplaySessionContext().messages as ReplayableMessage[]) {
+		const messages = projectDocumentationTranscript(
+			record.session.sessionManager.buildSessionContext().messages,
+		) as ReplayableMessage[];
+		for (const message of messages) {
 			for (const notification of this.#messageToReplayNotifications(record.session.sessionId, message)) {
 				await this.#connection.sessionUpdate(notification);
 			}

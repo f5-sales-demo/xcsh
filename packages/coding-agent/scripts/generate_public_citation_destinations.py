@@ -28,6 +28,7 @@ root = args.evidence_root
 repo = pathlib.Path(__file__).resolve().parents[3]
 receipts = json.loads((root / "assessment/source-receipts.json").read_text())
 SITEMAP_NAMESPACE = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
+ARCHIVE_EXPANSION_ERROR = "API archive expanded payload exceeds limit"
 
 
 def sitemap(file: pathlib.Path) -> tuple[set[str], str]:
@@ -132,7 +133,6 @@ with zipfile.ZipFile(api_zip) as z:
         names.add(name)
         EXPANDED_BYTES += member.file_size
         if EXPANDED_BYTES > 512 * 1024 * 1024:
-            ARCHIVE_EXPANSION_ERROR = "API archive expanded payload exceeds limit"
             raise SystemExit(ARCHIVE_EXPANSION_ERROR)
         payload = z.read(member)
         if len(payload) != member.file_size:

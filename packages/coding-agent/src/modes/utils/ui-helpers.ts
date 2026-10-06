@@ -3,6 +3,7 @@ import type { AssistantMessage, ImageContent, Message } from "@f5-sales-demo/pi-
 import { Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
 import type { AsyncQuestionItem } from "../../../../chat-ui/src/interactions/contract";
 import { settings } from "../../config/settings";
+import { projectDocumentationTranscript } from "../../internal-urls/public-citations";
 import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
 import { BashExecutionComponent } from "../../modes/components/bash-execution";
@@ -773,7 +774,7 @@ export class UiHelpers {
 	}
 
 	findLastAssistantMessage(): AssistantMessage | undefined {
-		const messages = this.ctx.session.displayMessages;
+		const messages = projectDocumentationTranscript(this.ctx.session.messages);
 		for (let i = messages.length - 1; i >= 0; i--) {
 			const message = messages[i];
 			if (message?.role === "assistant") {

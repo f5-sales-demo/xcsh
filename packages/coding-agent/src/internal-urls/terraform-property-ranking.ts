@@ -468,6 +468,7 @@ export function propertyRequestsBlock(text: string): boolean {
 	text = text.split(/\bto\s+(?:configure|enable|provide|handle|support)\b/i)[0]!;
 	if (
 		/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text) ||
+		/\b(?:which|what)\s+leaf\b/i.test(text) ||
 		/\b(?:which|what)\s+(?:fields|attributes|properties|parameters|arguments|flags)\b/i.test(text)
 	)
 		return false;

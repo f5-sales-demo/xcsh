@@ -127,6 +127,7 @@ import {
 	DocumentationCitationStream,
 	normalizeAssistantDocumentationCitations,
 	projectAssistantDocumentationCitations,
+	projectDocumentationTranscript,
 } from "../internal-urls/public-citations";
 import {
 	disposeKernelSessionsByOwner,
@@ -1170,6 +1171,7 @@ export class AgentSession {
 	// Track last assistant message for auto-compaction check
 	#lastAssistantMessage: AssistantMessage | undefined = undefined;
 	readonly #citationStreams = new Map<number, DocumentationCitationStream>();
+	#pendingCitationDelta: AgentEvent | undefined;
 
 	#projectDisplayCitations(event: AgentEvent): AgentEvent {
 		const projectStreamMessage = (message: AssistantMessage): AssistantMessage =>
@@ -1182,6 +1184,7 @@ export class AgentSession {
 			});
 		if (event.type === "message_start" && event.message.role === "assistant") {
 			this.#citationStreams.clear();
+			this.#pendingCitationDelta = undefined;
 			return { ...event, message: projectAssistantDocumentationCitations(event.message) };
 		}
 		if (event.type === "message_update" && event.message.role === "assistant") {
@@ -1208,16 +1211,30 @@ export class AgentSession {
 				};
 			}
 			if (update.type === "text_end") {
-				this.#citationStreams.get(update.contentIndex)?.complete();
+				const pending = this.#citationStreams.get(update.contentIndex)?.complete() ?? "";
+				const message = projectStreamMessage(event.message);
+				const partial = projectStreamMessage(update.partial);
+				if (pending) {
+					this.#pendingCitationDelta = {
+						type: "message_update",
+						message,
+						assistantMessageEvent: {
+							type: "text_delta",
+							contentIndex: update.contentIndex,
+							delta: pending,
+							partial,
+						},
+					};
+				}
 				return {
 					...event,
-					message: projectStreamMessage(event.message),
+					message,
 					assistantMessageEvent: {
 						...update,
 						content:
 							this.#citationStreams.get(update.contentIndex)?.visible ??
 							normalizeAssistantDocumentationCitations(update.content),
-						partial: projectStreamMessage(update.partial),
+						partial,
 					},
 				};
 			}
@@ -1416,6 +1433,9 @@ export class AgentSession {
 		}
 
 		displayEvent = this.#projectDisplayCitations(displayEvent);
+		const pendingCitationDelta = this.#pendingCitationDelta;
+		this.#pendingCitationDelta = undefined;
+		if (pendingCitationDelta) await this.#emitSessionEvent(pendingCitationDelta);
 		const turnSettlementListeners = await this.#emitSessionEvent(displayEvent);
 
 		// `agent_end` is the provider-neutral completion boundary. Settle only
@@ -3300,16 +3320,12 @@ export class AgentSession {
 
 	/** Render saved assistant evidence through the current verified public citation map. */
 	get displayMessages(): AgentMessage[] {
-		return this.messages.map(message =>
-			message.role === "assistant" ? projectAssistantDocumentationCitations(message) : message,
-		);
+		return projectDocumentationTranscript(this.messages);
 	}
 
 	buildDisplaySessionContext(): SessionContext {
 		const context = deobfuscateSessionContext(this.sessionManager.buildSessionContext(), this.#obfuscator);
-		context.messages = context.messages.map(message =>
-			message.role === "assistant" ? projectAssistantDocumentationCitations(message) : message,
-		);
+		context.messages = projectDocumentationTranscript(context.messages);
 		context.usedTokens = calculateUsedTokens(context.messages);
 		return context;
 	}

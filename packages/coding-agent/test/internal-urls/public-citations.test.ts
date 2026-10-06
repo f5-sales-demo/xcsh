@@ -101,12 +101,17 @@ describe("public documentation citations", () => {
 	});
 
 	test("does not expose an internal citation split across streaming chunks", () => {
+		const ordinary = new DocumentationCitationStream();
+		expect(ordinary.push("All done, the echo came back.")).toBe("All done, the echo came back.");
 		const stream = new DocumentationCitationStream();
 		const chunks = ["See xc", "sh://documentation/community-f5-com/t/65170/", "index.md for the example."];
 		const visible = chunks.map(chunk => stream.push(chunk)).join("") + stream.complete();
 		expect(visible).toBe("See https://community.f5.com/t/65170 for the example.");
 		expect(visible).not.toContain("xcsh://");
 		expect(normalizeAssistantDocumentationCitations(visible)).toBe(visible);
+		const trailing = new DocumentationCitationStream();
+		expect(trailing.push("Cite xcsh://documentation/community-f5-com/t/65170/index.md")).toBe("Cite ");
+		expect(trailing.complete()).toBe("https://community.f5.com/t/65170");
 		expect(normalizeAssistantDocumentationCitations("See xcsh://docs/about and agent://output/123")).toBe(
 			"See [unverified documentation citation] and agent://output/123",
 		);

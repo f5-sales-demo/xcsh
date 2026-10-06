@@ -823,7 +823,8 @@ export function rankTerraformDirectProperties(
 				),
 		),
 	];
-	const requested = terms(query);
+	const comparisonOperation = /\b(?:response[ -])?comparison[ -]operation\b/i.test(query);
+	const requested = terms(query).map(term => (comparisonOperation && term === "operation" ? "operator" : term));
 	const parentTerms = new Set(terms(parentPath.join(" ")));
 	const ranked = sections
 		.filter(
@@ -2458,7 +2459,11 @@ export class TerraformDocumentationRepository {
 					}
 				}
 			}
-			if (rows.length === 1 && rows[0]?.anchor === "section" && !navigationRequest) {
+			const leadingMetadata = rows[0] ? (JSON.parse(rows[0].metadata) as TerraformMetadata) : undefined;
+			const exactBreadcrumbScope =
+				(leadingMetadata?.schema_path.length ?? 0) > 0 &&
+				propertyBreadcrumbText(search).includes(leadingMetadata!.schema_path.join("."));
+			if (rows[0]?.anchor === "section" && !navigationRequest && (rows.length === 1 || exactBreadcrumbScope)) {
 				const parent = rows[0];
 				const metadata = JSON.parse(parent.metadata) as TerraformMetadata;
 				const refined = rankTerraformDirectProperties(search, metadata.schema_path, metadata.sections ?? []);

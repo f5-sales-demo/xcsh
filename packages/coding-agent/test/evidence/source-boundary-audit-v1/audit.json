@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "19332ab39b68ad7da1e3fc385dd964d1a67a2495",
-  "fingerprint": "9255ba54d387de248ff108835f0d6eb81f8074df7b8069d8bbe53b80c43571dd",
+  "revision": "a35c539b90f789abb0103e23d6839354f2feb8e9",
+  "fingerprint": "715afa570f8ae264be54d346d06ac28100d5b71ed6f529a98f736e4fa15c0234",
   "counts": {
     "total": 238,
     "components": 96,
@@ -964,7 +964,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "496e756ce9005baf6780e0f8641f760a39be400de866a0607691bedd1705eda7",
+      "sha256": "46d3d54e00d02f59d6954f88a7f3959caaf0d59811b3a4746f707c8ad2aabe2d",
       "exports": [
         "AcpAgent"
       ],
@@ -3112,7 +3112,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "bee97f575436adb8cfddc108ca341a11f2b5c4a4686b3e3eaf0e49db8c19cbe0",
+      "sha256": "a4b146cc26d067eb1e30abf5469514d83ccd6ac5067f73d171d55cc965f565fb",
       "exports": [
         "CommandController",
         "renderProviderSection",
@@ -3700,7 +3700,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "d7846ae4bc7f53120eb8a6e48d1af6c7026fd95fce8f6a5a8b22d542c9aa07a3",
+      "sha256": "f6d33b448b1e01ec53fbce36ff63d308592f0e9acc55a9e11ba78e1ed6f00dd5",
       "exports": [
         "PrintModeOptions",
         "buildJsonAgentEventLine",
@@ -3772,7 +3772,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "0f676f963a2d6cae4c700c3ae7408fc25897f9f25e7035a824077da52850750f",
+      "sha256": "26c33bce2b5d2b258b4e64eb447c0f23dbb663a57f98b1ada928c79dc17cbd03",
       "exports": [
         "PendingExtensionRequest",
         "requestRpcEditor",
@@ -4277,7 +4277,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "9da0a3f900b70b2485c0204e3292e87f3eeabdc0b22e4be7ea9a3987d91b0a4e",
+      "sha256": "5045e9a0df09d8b6fda1b5c23daacd9ee73096ac0194d642b10ebd651e1740b1",
       "exports": [
         "UiHelpers"
       ],

@@ -1,3 +1,4 @@
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import {
 	API_PUBLIC_CATEGORIES,
@@ -162,6 +163,29 @@ export function normalizeAssistantDocumentationCitations(text: string): string {
 export class DocumentationCitationStream {
 	#raw = "";
 	#visible = "";
+	static readonly #prefix = "xcsh://";
+
+	#pendingUrlStart(): number | null {
+		const full = this.#raw.lastIndexOf(DocumentationCitationStream.#prefix);
+		if (full >= 0) {
+			const tail = this.#raw.slice(full);
+			if (!/[\s<>)\]}`"']/.test(tail)) {
+				const hostAndPath = tail.slice(DocumentationCitationStream.#prefix.length);
+				const host = hostAndPath.split("/", 1)[0]!;
+				if (DOCUMENTATION_HOSTS.has(host) || [...DOCUMENTATION_HOSTS].some(value => value.startsWith(host)))
+					return full;
+			}
+		}
+		for (let length = 1; length < DocumentationCitationStream.#prefix.length; length++) {
+			const start = this.#raw.length - length;
+			if (
+				this.#raw.endsWith(DocumentationCitationStream.#prefix.slice(0, length)) &&
+				(start === 0 || /[^A-Za-z0-9]/.test(this.#raw[start - 1]!))
+			)
+				return start;
+		}
+		return null;
+	}
 
 	get visible(): string {
 		return this.#visible;
@@ -169,14 +193,10 @@ export class DocumentationCitationStream {
 
 	push(delta: string): string {
 		this.#raw += delta;
-		const lastBoundary = Math.max(
-			this.#raw.lastIndexOf(" "),
-			this.#raw.lastIndexOf("\n"),
-			this.#raw.lastIndexOf(")"),
-			this.#raw.lastIndexOf("]"),
+		const pendingStart = this.#pendingUrlStart();
+		const projected = normalizeAssistantDocumentationCitations(
+			pendingStart === null ? this.#raw : this.#raw.slice(0, pendingStart),
 		);
-		if (lastBoundary < 0) return "";
-		const projected = normalizeAssistantDocumentationCitations(this.#raw.slice(0, lastBoundary + 1));
 		if (!projected.startsWith(this.#visible)) return "";
 		const safe = projected.slice(this.#visible.length);
 		this.#visible = projected;
@@ -210,4 +230,10 @@ export function projectAssistantDocumentationCitations(message: AssistantMessage
 		return { ...block, text: normalized, ...(citations === undefined ? {} : { citations }) };
 	});
 	return changed ? { ...message, content } : message;
+}
+
+export function projectDocumentationTranscript(messages: readonly AgentMessage[]): AgentMessage[] {
+	return messages.map(message =>
+		message.role === "assistant" ? projectAssistantDocumentationCitations(message) : message,
+	);
 }

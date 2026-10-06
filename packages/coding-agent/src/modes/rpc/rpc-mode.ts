@@ -24,6 +24,7 @@ import {
 	normalizeHostToolDefinitions,
 	RpcHostToolBridge,
 } from "../../host-tools";
+import { projectDocumentationTranscript } from "../../internal-urls/public-citations";
 import {
 	extractMediaDescriptorFromToolResult,
 	listMediaDescriptors,
@@ -875,7 +876,7 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 			// =================================================================
 
 			case "get_messages": {
-				return success(id, "get_messages", { messages: session.displayMessages });
+				return success(id, "get_messages", { messages: projectDocumentationTranscript(session.messages) });
 			}
 
 			default: {
