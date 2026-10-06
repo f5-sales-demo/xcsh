@@ -550,6 +550,10 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 						command.identity,
 					),
 				});
+			case "interaction_cancel":
+				return success(id, command.type, {
+					accepted: session.userInteractions.cancelExternal(command.requestId, command.identity),
+				});
 			case "plan_decide":
 				return success(id, command.type, await session.decidePlan(command.planId, command.action));
 			// =================================================================

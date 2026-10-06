@@ -174,3 +174,47 @@ test("nested terminal pauses retain queued input while remote answers still comp
 	expect(await cancelled).toBeUndefined();
 	expect(presentations).toBe(1);
 });
+
+test("async questions open sequentially, preserve pauses, and remain pending after dismissal", async () => {
+	const owner = new UserInteractions();
+	const resume = owner.pauseLocalPresentation();
+	const forms: ReturnType<typeof Promise.withResolvers<string | undefined>>[] = [];
+	owner.setAsyncPresenter(() => {
+		const form = Promise.withResolvers<string | undefined>();
+		forms.push(form);
+		return form.promise;
+	});
+	const replies = owner.requestAsyncBatch([
+		{ kind: "input", delivery: "async", title: "First", options: ["Recommended", "Alternative"] },
+		{ kind: "input", delivery: "async", title: "Second" },
+	]);
+	expect(forms).toHaveLength(0);
+	const [first, second] = owner.pending();
+	resume();
+	expect(forms).toHaveLength(1);
+	forms[0].resolve(undefined);
+	await Bun.sleep(0);
+	expect(owner.pending()).toHaveLength(2);
+	expect(forms).toHaveLength(2);
+	owner.respond(second.id, "Free text");
+	expect(await replies[1]).toBe("Free text");
+	expect(owner.presentAsync(first.id)).toBe(true);
+	expect(forms).toHaveLength(3);
+	forms[2].resolve("Alternative");
+	expect(await replies[0]).toBe("Alternative");
+	expect(owner.pending()).toEqual([]);
+});
+
+test("registering an async presenter opens queued input without consuming a recommendation", async () => {
+	const owner = new UserInteractions();
+	const result = owner.request({ kind: "input", delivery: "async", title: "Choice", options: ["Recommended"] });
+	let shown = 0;
+	owner.setAsyncPresenter(() => {
+		shown++;
+		return new Promise(() => {});
+	});
+	expect(shown).toBe(1);
+	expect(owner.pending()).toHaveLength(1);
+	owner.cancelAll();
+	expect(await result).toBeUndefined();
+});

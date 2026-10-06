@@ -1000,10 +1000,17 @@ export class AgentSession {
 		void this.#emitSessionEvent({ type: "async_user_input", item, questionIds });
 	}
 	async deliverAsyncAnswer(itemId: string, questionId: string, answer: string): Promise<void> {
+		const generation = this.#promptGeneration;
 		await this.prompt(JSON.stringify({ type: "user_input_reply", itemId, questionId, answer }), {
 			streamingBehavior: "steer",
 			expandPromptTemplates: false,
 		});
+		// A reply can be queued after the loop's final steering poll but before
+		// prompt finalization. Once the loop is idle, resume any reply it retained.
+		await this.agent.waitForIdle();
+		if (this.#isPromptCurrent(generation) && this.agent.hasQueuedMessages()) {
+			await this.agent.continue();
+		}
 	}
 	reportInteractionFailure(itemId: string, _error: unknown): void {
 		void this.#emitSessionEvent({

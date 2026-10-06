@@ -130,6 +130,63 @@ describe("client tool discovery continuation", () => {
 		expect(requests).toBe(2);
 		expect(restored).toEqual([]);
 	});
+	it("correlated async replies stay queued for the model boundary rather than live steering", async () => {
+		const reply = {
+			role: "user" as const,
+			content: [
+				{
+					type: "text" as const,
+					text: JSON.stringify({ type: "user_input_reply", itemId: "i", questionId: "i:0", answer: "B" }),
+				},
+			],
+			timestamp: 1,
+		};
+		let queue: (typeof reply)[] = [];
+		let requests = 0;
+		let claimed = false;
+		let received = false;
+		const run = agentLoop(
+			[{ role: "user", content: "Choose before producing the result", timestamp: 0 }],
+			{ messages: [], systemPrompt: "", tools: [] },
+			{
+				model: { ...model, compat: { supportsWebSocketSteering: true } },
+				convertToLlm: messages => messages as Message[],
+				waitForSteeringMessages: async () => {},
+				getSteeringMessages: async () => {
+					const batch = queue;
+					queue = [];
+					return batch;
+				},
+				restoreSteeringMessages: messages => {
+					queue.unshift(...(messages as (typeof reply)[]));
+				},
+			},
+			undefined,
+			(_model, context, options) => {
+				const response = new AssistantMessageEventStream();
+				queueMicrotask(async () => {
+					if (requests++ === 0) {
+						queue.push(reply);
+						const claim = await options?.liveSteering?.claim(new AbortController().signal);
+						claimed = !!claim;
+						claim?.accept();
+					} else
+						received = context.messages.some(
+							message =>
+								message.role === "user" && JSON.stringify(message.content) === JSON.stringify(reply.content),
+						);
+					response.push({ type: "done", reason: "stop", message: assistant(false) });
+				});
+				return response;
+			},
+		);
+		for await (const _ of run) {
+		}
+		expect(claimed).toBe(false);
+		expect(received).toBe(true);
+		expect(requests).toBe(2);
+	});
+
 	it("executes a repeated search once and persists activated schemas for replay", async () => {
 		let executions = 0;
 		const loaded = { name: "read", description: "Read", parameters: Type.Object({ path: Type.String() }) };

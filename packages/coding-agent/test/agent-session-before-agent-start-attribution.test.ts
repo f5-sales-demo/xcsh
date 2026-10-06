@@ -214,6 +214,24 @@ describe("AgentSession before_agent_start attribution fallback", () => {
 		expect(llmInjected.attribution).toBe("agent");
 		expect(inferCopilotInitiator(llmMessages)).toBe("agent");
 	});
+	it("async reply arriving at agent_end resumes after prompt finalization", async () => {
+		await createSession();
+		let reply: Promise<void> | undefined;
+		let sent = false;
+		session.subscribe(event => {
+			if (event.type === "agent_end" && !sent) {
+				sent = true;
+				reply = session.deliverAsyncAnswer("question", "question:0", "Maple");
+			}
+		});
+		await session.prompt("Wait for the required release name");
+		await reply;
+		expect(
+			providerMessages.some(
+				message => message.role === "user" && JSON.stringify(message.content).includes("user_input_reply"),
+			),
+		).toBe(true);
+	});
 });
 
 function messageTextBlocks(message: Message): string[] {

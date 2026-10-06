@@ -233,6 +233,7 @@ export class UserInteractions {
 		} finally {
 			this.#batchDepth--;
 			this.#flushNotifications();
+			this.#presentNext();
 		}
 	}
 	request(
@@ -276,12 +277,27 @@ export class UserInteractions {
 				else resolve(value as T | undefined);
 				this.#presentNext();
 			};
+			const completeLocal = (value: T | undefined) => {
+				// Dismissing an async form only releases its presentation slot. The
+				// request remains owned here for reopening or an external reply.
+				if (
+					interaction.delivery === "async" &&
+					(value === undefined || (typeof value === "string" && !value.trim()))
+				) {
+					const pending = this.#pending.get(interaction.id);
+					if (!pending) return;
+					pending.presentationRequested = false;
+					if (this.#localActive === interaction.id) this.#localActive = undefined;
+					this.#presentNext();
+					return;
+				}
+				finish(value, false);
+			};
 			const startLocal = () => {
 				if (!local) return;
 				try {
-					void local(abort.signal, value => finish(value, false)).then(
-						value => finish(value, false),
-						error => finish(undefined, false, { error }),
+					void local(abort.signal, completeLocal).then(completeLocal, error =>
+						finish(undefined, false, { error }),
 					);
 				} catch (error) {
 					finish(undefined, false, { error });
@@ -291,8 +307,13 @@ export class UserInteractions {
 				interaction,
 				finish,
 				startLocal,
+				presentationRequested: interaction.delivery === "async",
 				hasLocal:
-					interaction.kind === "request_user_input" ? this.#questionPresenter !== undefined : local !== undefined,
+					interaction.delivery === "async"
+						? this.#asyncPresenter !== undefined
+						: interaction.kind === "request_user_input"
+							? this.#questionPresenter !== undefined
+							: local !== undefined,
 			});
 			signal?.addEventListener("abort", onAbort, { once: true });
 			this.#emit("opened", interaction);
@@ -300,7 +321,8 @@ export class UserInteractions {
 		});
 	}
 	#presentNext(): void {
-		if (this.#localActive || this.#localPauses > 0 || this.#closed || this.#cancelling) return;
+		if (this.#localActive || this.#localPauses > 0 || this.#batchDepth > 0 || this.#closed || this.#cancelling)
+			return;
 		const next = [...this.#pending.values()].find(
 			value => value.hasLocal && (value.interaction.delivery !== "async" || value.presentationRequested),
 		);
@@ -312,7 +334,9 @@ export class UserInteractions {
 		if (value === undefined) return true;
 		if (interaction.kind === "request_user_input") return validInputResponse(interaction.inputQuestions ?? [], value);
 		return (
-			typeof value === "string" && (interaction.kind !== "select" || interaction.options?.includes(value) === true)
+			typeof value === "string" &&
+			(interaction.delivery !== "async" || value.trim().length > 0) &&
+			(interaction.kind !== "select" || interaction.options?.includes(value) === true)
 		);
 	}
 	respond(id: string, value: unknown, identity?: InteractionIdentity): boolean {
@@ -360,6 +384,16 @@ export class UserInteractions {
 		pending.finish(structuredClone(value), true);
 		if (this.#receipts.size > 256) this.#receipts.delete(this.#receipts.keys().next().value!);
 		return true;
+	}
+	cancelExternal(id: string, identity: InteractionIdentity): boolean {
+		const pending = this.#pending.get(id);
+		if (
+			!isInteractionIdentity(identity) ||
+			!pending?.interaction.identity ||
+			!isDeepStrictEqual(pending.interaction.identity, identity)
+		)
+			return false;
+		return this.resolve(id, "cancelled");
 	}
 	resolve(id: string, reason: Exclude<InteractionResolution, "answered">): boolean {
 		const pending = this.#pending.get(id);

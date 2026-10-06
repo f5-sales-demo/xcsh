@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -95,7 +95,16 @@ describe("progressive context loading", () => {
 		try {
 			const active = session.getActiveToolNames();
 			expect(active).toEqual(
-				expect.arrayContaining(["read", "grep", "find", "bash", "edit", "write", "search_tool_bm25"]),
+				expect.arrayContaining([
+					"read",
+					"grep",
+					"find",
+					"bash",
+					"edit",
+					"write",
+					"search_tool_bm25",
+					"request_user_input_async",
+				]),
 			);
 			expect(active).not.toContain("calc");
 			expect(active).not.toContain("task");
@@ -115,6 +124,9 @@ describe("progressive context loading", () => {
 			await session.activateDiscoveredTools(["deferred_weather"]);
 			expect(session.getActiveToolNames()).toContain("deferred_weather");
 			expect(session.getActiveToolNames()).toContain("resolve");
+			expect(session.getActiveToolNames()).toContain("request_user_input_async");
+			await session.refreshExtensionTools();
+			expect(session.getActiveToolNames()).toContain("request_user_input_async");
 		} finally {
 			await session.dispose();
 		}
@@ -149,7 +161,16 @@ describe("progressive context loading", () => {
 			const activeToolNames = session.getActiveToolNames();
 			expect(activeToolNames).toContain("xcsh_context");
 			expect(activeToolNames).toEqual(
-				expect.arrayContaining(["read", "grep", "find", "bash", "edit", "write", "search_tool_bm25"]),
+				expect.arrayContaining([
+					"read",
+					"grep",
+					"find",
+					"bash",
+					"edit",
+					"write",
+					"search_tool_bm25",
+					"request_user_input_async",
+				]),
 			);
 			expect(
 				activeToolNames.every(name =>
@@ -164,6 +185,7 @@ describe("progressive context loading", () => {
 						"xcsh_api",
 						"xcsh_context",
 						"search_tool_bm25",
+						"request_user_input_async",
 					].includes(name),
 				),
 			).toBe(true);
@@ -173,6 +195,7 @@ describe("progressive context loading", () => {
 
 			await session.setModel(openai);
 			expect(session.getActiveToolNames()).toContain("task");
+			expect(session.getActiveToolNames()).toContain("request_user_input_async");
 			expect(session.getActiveToolNames()).toContain("deferred_weather");
 			expect(session.getActiveToolNames()).not.toContain("search_tool_bm25");
 
@@ -180,6 +203,7 @@ describe("progressive context loading", () => {
 			expect(session.getActiveToolNames()).not.toContain("task");
 			expect(session.getActiveToolNames()).not.toContain("deferred_weather");
 			expect(session.getActiveToolNames()).toContain("search_tool_bm25");
+			expect(session.getActiveToolNames()).toContain("request_user_input_async");
 		} finally {
 			await session.dispose();
 		}
@@ -239,6 +263,7 @@ describe("progressive context loading", () => {
 
 		try {
 			expect(session.getActiveToolNames()).toContain("task");
+			expect(session.getActiveToolNames()).toContain("request_user_input_async");
 			expect(session.getActiveToolNames()).toContain("deferred_weather");
 		} finally {
 			await session.dispose();
@@ -263,9 +288,25 @@ describe("progressive context loading", () => {
 		const resumed = await create("progressive", resumedManager);
 		try {
 			expect(resumed.session.getActiveToolNames()).toContain("deferred_weather");
+			expect(resumed.session.getActiveToolNames()).toContain("request_user_input_async");
 			expect(resumed.session.sessionManager.buildSessionContext().hasPersistedToolSelection).toBe(true);
 		} finally {
 			await resumed.session.dispose();
+		}
+	});
+
+	it("delivers a real SDK async tool reply to the same session", async () => {
+		const { session } = await create("progressive");
+		try {
+			const delivered = spyOn(session, "deliverAsyncAnswer").mockResolvedValue(undefined);
+			const tool = session.agent.state.tools.find(tool => tool.name === "request_user_input_async")!;
+			await tool.execute("call", { questions: [{ title: "Which?", options: ["A", "B"] }] });
+			const request = session.userInteractions.pending()[0];
+			expect(session.userInteractions.respond(request.id, "B")).toBe(true);
+			await Bun.sleep(0);
+			expect(delivered).toHaveBeenCalledWith("call", "call:0", "B");
+		} finally {
+			await session.dispose();
 		}
 	});
 
@@ -273,7 +314,8 @@ describe("progressive context loading", () => {
 		const { session } = await create("progressive");
 		try {
 			expect(session.systemPrompt).toContain("xcsh://user");
-			expect(session.systemPrompt.length).toBeLessThanOrEqual(24_000);
+			// Budget includes the always-active async question schema and shared policy.
+			expect(session.systemPrompt.length).toBeLessThanOrEqual(26_000);
 			const toolJson = JSON.stringify(
 				session.agent.state.tools.map(tool => ({
 					name: tool.name,
@@ -281,7 +323,7 @@ describe("progressive context loading", () => {
 					parameters: tool.parameters,
 				})),
 			);
-			expect(toolJson.length).toBeLessThanOrEqual(45_000);
+			expect(toolJson.length).toBeLessThanOrEqual(47_000);
 		} finally {
 			await session.dispose();
 		}

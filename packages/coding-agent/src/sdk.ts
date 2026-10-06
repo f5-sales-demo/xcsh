@@ -1698,6 +1698,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			"xcsh_api",
 			"xcsh_context",
 			"search_tool_bm25",
+			"request_user_input_async",
 		];
 		const eagerRequestedActiveToolNames = requestedActiveToolNames.filter(
 			name => !(providerToolPolicyAvailable && name === "search_tool_bm25"),

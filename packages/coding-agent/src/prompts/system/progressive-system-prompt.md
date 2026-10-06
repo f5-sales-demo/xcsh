@@ -36,6 +36,8 @@ Working directory: {{cwd}}
 
 %%START_FOLDER%%
 
+{{{questionPolicy}}}
+
 ## On-demand context
 
 Detailed workflows and product knowledge live behind `xcsh://` resources, repository instructions, skills, and
