@@ -954,6 +954,7 @@ export function terraformCompleteDraft(query: string): boolean {
 	);
 }
 export function terraformTaskDestination(query: string): { role: string; anchor?: string } | undefined {
+	if (propertyInstructionText(query) !== query) return undefined;
 	if (terraformCompleteDraft(query))
 		return /\bstandalone\s+resource\s+example\b/i.test(query)
 			? { role: "example", anchor: "resource" }

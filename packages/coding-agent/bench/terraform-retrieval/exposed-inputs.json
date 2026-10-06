@@ -84,6 +84,30 @@
       "kind": "model-subset",
       "source": "current-v15-third-freeze/v15-third-first-retrieval.json.gz",
       "reason": "First source-reviewed retrieval missed one answerable top-five destination; regression only."
+    },
+    {
+      "sha256": "b8359aff57a86b2dc910b91d73fe2d29cc57feedc378566be4f5fff534fa6f94",
+      "kind": "heldout",
+      "source": "current-v15-fourth-freeze",
+      "reason": "Fourteen HCL/control prompts repeat exposed inputs; eligibility audit disqualifies qualification. Regression only."
+    },
+    {
+      "sha256": "901540787a1d42bcbf6f50fa7bb13760cf7a87e168e4cbfd02fef80301f4afc1",
+      "kind": "model-subset",
+      "source": "current-v15-fourth-freeze",
+      "reason": "Fourteen HCL/control prompts repeat exposed inputs; eligibility audit disqualifies qualification. Regression only."
+    },
+    {
+      "sha256": "4d37341c9900d2b8d9f6fcdf2c7cd1f779c2d62b2dac5c998e0e3659e01ec51b",
+      "kind": "heldout",
+      "source": "current-v15-fifth-freeze",
+      "reason": "First retrieval missed three answerable top-five destinations. Regression only."
+    },
+    {
+      "sha256": "a64e99bba0b8ce8b23163543a7d6750993fdd464193ed4e3e8440cf146940fa1",
+      "kind": "model-subset",
+      "source": "current-v15-fifth-freeze",
+      "reason": "First retrieval missed three answerable top-five destinations. Regression only."
     }
   ]
 }

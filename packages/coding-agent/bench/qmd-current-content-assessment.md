@@ -93,3 +93,11 @@ first result at 139/140 top-five coverage, 135/140 correct selection, and zero a
 selections. One affirmative suffix comparison selected its negative. The first result and
 suite are retained in `terraform-retrieval/current-v15-third-freeze/`; all later results
 are regression-only. Exact expected reads and public citations passed.
+
+
+The fourth suite reached 140/140 top-five coverage and 138/140 correct selections, but a
+subsequent prompt audit found 14 repeated exposed HCL/control prompts. It is development-only.
+The fifth unique-prompt first freeze reached 137/140 top-five and 132/140 correct selection,
+with no ambiguous selection; it remains failed and regression-only. One case used an incomplete
+canonical description, and two cases revealed nested-timeout/import-word routing defects.
+All first results and source files remain unchanged and preserved.

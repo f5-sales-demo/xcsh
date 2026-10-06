@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { terraformProviderMention, terraformQueryIdentity } from "../../src/internal-urls/terraform-documentation";
+import {
+	terraformProviderMention,
+	terraformQueryIdentity,
+	terraformTaskDestination,
+} from "../../src/internal-urls/terraform-documentation";
 import { interpretTerraformLifecycle } from "../../src/internal-urls/terraform-lifecycle";
 import {
 	propertyExplicitSchemaPaths,
@@ -225,4 +229,18 @@ test("affirmative suffix comparison cannot select its documented negative", () =
 	expect(selectPropertyDestination(query, rows, [], { identityResolved: true }).destinations[0]?.anchor).toBe(
 		"schema-endswith",
 	);
+});
+
+test("source-described importing is field meaning and nested timeout remains a property", () => {
+	expect(
+		terraformTaskDestination(
+			"For Terraform xcsh_fixture, find the field described as follows: Connect networks by importing route targets.",
+		),
+	).toBeUndefined();
+	expect(
+		interpretTerraformLifecycle("Follow `cloudfront`. Explain the documented field `timeout` and its constraints."),
+	).toBeUndefined();
+	expect(interpretTerraformLifecycle("Follow `timeouts`. Explain the documented field `read`.")?.operations).toEqual([
+		"read",
+	]);
 });
