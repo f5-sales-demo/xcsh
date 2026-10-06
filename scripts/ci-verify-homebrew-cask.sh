@@ -128,7 +128,7 @@ for entry in trace[5:8]:
 assert trace[8].get("outcome") == "no-match-no-fetch", trace[8]
 assert trace[9].get("outcome") == "Pinned offline documentation is unavailable because this session has no read tool; the answer cannot be verified.", trace[9]
 assert trace[10].get("source") == "docs-cloud-f5-com", trace[10]
-assert trace[10].get("outcome") == "image/png", trace[10]
+assert trace[10].get("outcome") == "public-media-link", trace[10]
 assert trace[11].get("outcome") == "ok", trace[11]
 PY
 }
