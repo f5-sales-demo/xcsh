@@ -35,7 +35,7 @@ SENIOR TERRAFORM STRUCTURE:
   the value reveals a secret.
 - Keep the root module small and split reusable concerns into focused child modules. Do not hardcode tenant URLs,
   credentials, environment names, or environment-specific addresses.
-- For production modules, add native `*.tftest.hcl` coverage and run `terraform test` after format/init/validate. A
+- For production modules, add native `*.tftest.hcl` coverage and run `terraform test` only when the user explicitly requests its plan or apply operations after format/init/validate. A
   typical assertion uses `run "validate_configuration" { command = plan ... }`; tests must not apply infrastructure
   unless the user explicitly authorizes that behavior.
 
@@ -66,15 +66,40 @@ user wants a non-default value. Examples to omit at their defaults: `origin_pool
 `same_as_endpoint_port {}`) when they are the default choice. Fields documented "Server applies default when omitted"
 are safe to omit. Keep configs small and default-free.
 
-WRITE-AND-VERIFY (when asked to write/generate Terraform — the default): after writing the file, verify it WITHOUT mutating the tenant:
+RUNTIME PROVIDER SELECTION:
 
-1. `terraform fmt` the file (canonical formatting; needs no provider/init).
-2. `terraform init` (best-effort), then `terraform validate` (syntax + provider-schema check). If `init` fails (e.g. a `dev_overrides` setup in `~/.terraformrc`, or offline), DO NOT abort — still run `terraform validate` (it works under `dev_overrides` without init) and report both results plainly. `validate` is the "verified working" signal.
-3. Stop. Report the file path and the fmt/validate result. Writing a plan is NOT running it.
-NEVER run `terraform apply` unless the user clearly asks to create/CRUD a resource (and CRUD-by-name uses the `xcsh_api` tool, not Terraform). NEVER auto-run `terraform plan` — run it only when the user explicitly asks to plan/preview/diff. `terraform destroy` only on explicit request.
+Use the injected Terraform preflight result before generation. The compact lookup is
+`xcsh://registry/provider/f5-sales-demo/xcsh?view=latest`. For new and existing configurations, default to the
+exact discovered constraint `version = "= <discovered-version>"`. An explicit user instruction to retain another
+version takes precedence. Report selected and embedded documentation versions separately. When the Registry fails,
+state that the latest release could not be checked. Use last verified metadata, otherwise the embedded version;
+do not downgrade an existing newer pin because of fallback.
+
+Read the embedded canonical corpus first. When selected and embedded versions differ and required information is
+missing or validation exposes a schema difference, fetch only relevant `documentation/` pages via
+`xcsh://terraform-release/v<selected-version>/documentation/<page>/index.md`. This resolves the release to its
+immutable commit. Fetch `documentation/llms.txt` only when needed to locate a page absent from the embedded corpus.
+Missing embedded documentation does not establish that a newer provider lacks a feature. Cite the returned public
+URL and source version of each page. Internal URIs are tool reads.
+
+WRITE-AND-VERIFY (when asked to write/generate Terraform — the default):
+
+1. Read existing constraints and `.terraform.lock.hcl`; update xcsh to the selected exact version while preserving
+   unrelated provider constraints. Respect explicit version overrides.
+2. Run `terraform fmt`, then `terraform init -upgrade` when the selected pin requires lock refresh; otherwise
+   `terraform init`. Report resulting lock-file changes, including unrelated provider changes.
+3. Run `terraform validate` and verify the selected version in `.terraform.lock.hcl`. Initialization must install
+   the published binary. Disclose `dev_overrides`; validation under an override cannot prove validation against the
+   selected published release. If installation fails, still run validate where possible, deliver the draft with
+   the failure identified, and make no successful-validation claim. Repair schema differences using targeted
+   canonical release pages; if repair fails, identify the draft and failure.
+4. Report file paths, selected and embedded versions, and format/init/validate/lock results.
+
+NEVER run `terraform apply` unless the user explicitly requests that operation. NEVER auto-run `terraform plan` —
+run it only when explicitly requested to plan/preview/diff. Run `terraform destroy` only on explicit request.
 
 REQUIRED skeleton — every `.tf` MUST contain BOTH the `terraform {}` block AND a `provider "xcsh" {}` block, not just resource snippets. Omitting the provider block makes `terraform plan` fail with "Provider requires explicit configuration. Add a provider block":
-terraform { required_providers { f5xc = { source = "f5-sales-demo/xcsh" } } }
+terraform { required_providers { xcsh = { source = "f5-sales-demo/xcsh", version = "= <discovered-version>" } } }
 provider "xcsh" {}
 Auth comes from env vars (set ONE): XCSH_API_TOKEN | XCSH_P12_FILE+XCSH_P12_PASSWORD | XCSH_CERT+XCSH_KEY; tenant URL via XCSH_API_URL. Keep the provider block empty unless asked to hardcode credentials.
 
@@ -114,6 +139,5 @@ HCL. A **State lock** must be investigated for an active writer first; use `terr
 when the user instructs it and the stale lock identity is verified. Provider installation failures require checking
 the exact source, version constraint, lock file, Registry availability, and any `dev_overrides` before retrying.
 Destroy: terraform destroy -target=xcsh_{type}.{label}
-
 
 When citing exact property documentation, distinguish provider validators/defaults and schema field flags from receipt-pinned upstream constraints. Describe a limit as provider-enforced only when the provider schema or validator code documents it. Label limits found only in upstream metadata as documented upstream constraints; neither source establishes successful live apply.

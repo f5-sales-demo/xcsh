@@ -1,3 +1,4 @@
+import { EMBEDDED_PROVIDER_VERSION, getProviderReleaseLookup, ProviderReleaseLookup } from "./provider-release";
 import type { InternalResource, InternalUrl } from "./types";
 
 const DEFAULT_PROVIDER_BASE_URL = "https://registry.terraform.io/v1/providers";
@@ -12,6 +13,7 @@ export interface RegistryResolverDeps {
 	readonly providerBaseUrl: string;
 	readonly moduleBaseUrl: string;
 	readonly timeoutMs: number;
+	readonly releaseLookup?: ProviderReleaseLookup;
 }
 
 interface ProviderVersion {
@@ -155,6 +157,20 @@ export class RegistryResolver {
 
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const route = parseRoute(url);
+		if (url.searchParams.get("view") === "latest") {
+			if (route.kind !== "provider" || route.namespace !== "f5-sales-demo" || route.type !== "xcsh") {
+				throw new Error("Latest view is supported for f5-sales-demo/xcsh");
+			}
+			const result = await (this.#deps.releaseLookup ?? getProviderReleaseLookup()).latest();
+			const content = JSON.stringify(result);
+			return {
+				url: url.href,
+				content,
+				contentType: "application/json",
+				size: Buffer.byteLength(content),
+				sourcePath: url.href,
+			};
+		}
 		const address =
 			route.kind === "provider"
 				? `${route.namespace}/${route.type}/versions`
@@ -253,5 +269,16 @@ export function createRegistryResolver(deps: Partial<RegistryResolverDeps> = {})
 		providerBaseUrl: deps.providerBaseUrl ?? DEFAULT_PROVIDER_BASE_URL,
 		moduleBaseUrl: deps.moduleBaseUrl ?? DEFAULT_MODULE_BASE_URL,
 		timeoutMs: deps.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+		releaseLookup:
+			deps.releaseLookup ??
+			(deps.fetch || deps.providerBaseUrl || deps.timeoutMs
+				? new ProviderReleaseLookup({
+						embeddedVersion: EMBEDDED_PROVIDER_VERSION,
+						fetch: deps.fetch,
+						sourceUrl: `${(deps.providerBaseUrl ?? DEFAULT_PROVIDER_BASE_URL).replace(/\/+$/, "")}/f5-sales-demo/xcsh/versions`,
+						timeoutMs: deps.timeoutMs,
+						cachePath: null,
+					})
+				: undefined),
 	});
 }

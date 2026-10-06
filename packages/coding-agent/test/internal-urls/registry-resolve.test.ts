@@ -139,3 +139,29 @@ describe("Terraform Registry response handling", () => {
 		expect(resource.content).not.toContain("terraform-aws-modules");
 	});
 });
+
+describe("xcsh latest Registry view", () => {
+	it("returns compact typed stable metadata while preserving the version-list route", async () => {
+		let calls = 0;
+		const resolver = createRegistryResolver({
+			fetch: async () => {
+				calls++;
+				return Response.json({
+					versions: [{ version: "15.2.0" }, { version: "15.10.0" }, { version: "16.0.0-beta" }],
+				});
+			},
+		});
+		const target = parseInternalUrl("xcsh://registry/provider/f5-sales-demo/xcsh?view=latest");
+		const latest = await resolver.resolve(target);
+		expect(latest.contentType).toBe("application/json");
+		const metadata = JSON.parse(latest.content);
+		expect(metadata.latestVersion).toBe("15.10.0");
+		expect(metadata.embeddedDocumentationVersion).toBe("15.2.0");
+		expect(metadata.freshness).toBe("fresh");
+		await resolver.resolve(target);
+		expect(calls).toBe(1);
+		const list = await resolver.resolve(parseInternalUrl("xcsh://registry/provider/f5-sales-demo/xcsh"));
+		expect(list.content).toContain("16.0.0-beta");
+		expect(calls).toBe(2);
+	});
+});

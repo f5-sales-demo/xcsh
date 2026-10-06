@@ -71,6 +71,7 @@ import extensionApiContent from "./extension-api.md" with { type: "text" };
 import { EXTENSION_TOOL_REFERENCE } from "./extension-tools.generated";
 import { createFleetResolver, type FleetDeps, type FleetResolver } from "./fleet-resolve";
 import { createPluginResolver, type GetPluginRoots, type PluginResolver } from "./plugin-resolve";
+import { ProviderDocumentationResolver } from "./provider-documentation";
 import { createRegistryResolver, type RegistryResolver, type RegistryResolverDeps } from "./registry-resolve";
 import { createSourceResolver, type SourceResolver } from "./source-resolve";
 import { TerraformDocumentationRepository } from "./terraform-documentation";
@@ -371,6 +372,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#terraformDocumentation: TerraformDocumentationRepository | null;
 	#terraformResolver: TerraformResolver | null;
 	#registryResolver: RegistryResolver | null = null;
+	#providerDocumentation = new ProviderDocumentationResolver();
 	#consoleResolver: ConsoleResolver | null = null;
 	#pluginResolver: PluginResolver | null = null;
 	#changesResolver: ChangesResolver | null = null;
@@ -557,6 +559,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		if (host === TERRAFORM_HOST) {
 			return this.#getTerraformResolver().resolve(url);
 		}
+
+		if (host === "terraform-release") return this.#providerDocumentation.resolve(url);
 
 		if (host === REGISTRY_HOST) {
 			return this.#getRegistryResolver().resolve(url);

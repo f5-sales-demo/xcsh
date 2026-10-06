@@ -32,3 +32,16 @@ describe("terraform-provider skill", () => {
 		expect(skill).toContain("State lock");
 	});
 });
+
+describe("runtime Terraform version policy", () => {
+	it("selects discovered exact pins, repairs locks and limits documentation supplements", async () => {
+		const skill = await Bun.file(skillPath).text();
+		expect(skill).toContain("xcsh://registry/provider/f5-sales-demo/xcsh?view=latest");
+		expect(skill).toContain('version = "= <discovered-version>"');
+		expect(skill).toContain("terraform init -upgrade");
+		expect(skill).toContain("do not downgrade");
+		expect(skill).toContain("immutable commit");
+		expect(skill).toContain("xcsh://terraform-release/");
+		expect(skill).toContain("published binary");
+	});
+});

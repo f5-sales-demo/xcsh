@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "812398acb1a12eba0802cb1eec88e8c1de4364b7",
+  "revision": "d92fbed94115a2dc2e31892aa23ebbb1613be936",
   "fingerprint": "ded41e5c7c135f374687f06ed8f307abb511f56c5418682d2eb1248613549b2e",
   "counts": {
     "total": 238,
@@ -356,9 +356,9 @@
         "packages/coding-agent/test/herdr-reporter.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
+        "packages/coding-agent/test/internal-urls/provider-documentation.test.ts",
         "packages/coding-agent/test/internal-urls/public-citations.test.ts",
-        "packages/coding-agent/test/internal-urls/terraform-documentation-snapshot.test.ts",
-        "packages/coding-agent/test/internal-urls/terraform-documentation.test.ts"
+        "packages/coding-agent/test/internal-urls/terraform-documentation-snapshot.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/normalize.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4993,6 +4993,7 @@
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
+        "packages/coding-agent/test/agent-session-terraform-preflight.test.ts",
         "packages/coding-agent/test/agent-session-tree-navigation.test.ts",
         "packages/coding-agent/test/auto-config-websearch.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
@@ -5000,8 +5001,7 @@
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
         "packages/coding-agent/test/bench-instant-extension.test.ts",
         "packages/coding-agent/test/bench-routing-matrix.test.ts",
-        "packages/coding-agent/test/boxed-gutter-integration.test.ts",
-        "packages/coding-agent/test/browser/acquire-helpers.test.ts"
+        "packages/coding-agent/test/boxed-gutter-integration.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/find.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5195,6 +5195,7 @@
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
         "packages/coding-agent/test/agent-session-routing-turn.test.ts",
+        "packages/coding-agent/test/agent-session-terraform-preflight.test.ts",
         "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
         "packages/coding-agent/test/archive-install.test.ts",
         "packages/coding-agent/test/args.test.ts",
@@ -5203,8 +5204,7 @@
         "packages/coding-agent/test/auto-config.test.ts",
         "packages/coding-agent/test/autocomplete-max-visible.test.ts",
         "packages/coding-agent/test/autoresearch-state.test.ts",
-        "packages/coding-agent/test/autoresearch-tools.test.ts",
-        "packages/coding-agent/test/bash-execution-outcome.test.ts"
+        "packages/coding-agent/test/autoresearch-tools.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/read.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5343,10 +5343,10 @@
         "packages/coding-agent/test/agent-session-role-thinking.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
+        "packages/coding-agent/test/agent-session-terraform-preflight.test.ts",
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/archive-install.test.ts",
-        "packages/coding-agent/test/async-job-cancellation.test.ts",
-        "packages/coding-agent/test/async-job-manager.test.ts"
+        "packages/coding-agent/test/async-job-cancellation.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/resolve.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5899,6 +5899,7 @@
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
+        "packages/coding-agent/test/agent-session-terraform-preflight.test.ts",
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/args.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
@@ -5910,8 +5911,7 @@
         "packages/coding-agent/test/browser/selector.test.ts",
         "packages/coding-agent/test/chat-handler-context-paths.test.ts",
         "packages/coding-agent/test/cli/flag-spec.test.ts",
-        "packages/coding-agent/test/component-boundary-contract.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/component-boundary-contract.test.ts"
       ],
       "classification": "packages/tui/src/components/box.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6051,8 +6051,8 @@
         "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/agent-session-routing-turn.test.ts",
-        "packages/coding-agent/test/agent-session-turn-phase.test.ts",
-        "packages/coding-agent/test/auth-profile-rpc-uat.test.ts"
+        "packages/coding-agent/test/agent-session-terraform-preflight.test.ts",
+        "packages/coding-agent/test/agent-session-turn-phase.test.ts"
       ],
       "classification": "packages/tui/src/components/input.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
