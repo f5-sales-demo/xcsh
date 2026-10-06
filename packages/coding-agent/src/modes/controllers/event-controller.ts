@@ -274,7 +274,7 @@ export class EventController {
 					}
 					this.ctx.optimisticUserMessageSignature = undefined;
 
-					if (!event.message.synthetic) {
+					if (!event.message.synthetic && !resolved) {
 						this.ctx.editor.setText("");
 						this.ctx.updatePendingMessagesDisplay();
 					}
