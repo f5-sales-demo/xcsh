@@ -71,3 +71,9 @@ cases selected. The remaining uncovered query is the unchanged 712-byte input re
 by the request limit. All expected exact reads and public citation mappings passed.
 Warm p95 was 31.00 ms. This remains development evidence; the exposure ledger records
 both frozen suite and model-subset digests as regression-only.
+
+
+Extracting attributed field meaning separately from caller scope raised the exposed v15
+regression to 139/140 top five and 137/140 correct automatic selections, with zero ambiguous
+selections. Expected exact reads and public mappings remain complete. This result remains
+regression-only. The 712-byte request remains unchanged in frozen evidence.

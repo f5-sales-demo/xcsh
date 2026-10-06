@@ -177,3 +177,13 @@ test("per-attempt retry limits stay separate from resource lifecycle durations",
 	).toBeUndefined();
 	expect(interpretTerraformLifecycle("Find a resource update timeout.")?.operations).toEqual(["update"]);
 });
+
+test("source-attributed lookup extracts the requested field meaning", () => {
+	expect(propertyRequestedText("Follow `memory`. Find the field described as follows: RAM size in MB.")).toBe(
+		"RAM size in MB.",
+	);
+	expect(propertyRequestedText("Locate the leaf with this documented meaning: duration in seconds.")).toBe(
+		"duration in seconds.",
+	);
+	expect(propertyRequestedText("Which field describes the namespace?")).toBe("the namespace?");
+});

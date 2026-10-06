@@ -625,6 +625,12 @@ export function propertyValueLookup(text: string): string | undefined {
 	return needValue;
 }
 export function propertyRequestedText(text: string): string | undefined {
+	const described =
+		/\b(?:find|locate|identify)\s+(?:the\s+)?(?:field|leaf|property)\s+(?:described as(?: follows)?|with (?:this|the following) (?:documented )?(?:meaning|description))\s*:\s*(.+)/i.exec(
+			text,
+		)?.[1];
+	if (described?.trim()) return described.trim();
+
 	const quotedLookup = [
 		...text.matchAll(
 			/\b(?:what\s+does|verify|reference\s+explains|type\s+and\s+constraints\s+of|field\s+rules\s+for|understand|explain(?:\s+the\s+(?:type|rules?|restrictions?|constraints?|contract)(?:\s+and\s+(?:type|rules?|restrictions?|constraints?))?\s+of)?|check|rules?\s+apply\s+to|contract\s+for|(?:field|attribute|property|parameter|argument|flag))\s+`([a-z][a-z0-9_]*)`/gi,
