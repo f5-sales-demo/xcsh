@@ -132,6 +132,26 @@ export function propertyWorkloadPortCount(text: string): "single" | "multiple" |
 	const multiple = /\b(?:multiple|multi)[ -](?:public[ -])?ports?\b/i.test(query);
 	return single === multiple ? undefined : single ? "single" : "multiple";
 }
+// These descriptions are from the canonical workload advertisement destinations.
+// Ambiguous or rejected descriptions cannot remove either branch.
+export function propertyMatchesWorkloadAdvertisement(text: string, candidate: PropertyCandidate): boolean {
+	if (candidate.provider_name !== "workload") return true;
+	const query = text.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, "");
+	if (
+		/\b(?:either|compare|versus|maybe|possibly)\b/i.test(query) ||
+		/\b(?:not|no|never|without)\b[^.!?;]*\b(?:advertise|advertisement)\b/i.test(query)
+	)
+		return true;
+	const publicAdvertisement =
+		/\bInternet\s+advertisement\b[^.!?;]*\bdefault\s+VIP\b|\badvertise(?:ment)?\b[^.!?;]*\bon\s+(?:the\s+)?Internet\b[^.!?;]*\bdefault\s+VIP\b/i.test(
+			query,
+		);
+	const customAdvertisement = /\bcustom\s+advertisement\b|\badvertise\b[^.!?;]*\bon\s+specific\s+sites\b/i.test(query);
+	if (publicAdvertisement === customAdvertisement) return true;
+	const parts = candidate.schema_path.split(".");
+	if (!parts.some(part => ["advertise_on_public", "advertise_custom"].includes(part))) return true;
+	return parts.includes(publicAdvertisement ? "advertise_on_public" : "advertise_custom");
+}
 export function propertyMatchesWorkloadPortCount(text: string, candidate: PropertyCandidate): boolean {
 	if (candidate.provider_name !== "workload") return true;
 	const count = propertyWorkloadPortCount(text);
@@ -165,6 +185,10 @@ export function propertyMatchesCookieOperators(text: string, row: PropertyCandid
 	return Boolean(outer && inner && outer === `cookies_${operators[0]}` && inner === `cookie_${operators[1]}`);
 }
 export function propertyQueryTerms(text: string): string[] {
+	text = text.replace(
+		/\b(?:locate|find)\s+(?:the\s+)?authorization endpoint URL,?\s+rather than\s+the\s+token or logout endpoint(?=[.!?]|$)/gi,
+		"locate authorization endpoint URL",
+	);
 	text = affirmativeComparisonText(text);
 	text = text
 		.split(/(`[^`]*`|"[^"]*"|\x27[^\x27]*\x27|‘[^’]*’|“[^”]*”|[a-z0-9_-]+(?:[./][a-z0-9_.-]+)+)/gi)
@@ -188,8 +212,14 @@ export function propertyQueryTerms(text: string): string[] {
 		)
 		.join("");
 	text = text
+		.replace(/\bbasic authentication\b/gi, "basic auth")
+		.replace(/\bserver[ -]name indication\b/gi, "sni")
+		.replace(/\balert name\b/gi, "alertname")
 		.replace(/\bquery[ -]parameters?\b/gi, "query param")
 		.replace(/\bhow\s+long\b/gi, "duration")
+		.replace(/\b(?:lower|lowest)(?=\s+(?:supported\s+)?(?:TLS\s+)?version\b)/gi, "min minimum")
+		.replace(/\b(?:upper|highest)(?=\s+(?:supported\s+)?(?:TLS\s+)?version\b)/gi, "max maximum")
+		.replace(/\bbegan\b/gi, "start")
 		.replace(/\bminimum\b/gi, "min minimum")
 		.replace(/\bmaximum\b/gi, "max maximum")
 		.replace(/\bdecrypt(?:s|ing)?\b/gi, "decryption decrypt")
@@ -287,6 +317,16 @@ export function propertyRequestedType(text: string): string | undefined {
 	if (/\bscalar\s+list\b/i.test(text)) return "list";
 	if (/\b(?:numeric|number)\s+(?:field|attribute|property|parameter|argument)\b/i.test(text)) return "number";
 	return undefined;
+}
+// The caller can name a root schema block in prose; the index verifies this identity.
+export function propertyNamedRootPath(text: string): string | undefined {
+	const clause = text.split(/[.!?;]/).find(value => /\b(?:use|under|within|inside)\s+(?:the\s+)?root\s+/i.test(value));
+	if (!clause || /\b(?:not|no|never|without|compare|either|versus)\b/i.test(clause)) return undefined;
+	const match =
+		/\b(?:use|under|within|inside)\s+(?:the\s+)?root\s+([a-z][a-z0-9_]*(?:\s+[a-z][a-z0-9_]*){0,3}?)(?=\s+rather than|[,;.!?]|$)/i.exec(
+			clause,
+		);
+	return match?.[1]?.toLowerCase().replace(/\s+/g, "_");
 }
 export function propertyRequestsRootField(text: string): boolean {
 	return /\b(?:top[ -]level|root[ -]level|root|direct)\s+(?:attribute|field|property|parameter|argument|flag)\b/i.test(
@@ -465,9 +505,26 @@ export function propertySchemaIdentifiers(text: string, providerName?: string): 
 	];
 }
 export function propertyRequestsBlock(text: string): boolean {
+	if (
+		/\b(?:locate|find)\s+(?:the\s+)?basic authentication\s+(?:inside|under|within)\b/i.test(text) &&
+		!/\b(?:field|leaf|user[ _-]name|password|value)\b/i.test(text)
+	)
+		return true;
+	const terminal =
+		text
+			.split(/[?!]|\.(?=\s|$)/)
+			.filter(clause => clause.trim())
+			.at(-1) ?? text;
+	if (
+		/\b(?:find|locate|identify|point me to)\s+(?:(?:the|a|an)\s+)?[^.!?;]*\b(?:identifier|value|count|threshold|offset|URL|interval)\b/i.test(
+			terminal,
+		)
+	)
+		return false;
 	text = text.split(/\bto\s+(?:configure|enable|provide|handle|support)\b/i)[0]!;
 	if (
-		/\b(?:field|attribute|property|parameter|argument|flag)\b/i.test(text) ||
+		/\b(?:field|attribute|property|parameter|argument|flag|setting)\b/i.test(text) ||
+		/\b(?:find|locate|point me to)\s+(?:the\s+)?leaf\b/i.test(text) ||
 		/\b(?:which|what)\s+leaf\b/i.test(text) ||
 		/\b(?:which|what)\s+(?:fields|attributes|properties|parameters|arguments|flags)\b/i.test(text)
 	)
@@ -491,6 +548,9 @@ export function propertyRequestsBlock(text: string): boolean {
 }
 export function propertyRequestedBlockText(text: string): string | undefined {
 	if (!propertyRequestsBlock(text)) return undefined;
+	const lookup = /\b(?:locate|find)\s+(?:(?:the|a|an)\s+)?(.+?)\s+(?:inside|under|within)\b/i.exec(text)?.[1];
+	if (lookup && !/\b(?:or|and|not|without|either)\b/i.test(lookup)) return lookup.trim();
+
 	const before = text.match(
 		/\b(?:declare|configure|specify|set|select|choose|enable|disable)\s+(.+?)\s+block\b/i,
 	)?.[1];
@@ -512,12 +572,14 @@ export function propertyValueLookup(text: string): string | undefined {
 	for (const clause of clauses) {
 		const placement = /\bwhere\s+(?:do|does)\s+(.+?)\s+(?:go|belong)\b/i.exec(clause);
 		const lookup =
-			/\b(?:find|locate|point me to|where do I put|where is|where are|I need)\s+(.+)/i.exec(clause) ?? placement;
+			/\b(?:find|locate|identify|point me to|where do I put|where is|where are|I need)\s+(.+)/i.exec(clause) ??
+			placement;
 		const operation = /\b(?:specify|set|provide|supply)\b/i.exec(clause);
 		if (operation && (!lookup || operation.index < lookup.index)) return undefined;
 		if (!lookup) continue;
 		if (/\b(?:example|usage|guidance)\b/i.test(clause)) return undefined;
 		let target = lookup[1]!.split(/\band\s+its\b/i)[0]!.trim();
+		target = target.replace(/^(?:(?:the|a|an)\s+)?(?:setting|leaf)\s+(?:used\s+to\s+|for\s+)?/i, "");
 		const owner = /\s+on\s+(?:the|a|an)\s+((?:[a-z][a-z0-9_-]*\s+){0,8})(?:data[ -]source|resource)[.?!]?$/i.exec(
 			target,
 		);
@@ -588,7 +650,7 @@ export function propertyRequestedText(text: string): string | undefined {
 		?.split(/\bin\b|\busing\b/i)[0]
 		?.trim();
 	const field = fieldText.match(
-		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag|setting)\b\s+(?:(?:selects?|chooses?|names?|sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
+		/\b(?:which|what)\s+(?:[a-z-]+\s+){0,3}(?:field|attribute|property|parameter|argument|flag|setting|leaf)\b\s+(?:(?:selects?|chooses?|names?|sets?|specifies|defines?|holds?|provides?|accepts?|indicates?|configures?|controls?|determines?|designates?|toggles?|enables?|disables?|exposes?|returns?|outputs?|describes?|filters?)\s+)?(.+)/i,
 	)?.[1];
 	const identifierField =
 		field && /\bidentifier\s+(?:field|attribute|property|parameter|argument)\b/i.test(text)
@@ -749,6 +811,7 @@ export function rankPropertyScope(
 		.filter(row => propertyMatchesCookieOperators(queryText, row))
 		.filter(row => propertyMatchesWorkloadArchitecture(queryText, row))
 		.filter(row => propertyMatchesWorkloadPortCount(queryText, row))
+		.filter(row => propertyMatchesWorkloadAdvertisement(queryText, row))
 		.filter(row => !requestedType || row.type == null || row.type === requestedType)
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {
@@ -827,6 +890,8 @@ export function rankPropertyScope(
 			)
 				score += 20;
 			for (const [positive, negative] of [
+				["min", "max"],
+				["max", "min"],
 				["success", "failure"],
 				["failure", "success"],
 				["outside", "inside"],

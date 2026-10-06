@@ -1179,6 +1179,7 @@ export function terraformProviderMention(search: string, names: readonly string[
 			.replace(/load[ _-]+balancer/g, "loadbalancer")
 			.replace(/health[ -]+check/g, "healthcheck")
 			.replace(/application[ _-]+firewall/g, "app firewall")
+			.replace(/application settings?/g, "app setting")
 			.replace(/transit[ _-]+gateway/g, "tgw")
 			.replace(/kubernetes/g, "k8s")
 			.replace(/big[ _-]+ip/g, "bigip")
@@ -1200,6 +1201,8 @@ export function terraformProviderMention(search: string, names: readonly string[
 	const query = ` ${normalize(providerSearch)} `;
 	const found = names
 		.filter(name => query.includes(` ${normalize(name)} `))
+		.filter(name => !(name === "route" && /\balert routing\b/i.test(search)))
+		.filter(name => !new RegExp(`\\b(?:assigned|allocated) ${normalize(name)}\\b`).test(query))
 		.filter(name => {
 			if (!explicitFieldLabel || name.includes("_")) return true;
 			const phrase = normalize(name);
@@ -1212,7 +1215,12 @@ export function terraformProviderMention(search: string, names: readonly string[
 		.filter(name => {
 			if (!["endpoint", "authentication", "setup", "xcsh"].includes(name)) return true;
 			const phrase = normalize(name);
-			return ["resource", "data source", "action"].some(role => query.includes(` ${phrase} ${role} `));
+			return (
+				["resource", "data source", "action", "configuration"].some(role =>
+					query.includes(` ${phrase} ${role} `),
+				) ||
+				(name === "authentication" && /\b(?:managed|resource)\s+oidc\s+authentication\b/i.test(search))
+			);
 		})
 		.sort((a, b) => normalize(b).length - normalize(a).length || (a < b ? -1 : a > b ? 1 : 0));
 	if (found.length > 1) {
@@ -1238,7 +1246,9 @@ export function terraformProviderMention(search: string, names: readonly string[
 						);
 				}) ||
 				query.includes(` ${phrase} data source `) ||
-				query.includes(` ${phrase} action `)
+				query.includes(` ${phrase} action `) ||
+				query.includes(` ${phrase} configuration `) ||
+				(name === "authentication" && /\b(?:managed|resource)\s+oidc\s+authentication\b/i.test(search))
 			);
 		});
 		if (declaredOwners.length === 1) return declaredOwners[0];
@@ -1262,7 +1272,12 @@ export function terraformQueryIdentity(search: string): { providerPhrase?: strin
 	const exact = [...search.matchAll(/\bxcsh_([a-z][a-z0-9_]*)\b/gi)];
 	const names = [...new Set(exact.map(match => match[1]!.toLowerCase()))];
 	const explicitRoles = new Set<string>();
-	if (/\b(?:data[ -]source|data\.xcsh_[a-z0-9_]+)\b/i.test(search)) explicitRoles.add("data-sources");
+	if (
+		/\b(?:data[ -]source|data\.xcsh_[a-z0-9_]+)\b/i.test(search) ||
+		(/\bterraform\b|\bxcsh_[a-z0-9_]+\b/i.test(search) && /\bread[ -]only\b/i.test(search))
+	)
+		explicitRoles.add("data-sources");
+	if (/\bterraform\s+managed\b/i.test(search)) explicitRoles.add("resources");
 	if (/\bephemeral(?: resource)?\b|\bephemeral\.xcsh_[a-z0-9_]+\b/i.test(search))
 		explicitRoles.add("ephemeral-resources");
 	if (

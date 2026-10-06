@@ -11,9 +11,11 @@ import {
 	propertyMatchesCookieOperators,
 	propertyMatchesExplicitPaths,
 	propertyMatchesGrouping,
+	propertyMatchesWorkloadAdvertisement,
 	propertyMatchesWorkloadArchitecture,
 	propertyMatchesWorkloadPortCount,
 	propertyMentionedSchemaPaths,
+	propertyNamedRootPath,
 	propertyNamesCollection,
 	propertyRequestedBlockText,
 	propertyRequestedText,
@@ -104,6 +106,8 @@ function selectPropertyDestinationInternal(
 	alternatives = alternatives.filter(included);
 	input = input.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
 	input = input.filter(row => propertyMatchesWorkloadPortCount(queryText, row));
+	input = input.filter(row => propertyMatchesWorkloadAdvertisement(queryText, row));
+	alternatives = alternatives.filter(row => propertyMatchesWorkloadAdvertisement(queryText, row));
 	alternatives = alternatives.filter(row => propertyMatchesWorkloadPortCount(queryText, row));
 	alternatives = alternatives.filter(row => propertyMatchesWorkloadArchitecture(queryText, row));
 	input = input.filter(row => propertyMatchesExplicitPaths(queryText, row));
@@ -111,6 +115,13 @@ function selectPropertyDestinationInternal(
 	if (propertyExplicitSchemaPaths(queryText).length && !input.length && !alternatives.length)
 		return { kind: "none", destinations: [], reason: "Unsupported explicit schema path" };
 
+	const rootPath = propertyNamedRootPath(queryText);
+	if (rootPath) {
+		const rootMatches = (row: PropertyCandidate) =>
+			row.schema_path === rootPath || row.schema_path.startsWith(`${rootPath}.`);
+		input = input.filter(rootMatches);
+		alternatives = alternatives.filter(rootMatches);
+	}
 	const requestedType = propertyRequestedType(queryText);
 	if (requestedType) {
 		input = input.filter(row => row.type == null || row.type === requestedType);
@@ -335,7 +346,13 @@ function selectPropertyDestinationInternal(
 		ranked[0]?.anchor.startsWith("schema-") &&
 		ranked[0].coverage >= 0.35 &&
 		propertyTerms(ranked[0].schema_path.split(".").at(-1) ?? "").length > 0 &&
-		propertyTerms(ranked[0].schema_path.split(".").at(-1) ?? "").every(term => query.has(term));
+		(propertyTerms(ranked[0].schema_path.split(".").at(-1) ?? "").every(term => query.has(term)) ||
+			Boolean(
+				propertyRequestedText(queryText) &&
+					/\b(?:count|threshold|offset|interval|number|percentage|value|URL)\b/i.test(
+						propertyRequestedText(queryText)!,
+					),
+			));
 	if (
 		pair &&
 		!scalarIntent &&

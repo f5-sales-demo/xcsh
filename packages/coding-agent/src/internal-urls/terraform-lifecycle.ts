@@ -21,7 +21,11 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 			);
 		}) ||
 		clauses.some(clause =>
-			transport.test(clause.replace(/\binactive\s+(?:[a-z0-9_-]+\s+){0,2}resource\b/gi, "resource")),
+			transport.test(
+				clause
+					.split(/\bnot\s+(?:an?\s+)?API timeout\b/i)[0]!
+					.replace(/\binactive\s+(?:[a-z0-9_-]+\s+){0,2}resource\b/gi, "resource"),
+			),
 		)
 	)
 		return undefined;
@@ -34,6 +38,7 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 		) ||
 			/\b(?:entire|whole|complete)\b[^.!?]*\bblock\b/i.test(question));
 	const evidence = clauses
+		.map(clause => clause.replace(/,?\s+not\s+(?:an?\s+)?API timeout\b[^.!?;]*$/i, ""))
 		.join(" ")
 		.replace(
 			/\b(?:read|refresh(?:ing|ed|es)?|inspect|update|modify|create|delete)\s+(?:the\s+)?(?:timeouts?\s+)?(?:documentation|docs|guide|page)\b/gi,
@@ -44,7 +49,10 @@ export function interpretTerraformLifecycle(query: string): TerraformLifecycleIn
 		: [];
 	const patterns: Array<[string, RegExp]> = [
 		["create", /\b(?:create|creation|creating)\b/i],
-		["read", /\brefresh(?:ing|ed|es)?\b|\bread\s+operation\b|\boperation\s+read\b|\bread\s+timeout\b/i],
+		[
+			"read",
+			/\brefresh(?:ing|ed|es)?\b|\bread\s+(?:(?:or|and)\s+(?:create|update|delete)\s+)?operations?\b|\boperation\s+read\b|\bread\s+timeout\b/i,
+		],
 		["update", /\b(?:update|modification|modify|modifying)\b/i],
 		["delete", /\b(?:delete|deletion|destroy|destruction|deleting)\b/i],
 	];

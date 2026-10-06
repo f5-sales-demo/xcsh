@@ -33,10 +33,22 @@ maximum response of 4,080 bytes. All 200 complete first-response hashes, includi
 scores and the API DNS clone category also matched. Mac source materialization took 1,020.92 ms. This is offline source parity and does not establish the retained ≥95%
 qualification gate or installed Mac acceptance.
 
-The exposed v10 regression has 40 answerable destinations retired by v15. Among 100 surviving answerables, development-only first-search top-five coverage is 75/100 and first
-selection is 58/100 after source-backed workload and field-intent routing. The original untouched v10 result remains immutable. A new source-reviewed frozen suite has not been exposed while this
-development gate is below the retained threshold.
+The exposed v10 regression has 40 answerable destinations retired by v15. Among 100 surviving answerables, development-only first-search top-five coverage is 100/100 and first
+selection is 96/100 after source-backed workload advertisement, terminal-field, provider-role, root-scope, and lifecycle routing. The original untouched v10 result remains immutable. A new source-reviewed frozen suite has not been exposed while this
+new qualification and installed model gates remain outstanding.
 
 One Ubuntu ChatGPT-subscription development turn read the exact `address_allocation_scheme.allocation_unit` leaf and cited its public provider page without an internal documentation citation or a live-apply claim. This single exposed case does not replace the required installed 40-case model matrix.
 
 GitHub reports the provider and API releases immutable. GitHub reports the selected general content release mutable; its exact six downloaded asset names, sizes, digests, and publication receipt were verified and pinned. The released bytes are preserved under the Ubuntu assessment directory, but the GitHub immutability flag is a remaining provenance limit.
+
+
+## Continued development verification
+
+The saved consumer history was merged with fetched main without rewriting its checkpoint.
+The new development results are retained separately in `terraform-retrieval/current-v15-development/`.
+The surviving-answerable result is 100/100 top five and 96/100 first selection; it is regression
+evidence and cannot qualify a previously exposed suite. Four covered cases still return choices.
+The new focused tests retain ambiguous provider roles, excluded lifecycle operations, caller filters,
+unrelated provider identities, and rejected advertisement branches. The legacy natural-language
+UAT checker now compares final public citations with exact internal leaf-read mappings instead of
+requiring internal citation URLs. Source-boundary, type-check, and retrieval/citation checks passed.

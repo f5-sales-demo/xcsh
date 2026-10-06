@@ -8,6 +8,7 @@ import {
 	propertyExcludedSchemaIdentifiers,
 	propertyExplicitSchemaPaths,
 	propertyInvalidExcludedScope,
+	propertyNamedRootPath,
 	propertyOrderedNestingPath,
 	propertyQueryTerms,
 	propertyRequestedText,
@@ -285,6 +286,12 @@ export function searchPropertyIndex(
 	}
 
 	if (propertyRequestsRootField(query)) clauses.push("instr(schema_path, char(46))=0");
+	const rootPath = propertyNamedRootPath(query);
+	if (rootPath) {
+		clauses.push("(schema_path=? OR substr(schema_path,1,length(?)+1)=? || '.')");
+		args.push(rootPath, rootPath, rootPath);
+	}
+
 	const requestedType = propertyRequestedType(query);
 	if (requestedType) {
 		clauses.push(
