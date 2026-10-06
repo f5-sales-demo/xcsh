@@ -132,6 +132,17 @@ function selectPropertyDestinationInternal(
 		alternatives = alternatives.filter(row => !row.schema_path.includes("."));
 	}
 	const query = new Set(propertyQueryTerms(queryText));
+	const comparisonMeaning = propertyRequestedText(queryText) ?? queryText;
+	const positiveComparison =
+		/\b(?:must|should)\s+(?:end with|start with|contain|match)\b/i.test(comparisonMeaning) &&
+		!/\b(?:not|never|compare|either|or)\b/i.test(comparisonMeaning);
+	if (positiveComparison) {
+		const positive = (row: PropertyCandidate) =>
+			!/\b(?:must|should)\s+not\s+(?:end with|start with|contain|match)\b/i.test(row.description);
+		input = input.filter(positive);
+		alternatives = alternatives.filter(positive);
+	}
+
 	const referenceRequest = propertyRequestedText(
 		queryText.replace(/\((?:such as\b|e\.g\.|for example\b)[^)]*\)/gi, ""),
 	);

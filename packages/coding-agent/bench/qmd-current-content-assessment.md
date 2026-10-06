@@ -85,3 +85,11 @@ also failed its first run: 138/140 top five, 132/140 correct selections, and one
 role incorrectly selected. Its first result is retained unchanged in
 `terraform-retrieval/current-v15-second-freeze/`, and its suite/subset digests are now
 regression-only. Expected exact reads and public citations passed; qualification remains false.
+
+
+A third untouched source-reviewed freeze (digest
+`2a6799c28d49a4eceb8ac993fd8ec9b150d5b0c7dd72168c37e02f401c57b302`) failed its
+first result at 139/140 top-five coverage, 135/140 correct selection, and zero ambiguous
+selections. One affirmative suffix comparison selected its negative. The first result and
+suite are retained in `terraform-retrieval/current-v15-third-freeze/`; all later results
+are regression-only. Exact expected reads and public citations passed.

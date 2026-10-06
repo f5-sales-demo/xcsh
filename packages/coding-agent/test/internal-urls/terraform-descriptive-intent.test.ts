@@ -204,3 +204,25 @@ test("literal single-parent and multi-parent trails remain affirmative caller sc
 		).providerType,
 	).toBeUndefined();
 });
+
+test("affirmative suffix comparison cannot select its documented negative", () => {
+	const row = (field: string, description: string, score: number): RankedProperty => ({
+		provider_type: "resources",
+		provider_name: "fixture",
+		schema_path: "operator." + field,
+		path: "documentation/resources/fixture/operator/index.md",
+		anchor: "schema-" + field,
+		description,
+		score,
+		coverage: 1,
+	});
+	const query =
+		"Follow `operator`. Find the field described as follows: The header value must end with the specified value.";
+	const rows = [
+		row("does_not_end_with", "Exclusive with The header value must not end with the specified value.", 25),
+		row("endswith", "The header value must end with the specified value.", 20),
+	];
+	expect(selectPropertyDestination(query, rows, [], { identityResolved: true }).destinations[0]?.anchor).toBe(
+		"schema-endswith",
+	);
+});
