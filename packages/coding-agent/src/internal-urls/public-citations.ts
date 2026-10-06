@@ -277,7 +277,7 @@ export function citationLine(
 }
 
 const DOC_URI =
-	/xcsh:\/\/(?:docs|documentation|terraform-documentation|terraform|api-spec|api-catalog)\/[^\s<>)\]}`]+/gi;
+	/xcsh:\/\/(?:docs|documentation|terraform-documentation|terraform|api-spec|api-catalog)(?![A-Za-z0-9.-])(?:[/?#][^\s<>)\]}`]*)?/gi;
 
 /** Project assistant prose only. Tool inputs, tool results, fenced code, and inline protocol examples stay exact. */
 export function normalizeAssistantDocumentationCitations(

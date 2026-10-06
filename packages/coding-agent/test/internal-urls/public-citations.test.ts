@@ -224,3 +224,14 @@ test("streaming encoded uppercase citations agrees with completed projection", (
 		"See https://f5-sales-demo.github.io/terraform-provider-xcsh/resources/http_loadbalancer/ for details.",
 	);
 });
+
+test("unmapped collection citations cannot expose internal documentation roots", () => {
+	for (const uri of ["xcsh://terraform-documentation/", "xcsh://documentation", "xcsh://api-catalog/?search=TLS"]) {
+		expect(normalizeAssistantDocumentationCitations(`See [source](${uri}).`)).toBe(
+			"See [source]([unverified documentation citation]).",
+		);
+	}
+	expect(normalizeAssistantDocumentationCitations("Use xcsh://documentation-helper/example")).toBe(
+		"Use xcsh://documentation-helper/example",
+	);
+});
