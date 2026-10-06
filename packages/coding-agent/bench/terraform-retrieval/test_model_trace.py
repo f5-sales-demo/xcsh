@@ -476,6 +476,18 @@ class ProviderVersionCitationTest(unittest.TestCase):
 class LiveApplyClaimTest(unittest.TestCase):
     """Separate sourced reference verification from live-apply assertions."""
 
+    def test_documentation_verification_does_not_assert_a_later_negated_apply(
+        self,
+    ) -> None:
+        self.assertFalse(
+            has_false_live_apply_claim(
+                "This draft was documentation-verified; terraform validate and live apply were not run."
+            )
+        )
+        self.assertTrue(
+            has_false_live_apply_claim("Verified the live apply succeeded.")
+        )
+
     def test_sentence_local_claims_and_explicit_denials(self) -> None:
         """Retain affirmative detection and avoid cross-sentence false matches."""
         for text in [

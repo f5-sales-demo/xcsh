@@ -35,7 +35,7 @@ def missing_user_values_requested(text: str, fields: list[str]) -> bool:
 
 def has_false_live_apply_claim(text: str) -> bool:
     """Screen affirmative live claims without joining separate sentences."""
-    clauses = re.split(r"(?<=[.!?])\s+|\n", text)
+    clauses = re.split(r"(?<=[.!?;])\s+|\n", text)
     for clause in clauses:
         claim = re.sub(
             r"not verified by (?:a )?live apply|not (?:live[- ]?)?apply evidence|"
