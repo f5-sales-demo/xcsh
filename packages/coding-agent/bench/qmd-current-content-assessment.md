@@ -27,13 +27,15 @@ The general index is 46,952,448 SQLite bytes and 13,581,264 compressed bytes; SH
 `fbe22a883acb7d56026b302d2c52e8c9a5e855c003252dd42b6c4b9a6416c275`. Two builds of each source produced matching hashes. The API discovery SQLite has 2,215,936 bytes and its
 compressed index 494,162 bytes; its generated file digest matched on two runs.
 
-The exposed v10 prompts, used only as a development workload on v15, produced 1,000 warm search samples on each host. On the reviewed routing candidate Ubuntu p95 was 129.13 ms and Mac p95 was 77.13 ms, with a
+The exposed v10 prompts, used only as a development workload on v15, produced 1,000 warm search samples on each host. At consumer source commit `6d02065ca`, Ubuntu p95 was 132.43 ms and Mac p95 was 78.12 ms, with a
 maximum response of 4,080 bytes. All 200 complete first-response hashes, including ranks, scores, and anchors, matched across hosts. The general community top three paths and
 scores and the API DNS clone category also matched. Mac source materialization took 1,020.92 ms. This is offline source parity and does not establish the retained ≥95%
 qualification gate or installed Mac acceptance.
 
-The exposed v10 regression has 40 answerable destinations retired by v15. Among 100 surviving answerables, development-only first-search top-five coverage is 73/100 and first
-selection is 56/100 after source-backed workload routing. The original untouched v10 result remains immutable. A new source-reviewed frozen suite has not been exposed while this
+The exposed v10 regression has 40 answerable destinations retired by v15. Among 100 surviving answerables, development-only first-search top-five coverage is 75/100 and first
+selection is 58/100 after source-backed workload and field-intent routing. The original untouched v10 result remains immutable. A new source-reviewed frozen suite has not been exposed while this
 development gate is below the retained threshold.
+
+One Ubuntu ChatGPT-subscription development turn read the exact `address_allocation_scheme.allocation_unit` leaf and cited its public provider page without an internal documentation citation or a live-apply claim. This single exposed case does not replace the required installed 40-case model matrix.
 
 GitHub reports the provider and API releases immutable. GitHub reports the selected general content release mutable; its exact six downloaded asset names, sizes, digests, and publication receipt were verified and pinned. The released bytes are preserved under the Ubuntu assessment directory, but the GitHub immutability flag is a remaining provenance limit.
