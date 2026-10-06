@@ -25,6 +25,7 @@ import {
 	validatePropertyIndex,
 } from "./terraform-property-index";
 import {
+	propertyBreadcrumbText,
 	propertyRequestedBlockText,
 	propertyRequestedText,
 	propertyRequestsBlock,
@@ -963,6 +964,16 @@ export function terraformTaskDestination(query: string): { role: string; anchor?
 	)
 		return undefined;
 	if (/\bimport(?:s|ing)?\b|\badopt\b.*\bstate\b/i.test(query)) return { role: "import" };
+	// An ordered, explicitly supplied schema trail is field evidence even when
+	// the question calls the terminal field a "leaf" or "setting". Keep the
+	// selected branch for property retrieval rather than routing to a generic
+	// data-source root page.
+	if (
+		propertyBreadcrumbText(query) !== query &&
+		/\b(?:leaf|field|setting|property|attribute|parameter|value)\b/i.test(query) &&
+		!/\b(?:example|usage|guidance|minimal|root)\b/i.test(query)
+	)
+		return undefined;
 	const valueLookup =
 		/\b(?:find|locate|point me to)\b|\bwhere\s+(?:is|are|do I put)\b/i.test(query) &&
 		!/\b(?:resource|data[ -]source|action)\b\s+(?:is\s+)?(?:documented|defined|specification)\b|\b(?:minimal|root)\s+configuration\b|\b(?:example|usage|guidance)\b/i.test(

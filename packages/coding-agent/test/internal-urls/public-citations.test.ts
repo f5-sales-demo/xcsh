@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import path from "node:path";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
+import { PUBLIC_CITATION_SOURCES } from "../../src/internal-urls/public-citation-destinations.generated";
 import {
 	DocumentationCitationStream,
 	normalizeAssistantDocumentationCitations,
@@ -10,6 +12,21 @@ import {
 import { extractReferences } from "../../src/references";
 
 describe("public documentation citations", () => {
+	test("publication mapping provenance agrees with every reviewed source pin", async () => {
+		const root = path.resolve(import.meta.dir, "../../../../tools");
+		const [content, provider, api] = await Promise.all([
+			Bun.file(path.join(root, "documentation-release.json")).json(),
+			Bun.file(path.join(root, "terraform-documentation-release.json")).json(),
+			Bun.file(path.join(root, "spec-release.json")).json(),
+		]);
+		expect(PUBLIC_CITATION_SOURCES.general.version).toBe(content.release_tag);
+		expect(PUBLIC_CITATION_SOURCES.general.digest).toBe(content.assets["html-to-markdown-content.tar.gz"].sha256);
+		expect(PUBLIC_CITATION_SOURCES.terraform.version).toBe(provider.release_tag);
+		expect(PUBLIC_CITATION_SOURCES.terraform.digest).toBe(provider.assets["canonical-documentation.tar.gz"].sha256);
+		expect(PUBLIC_CITATION_SOURCES.api.version).toBe(api.release_tag);
+		expect(PUBLIC_CITATION_SOURCES.api.digest).toBe(api.assets[`f5xc-api-specs-${api.release_tag}.zip`].slice(7));
+	});
+
 	test("maps exact current source documents and strips only internal retrieval parameters", () => {
 		const community = publicCitationForInternalUri(
 			"xcsh://documentation/community-f5-com/t/65170/index.md#api-discovery",
