@@ -161,11 +161,10 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: "1"
         run: |
           set -euo pipefail
-          cd "$UAT_HOME"
           sudo -H -u "$UAT_USER" env \
             EXPECTED_VERSION="$EXPECTED_VERSION" \
             RELEASE_ARCH="$RELEASE_ARCH" \
             HOMEBREW_NO_AUTO_UPDATE="$HOMEBREW_NO_AUTO_UPDATE" \
             TMPDIR="$UAT_HOME/tmp" \
             PATH="$UAT_BREW_PREFIX/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
-            /bin/bash "$UAT_HOME/ci-verify-homebrew-cask.sh"
+            /bin/bash -c 'cd "$1" && exec /bin/bash "$1/ci-verify-homebrew-cask.sh"' _ "$UAT_HOME"
