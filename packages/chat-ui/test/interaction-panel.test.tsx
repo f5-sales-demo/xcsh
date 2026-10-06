@@ -92,3 +92,41 @@ test("same-context implementation requests transcript follow before sending the 
 	fireEvent.click(screen.getByRole("button", { name: "Yes, implement this plan" }));
 	expect(order.slice(-2)).toEqual(["follow", "plan_decide"]);
 });
+
+test("async forms open one at a time and only explicit submission sends the recommendation", async () => {
+	const h = harness();
+	render(<InteractionPanel transport={h.transport} />);
+	const first = { id: "a", identity: h.request.identity, kind: "input", delivery: "async", title: "HTTP or CDN?", options: ["HTTP (Recommended)", "CDN"] };
+	const second = { ...first, id: "b", title: "Certificate?", options: undefined };
+	h.receive({ type: "interaction_snapshot", sessionId: "s", revision: 1, pending: [first, second] });
+	expect(screen.getByText(first.title)).toBeDefined();
+	expect(screen.queryByText(second.title)).toBeNull();
+	expect(h.sent).toHaveLength(1);
+	fireEvent.change(screen.getByRole("textbox"), { target: { value: "Custom answer" } });
+	h.receive({ type: "interaction_snapshot", sessionId: "s", revision: 1, pending: [structuredClone(first), second] });
+	expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Custom answer");
+	fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
+	const command = h.sent.at(-1)!;
+	expect(command).toMatchObject({ type: "interaction_respond", requestId: "a", value: "Custom answer" });
+	await act(async () => {
+		if (command.type === "interaction_respond") h.receive({ type: "interaction_receipt", responseId: command.responseId, accepted: true });
+	});
+	h.receive({ type: "interaction_event", revision: 2, event: { type: "resolved", interaction: first, reason: "answered" } });
+	expect(screen.queryByText(first.title)).toBeNull();
+	expect(screen.getByText(second.title)).toBeDefined();
+});
+
+test("answer later keeps async questions pending and reopening never sends a default", () => {
+	const h = harness();
+	render(<InteractionPanel transport={h.transport} />);
+	const request = { id: "a", identity: h.request.identity, kind: "input", delivery: "async", title: "Choose?", options: ["Recommended"] };
+	h.receive({ type: "interaction_snapshot", sessionId: "s", revision: 1, pending: [request] });
+	fireEvent.change(screen.getByRole("textbox"), { target: { value: "Retained draft" } });
+	fireEvent.click(screen.getByRole("button", { name: "Answer later" }));
+	expect(screen.getByText("Choose?").closest("[hidden]")).not.toBeNull();
+	expect(h.sent).toHaveLength(1);
+	fireEvent.click(screen.getByRole("button", { name: "Reopen pending questions" }));
+	expect(screen.getByText("Choose?")).toBeDefined();
+	expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Retained draft");
+	expect(h.sent).toHaveLength(1);
+});

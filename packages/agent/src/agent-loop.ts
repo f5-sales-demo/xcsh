@@ -25,6 +25,28 @@ import type {
 } from "./types";
 import { getToolExecutionKind } from "./types";
 
+function isStructuredInputReply(message: import("@f5-sales-demo/pi-ai").Message): boolean {
+	if (message.role !== "user") return false;
+	const text =
+		typeof message.content === "string"
+			? message.content
+			: message.content
+					.filter(part => part.type === "text")
+					.map(part => part.text)
+					.join("\n");
+	try {
+		const reply = JSON.parse(text);
+		return (
+			reply?.type === "user_input_reply" &&
+			typeof reply.itemId === "string" &&
+			typeof reply.questionId === "string" &&
+			typeof reply.answer === "string"
+		);
+	} catch {
+		return false;
+	}
+}
+
 /**
  * Start an agent loop with a new prompt message.
  * The prompt is added to the context and events are emitted for it.
@@ -401,7 +423,10 @@ async function runLoop(
 							take: () => config.getSteeringMessages!(),
 							toProvider: async messages => {
 								const converted = await config.convertToLlm(messages);
-								if (converted.some(message => message.role !== "user")) return undefined;
+								// Correlated question replies must enter at a model boundary. They
+								// resolve an existing item, rather than steering its in-flight text.
+								if (converted.some(message => message.role !== "user" || isStructuredInputReply(message)))
+									return undefined;
 								return converted as import("@f5-sales-demo/pi-ai").UserMessage[];
 							},
 						})

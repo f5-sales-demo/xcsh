@@ -53,3 +53,19 @@ test("app-server fixtures pin blocking, secret, and active-status contracts", ()
 	expect(thread).toContain("active_flags: Vec<ThreadActiveFlag>");
 	expect(thread).toContain("WaitingOnUserInput");
 });
+
+test("normal-work comparison independently pins the current Default policy and async handler", () => {
+	expect(manifest.normalWorkComparison.commit).toBe("4b5c11134974dd6ec733b89d0e5a5f4c7d74856d");
+	for (const [file, digest] of Object.entries(manifest.normalWorkComparison.files))
+		expect(
+			createHash("sha256")
+				.update(readFileSync(resolve(root, file)))
+				.digest("hex"),
+		).toBe(String(digest));
+	const source = readFileSync(
+		resolve(root, "codex-rs/core/src/tools/handlers/request_user_input_async-normal-work.source"),
+		"utf8",
+	);
+	expect(source).toContain("AgentMessageDelivery::Async");
+	expect(source).toContain("accepted");
+});

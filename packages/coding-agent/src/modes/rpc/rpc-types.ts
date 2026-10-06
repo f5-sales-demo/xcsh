@@ -44,6 +44,12 @@ export type RpcCommand =
 			planId: string;
 			action: import("../../../../chat-ui/src/interactions/conversation-plan").PlanAction;
 	  }
+	| {
+			id?: string;
+			type: "interaction_cancel";
+			requestId: string;
+			identity: import("../../session/user-interactions").InteractionIdentity;
+	  }
 	// Prompting
 	| {
 			id?: string;

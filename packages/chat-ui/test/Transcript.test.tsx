@@ -331,3 +331,10 @@ test("reduced motion keeps a text timeline on its first frame", async () => {
 		window.matchMedia = original;
 	}
 });
+
+test("correlated async replies render readable answer summaries", () => {
+	const text = JSON.stringify({ type: "user_input_reply", itemId: "i", questionId: "i:0", answer: "HTTP" });
+	render(<Transcript messages={[msg({ id: "reply", role: "user", text })]} streaming={false} />);
+	expect(screen.getByText("Answer recorded: HTTP")).toBeDefined();
+	expect(screen.queryByText(text)).toBeNull();
+});

@@ -173,6 +173,8 @@ Configs you didn't validate become incidents. Assumptions you didn't test fail u
 
 %%START_FOLDER%%
 
+{{{questionPolicy}}}
+
 {{#if context}}
 ## F5 XC Platform Context
 
