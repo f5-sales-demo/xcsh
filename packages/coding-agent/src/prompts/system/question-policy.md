@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD041 -->
 <structured-questions>
 Investigate discoverable facts in the workspace and available sources before asking the user. Ask only for
 unresolved preferences, constraints, or missing choices whose answers materially affect the result. A fully

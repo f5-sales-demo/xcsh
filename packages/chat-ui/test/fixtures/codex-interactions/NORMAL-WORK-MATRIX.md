@@ -1,6 +1,6 @@
 # Normal-work question acceptance matrix
 
-Issue: https://github.com/f5-sales-demo/xcsh/issues/4739
+Issue: [#4739](https://github.com/f5-sales-demo/xcsh/issues/4739)
 
 The live model prompts never name question tools and use automatic tool choice. Test inputs are synthetic; the Terraform scenario uses example.com and placeholders, with no tenant lookup or deployment. Source tests and live model checks are separate from installed client acceptance.
 
