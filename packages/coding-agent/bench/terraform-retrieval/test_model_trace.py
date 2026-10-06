@@ -457,6 +457,7 @@ class ProviderVersionCitationTest(unittest.TestCase):
         for text in [
             "Provider v12.4.0",
             "bundled version **12.4.0**",
+            "provider v12.4.0.",
             'version = "= 12.4.0"',
         ]:
             self.assertTrue(cites_provider_version(text, "v12.4.0"))

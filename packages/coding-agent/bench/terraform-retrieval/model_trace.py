@@ -61,7 +61,10 @@ def cites_provider_version(text: str, provider_version: str) -> bool:
         raise ValueError(message)
     return bool(
         re.search(
-            r"(?<![A-Za-z0-9_.])v?" + re.escape(version) + r"(?![A-Za-z0-9_.+-])", text
+            r"(?<![A-Za-z0-9_.])v?"
+            + re.escape(version)
+            + r"(?![A-Za-z0-9_+-]|\.[A-Za-z0-9])",
+            text,
         )
     )
 
