@@ -159,6 +159,9 @@ if not args.regression and any(case["kind"] == "ambiguous" for case in all_cases
         message = "Eligible approved continuation freeze required"
         raise ValueError(message)
     plans = json.loads(plans_bytes)
+    validate_continuation_plans(json.loads(heldout_bytes), plans)
+    selected_ids = {case["id"] for case in all_cases}
+    plans = [plan for plan in plans if plan["id"] in selected_ids]
     validate_continuation_plans(all_cases, plans)
     receipt_bytes = args.continuation_receipt.read_bytes()
     continuation_verified = validate_continuation_receipt(

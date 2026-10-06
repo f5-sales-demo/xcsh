@@ -392,6 +392,9 @@ def main() -> None:
     validate_model_activation(cases)
     validate_model_subset_identity(cases, loaded["heldout.json"])
     plans = loaded["model-continuations.json"]
+    validate_continuation_plans(loaded["heldout.json"], plans)
+    selected_ids = {case["id"] for case in cases}
+    plans = [plan for plan in plans if plan["id"] in selected_ids]
     validate_continuation_plans(cases, plans)
     by_id = {case["id"]: case for case in cases}
     create_evidence_directory(args.output)
