@@ -107,3 +107,9 @@ The sixth source-reviewed first freeze reached 138/140 top-five coverage, 137/14
 selection, and zero ambiguous selections. Two workload fields exposed source-description
 port-count and target-versus-reached-port distinctions. Its first result is retained in
 `terraform-retrieval/current-v15-sixth-freeze/`; later runs are regression-only.
+
+
+The seventh unique first freeze missed one aggregate route timeout (139/140 top five,
+136/140 correct selection, zero ambiguous selections). Its unchanged first result is retained
+in `terraform-retrieval/current-v15-seventh-freeze/`. Later results are regression-only.
+The explicit nested route hierarchy now excludes lifecycle routing for this field.

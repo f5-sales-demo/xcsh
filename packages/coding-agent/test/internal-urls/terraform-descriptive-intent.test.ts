@@ -268,3 +268,11 @@ test("field meanings preserve explicit multi-port scope and distinguish target v
 	);
 	expect(ranked[0]?.schema_path).toBe("stateful_service.info.target_port");
 });
+
+test("explicit route hierarchy excludes lifecycle routing for aggregate retry duration", () => {
+	expect(
+		interpretTerraformLifecycle(
+			"Follow `routes` → `simple_route` → `advanced_options`. Find the field described as follows: The timeout for the route including all retries, in milliseconds.",
+		),
+	).toBeUndefined();
+});

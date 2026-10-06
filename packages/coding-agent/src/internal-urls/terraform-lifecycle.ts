@@ -5,6 +5,9 @@ export interface TerraformLifecycleIntent {
 	evidence: string;
 }
 export function interpretTerraformLifecycle(query: string): TerraformLifecycleIntent | undefined {
+	const explicitTrail = /\bfollow\s+`([a-z][a-z0-9_]*)`/i.exec(query)?.[1];
+	if (explicitTrail && explicitTrail !== "timeouts" && !/\blifecycle\b/i.test(query)) return undefined;
+
 	if (
 		/\b(?:explain|find|verify|check)\s+(?:the\s+)?(?:documented\s+)?field\s+`timeout`/i.test(query) &&
 		/\bfollow\s+`(?!timeouts`)[a-z][a-z0-9_]*`/i.test(query) &&

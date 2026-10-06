@@ -120,6 +120,18 @@
       "kind": "model-subset",
       "source": "current-v15-sixth-freeze/v15-sixth-first-retrieval.json.gz",
       "reason": "First retrieval missed two answerable top-five destinations. Regression only."
+    },
+    {
+      "sha256": "08a53931929847590ca93ee55d57c2fc8a02fcfeb77deae2a85f3ab1e3bff7ed",
+      "kind": "heldout",
+      "source": "current-v15-seventh-freeze/v15-seventh-first-retrieval.json.gz",
+      "reason": "First retrieval missed an answerable top-five destination; regression only."
+    },
+    {
+      "sha256": "7b2dca044fb012af02460d5fec838026d1063c35d50c84e168379993d612e09d",
+      "kind": "model-subset",
+      "source": "current-v15-seventh-freeze/v15-seventh-first-retrieval.json.gz",
+      "reason": "First retrieval missed an answerable top-five destination; regression only."
     }
   ]
 }
