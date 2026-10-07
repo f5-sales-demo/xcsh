@@ -15,7 +15,9 @@ defaults to `XCSH_NAMESPACE`, and secret policy defaults to `shared/ves-io-allow
 
 Use [immutable xcsh v23.0.0](https://github.com/f5-sales-demo/xcsh/releases/tag/v23.0.0) or later for this interchangeability contract. Earlier v22.15.0 compatibility output has different defaults.
 
-After native [context setup](/xcsh/en/f5-distributed-cloud/contexts-namespaces/), replace only `vesctl` with `xcsh` in the [frozen BYOC article](https://github.com/A-Haines/xc-lb-byoc-demo-automation/blob/e7acf7fd53b2f19d9aca7ca43f23e47c2187ab9e/examples/blindfold/README.md). Keep this work in a private directory and set an owner-only umask before shell redirection:
+After native [context setup](/xcsh/en/f5-distributed-cloud/contexts-namespaces/), replace only `vesctl` with `xcsh` in the [frozen BYOC
+article](https://github.com/A-Haines/xc-lb-byoc-demo-automation/blob/e7acf7fd53b2f19d9aca7ca43f23e47c2187ab9e/examples/blindfold/README.md). Keep this work in a private directory
+and set an owner-only umask before shell redirection:
 
 ```bash
 umask 077
@@ -25,15 +27,23 @@ xcsh request secrets get-policy-document --namespace shared --name ves-io-allow-
 xcsh request secrets encrypt --policy-document policy --public-key pubkey key.pem | tail -1 > certs/key.blindfold
 ```
 
-`certs/key.blindfold` contains one bare-base64 line. The reference consumer trims the file and adds exactly one `string:///` prefix. Its README incorrectly describes the file as a location string. For existing `xcsh create` commands, set `spec.private_key.blindfold_secret_info.location` to `string:///` followed by that trimmed value. Encryption does not create a certificate or load balancer.
+`certs/key.blindfold` contains one bare-base64 line. The reference consumer trims the file and adds exactly one `string:///` prefix. Its README incorrectly describes the file as a
+location string. For existing `xcsh create` commands, set `spec.private_key.blindfold_secret_info.location` to `string:///` followed by that trimmed value. Encryption does not
+create a certificate or load balancer.
 
 Released Ubuntu standalone and independent Mac Homebrew v23.0.0 acceptance ran this pipeline, created and rotated fresh certificates on fixed-response HTTPS load balancers, and verified strict private CA trust, SNI, changed fingerprints, ready/valid state and HTTPS 200. All run-owned resources were removed and named absence verified.
 
-The article deploys through the deprecated `volterra` Terraform provider. The next-generation [terraform-provider-xcsh](https://github.com/f5-sales-demo/terraform-provider-xcsh) is unreleased and still iterating toward feature completeness. Richer Blindfold provider functionality is future work. This guide qualifies xcsh encryption and xcsh-owned resource deployment; it does not qualify that provider or reproduce the article's deployment stack.
+The article deploys through the deprecated `volterra` Terraform provider. The next-generation [terraform-provider-xcsh](https://github.com/f5-sales-demo/terraform-provider-xcsh) is
+unreleased and still iterating toward feature completeness. Richer Blindfold provider functionality is future work. This guide qualifies xcsh encryption and xcsh-owned resource
+deployment; it does not qualify that provider or reproduce the article's deployment stack.
 
-Compatibility public documents default to camelCase YAML. `--outfmt json|yaml` or modern retrieval-only `--output json|yaml` selects an explicit format; do not combine them. Policy retrieval requires `--name` and defaults its namespace to `default`; the explicit shared policy above is appropriate for platform TLS. Canonical `xcsh blindfold public-key` and `policy` retain snake_case JSON defaults, and canonical policy defaults to `shared/ves-io-allow-volterra`.
+Compatibility public documents default to camelCase YAML. `--outfmt json|yaml` or modern retrieval-only `--output json|yaml` selects an explicit format; do not combine them. Policy
+retrieval requires `--name` and defaults its namespace to `default`; the explicit shared policy above is appropriate for platform TLS. Canonical `xcsh blindfold public-key` and
+`policy` retain snake_case JSON defaults, and canonical policy defaults to `shared/ves-io-allow-volterra`.
 
-Both paths accept single-document JSON/YAML with known camelCase or snake_case fields. Agreeing aliases are accepted; conflicting aliases, duplicate keys, multiple documents, malformed fields and mismatched tenants fail. Retrieval preserves complete public policy information; encryption uses only required normalized fields. The public-key and policy file flags must be supplied together. With both files, encryption runs offline without context resolution, credentials or network access.
+Both paths accept single-document JSON/YAML with known camelCase or snake_case fields. Agreeing aliases are accepted; conflicting aliases, duplicate keys, multiple documents,
+malformed fields and mismatched tenants fail. Retrieval preserves complete public policy information; encryption uses only required normalized fields. The public-key and policy
+file flags must be supplied together. With both files, encryption runs offline without context resolution, credentials or network access.
 
 ```bash
 xcsh request secrets get-public-key --key-version 7 --outfmt json > pubkey.json
@@ -50,11 +60,17 @@ xcsh request secrets encrypt --public-key pubkey --policy-document policy key.pe
 xcsh request secrets encrypt --public-key pubkey --policy-document policy key.pem --outfile key.envelope --result-file encrypted.json
 ```
 
-Compatibility `--outfile` stores the raw binary envelope, with empty default stdout. It conflicts with explicit textual encoding, `--output-file` and `--json`; a distinct `--result-file` is allowed. Existing or symlink destinations are rejected. The raw artifact is not a location string; use textual output for a location consumer. `--json` and assistant results remain public reports without ciphertext.
+Compatibility `--outfile` stores the raw binary envelope, with empty default stdout. It conflicts with explicit textual encoding, `--output-file` and `--json`; a distinct
+`--result-file` is allowed. Existing or symlink destinations are rejected. The raw artifact is not a location string; use textual output for a location consumer. `--json` and
+assistant results remain public reports without ciphertext.
 
-Encryption accepts one positional filename, `--input FILE`, `-` for redirected stdin, or redirected stdin with no filename. Use `--` before filenames beginning with a dash. Interactive missing input fails immediately. Native bounded, zeroizing reads preserve binary plaintext and support cancellation; Ctrl-C exits 130, usage errors exit 2, and operational failures exit 1. Diagnostics go to stderr.
+Encryption accepts one positional filename, `--input FILE`, `-` for redirected stdin, or redirected stdin with no filename. Use `--` before filenames beginning with a dash.
+Interactive missing input fails immediately. Native bounded, zeroizing reads preserve binary plaintext and support cancellation; Ctrl-C exits 130, usage errors exit 2, and
+operational failures exit 1. Diagnostics go to stderr.
 
-Canonical `--policy namespace/name` and modern `-n` remain available. Do not combine canonical policy with explicit policy namespace/name. `--context-name` asserts the selected online context without activating another context. Compatibility covers only these three secrets commands: native authentication remains required, and `.vesconfig`, VES credentials, legacy authentication, request abbreviations and output-directory routing remain unsupported.
+Canonical `--policy namespace/name` and modern `-n` remain available. Do not combine canonical policy with explicit policy namespace/name. `--context-name` asserts the selected
+online context without activating another context. Compatibility covers only these three secrets commands: native authentication remains required, and `.vesconfig`, VES
+credentials, legacy authentication, request abbreviations and output-directory routing remain unsupported.
 
 ## Retrieve public encryption material
 
