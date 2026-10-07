@@ -39,10 +39,54 @@ export class ExtensionUiController {
 	initializeInteractionPresenters(): void {
 		const drafts = new Map<string, { title: string; text: string }>();
 		const presentations = new Set<Promise<string | undefined>>();
+		const deadlines = new Map<string, number>();
+		const owner = this.ctx.session.userInteractions;
+		const discardedDrafts = new Set<string>();
+		let timer: ReturnType<typeof setInterval> | undefined;
+		const stopTimer = () => {
+			if (timer) clearInterval(timer);
+			timer = undefined;
+		};
+		owner.subscribe(event => {
+			if (event.interaction.delivery !== "async") return;
+			if (event.type === "opened" && !presentations.size) {
+				deadlines.set(event.interaction.id, Date.now() + 30_000);
+				if (!timer) {
+					timer = setInterval(tick, 1000);
+					timer.unref?.();
+				}
+			} else {
+				deadlines.delete(event.interaction.id);
+				if (event.reason === "answered") {
+					discardedDrafts.add(event.interaction.id);
+					drafts.delete(event.interaction.id);
+				}
+			}
+			if (!deadlines.size) stopTimer();
+		});
+		const tick = () => {
+			let countdown: number | undefined;
+			for (const [id, deadline] of deadlines)
+				if (Date.now() >= deadline) {
+					deadlines.delete(id);
+					drafts.delete(id);
+					owner.skipAsyncLocal(id);
+				}
+
+			for (const deadline of deadlines.values()) {
+				const seconds = Math.ceil((deadline - Date.now()) / 1000);
+				if (seconds > 0 && seconds <= 20) countdown = Math.min(countdown ?? seconds, seconds);
+			}
+			if (countdown !== undefined) this.ctx.showStatus?.(`Questions skip in ${countdown}s · /questions to answer`);
+			if (!deadlines.size) stopTimer();
+		};
+
 		this.ctx.session.subscribe(async event => {
 			if (event.type !== "agent_end") return;
+			deadlines.clear();
+			stopTimer();
 			for (const request of this.ctx.session.userInteractions.pending()) {
-				if (request.delivery === "async") this.ctx.session.userInteractions.resolve(request.id, "expired");
+				if (request.delivery === "async") this.ctx.session.userInteractions.skipAsyncLocal(request.id);
 			}
 			// Await the real editor lifecycle before appending recovered drafts.
 			await Promise.allSettled([...presentations]);
@@ -52,8 +96,11 @@ export class ExtensionUiController {
 			if (recovered.length)
 				this.ctx.editor.setText([this.ctx.editor.getText(), ...recovered].filter(Boolean).join("\n\n"));
 			drafts.clear();
+			discardedDrafts.clear();
 		});
 		this.ctx.session.userInteractions.setAsyncPresenter(async (request, signal) => {
+			deadlines.clear();
+			stopTimer();
 			const presentation = this.showHookCustom<string | undefined>(
 				(tui, _theme, _keys, done) =>
 					new AsyncQuestionComponent(
@@ -64,10 +111,27 @@ export class ExtensionUiController {
 						signal,
 						drafts.get(request.id)?.text ?? "",
 						text =>
+							!discardedDrafts.has(request.id) &&
 							drafts.set(request.id, {
 								title: request.title,
 								text,
 							}),
+						{
+							skip: () => {
+								discardedDrafts.add(request.id);
+								drafts.delete(request.id);
+								owner.skipAsyncLocal(request.id);
+							},
+							interrupt: () => {
+								void this.ctx.session.abort();
+							},
+							navigate: forward => {
+								const pending = owner.pendingAsyncLocal();
+								const index = pending.findIndex(item => item.id === request.id);
+								const next = pending[index + (forward ? 1 : -1)];
+								if (next) owner.presentAsync(next.id);
+							},
+						},
 					),
 			);
 			presentations.add(presentation);
@@ -77,7 +141,7 @@ export class ExtensionUiController {
 			} finally {
 				presentations.delete(presentation);
 			}
-			if (answer !== undefined) drafts.delete(request.id);
+			if (answer !== undefined || discardedDrafts.has(request.id)) drafts.delete(request.id);
 			return answer;
 		});
 		this.ctx.session.userInteractions.setQuestionPresenter((questions, signal, request) =>
