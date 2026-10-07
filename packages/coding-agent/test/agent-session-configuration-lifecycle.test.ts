@@ -407,3 +407,66 @@ test("a pending manual model selection survives task abort", async () => {
 	expect(session.model).toEqual(target);
 	expect(session.settings.getModelRole("default")).toBe(`${target.provider}/${target.id}`);
 });
+
+test("question discovery cannot bypass catalog, root, or explicit tool restrictions", async () => {
+	const asynchronous = tool("request_user_input_async");
+	const waiting = tool("request_user_input");
+	const { session, target } = await fixture({
+		toolRegistry: new Map([
+			[asynchronous.name, asynchronous],
+			[waiting.name, waiting],
+		]),
+		rebuildSystemPrompt: async names => names.join(","),
+	});
+	expect(session.getDiscoverableTools().map(tool => tool.name)).not.toContain(asynchronous.name);
+	expect(await session.activateDiscoveredTools([asynchronous.name])).toEqual([]);
+	await session.setModelTemporary({ ...target, experimentalSupportedTools: ["send_user_message_async"] });
+	expect(session.getDiscoverableTools().map(tool => tool.name)).toContain(asynchronous.name);
+	await session.setActiveToolsByName([]);
+	expect(session.getDiscoverableTools().map(tool => tool.name)).not.toContain(asynchronous.name);
+	await session.setPlanModeState({ enabled: true } as any);
+	expect(session.getDiscoverableTools().map(tool => tool.name)).not.toContain(waiting.name);
+});
+
+test("mode transitions rebuild guidance before their next model call", async () => {
+	const waiting = tool("request_user_input");
+	const { session } = await fixture({
+		toolRegistry: new Map([[waiting.name, waiting]]),
+		rebuildSystemPrompt: async names => names.join(","),
+	});
+	await session.setPlanModeState({ enabled: true } as any);
+	expect(session.systemPrompt).toContain(waiting.name);
+	await session.setPlanModeState(undefined);
+	expect(session.systemPrompt).not.toContain(waiting.name);
+});
+
+test("plugin reload and root restrictions agree with question discovery", async () => {
+	const asynchronous = tool("request_user_input_async");
+	const waiting = tool("request_user_input");
+	const extensionRunner = { getAllRegisteredTools: () => [] } as any;
+	const { session, target } = await fixture({
+		toolRegistry: new Map([
+			[asynchronous.name, asynchronous],
+			[waiting.name, waiting],
+		]),
+		extensionRunner,
+		rebuildSystemPrompt: async names => names.join(","),
+	});
+	await session.setModelTemporary({ ...target, experimentalSupportedTools: ["send_user_message_async"] });
+	await session.refreshExtensionTools();
+	expect(session.getActiveToolNames()).toContain(asynchronous.name);
+	await session.setActiveToolsByName([]);
+	await session.refreshExtensionTools();
+	expect(session.getDiscoverableTools().map(tool => tool.name)).not.toContain(asynchronous.name);
+	const subagent = await fixture({
+		taskDepth: 1,
+		toolRegistry: new Map([
+			[asynchronous.name, asynchronous],
+			[waiting.name, waiting],
+		]),
+	});
+	await subagent.session.setModelTemporary({ ...target, experimentalSupportedTools: ["send_user_message_async"] });
+	await subagent.session.setPlanModeState({ enabled: true } as any);
+	expect(subagent.session.getActiveToolNames()).toEqual([]);
+	expect(subagent.session.getDiscoverableTools()).toEqual([]);
+});

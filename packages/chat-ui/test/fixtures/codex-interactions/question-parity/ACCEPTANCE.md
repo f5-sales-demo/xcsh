@@ -34,7 +34,51 @@ with four layout tests skipped by their existing environment gates.
 
 Remaining acceptance gates stay open: full workspace suite repair, semantic trace capture,
 optional timeout and snooze, complete model-transition matrix, all installed immutable-release identities,
-real Chrome/VS Code/Excel/Word/PowerPoint panes and voice. Mac native capture works, but interactive Office
+real Chrome pane and voice. Real Excel, Word and PowerPoint pane checks are deferred by explicit user instruction. Mac native capture works, but interactive Office
 control is currently rejected with `PERMISSION_ERROR_ACCESSIBILITY`; connected computer-use bootstrap times out.
 No protocol or mock result substitutes for these gates. Non-open-source clients claim shared-contract
 conformance only, without closed-source UI-equivalence claims.
+
+
+Follow-up #4755 source acceptance extends the frozen fixture checks:
+
+- Other typing retains its draft while Up/Down return to named choices.
+- Local skip, the 30-second collapsed expiry, and live turn completion close this terminal's editor while
+  preserving authenticated ownership for other clients. No suggested answer is delivered automatically.
+- Alt+Up/Down navigate pending questions; Ctrl+C clears typed text first; Esc interrupts the live turn.
+- External acceptance discards the corresponding local draft. Hidden viewport options cannot be submitted
+  by a digit shortcut. Countdown begins in the final 20 seconds; opening the editor snoozes local expiry.
+- Discovery excludes ineligible catalog/root/restricted question tools. Mode transitions await rebuilt
+  guidance; entering Plan mode preserves explicit tool restrictions.
+
+The follow-up hook, broker, configuration and frozen-contract suites pass 95 tests. The workspace TypeScript
+check passes. Installed VS Code v10.0.1-261007020520 reproduced a message-layout collision; the failing-first
+browser UAT and repair are merged in vscode-xcsh #1652. Its replacement immutable artifact acceptance remains
+pending. xcsh release PR #4753 is merged at cbf0bec999c1ea336e836031a20505ba9ba7fc55; signing, publication and
+installed v22.13.1 acceptance remain pending. Chrome v1.33.1 release ZIP SHA-256 is
+b74159c95f871315f675e82e125a0c06e1d0c709c37481dc4a04bf97438abc45; that release currently reports immutable=false.
+
+
+Installed VS Code replacement v10.0.1-261007025924 is immutable and was installed in the task-owned Ubuntu
+profile after verifying VSIX SHA-256 022424fc5509c90bf58bb1ee4d0c5de580094b283df3b7a396e3637e891216cf.
+The real pane naturally requested an audience, accepted End users, and rendered the resulting report in
+vertical document flow. Chrome v1.33.1 ZIP was loaded into an isolated Chrome profile and its packaged panel
+renders; console activation and actual question exchange are still pending. The second Ubuntu Pro source
+turn confirms unattended local expiry removes /questions access without submitting a suggested answer.
+Its captured native session identity is 159c628661718555, turn 1; the persisted item carries delivery=async
+and phase=final_answer. Complete app-server started/completed signal capture remains pending.
+
+
+Live Pro app-server acceptance used a synthesized changes.txt and a prompt that did not name question tools.
+Session 159c6471b7e53fb5 emitted identical complete question items in item/started and item/completed with
+semantic turn 159c6471b7e53fb5-turn-1b53de54-f235-4395-acc1-bf6d91aa5032, delivery=async and phase=final_answer.
+No item/tool/requestUserInput was emitted. Authenticated correlated reply acceptance returned accepted=true,
+turn/completed reported completed, and the resulting release-note outline targeted engineers after an
+independent 10.000-second monotonic timing check. The source Herdr two-minute answered run separately rendered
+Answer recorded: Engineers and the final Engineers outline at 120.000 seconds. Installed immutable VS Code
+v10.0.1-261007025924 accepted End users and rendered the completed report with vertical paragraph/list flow.
+
+
+The user explicitly deferred real Excel, Word and PowerPoint verification. Their source builds and shared
+contract tests remain evidence; installed Office input, rendering and answer delivery are unverified.
+The task-owned Mac sideload process was stopped. Other client and release acceptance remains in scope.

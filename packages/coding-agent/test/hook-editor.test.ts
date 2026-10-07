@@ -88,6 +88,7 @@ function createControllerContext() {
 		session: {
 			userInteractions: new UserInteractions(),
 			notifyUserPrompt,
+			abort: vi.fn(),
 			subscribe: (listener: (event: any) => void) => {
 				events.add(listener);
 				return () => events.delete(listener);
@@ -96,6 +97,7 @@ function createControllerContext() {
 		editor,
 		editorContainer,
 		ui,
+		statusLine: { setHookStatus: vi.fn() },
 		hookEditor: undefined,
 	} as unknown as TestContext;
 
@@ -654,8 +656,9 @@ it("async editor recovers typed drafts at live turn end and keeps the composer d
 	widget.handleInput("\x1b[200~Montréal 東京\n$(touch never)\x1b[201~");
 	emit({ type: "agent_end" });
 	await Bun.sleep(0);
-	expect(await answer).toBeUndefined();
-	expect(ctx.session.userInteractions.pending()).toEqual([]);
+	expect(ctx.session.userInteractions.pendingAsyncLocal()).toEqual([]);
+	expect(ctx.session.userInteractions.respond(pending.id, "idle reply")).toBe(true);
+	expect(await answer).toBe("idle reply");
 	expect(editor.setText).toHaveBeenLastCalledWith("draft\n\n> Audience?\n\nMontréal 東京\n$(touch never)");
 });
 
@@ -676,4 +679,150 @@ it("async answers expand large paste markers before delivery", async () => {
 	widget.handleInput(`\x1b[200~${text}\x1b[201~`);
 	widget.handleInput("\r");
 	expect(await result).toBe(text);
+});
+
+it("async Other retains its draft while Up/Down navigate choices", async () => {
+	const { ctx, editorContainer } = createControllerContext();
+	new ExtensionUiController(ctx).initializeInteractionPresenters();
+	const result = ctx.session.userInteractions.request({
+		kind: "input",
+		delivery: "async",
+		title: "Audience?",
+		options: ["Engineers", "End users"],
+	});
+	ctx.session.userInteractions.presentAsync(ctx.session.userInteractions.pending()[0].id);
+	await Bun.sleep(0);
+	const widget = editorContainer.children[0] as any;
+	widget.handleInput("j");
+	widget.handleInput("ust text");
+	widget.handleInput("\x1b[A");
+	widget.render(120);
+	widget.handleInput("\r");
+	expect(await result).toBe("End users");
+});
+
+it("async explicit skip closes locally without delivering or rejecting another client", async () => {
+	const { ctx, editor, editorContainer } = createControllerContext();
+	new ExtensionUiController(ctx).initializeInteractionPresenters();
+	const result = ctx.session.userInteractions.request({ kind: "input", delivery: "async", title: "Details?" });
+	const request = ctx.session.userInteractions.pending()[0];
+	ctx.session.userInteractions.presentAsync(request.id);
+	await Bun.sleep(0);
+	(editorContainer.children[0] as any).handleInput("\x1b[53;5u");
+	await Bun.sleep(0);
+	expect(editorContainer.children).toEqual([editor]);
+	expect(ctx.session.userInteractions.presentAsync(request.id)).toBe(false);
+	expect(ctx.session.userInteractions.respond(request.id, "External answer")).toBe(true);
+	expect(await result).toBe("External answer");
+});
+
+it("async collapsed expiry skips locally and never chooses the recommendation", async () => {
+	const { ctx, editorContainer, editor } = createControllerContext();
+	let now = 1000;
+	vi.spyOn(Date, "now").mockImplementation(() => now);
+	new ExtensionUiController(ctx).initializeInteractionPresenters();
+	const result = ctx.session.userInteractions.request({
+		kind: "input",
+		delivery: "async",
+		title: "Audience?",
+		options: ["Engineers", "End users"],
+	});
+	const request = ctx.session.userInteractions.pending()[0];
+	now += 30001;
+	await Bun.sleep(1100);
+	expect(editorContainer.children).toEqual([editor]);
+	expect(ctx.session.userInteractions.presentAsync(request.id)).toBe(false);
+	expect(ctx.session.userInteractions.respond(request.id, "End users")).toBe(true);
+	expect(await result).toBe("End users");
+});
+
+it("async navigation retains Other draft without pre-answering pending questions", async () => {
+	const { ctx, editorContainer } = createControllerContext();
+	new ExtensionUiController(ctx).initializeInteractionPresenters();
+	const first = ctx.session.userInteractions.request({
+		kind: "input",
+		delivery: "async",
+		title: "First?",
+		options: ["One", "Two"],
+	});
+	const second = ctx.session.userInteractions.request({ kind: "input", delivery: "async", title: "Second?" });
+	const pending = ctx.session.userInteractions.pending();
+	ctx.session.userInteractions.presentAsync(pending[0].id);
+	await Bun.sleep(0);
+	(editorContainer.children[0] as any).handleInput("kept");
+	(editorContainer.children[0] as any).handleInput("\x1b[1;3A");
+	await Bun.sleep(0);
+	(editorContainer.children[0] as any).handleInput("later");
+	(editorContainer.children[0] as any).handleInput("\x1b[1;3B");
+	await Bun.sleep(0);
+	(editorContainer.children[0] as any).handleInput("\r");
+	expect(await first).toBe("kept");
+	expect(ctx.session.userInteractions.respond(pending[1].id, "external")).toBe(true);
+	expect(await second).toBe("external");
+});
+
+it("async Esc interrupts the live turn and Ctrl+C clears text first", async () => {
+	const { ctx, editorContainer } = createControllerContext();
+	new ExtensionUiController(ctx).initializeInteractionPresenters();
+	const result = ctx.session.userInteractions.request({ kind: "input", delivery: "async", title: "Details?" });
+	ctx.session.userInteractions.presentAsync(ctx.session.userInteractions.pending()[0].id);
+	await Bun.sleep(0);
+	const widget = editorContainer.children[0] as any;
+	widget.handleInput("kept");
+	widget.handleInput("\x03");
+	expect(ctx.session.abort).not.toHaveBeenCalled();
+	widget.handleInput("\x1b");
+	expect(ctx.session.abort).toHaveBeenCalledTimes(1);
+	ctx.session.userInteractions.close();
+	await result;
+});
+
+it("external async acceptance discards the corresponding unsent local draft", async () => {
+	const { ctx, editorContainer, editor, emit } = createControllerContext();
+	new ExtensionUiController(ctx).initializeInteractionPresenters();
+	const result = ctx.session.userInteractions.request({ kind: "input", delivery: "async", title: "Details?" });
+	const request = ctx.session.userInteractions.pending()[0];
+	ctx.session.userInteractions.presentAsync(request.id);
+	await Bun.sleep(0);
+	(editorContainer.children[0] as any).handleInput("stale local draft");
+	ctx.session.userInteractions.respond(request.id, "accepted elsewhere");
+	await result;
+	emit({ type: "agent_end" });
+	await Bun.sleep(0);
+	expect(editor.setText).not.toHaveBeenCalledWith(expect.stringContaining("stale local draft"));
+});
+
+it("async option shortcuts cannot submit an option hidden by a small viewport", async () => {
+	const { ctx, editorContainer } = createControllerContext();
+	new ExtensionUiController(ctx).initializeInteractionPresenters();
+	const options = Array.from({ length: 20 }, (_, index) => `Choice ${index + 1}`);
+	const result = ctx.session.userInteractions.request({ kind: "input", delivery: "async", title: "Choice?", options });
+	const request = ctx.session.userInteractions.pending()[0];
+	ctx.session.userInteractions.presentAsync(request.id);
+	await Bun.sleep(0);
+	const widget = editorContainer.children[0] as any;
+	Object.assign(ctx.ui.terminal, { rows: 12 });
+	widget.render(50);
+	widget.handleInput("9");
+	await Bun.sleep(0);
+	expect(ctx.session.userInteractions.pending()).toHaveLength(1);
+	ctx.session.userInteractions.respond(request.id, "External");
+	await result;
+});
+
+it("async countdown status clears when the editor opens", async () => {
+	const { ctx } = createControllerContext();
+	let now = 1000;
+	vi.spyOn(Date, "now").mockImplementation(() => now);
+	new ExtensionUiController(ctx).initializeInteractionPresenters();
+	const result = ctx.session.userInteractions.request({ kind: "input", delivery: "async", title: "Details?" });
+	const request = ctx.session.userInteractions.pending()[0];
+	now += 11000;
+	await Bun.sleep(1100);
+	expect(ctx.statusLine.setHookStatus).toHaveBeenLastCalledWith("async-questions", expect.stringContaining("19s"));
+	ctx.session.userInteractions.presentAsync(request.id);
+	await Bun.sleep(0);
+	expect(ctx.statusLine.setHookStatus).toHaveBeenLastCalledWith("async-questions", undefined);
+	ctx.session.userInteractions.close();
+	await result;
 });

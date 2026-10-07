@@ -1001,7 +1001,7 @@ export class AgentSession {
 				await this.#emitSessionEvent({ type: "plan_resolved", planId });
 				return { accepted: true };
 			}
-			this.setPlanModeState(undefined);
+			await this.setPlanModeState(undefined);
 			this.sessionManager.appendModeChange("none");
 			await this.sendCustomMessage(
 				{ customType: "collaboration-mode", content: defaultModePrompt, display: false },
@@ -3196,12 +3196,24 @@ export class AgentSession {
 	}
 
 	getDiscoverableTools(): DiscoverableTool[] {
-		return Array.from(this.#discoverableTools.values());
+		return Array.from(this.#discoverableTools.values()).filter(tool => {
+			if (tool.name === "request_user_input_async")
+				return (
+					asyncQuestionsSupported(this.model, this.#taskDepth) && this.#questionToolNames?.has(tool.name) !== false
+				);
+			if (tool.name === "request_user_input")
+				return (
+					this.#taskDepth === 0 &&
+					(this.#planModeState?.enabled || this.settings.get("interactions.waitingInDefault")) &&
+					this.#questionToolNames?.has(tool.name) !== false
+				);
+			return true;
+		});
 	}
 
 	getDiscoverableToolSearchIndex(): DiscoverableToolSearchIndex {
 		if (!this.#discoverableToolSearchIndex) {
-			this.#discoverableToolSearchIndex = buildDiscoverableToolSearchIndex(this.#discoverableTools.values());
+			this.#discoverableToolSearchIndex = buildDiscoverableToolSearchIndex(this.getDiscoverableTools());
 		}
 		return this.#discoverableToolSearchIndex;
 	}
@@ -3214,10 +3226,11 @@ export class AgentSession {
 	}
 
 	async activateDiscoveredTools(toolNames: string[]): Promise<string[]> {
-		const activated = toolNames.filter(name => this.#discoverableTools.has(name) && this.#toolRegistry.has(name));
+		const eligible = new Set(this.getDiscoverableTools().map(tool => tool.name));
+		const activated = toolNames.filter(name => eligible.has(name) && this.#toolRegistry.has(name));
 		if (activated.length === 0) return [];
-		await this.setActiveToolsByName([...this.getActiveToolNames(), ...activated]);
-		return [...new Set(activated)];
+		await this.#applyActiveToolsByName([...this.getActiveToolNames(), ...activated]);
+		return [...new Set(activated)].filter(name => this.getActiveToolNames().includes(name));
 	}
 
 	async #applyActiveToolsByName(toolNames: string[], options?: { isCurrent?: () => boolean }): Promise<void> {
@@ -3233,7 +3246,8 @@ export class AgentSession {
 				(!asyncQuestionsSupported(this.model, this.#taskDepth) || this.#questionToolNames?.has(name) === false)
 			)
 				continue;
-			if (name === "request_user_input" && this.#questionToolNames?.has(name) === false) continue;
+			if (name === "request_user_input" && (this.#taskDepth > 0 || this.#questionToolNames?.has(name) === false))
+				continue;
 			if (
 				name === "request_user_input" &&
 				!this.#planModeState?.enabled &&
@@ -3297,6 +3311,7 @@ export class AgentSession {
 	 */
 	async setActiveToolsByName(toolNames: string[]): Promise<void> {
 		this.#questionToolNames = new Set(toolNames.map(name => name.toLowerCase()));
+		this.#discoverableToolSearchIndex = null;
 		await this.#applyActiveToolsByName(toolNames);
 	}
 
@@ -3501,12 +3516,15 @@ export class AgentSession {
 		return this.#planModeState;
 	}
 
-	setPlanModeState(state: PlanModeState | undefined): void {
+	async setPlanModeState(state: PlanModeState | undefined): Promise<void> {
 		this.#planModeState = state;
 		this.#syncWaitingToolAvailability();
+		await this.refreshBaseSystemPrompt();
 	}
 	#syncWaitingToolAvailability(): void {
-		const enabled = this.#planModeState?.enabled || this.settings.get("interactions.waitingInDefault");
+		this.#discoverableToolSearchIndex = null;
+		const enabled =
+			this.#taskDepth === 0 && (this.#planModeState?.enabled || this.settings.get("interactions.waitingInDefault"));
 		const tools = this.agent.state.tools.filter(
 			tool => tool.name !== "request_user_input" && tool.name !== "request_user_input_async",
 		);

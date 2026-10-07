@@ -1555,9 +1555,23 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		};
 		const rebuildSystemPrompt = async (toolNames: string[], tools: Map<string, AgentTool>): Promise<string> => {
 			toolContextStore.setToolNames(toolNames);
-			const discoverableTools = collectDiscoverableTools(tools.values()).filter(
-				tool => !["search_tool_bm25", "resolve"].includes(tool.name),
-			);
+			const discoverableTools = session
+				? session.getDiscoverableTools()
+				: collectDiscoverableTools(tools.values()).filter(tool => {
+						if (["search_tool_bm25", "resolve"].includes(tool.name)) return false;
+						if (tool.name === "request_user_input_async")
+							return (
+								asyncQuestionsSupported(model, taskDepth) &&
+								(options.toolNames === undefined || options.toolNames.includes(tool.name))
+							);
+						if (tool.name === "request_user_input")
+							return (
+								taskDepth === 0 &&
+								(existingSession.mode === "plan" || settings.get("interactions.waitingInDefault")) &&
+								(options.toolNames === undefined || options.toolNames.includes(tool.name))
+							);
+						return true;
+					});
 			const promptTools = buildSystemPromptToolMetadata(tools, {
 				search_tool_bm25: {
 					description: renderSearchToolBm25Description(discoverableTools),
