@@ -1,14 +1,14 @@
 {
   "version": 1,
   "ledgerSha256": [
-    "2672f8ec",
-    "7cf19543",
-    "09b0f41a",
-    "6a428c82",
-    "18fa36aa",
-    "1f0f17d5",
-    "89545245",
-    "6fe9ce25"
+    "065ec7e5",
+    "20aa6fa3",
+    "d17923a4",
+    "eb343b7c",
+    "b8a0ca6a",
+    "4edd5a1c",
+    "af02d6da",
+    "81fa764c"
   ],
   "sourceSha256": {
     "packages/coding-agent/src/autoresearch/dashboard.ts": [
@@ -132,14 +132,24 @@
       "85a6a935"
     ],
     "packages/coding-agent/src/modes/components/context-add-wizard.ts": [
-      "366539a0",
-      "3ab4aa2f",
-      "8374081f",
-      "7c38e7a3",
-      "178d329f",
-      "61b31354",
-      "979ea02f",
-      "e060b4d4"
+      "f5cc11fd",
+      "e7c73ca9",
+      "5cbe947c",
+      "9da4801a",
+      "b402cfaf",
+      "2ec266fb",
+      "edf27099",
+      "2e3e06e0"
+    ],
+    "packages/coding-agent/src/modes/components/context-picker.ts": [
+      "554a30c7",
+      "0f9555fa",
+      "8df7aa61",
+      "1aeca6de",
+      "0bc63117",
+      "047045b7",
+      "c9c35ccd",
+      "e2759d46"
     ],
     "packages/coding-agent/src/modes/components/copy-selector.ts": [
       "a6db56bc",
@@ -1095,21 +1105,75 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/context-add-wizard.ts",
-      "line": 190,
+      "line": 202,
       "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/context-add-wizard.ts",
-      "line": 191,
+      "line": 203,
       "sink": "selectorCompactRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/context-add-wizard.ts",
-      "line": 200,
+      "line": 212,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "line": 85,
+      "sink": "selectorProse",
+      "entry": "context-picker-4754"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "line": 89,
+      "sink": "selectorCompactRow",
+      "entry": "context-picker-4754"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "line": 91,
+      "sink": "selectorProse",
+      "entry": "context-picker-4754"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "line": 93,
+      "sink": "selectorCompactRow",
+      "entry": "context-picker-4754"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "line": 111,
+      "sink": "selectorFrame",
+      "entry": "context-picker-4754"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "line": 208,
+      "sink": "selectorFrame",
+      "entry": "context-picker-4754"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "line": 214,
+      "sink": "selectorCompactRow",
+      "entry": "context-picker-4754"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "line": 237,
+      "sink": "selectorFrame",
+      "entry": "context-picker-4754"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "line": 243,
+      "sink": "selectorCompactRow",
+      "entry": "context-picker-4754"
     },
     {
       "file": "packages/coding-agent/src/modes/components/copy-selector.ts",

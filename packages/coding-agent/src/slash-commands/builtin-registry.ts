@@ -311,6 +311,7 @@ const shutdownHandler = async (
 };
 
 const CONTEXT_SUBCOMMANDS: SubcommandDef[] = [
+	{ name: "edit", description: "Edit saved fields with masked credential replacement", usage: "[name]" },
 	{ name: "list", description: t("commands.context.sub.list.description") },
 	{
 		name: "activate",
@@ -2064,7 +2065,19 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				const subName = argumentPrefix.slice(0, firstSpace).toLowerCase();
 				const subPrefix = argumentPrefix.slice(firstSpace + 1).replace(/^ +/, "");
 				const sub = CONTEXT_SUBCOMMANDS.find(s => s.name === subName);
-				if (!sub?.getArgumentCompletions) return null;
+				if (!sub) return null;
+				if (!sub.getArgumentCompletions && ["show", "edit", "delete", "link"].includes(subName)) {
+					const names = tryGetContextService()?.listContextNamesCached() ?? [];
+					const [name = "", ...tail] = subPrefix.split(/\s+/);
+					if (tail.length)
+						return subName === "delete" && "--confirm".startsWith(tail.join(" "))
+							? [{ value: `delete ${name} --confirm`, label: "--confirm", description: "Review deletion" }]
+							: null;
+					return names
+						.filter(value => value.toLowerCase().startsWith(name.toLowerCase()))
+						.map(value => ({ value: `${subName} ${value}`, label: value, description: "Context · global" }));
+				}
+				if (!sub.getArgumentCompletions) return null;
 				const items = sub.getArgumentCompletions(subPrefix);
 				if (!items || items.length === 0) return null;
 				return items.map(item => ({
@@ -2087,7 +2100,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					items.push({
 						value: `${n} `,
 						label: n,
-						description: hint?.apiUrl,
+						description: `Context · global · ${hint?.apiUrl ?? ""}`,
 					});
 				}
 				if (svc.previousContextName && "-".startsWith(lower)) {
@@ -2103,7 +2116,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				items.push({
 					value: `${sub.name} `,
 					label: sub.name,
-					description: sub.description,
+					description: `Action · ${sub.description}`,
 					hint: sub.usage,
 				});
 			}

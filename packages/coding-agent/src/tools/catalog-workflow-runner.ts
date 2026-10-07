@@ -10,6 +10,7 @@ import { buildNarration, resolveProfile } from "../browser/presentation-profile"
 import type { BrowserProvider } from "../browser/provider";
 import { CONSOLE_CATALOG_DATA } from "../internal-urls/console-catalog.generated";
 import catalogWorkflowRunnerDescription from "../prompts/tools/catalog-workflow-runner.md" with { type: "text" };
+import { currentContextExecution, executionEnvironmentValue } from "../services/context-execution";
 import { ContextService } from "../services/xcsh-context";
 import { apiItemPath } from "../sweep/sweep-scoring";
 import type { ToolSession } from ".";
@@ -627,9 +628,9 @@ export class CatalogWorkflowRunnerTool
 	 * if there's no API token or the request fails, returns false (proceed with create).
 	 */
 	async #resourceExists(resource: string, name: string, namespace: string, baseUrl: string): Promise<boolean> {
-		const token = process.env.XCSH_API_TOKEN;
+		const token = executionEnvironmentValue("XCSH_API_TOKEN");
 		// Never send the API token to an untrusted host (SSRF / credential leak).
-		if (!token || !isTrustedApiUrl(baseUrl, process.env.XCSH_API_URL)) return false;
+		if (!token || !isTrustedApiUrl(baseUrl, executionEnvironmentValue("XCSH_API_URL"))) return false;
 		for (const ns of [namespace, "system"]) {
 			try {
 				const r = await fetch(`${baseUrl.replace(/\/+$/, "")}${apiItemPath(resource, ns, name)}`, {
@@ -646,9 +647,9 @@ export class CatalogWorkflowRunnerTool
 
 	/** Best-effort API delete for the recreate idempotency mode. */
 	async #apiDelete(resource: string, name: string, namespace: string, baseUrl: string): Promise<void> {
-		const token = process.env.XCSH_API_TOKEN;
+		const token = executionEnvironmentValue("XCSH_API_TOKEN");
 		// Never send the API token to an untrusted host (SSRF / credential leak).
-		if (!token || !isTrustedApiUrl(baseUrl, process.env.XCSH_API_URL)) return;
+		if (!token || !isTrustedApiUrl(baseUrl, executionEnvironmentValue("XCSH_API_URL"))) return;
 		for (const ns of [namespace, "system"]) {
 			await fetch(`${baseUrl.replace(/\/+$/, "")}${apiItemPath(resource, ns, name)}`, {
 				method: "DELETE",
@@ -690,7 +691,9 @@ export class CatalogWorkflowRunnerTool
 			// Default the namespace param from the active context when absent.
 			if (params.namespace === undefined) {
 				try {
-					const ns = ContextService.instance.activeNamespace;
+					const ns = currentContextExecution()
+						? executionEnvironmentValue("XCSH_NAMESPACE")
+						: ContextService.instance.activeNamespace;
 					if (ns) params.namespace = ns;
 				} catch {
 					/* no active context; validateParams will report if required */
@@ -702,14 +705,16 @@ export class CatalogWorkflowRunnerTool
 			// Resolve base URL: explicit param > env > active context.
 			let activeApiUrl: string | null = null;
 			try {
-				activeApiUrl = ContextService.instance.activeApiUrl;
+				activeApiUrl = currentContextExecution()
+					? (executionEnvironmentValue("XCSH_API_URL") ?? null)
+					: ContextService.instance.activeApiUrl;
 			} catch {
 				activeApiUrl = null; // ContextService not initialized (e.g. unit context)
 			}
-			const baseUrl = inputParams.base_url ?? process.env.XCSH_API_URL ?? activeApiUrl ?? "";
+			const baseUrl = inputParams.base_url ?? executionEnvironmentValue("XCSH_API_URL") ?? activeApiUrl ?? "";
 			if (!baseUrl) {
 				throw new ToolError(
-					"No base_url provided, XCSH_API_URL is not set, and no active tenant context. Run `/context use <name>` or pass base_url.",
+					"No base_url provided, XCSH_API_URL is not set, and no active tenant context. Run `/context activate <name>` or pass base_url.",
 				);
 			}
 

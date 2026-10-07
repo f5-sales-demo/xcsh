@@ -28,6 +28,7 @@ export interface KnowledgeSource {
 }
 
 export interface ContextOverrides {
+	unsetEnv?: string[];
 	defaultNamespace?: string;
 	env?: Record<string, string>;
 	sensitiveKeys?: string[];
@@ -123,6 +124,10 @@ export function mergePointerOverrides(base: XCSHContextData, overrides: ContextO
 		merged.env = { ...base.env, ...overrides.env };
 	}
 
+	if (overrides.unsetEnv) {
+		merged.env = { ...merged.env };
+		for (const key of overrides.unsetEnv) if (typeof key === "string") delete merged.env[key];
+	}
 	return merged;
 }
 
@@ -138,6 +143,8 @@ export const RESERVED_CONTEXT_NAMES = new Set([
 	"create",
 	"delete",
 	"rename",
+	"edit",
+	"manage",
 	"namespace",
 	"env",
 	"set",
@@ -237,6 +244,26 @@ export class ContextResolver {
 
 		// Priority 3: global ~/.config/xcsh/contexts/
 		return Promise.resolve(this.#resolveGlobal());
+	}
+
+	/** Resolve an explicit identity without changing any saved active pointer. */
+	resolveTarget(target: { name: string; source: "local" | "global" }, cwd: string): ResolvedContext | null {
+		if (!isSafeContextName(target.name)) return null;
+		const file =
+			target.source === "local"
+				? this.#paths.getLocalContextPath(target.name, cwd)
+				: this.#paths.getContextPath(target.name);
+		const data = this.#readJsonFile(file);
+		if (!data || !validateLocalContextFile(data).valid) return null;
+		const result =
+			isPointerContext(data) && target.source === "local"
+				? this.#resolvePointer(data, file)
+				: isInlineContext(data)
+					? this.#finalize(data as unknown as XCSHContextData, target.source, file)
+					: null;
+		if (!result || typeof result.context.apiToken !== "string" || typeof result.context.defaultNamespace !== "string")
+			return null;
+		return { ...result, context: { ...result.context, name: target.name } };
 	}
 
 	findLocalContextsDir(cwd: string): string | null {

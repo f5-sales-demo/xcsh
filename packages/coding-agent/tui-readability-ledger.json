@@ -16,6 +16,29 @@
   ],
   "entries": [
     {
+      "id": "context-picker-4754",
+      "surface": "tenant selection and guided saved context drafts",
+      "source": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "sinks": [
+        "selectorFrame",
+        "selectorCompactRow",
+        "selectorProse"
+      ],
+      "category": "mixed prose and compact selections",
+      "policy": "truncate-with-full-detail",
+      "detailView": true,
+      "reproductionWidth": 60,
+      "fixture": "Synthetic same-name local/global contexts and long tenant endpoints; 60x20, 80x24, 120x40.",
+      "status": "finding-open",
+      "issue": "#4754",
+      "tests": [
+        "packages/coding-agent/test/context-picker.test.ts",
+        "packages/coding-agent/test/context-operations.test.ts"
+      ],
+      "terminalUat": "Observed Ubuntu Herdr picker entry, action menu and no-match search; complete size/theme/resize audit pending.",
+      "mergedPr": "pending"
+    },
+    {
       "id": "complete-btw-panel",
       "surface": "ephemeral side answers",
       "source": "packages/coding-agent/src/modes/components/btw-panel.ts",
