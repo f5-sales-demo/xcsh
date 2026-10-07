@@ -5,7 +5,9 @@ Branch: `feature/issue-4750-native-blindfold`; fresh Ubuntu worktree under `.wor
 
 ## Planning and audit
 
-Implement one Rust native input/encryption boundary, shared TypeScript service, CLI and assistant adapters. Follow the binary contract in `blindfold-protocol.md`; preserve complete public exponent and avoid the retired provider's OAEP format. Deploy only owned lab resources. Credentials and test CA/key/runtime evidence stay outside the checkout. Repository named rigor skills were unavailable; planning, TDD evidence and this completion ledger record the required process directly.
+Implement one Rust native input/encryption boundary, shared TypeScript service, CLI and assistant adapters. Follow the binary contract in `blindfold-protocol.md`; preserve complete
+public exponent and avoid the retired provider's OAEP format. Deploy only owned lab resources. Credentials and test CA/key/runtime evidence stay outside the checkout. Repository
+named rigor skills were unavailable; planning, TDD evidence and this completion ledger record the required process directly.
 
 ## Acceptance ledger
 
