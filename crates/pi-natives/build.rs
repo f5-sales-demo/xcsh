@@ -342,6 +342,15 @@ const GRAMMARS: &[GrammarSpec] = &[
 ];
 
 fn main() {
+	println!("cargo:rerun-if-changed=src/blindfold_pkcs12.c");
+	let mut blindfold = cc::Build::new();
+	blindfold.file("src/blindfold_pkcs12.c");
+	for include in
+		env::split_paths(&env::var_os("DEP_OPENSSL_INCLUDE").expect("OpenSSL include directory"))
+	{
+		blindfold.include(include);
+	}
+	blindfold.compile("xcsh_blindfold_pkcs12");
 	napi_build::setup();
 	generate_chunk_schema();
 }
