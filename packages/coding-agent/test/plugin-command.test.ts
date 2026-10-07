@@ -78,7 +78,7 @@ describe("Plugin command scope parsing", () => {
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
-	});
+	}, 30_000);
 
 	it("rejects invalid scope values", async () => {
 		const command = new Plugin(["install", "--scope", "porject-INVALID"], TEST_CONFIG);

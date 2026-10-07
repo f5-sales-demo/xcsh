@@ -64,6 +64,14 @@ interface PathArgSpec {
  * ssh remote cwd) are intentionally absent.
  */
 const TOOL_PATHS: Record<string, PathArgSpec[]> = {
+	xcsh_blindfold: [
+		{ keys: ["input"], access: "read" },
+		{ keys: ["cert"], access: "read" },
+		{ keys: ["key"], access: "read" },
+		{ keys: ["bundle"], access: "read" },
+		{ keys: ["outputFile"], access: "write" },
+		{ keys: ["resultFile"], access: "write" },
+	],
 	read: [{ keys: ["file_path", "path"], access: "read" }],
 	write: [{ keys: ["file_path", "path"], access: "write" }],
 	notebook: [{ keys: ["notebook_path"], access: "write" }],

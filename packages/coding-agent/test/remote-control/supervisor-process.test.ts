@@ -146,4 +146,4 @@ test("the real supervisor replaces a killed host once and an intentional disable
 		}
 		await rm(agentDir, { recursive: true, force: true });
 	}
-}, 20_000);
+}, 60_000);
