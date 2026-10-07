@@ -36,7 +36,7 @@ The delivery rows are accepted against immutable v22.14.4. The retained demo exp
 
 ## Released installation acceptance
 
-Release: https://github.com/f5-sales-demo/xcsh/releases/tag/v22.14.4
+Release: [v22.14.4](https://github.com/f5-sales-demo/xcsh/releases/tag/v22.14.4)
 Source commit: `cd5b50251630100e05a402552a68814003abd8bd`; workflow run `37591704077`.
 Linux x64 binary SHA-256: `385172b1652b899797ab927f7f651321bd0ebf8fb16a83ae7d8342c37f6e736e`.
 The binary, checksum, provenance and baseline/modern addons match GitHub immutable asset digests. Both native variants load independently on Debian 12; the standalone binary reports `xcsh/22.14.4` and its Blindfold help works there.
@@ -45,7 +45,7 @@ Installed protected PEM replacement and PKCS#12 replacement passed. A fresh prot
 public fingerprint and returned HTTP 200 over TLS 1.3. Name collision and mismatched-key replacement failed without damaging the endpoint. Private ownership/expiry/teardown records
 were updated to the final retained certificate.
 
-The public guide at https://f5-sales-demo.github.io/xcsh/en/f5-distributed-cloud/blindfold-certificates/ returns HTTP 200. Auxiliary EC resource absence was confirmed by named HTTP
+The [public guide](https://f5-sales-demo.github.io/xcsh/en/f5-distributed-cloud/blindfold-certificates/) returns HTTP 200. Auxiliary EC resource absence was confirmed by named HTTP
 404. Actual tenant identities, private keys, passphrases, tokens and encrypted payloads stay outside this public ledger.
 
 The installed Linux ABI failure in immutable v22.14.2 was reproduced on Debian 12 and repaired in #4780. Target-specific Clang wrappers bind vendored OpenSSL to napi's release sysroot; unsupported unversioned C23 libc symbols are rejected before publication. Prior immutable assets were preserved.
