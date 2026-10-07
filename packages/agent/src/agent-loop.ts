@@ -379,231 +379,243 @@ async function runLoop(
 	// Check for steering messages at start (user may have typed while waiting)
 	let pendingMessages: AgentMessage[] = (await config.getSteeringMessages?.()) || [];
 
+	let followUpTurn = false;
 	// Outer loop: continues when queued follow-up messages arrive after agent would stop
 	while (true) {
-		let hasMoreToolCalls = true;
+		const runTurn = config.runConversationTurn ?? (async <T>(action: () => Promise<T>) => action());
+		const stopped = await runTurn(async () => {
+			let hasMoreToolCalls = true;
 
-		// Inner loop: process tool calls and steering messages
-		while (hasMoreToolCalls || pendingMessages.length > 0) {
-			if (!firstTurn) {
-				stream.push({ type: "turn_start" });
-			} else {
-				firstTurn = false;
-			}
-
-			// Process pending messages (inject before next assistant response)
-			if (pendingMessages.length > 0) {
-				for (const message of pendingMessages) {
-					stream.push({ type: "message_start", message });
-					stream.push({ type: "message_end", message });
-					currentContext.messages.push(message);
-					newMessages.push(message);
+			// Inner loop: process tool calls and steering messages
+			while (hasMoreToolCalls || pendingMessages.length > 0) {
+				if (!firstTurn) {
+					stream.push({ type: "turn_start" });
+				} else {
+					firstTurn = false;
 				}
-				pendingMessages = [];
-			}
 
-			// Refresh prompt/tool context from live state before each model call
-			if (config.syncContextBeforeModelCall) {
-				await logger.ttftAttr("ttft.sync-context", () => config.syncContextBeforeModelCall!(currentContext));
-			}
+				// Process pending messages (inject before next assistant response)
+				if (pendingMessages.length > 0) {
+					for (const message of pendingMessages) {
+						stream.push({ type: "message_start", message });
+						stream.push({ type: "message_end", message });
+						currentContext.messages.push(message);
+						newMessages.push(message);
+					}
+					pendingMessages = [];
+				}
 
-			const selectedToolChoice = recoveryToolChoice
-				? recoveryToolChoice.value
-				: (config.getToolChoice?.() ?? config.toolChoice);
+				// Refresh prompt/tool context from live state before each model call
+				if (config.syncContextBeforeModelCall) {
+					await logger.ttftAttr("ttft.sync-context", () => config.syncContextBeforeModelCall!(currentContext));
+				}
 
-			// Offer opt-in, plain user steering to the active provider without consuming other message kinds.
-			const live =
-				(config.model.compat as import("@f5-sales-demo/pi-ai").OpenAIResponsesCompat | undefined)
-					?.supportsWebSocketSteering &&
-				config.waitForSteeringMessages &&
-				config.getSteeringMessages &&
-				!exactToolName(selectedToolChoice)
-					? new LiveSteeringChannel({
-							wait: config.waitForSteeringMessages,
-							take: () => config.getSteeringMessages!(),
-							toProvider: async messages => {
-								const converted = await config.convertToLlm(messages);
-								// Correlated question replies must enter at a model boundary. They
-								// resolve an existing item, rather than steering its in-flight text.
-								if (converted.some(message => message.role !== "user" || isStructuredInputReply(message)))
-									return undefined;
-								return converted as import("@f5-sales-demo/pi-ai").UserMessage[];
-							},
-						})
-					: undefined;
-			const scheduler = createToolScheduler(
-				currentContext.tools,
-				signal,
-				stream,
-				config.getSteeringMessages,
-				config.interruptMode,
-				config.getToolContext,
-				config.transformToolCallArguments,
-				config.intentTracing,
-				completedTools,
-				toolKey,
-			);
-			const streamingDispatch = config.model.api === "openai-codex-responses";
-			const responseController = new AbortController();
-			const responseSignal = signal
-				? AbortSignal.any([signal, responseController.signal])
-				: responseController.signal;
-			const responseStartIndex = currentContext.messages.length;
-			let message: AssistantMessage;
-			let lastCheckpoint: AssistantMessage | undefined;
-			try {
-				message = await streamAssistantResponse(
-					currentContext,
-					newMessages,
-					{
-						...config,
-						...(live ? { liveSteering: live } : {}),
-						onAssistantCheckpoint: async checkpoint => {
-							await config.onAssistantCheckpoint?.(checkpoint);
-							lastCheckpoint = checkpoint;
-						},
-						getToolChoice: undefined,
-						toolChoice: selectedToolChoice,
-						...(streamingDispatch ? { maxRetries: Math.max(0, 2 - recoveryAttempts) } : {}),
-					},
-					responseSignal,
+				const selectedToolChoice = recoveryToolChoice
+					? recoveryToolChoice.value
+					: (config.getToolChoice?.() ?? config.toolChoice);
+
+				// Offer opt-in, plain user steering to the active provider without consuming other message kinds.
+				const live =
+					(config.model.compat as import("@f5-sales-demo/pi-ai").OpenAIResponsesCompat | undefined)
+						?.supportsWebSocketSteering &&
+					config.waitForSteeringMessages &&
+					config.getSteeringMessages &&
+					!exactToolName(selectedToolChoice)
+						? new LiveSteeringChannel({
+								wait: config.waitForSteeringMessages,
+								take: () => config.getSteeringMessages!(),
+								toProvider: async messages => {
+									const converted = await config.convertToLlm(messages);
+									// Correlated question replies must enter at a model boundary. They
+									// resolve an existing item, rather than steering its in-flight text.
+									if (converted.some(message => message.role !== "user" || isStructuredInputReply(message)))
+										return undefined;
+									return converted as import("@f5-sales-demo/pi-ai").UserMessage[];
+								},
+							})
+						: undefined;
+				const scheduler = createToolScheduler(
+					currentContext.tools,
+					signal,
 					stream,
-					streamFn,
-					streamingDispatch ? (partial, call) => scheduler.admit(partial, [call]) : undefined,
+					config.getSteeringMessages,
+					config.interruptMode,
+					config.getToolContext,
+					config.transformToolCallArguments,
+					config.intentTracing,
+					completedTools,
+					toolKey,
 				);
-			} catch (error) {
-				responseController.abort();
-				const prior =
-					lastCheckpoint ?? currentContext.messages.slice(responseStartIndex).find(m => m.role === "assistant");
-				message =
-					prior?.role === "assistant"
-						? {
-								...prior,
-								stopReason: signal?.aborted ? "aborted" : "error",
-								errorMessage: error instanceof Error ? error.message : String(error),
-							}
-						: {
-								...sanitizedForcedToolMessage(config.model, signal?.aborted ? "aborted" : "error"),
-								errorMessage: String(error),
-							};
-				const ownedIndex = currentContext.messages.findIndex(
-					(m, index) => index >= responseStartIndex && m.role === "assistant" && m.timestamp === message.timestamp,
-				);
-				if (ownedIndex >= 0) currentContext.messages[ownedIndex] = message;
-				else currentContext.messages.push(message);
-				stream.push({ type: "message_end", message });
-			}
-			newMessages.push(retainedAssistant(message));
-			if (message.stopReason !== "error" && message.stopReason !== "aborted") {
-				recoveryAttempts = 0;
-				recoveryToolChoice = undefined;
-				recoveryToolChoiceServed = false;
-				const required = exactToolName(selectedToolChoice);
-				scheduler.admit(
-					message,
-					message.content.filter(
-						(c): c is Extract<AssistantMessage["content"][number], { type: "toolCall" }> =>
-							c.type === "toolCall" && (!required || c.name === required),
-					),
-				);
-			}
-			const executionResult = await scheduler.drain();
-			const dispatchedResults = executionResult.toolResults;
-			for (const result of dispatchedResults) {
-				if (currentContext.messages.includes(result)) continue;
-				currentContext.messages.push(result);
-				newMessages.push(result);
-			}
-			if (live) {
-				if (message.stopReason === "error" || message.stopReason === "aborted")
-					config.restoreSteeringMessages?.([...live.accepted, ...live.deferred]);
-				else {
-					for (const accepted of live.accepted) {
-						currentContext.messages.push(accepted);
-						newMessages.push(accepted);
-						stream.push({ type: "message_start", message: accepted });
-						stream.push({ type: "message_end", message: accepted });
-					}
-					config.restoreSteeringMessages?.(live.deferred);
+				const streamingDispatch = config.model.api === "openai-codex-responses";
+				const responseController = new AbortController();
+				const responseSignal = signal
+					? AbortSignal.any([signal, responseController.signal])
+					: responseController.signal;
+				const responseStartIndex = currentContext.messages.length;
+				let message: AssistantMessage;
+				let lastCheckpoint: AssistantMessage | undefined;
+				try {
+					message = await streamAssistantResponse(
+						currentContext,
+						newMessages,
+						{
+							...config,
+							...(live ? { liveSteering: live } : {}),
+							onAssistantCheckpoint: async checkpoint => {
+								await config.onAssistantCheckpoint?.(checkpoint);
+								lastCheckpoint = checkpoint;
+							},
+							getToolChoice: undefined,
+							toolChoice: selectedToolChoice,
+							...(streamingDispatch ? { maxRetries: Math.max(0, 2 - recoveryAttempts) } : {}),
+						},
+						responseSignal,
+						stream,
+						streamFn,
+						streamingDispatch ? (partial, call) => scheduler.admit(partial, [call]) : undefined,
+					);
+				} catch (error) {
+					responseController.abort();
+					const prior =
+						lastCheckpoint ?? currentContext.messages.slice(responseStartIndex).find(m => m.role === "assistant");
+					message =
+						prior?.role === "assistant"
+							? {
+									...prior,
+									stopReason: signal?.aborted ? "aborted" : "error",
+									errorMessage: error instanceof Error ? error.message : String(error),
+								}
+							: {
+									...sanitizedForcedToolMessage(config.model, signal?.aborted ? "aborted" : "error"),
+									errorMessage: String(error),
+								};
+					const ownedIndex = currentContext.messages.findIndex(
+						(m, index) =>
+							index >= responseStartIndex && m.role === "assistant" && m.timestamp === message.timestamp,
+					);
+					if (ownedIndex >= 0) currentContext.messages[ownedIndex] = message;
+					else currentContext.messages.push(message);
+					stream.push({ type: "message_end", message });
 				}
-			}
-			const steeringMessagesFromExecution = executionResult.steeringMessages;
-
-			if (streamingDispatch && message.interruption && message.stopReason === "error" && !signal?.aborted) {
-				recoveryToolChoiceServed ||= !!exactToolName(selectedToolChoice) && dispatchedResults.length > 0;
-				if (recoveryToolChoiceServed) message.interruption.toolChoiceServed = true;
-				recoveryAttempts += message.interruption.providerRetriesConsumed;
-				if (recoveryAttempts < 2) {
-					recoveryAttempts += 1;
-					try {
-						await recoveryBackoff(500 * recoveryAttempts, signal);
-					} catch {
-						message.stopReason = "aborted";
-						const retained = retainedAssistant(message);
-						const index = newMessages.findIndex(m => m.role === "assistant" && m.timestamp === message.timestamp);
-						if (index >= 0) newMessages[index] = retained;
-						const contextIndex = currentContext.messages.findIndex(
-							m => m.role === "assistant" && m.timestamp === message.timestamp,
-						);
-						if (contextIndex >= 0) currentContext.messages[contextIndex] = retained;
-						stream.push({ type: "message_end", message: retained });
-					}
-					if (!signal?.aborted) {
-						pendingMessages = steeringMessagesFromExecution ?? ((await config.getSteeringMessages?.()) || []);
-						hasMoreToolCalls = true;
-						recoveryToolChoice = {
-							value:
-								exactToolName(selectedToolChoice) && dispatchedResults.length > 0 ? "none" : selectedToolChoice,
-						};
-						continue;
-					}
+				newMessages.push(retainedAssistant(message));
+				if (message.stopReason !== "error" && message.stopReason !== "aborted") {
+					recoveryAttempts = 0;
+					recoveryToolChoice = undefined;
+					recoveryToolChoiceServed = false;
+					const required = exactToolName(selectedToolChoice);
+					scheduler.admit(
+						message,
+						message.content.filter(
+							(c): c is Extract<AssistantMessage["content"][number], { type: "toolCall" }> =>
+								c.type === "toolCall" && (!required || c.name === required),
+						),
+					);
 				}
-			}
-			if (message.stopReason === "error" || message.stopReason === "aborted") {
-				// Create placeholder tool results for any tool calls in the aborted message
-				// This maintains the tool_use/tool_result pairing that the API requires
-				type ToolCallContent = Extract<AssistantMessage["content"][number], { type: "toolCall" }>;
-				const toolCalls = message.content.filter((c): c is ToolCallContent => c.type === "toolCall");
-				const toolResults: ToolResultMessage[] = [...dispatchedResults];
-				for (const toolCall of toolCalls) {
-					if (scheduler.has(toolCall) || message.interruption) continue;
-					const result = createAbortedToolResult(toolCall, stream, message.stopReason, message.errorMessage);
+				const executionResult = await scheduler.drain();
+				const dispatchedResults = executionResult.toolResults;
+				for (const result of dispatchedResults) {
+					if (currentContext.messages.includes(result)) continue;
 					currentContext.messages.push(result);
 					newMessages.push(result);
-					toolResults.push(result);
 				}
+				if (live) {
+					if (message.stopReason === "error" || message.stopReason === "aborted")
+						config.restoreSteeringMessages?.([...live.accepted, ...live.deferred]);
+					else {
+						for (const accepted of live.accepted) {
+							currentContext.messages.push(accepted);
+							newMessages.push(accepted);
+							stream.push({ type: "message_start", message: accepted });
+							stream.push({ type: "message_end", message: accepted });
+						}
+						config.restoreSteeringMessages?.(live.deferred);
+					}
+				}
+				const steeringMessagesFromExecution = executionResult.steeringMessages;
+
+				if (streamingDispatch && message.interruption && message.stopReason === "error" && !signal?.aborted) {
+					recoveryToolChoiceServed ||= !!exactToolName(selectedToolChoice) && dispatchedResults.length > 0;
+					if (recoveryToolChoiceServed) message.interruption.toolChoiceServed = true;
+					recoveryAttempts += message.interruption.providerRetriesConsumed;
+					if (recoveryAttempts < 2) {
+						recoveryAttempts += 1;
+						try {
+							await recoveryBackoff(500 * recoveryAttempts, signal);
+						} catch {
+							message.stopReason = "aborted";
+							const retained = retainedAssistant(message);
+							const index = newMessages.findIndex(
+								m => m.role === "assistant" && m.timestamp === message.timestamp,
+							);
+							if (index >= 0) newMessages[index] = retained;
+							const contextIndex = currentContext.messages.findIndex(
+								m => m.role === "assistant" && m.timestamp === message.timestamp,
+							);
+							if (contextIndex >= 0) currentContext.messages[contextIndex] = retained;
+							stream.push({ type: "message_end", message: retained });
+						}
+						if (!signal?.aborted) {
+							pendingMessages = steeringMessagesFromExecution ?? ((await config.getSteeringMessages?.()) || []);
+							hasMoreToolCalls = true;
+							recoveryToolChoice = {
+								value:
+									exactToolName(selectedToolChoice) && dispatchedResults.length > 0
+										? "none"
+										: selectedToolChoice,
+							};
+							continue;
+						}
+					}
+				}
+				if (message.stopReason === "error" || message.stopReason === "aborted") {
+					// Create placeholder tool results for any tool calls in the aborted message
+					// This maintains the tool_use/tool_result pairing that the API requires
+					type ToolCallContent = Extract<AssistantMessage["content"][number], { type: "toolCall" }>;
+					const toolCalls = message.content.filter((c): c is ToolCallContent => c.type === "toolCall");
+					const toolResults: ToolResultMessage[] = [...dispatchedResults];
+					for (const toolCall of toolCalls) {
+						if (scheduler.has(toolCall) || message.interruption) continue;
+						const result = createAbortedToolResult(toolCall, stream, message.stopReason, message.errorMessage);
+						currentContext.messages.push(result);
+						newMessages.push(result);
+						toolResults.push(result);
+					}
+					stream.push({
+						type: "turn_end",
+						message,
+						toolResults,
+						...(recoveryToolChoiceServed ? { toolChoiceServed: true } : {}),
+					});
+					stream.push({ type: "agent_end", messages: newMessages });
+					stream.end(newMessages);
+					return true;
+				}
+
+				// Check for tool calls
+				const toolCalls = message.content.filter(c => c.type === "toolCall");
+				hasMoreToolCalls = toolCalls.length > 0 || Boolean(live?.accepted.length);
+
+				const toolResults = dispatchedResults;
+
 				stream.push({
 					type: "turn_end",
 					message,
 					toolResults,
 					...(recoveryToolChoiceServed ? { toolChoiceServed: true } : {}),
 				});
-				stream.push({ type: "agent_end", messages: newMessages });
-				stream.end(newMessages);
-				return;
+
+				pendingMessages = steeringMessagesFromExecution ?? ((await config.getSteeringMessages?.()) || []);
 			}
 
-			// Check for tool calls
-			const toolCalls = message.content.filter(c => c.type === "toolCall");
-			hasMoreToolCalls = toolCalls.length > 0 || Boolean(live?.accepted.length);
-
-			const toolResults = dispatchedResults;
-
-			stream.push({
-				type: "turn_end",
-				message,
-				toolResults,
-				...(recoveryToolChoiceServed ? { toolChoiceServed: true } : {}),
-			});
-
-			pendingMessages = steeringMessagesFromExecution ?? ((await config.getSteeringMessages?.()) || []);
-		}
-
+			return false;
+		}, followUpTurn);
+		if (stopped) return;
 		// Agent would stop here. Check for follow-up messages.
 		const followUpMessages = (await config.getFollowUpMessages?.()) || [];
 		if (followUpMessages.length > 0) {
 			// Set as pending so inner loop processes them
 			pendingMessages = followUpMessages;
+			followUpTurn = true;
 			continue;
 		}
 

@@ -1,0 +1,112 @@
+{
+  "receipts": [
+    {
+      "columns": 60,
+      "rows": 20,
+      "theme": "dark",
+      "states": [
+        "picker",
+        "actions",
+        "no-match",
+        "create",
+        "token-masked",
+        "create-review",
+        "edit-review",
+        "connected"
+      ],
+      "savedOnly": true,
+      "cancelledEditUnchanged": true,
+      "unchangedTokenRetained": true
+    },
+    {
+      "columns": 80,
+      "rows": 24,
+      "theme": "dark",
+      "states": [
+        "picker",
+        "actions",
+        "no-match",
+        "create",
+        "token-masked",
+        "create-review",
+        "edit-review",
+        "connected"
+      ],
+      "savedOnly": true,
+      "cancelledEditUnchanged": true,
+      "unchangedTokenRetained": true
+    },
+    {
+      "columns": 120,
+      "rows": 40,
+      "theme": "dark",
+      "states": [
+        "picker",
+        "actions",
+        "no-match",
+        "create",
+        "token-masked",
+        "create-review",
+        "edit-review",
+        "connected"
+      ],
+      "savedOnly": true,
+      "cancelledEditUnchanged": true,
+      "unchangedTokenRetained": true
+    },
+    {
+      "columns": 60,
+      "rows": 20,
+      "theme": "light",
+      "states": [
+        "picker",
+        "actions",
+        "no-match",
+        "create",
+        "token-masked",
+        "create-review",
+        "edit-review",
+        "connected"
+      ],
+      "savedOnly": true,
+      "cancelledEditUnchanged": true,
+      "unchangedTokenRetained": true
+    },
+    {
+      "columns": 80,
+      "rows": 24,
+      "theme": "light",
+      "states": [
+        "picker",
+        "actions",
+        "no-match",
+        "create",
+        "token-masked",
+        "create-review",
+        "edit-review",
+        "connected"
+      ],
+      "savedOnly": true,
+      "cancelledEditUnchanged": true,
+      "unchangedTokenRetained": true
+    },
+    {
+      "columns": 120,
+      "rows": 40,
+      "theme": "light",
+      "states": [
+        "picker",
+        "actions",
+        "no-match",
+        "create",
+        "token-masked",
+        "create-review",
+        "edit-review",
+        "connected"
+      ],
+      "savedOnly": true,
+      "cancelledEditUnchanged": true,
+      "unchangedTokenRetained": true
+    }
+  ]
+}

@@ -259,6 +259,7 @@ export class Agent {
 	#abortController?: AbortController;
 	#convertToLlm: (messages: AgentMessage[]) => Message[] | Promise<Message[]>;
 	#contextMessages?: AgentLoopConfig["getContextMessages"];
+	#runConversationTurn?: AgentLoopConfig["runConversationTurn"];
 	#transformContext?: (messages: AgentMessage[], signal?: AbortSignal) => Promise<AgentMessage[]>;
 	#steeringQueue: AgentMessage[] = [];
 	#steeringWaiters = new Set<() => void>();
@@ -564,6 +565,11 @@ export class Agent {
 	}
 
 	/** Install the owning session's model-context provider. It must not start work. */
+
+	setConversationTurnScope(scope: AgentLoopConfig["runConversationTurn"]): void {
+		this.#runConversationTurn = scope;
+	}
+
 	setContextMessagesProvider(provider?: AgentLoopConfig["getContextMessages"]): () => void {
 		this.#contextMessages = provider;
 		return () => {
@@ -892,6 +898,7 @@ export class Agent {
 					return this.#dequeueSteeringMessages();
 				},
 				getFollowUpMessages: async () => this.#dequeueFollowUpMessages(),
+				runConversationTurn: this.#runConversationTurn,
 			};
 
 			return { context, config };

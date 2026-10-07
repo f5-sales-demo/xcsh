@@ -4,10 +4,12 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import { prompt } from "@f5-sales-demo/pi-utils";
+import { validateXcshApiCredentials } from "@f5-sales-demo/pi-utils/xcsh-auth";
 import { type Static, Type } from "@sinclair/typebox";
 import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text" };
 import { SecretObfuscator } from "../secrets";
 import { type ContextEnv, createContextEnv } from "../services/context-env";
+import { currentContextExecution } from "../services/context-execution";
 import type { ToolSession } from ".";
 import { humanizeResourceType } from "./render-utils";
 
@@ -257,8 +259,18 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 	#resolveCredentials(): [string, string] {
 		return [
-			(process.env.XCSH_API_URL ?? this.#contextEnv.get("XCSH_API_URL") ?? "").replace(/\/+$/, ""),
-			process.env.XCSH_API_TOKEN ?? this.#contextEnv.get("XCSH_API_TOKEN") ?? "",
+			(
+				(currentContextExecution()
+					? currentContextExecution()!.environment.XCSH_API_URL
+					: process.env.XCSH_API_URL) ??
+				this.#contextEnv.get("XCSH_API_URL") ??
+				""
+			).replace(/\/+$/, ""),
+			(currentContextExecution()
+				? currentContextExecution()!.environment.XCSH_API_TOKEN
+				: process.env.XCSH_API_TOKEN) ??
+				this.#contextEnv.get("XCSH_API_TOKEN") ??
+				"",
 		];
 	}
 
@@ -369,7 +381,12 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			}
 		} catch {
 			// Fall back to default namespace only
-			const def = process.env.XCSH_NAMESPACE ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "default";
+			const def =
+				(currentContextExecution()
+					? currentContextExecution()!.environment.XCSH_NAMESPACE
+					: process.env.XCSH_NAMESPACE) ??
+				this.#contextEnv.get("XCSH_NAMESPACE") ??
+				"default";
 			allNs = [def];
 		}
 
@@ -434,7 +451,12 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		// File-based cache: reuse batch results across xcsh invocations (5-minute TTL).
 		// Prevents cumulative rate limiting when the benchmark runs multiple queries.
 		const ns =
-			params?.namespace ?? process.env.XCSH_NAMESPACE ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "_default";
+			params?.namespace ??
+			(currentContextExecution()
+				? currentContextExecution()!.environment.XCSH_NAMESPACE
+				: process.env.XCSH_NAMESPACE) ??
+			this.#contextEnv.get("XCSH_NAMESPACE") ??
+			"_default";
 		const cachePath = batchCachePath(apiBase, contextName, apiToken, ns, paths, this.cacheDir);
 		try {
 			const cacheDir = path.dirname(cachePath);
@@ -879,7 +901,12 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			case 403:
 				return `Access denied${ctxHint}. The API token may lack the required role or permission for this operation. Check the token's role assignments in the F5 XC console.`;
 			case 404: {
-				const ns = process.env.XCSH_NAMESPACE ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "default";
+				const ns =
+					(currentContextExecution()
+						? currentContextExecution()!.environment.XCSH_NAMESPACE
+						: process.env.XCSH_NAMESPACE) ??
+					this.#contextEnv.get("XCSH_NAMESPACE") ??
+					"default";
 				return `Resource not found in namespace \`${ns}\`${ctxHint}. Verify the resource name, or use POST to create it.`;
 			}
 			case 409:
@@ -911,7 +938,13 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 					}),
 			);
 		}
-		if (params.contextName !== undefined && this.#getContextService) {
+		if (params.contextName !== undefined && currentContextExecution()) {
+			const [apiUrl, apiToken] = this.#resolveCredentials();
+			const result = await validateXcshApiCredentials({ apiUrl, apiToken, timeoutMs: 5000, fetch });
+			if (result.status !== "connected")
+				return this.#errorResult("Admitted context credentials are not connected. Validate or replace its token.");
+		}
+		if (params.contextName !== undefined && this.#getContextService && !currentContextExecution()) {
 			try {
 				const status = (await this.#getContextService()).getStatus();
 				if (
@@ -952,7 +985,12 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const resolved = isWildcard ? this.#loadListablePaths() : batchPaths;
 			if (resolved.length > 0) {
 				const batchNs =
-					params.params?.namespace ?? process.env.XCSH_NAMESPACE ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "";
+					params.params?.namespace ??
+					(currentContextExecution()
+						? currentContextExecution()!.environment.XCSH_NAMESPACE
+						: process.env.XCSH_NAMESPACE) ??
+					this.#contextEnv.get("XCSH_NAMESPACE") ??
+					"";
 				// A wildcard batches all non-system namespaces in one tool call.
 				// Reduces multi-namespace queries from N+1 batch calls to 1.
 				if (batchNs === "*") {

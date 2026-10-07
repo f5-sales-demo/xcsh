@@ -1,4 +1,5 @@
-import { Container, Input, matchesKey, Spacer, Text } from "@f5-sales-demo/pi-tui";
+import { Container, Input, Spacer, Text } from "@f5-sales-demo/pi-tui";
+import { isSafeContextName } from "@f5-sales-demo/pi-utils";
 import { normalizeXcshApiUrlInput, normalizeXcshCredentialInput } from "@f5-sales-demo/pi-utils/xcsh-auth";
 import type { TokenValidationResult, XCSHContext } from "../../services/xcsh-context";
 import {
@@ -19,7 +20,6 @@ import {
 	selectorFrame,
 	selectorFrameContentWidth,
 	selectorKeys,
-	selectorNavigationHint,
 	selectorProse,
 } from "./selector-frame";
 
@@ -51,6 +51,7 @@ export function validateWizardUrl(url: string): string | null {
 	try {
 		const parsed = new URL(url);
 		if (parsed.protocol !== "https:") return "URL must use HTTPS";
+		if (parsed.username || parsed.password) return "URL must not include credentials";
 		const labels = parsed.hostname.replace(/\.$/, "").split(".");
 		if (labels.length < 2 || labels.some(l => l.length === 0)) {
 			return "URL must include a full domain (e.g., tenant.console.ves.volterra.io)";
@@ -68,7 +69,8 @@ function prefill(input: Input, value: string): void {
 
 export function validateWizardName(name: string): string | null {
 	if (!name.trim()) return "Name is required";
-	if (!NAME_PATTERN.test(name)) return "Name must be 1-64 characters: letters, digits, hyphens, underscores";
+	if (!NAME_PATTERN.test(name) || !isSafeContextName(name))
+		return "Name must be 1-64 characters: letters, digits, hyphens, underscores";
 	return null;
 }
 
@@ -94,22 +96,13 @@ function validationFailureMessage(reason: TokenValidationResult["failureReason"]
 }
 
 function validationDetails(state: WizardState, httpStatus?: number, latencyMs?: number): string {
-	const maskedToken = state.token.length > 4 ? `${"*".repeat(8)}${state.token.slice(-4)}` : "****";
+	const maskedToken = "••••";
 	const status = httpStatus === undefined ? "n/a" : String(httpStatus);
 	const latency = latencyMs === undefined ? "n/a" : `${latencyMs}ms`;
 	return `Endpoint: ${state.url}/api/web/namespaces | HTTP: ${status} | Latency: ${latency} | Token: ${maskedToken} (${state.token.length} chars)`;
 }
 
-type WizardStep =
-	| "url"
-	| "token"
-	| "name"
-	| "validating"
-	| "namespace"
-	| "username"
-	| "password"
-	| "confirm"
-	| "activate";
+type WizardStep = "url" | "token" | "name" | "validating" | "namespace" | "username" | "password" | "confirm";
 
 interface WizardState {
 	url: string;
@@ -162,19 +155,38 @@ export class ContextAddWizard extends Container {
 	#pageCapacity = 1;
 	#bodyLength = 0;
 	#manualPaging = false;
-	#onCompleteCallback: (context: XCSHContext, activate: boolean) => void;
+	#onCompleteCallback: (context: XCSHContext, activate: boolean) => void | Promise<void>;
+	#saving = false;
+	#saveError = "";
+	#closed = false;
+	#initial?: XCSHContext;
+	#scope = "Global saved configuration";
 	#onCancelCallback: () => void;
 	#onRenderCallback: () => void;
 
 	constructor(
-		onComplete: (context: XCSHContext, activate: boolean) => void,
+		onComplete: (context: XCSHContext, activate: boolean) => void | Promise<void>,
 		onCancel: () => void,
 		onRender: () => void,
+		options?: { initial?: XCSHContext; scope?: string; prefill?: { name?: string; url?: string; token?: string } },
 	) {
 		super();
 		this.#onCompleteCallback = onComplete;
 		this.#onCancelCallback = onCancel;
 		this.#onRenderCallback = onRender;
+		this.#initial = options?.initial;
+		for (const key of ["name", "url", "token"] as const)
+			if (options?.prefill?.[key]) this.#state[key] = options.prefill[key]!;
+		this.#scope = options?.scope ?? this.#scope;
+		if (this.#initial)
+			this.#state = {
+				url: this.#initial.apiUrl,
+				token: this.#initial.apiToken,
+				name: this.#initial.name,
+				namespace: this.#initial.defaultNamespace,
+				username: this.#initial.env?.[XCSH_USERNAME] ?? "",
+				password: this.#initial.env?.[XCSH_CONSOLE_PASSWORD] ?? "",
+			};
 
 		this.#contentContainer = new Container();
 		this.#renderStep();
@@ -200,13 +212,15 @@ export class ContextAddWizard extends Container {
 		return selectorFrame(
 			width,
 			rows,
-			"Add F5 XC context",
-			"Collect and validate a named tenant configuration; saving and activation are reviewed separately.",
+			this.#currentStep === "confirm" ? "Review context" : this.#initial ? "Edit context" : "Create context",
+			`${this.#scope} · credentials stay masked`,
 			[],
 			visibleBody,
-			[],
+			[this.#saveError],
 			[
-				selectorNavigationHint(),
+				this.#inputField
+					? `${selectorKeys("confirm")}: continue`
+					: `${selectorKeys("up")}/${selectorKeys("down")}: navigate · ${selectorKeys("confirm")}: select`,
 				selectorCancelHint(this.#currentStep === "url" ? "cancel wizard" : "back"),
 				...(body.length > this.#pageCapacity
 					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: wizard details`]
@@ -251,16 +265,13 @@ export class ContextAddWizard extends Container {
 			case "confirm":
 				this.#renderConfirmStep();
 				break;
-			case "activate":
-				this.#renderActivateStep();
-				break;
 		}
 	}
 
 	#renderUrlStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 1: Tenant URL")));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Tenant URL")));
 		this.#contentContainer.addChild(new Spacer(1));
-		this.#contentContainer.addChild(new Text("Enter the F5 XC console URL:", 0, 0));
+		this.#contentContainer.addChild(new Text("HTTPS tenant endpoint", 0, 0));
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
@@ -277,14 +288,22 @@ export class ContextAddWizard extends Container {
 	}
 
 	#renderTokenStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 2: API Token")));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "API token")));
 		this.#contentContainer.addChild(new Spacer(1));
-		this.#contentContainer.addChild(new Text("Enter your API token:", 0, 0));
+		this.#contentContainer.addChild(
+			new Text(
+				this.#initial
+					? "Leave blank to retain token; enter a replacement explicitly"
+					: "Paste the API token; input is masked",
+				0,
+				0,
+			),
+		);
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
 		this.#inputField.setMasked(true);
-		prefill(this.#inputField, this.#state.token);
+		prefill(this.#inputField, this.#initial && this.#state.token === this.#initial.apiToken ? "" : this.#state.token);
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
 
@@ -297,9 +316,9 @@ export class ContextAddWizard extends Container {
 	}
 
 	#renderNameStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 3: Context Name")));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Context name")));
 		this.#contentContainer.addChild(new Spacer(1));
-		this.#contentContainer.addChild(new Text("Enter a name for this context:", 0, 0));
+		this.#contentContainer.addChild(new Text("Letters, digits, hyphens and underscores", 0, 0));
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
@@ -328,7 +347,7 @@ export class ContextAddWizard extends Container {
 				new Text(theme.fg("error", `✗ ${this.#validationError ?? "Validation failed"}`), 0, 0),
 			);
 			this.#contentContainer.addChild(new Spacer(1));
-			const options = ["Retry", "Edit (start over)"];
+			const options = ["Retry", "Edit URL", "Edit token"];
 			for (let i = 0; i < options.length; i++) {
 				const isSelected = i === this.#selectedIndex;
 				const prefix = isSelected ? theme.fg("chromeAccent", `${theme.nav.cursor} `) : "  ";
@@ -339,7 +358,7 @@ export class ContextAddWizard extends Container {
 			this.#contentContainer.addChild(new Text(theme.fg("muted", "Esc: back"), 0, 0));
 			return;
 		}
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 4: Validating Token")));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Checking credentials")));
 		this.#contentContainer.addChild(new Spacer(1));
 		this.#contentContainer.addChild(new Text("Validating credentials...", 0, 0));
 		this.#contentContainer.addChild(new Spacer(1));
@@ -348,17 +367,21 @@ export class ContextAddWizard extends Container {
 	}
 
 	async #runValidation(): Promise<void> {
-		if (this.#validationInFlight) return;
+		if (this.#validationInFlight || this.#closed) return;
 		this.#validationInFlight = true;
 		try {
 			const { ContextService } = await import("../../services/xcsh-context");
 			const service = await ContextService.getOrInit();
-			const result = await service.validateToken({
-				apiUrl: this.#state.url,
-				apiToken: this.#state.token,
-				timeoutMs: 5000,
-			});
+			const result =
+				this.#initial && this.#state.url === this.#initial.apiUrl && this.#state.token === this.#initial.apiToken
+					? { status: "connected" as const }
+					: await service.validateToken({
+							apiUrl: this.#state.url,
+							apiToken: this.#state.token,
+							timeoutMs: 5000,
+						});
 
+			if (this.#closed) return;
 			if (result.status === "connected") {
 				this.#currentStep = "namespace";
 				this.#selectedIndex = 0;
@@ -388,9 +411,9 @@ export class ContextAddWizard extends Container {
 	}
 
 	#renderNamespaceStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 5: Default Namespace")));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Default namespace")));
 		this.#contentContainer.addChild(new Spacer(1));
-		this.#contentContainer.addChild(new Text("Enter the default namespace:", 0, 0));
+		this.#contentContainer.addChild(new Text("Used for future turns", 0, 0));
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
@@ -407,7 +430,7 @@ export class ContextAddWizard extends Container {
 	}
 
 	#renderUsernameStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 6: Web-Console Username")));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Console username (optional)")));
 		this.#contentContainer.addChild(new Spacer(1));
 		this.#contentContainer.addChild(new Text("Enter the web-console login username (optional):", 0, 0));
 		this.#contentContainer.addChild(new Spacer(1));
@@ -421,7 +444,7 @@ export class ContextAddWizard extends Container {
 	}
 
 	#renderPasswordStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 7: Web-Console Password")));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Console password (optional)")));
 		this.#contentContainer.addChild(new Spacer(1));
 		this.#contentContainer.addChild(new Text("Enter the web-console login password (optional):", 0, 0));
 		this.#contentContainer.addChild(new Spacer(1));
@@ -436,13 +459,15 @@ export class ContextAddWizard extends Container {
 	}
 
 	#renderConfirmStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 8: Confirm")));
+		if (this.#saveError) this.#contentContainer.addChild(new Text(theme.fg("error", this.#saveError), 0, 0));
+		if (this.#saving) this.#contentContainer.addChild(new Text("Saving…", 0, 0));
+		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Review context")));
 		this.#contentContainer.addChild(new Spacer(1));
 
 		// Summary table
 		this.#contentContainer.addChild(new Text(`Name: ${theme.fg("contentAccent", this.#state.name)}`, 0, 0));
 		this.#contentContainer.addChild(new Text(`URL: ${this.#state.url}`, 0, 0));
-		const masked = this.#state.token.length > 4 ? `${"*".repeat(8)}${this.#state.token.slice(-4)}` : "****";
+		const masked = "••••";
 		this.#contentContainer.addChild(new Text(`Token: ${masked}`, 0, 0));
 		this.#contentContainer.addChild(new Text(`Namespace: ${this.#state.namespace}`, 0, 0));
 		if (this.#state.username) {
@@ -453,28 +478,10 @@ export class ContextAddWizard extends Container {
 		}
 		this.#contentContainer.addChild(new Spacer(1));
 
-		this.#contentContainer.addChild(new Text("Save this context?", 0, 0));
+		this.#contentContainer.addChild(new Text("One review before saving", 0, 0));
 		this.#contentContainer.addChild(new Spacer(1));
 
-		const options = ["Yes", "No"];
-		for (let i = 0; i < options.length; i++) {
-			const isSelected = i === this.#selectedIndex;
-			const prefix = isSelected ? theme.fg("chromeAccent", `${theme.nav.cursor} `) : "  ";
-			const text = isSelected ? theme.fg("contentAccent", options[i]) : options[i];
-			this.#contentContainer.addChild(new Text(prefix + text, 0, 0));
-		}
-
-		this.#contentContainer.addChild(new Spacer(1));
-		this.#contentContainer.addChild(new Text(theme.fg("muted", "Esc: back"), 0, 0));
-	}
-
-	#renderActivateStep(): void {
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 9: Activate")));
-		this.#contentContainer.addChild(new Spacer(1));
-		this.#contentContainer.addChild(new Text("Activate this context now?", 0, 0));
-		this.#contentContainer.addChild(new Spacer(1));
-
-		const options = ["Yes", "No"];
+		const options = ["Cancel", "Save and activate", "Save only", "Optional console credentials"];
 		for (let i = 0; i < options.length; i++) {
 			const isSelected = i === this.#selectedIndex;
 			const prefix = isSelected ? theme.fg("chromeAccent", `${theme.nav.cursor} `) : "  ";
@@ -487,6 +494,7 @@ export class ContextAddWizard extends Container {
 	}
 
 	handleInput(keyData: string): void {
+		if (this.#saving || this.#closed) return;
 		if (matchesAppInterrupt(keyData)) {
 			return;
 		}
@@ -501,6 +509,7 @@ export class ContextAddWizard extends Container {
 		// Handle the configured selector Back binding.
 		if (matchesSelectorKey(keyData, "cancel")) {
 			if (this.#currentStep === "url") {
+				this.#closed = true;
 				this.#onCancelCallback();
 				return;
 			}
@@ -521,7 +530,7 @@ export class ContextAddWizard extends Container {
 
 		// If we have an input field, let it handle the input
 		if (this.#inputField) {
-			if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
+			if (matchesSelectorKey(keyData, "confirm")) {
 				this.#saveInputAndProceed();
 				return;
 			}
@@ -530,17 +539,17 @@ export class ContextAddWizard extends Container {
 		}
 
 		// Selector steps - handle Enter
-		if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
+		if (matchesSelectorKey(keyData, "confirm")) {
 			this.#selectCurrentOption();
 			return;
 		}
 
 		// Handle up/down arrows for selectors
-		if (matchesKey(keyData, "up")) {
+		if (matchesSelectorKey(keyData, "up")) {
 			this.#moveSelection(-1);
 			return;
 		}
-		if (matchesKey(keyData, "down")) {
+		if (matchesSelectorKey(keyData, "down")) {
 			this.#moveSelection(1);
 			return;
 		}
@@ -580,18 +589,21 @@ export class ContextAddWizard extends Container {
 					this.#renderStep();
 					return;
 				}
-				if (!normalizedToken) {
+				if (!normalizedToken && !this.#initial) {
 					this.#validationError = "API token is required";
 					this.#renderStep();
 					return;
 				}
 				this.#validationError = null;
-				this.#state.token = normalizedToken;
+				this.#state.token = normalizedToken || this.#state.token || this.#initial?.apiToken || "";
 				this.#currentStep = "name";
 				break;
 			}
 			case "name": {
-				const nameError = validateWizardName(value);
+				const nameError =
+					this.#initial && value !== this.#initial.name
+						? "Use Rename from context actions to change the name"
+						: validateWizardName(value);
 				if (nameError) {
 					this.#validationError = nameError;
 					this.#renderStep();
@@ -605,7 +617,8 @@ export class ContextAddWizard extends Container {
 			}
 			case "namespace": {
 				this.#state.namespace = value || "default";
-				this.#currentStep = "username";
+				this.#currentStep = "confirm";
+				this.#selectedIndex = 0;
 				break;
 			}
 			case "username": {
@@ -647,10 +660,9 @@ export class ContextAddWizard extends Container {
 					this.#validationDetails = null;
 					this.#renderStep();
 				} else {
-					// Edit — go back to url
-					this.#currentStep = "url";
-					this.#state.token = "";
-					this.#state.password = "";
+					// Keep unrelated draft fields while correcting credentials.
+					this.#currentStep = this.#selectedIndex === 2 ? "token" : "url";
+
 					this.#validationError = null;
 					this.#validationDetails = null;
 					this.#selectedIndex = 0;
@@ -660,23 +672,39 @@ export class ContextAddWizard extends Container {
 			}
 			case "confirm": {
 				if (this.#selectedIndex === 0) {
-					// Yes — advance to activate
-					this.#currentStep = "activate";
-					this.#selectedIndex = 0;
+					this.#closed = true;
+					this.#onCancelCallback();
+				} else if (this.#selectedIndex === 3) {
+					this.#currentStep = "username";
 					this.#renderStep();
-				} else {
-					// No — go back to url
-					this.#currentStep = "url";
-					this.#selectedIndex = 0;
-					this.#renderStep();
+				} else void this.#save(this.#selectedIndex === 1);
+				return;
+			}
+		}
+	}
+
+	async #save(activate: boolean): Promise<void> {
+		if (this.#saving || this.#closed) return;
+		this.#saving = true;
+		this.#saveError = "";
+		const draft = buildWizardContext(this.#state);
+		const next: XCSHContext = this.#initial
+			? {
+					...this.#initial,
+					...draft,
+					env: { ...this.#initial.env, ...draft.env },
+					sensitiveKeys: [...new Set([...(this.#initial.sensitiveKeys ?? []), ...(draft.sensitiveKeys ?? [])])],
 				}
-				return;
-			}
-			case "activate": {
-				const context = buildWizardContext(this.#state);
-				this.#onCompleteCallback(context, this.#selectedIndex === 0);
-				return;
-			}
+			: draft;
+		try {
+			await this.#onCompleteCallback(next, activate);
+			this.#closed = true;
+		} catch (error) {
+			this.#saveError = error instanceof Error ? error.message : "Save failed; check file permissions and retry";
+		} finally {
+			this.#saving = false;
+			this.#renderStep();
+			this.#requestRender();
 		}
 	}
 
@@ -690,15 +718,24 @@ export class ContextAddWizard extends Container {
 	#getMaxIndexForCurrentStep(): number {
 		switch (this.#currentStep) {
 			case "validating":
+				return 2;
 			case "confirm":
-			case "activate":
-				return 1;
+				return 3;
 			default:
 				return 0;
 		}
 	}
 
 	#goBack(): void {
+		if (this.#inputField) {
+			const value = this.#inputField.getValue();
+			if (this.#currentStep === "url") this.#state.url = value;
+			else if (this.#currentStep === "name") this.#state.name = value;
+			else if (this.#currentStep === "namespace") this.#state.namespace = value;
+			else if (this.#currentStep === "username") this.#state.username = value;
+			else if (this.#currentStep === "password") this.#state.password = value;
+			else if (this.#currentStep === "token" && value) this.#state.token = value;
+		}
 		this.#validationError = null;
 		this.#selectedIndex = 0;
 
@@ -719,10 +756,7 @@ export class ContextAddWizard extends Container {
 				this.#currentStep = "username";
 				break;
 			case "confirm":
-				this.#currentStep = "password";
-				break;
-			case "activate":
-				this.#currentStep = "confirm";
+				this.#currentStep = "namespace";
 				break;
 		}
 

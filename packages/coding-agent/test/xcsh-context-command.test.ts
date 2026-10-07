@@ -279,10 +279,10 @@ describe("/context slash command handler", () => {
 		await handleContextCommand({ name: "context", args: "activate staging", text: "/context activate staging" }, ctx);
 
 		expect(ctx.messages[0].type).toBe("status");
-		// Activate now shows the same red table as /context show
+		// Activation acknowledges selection without reporting configuration or authentication.
 		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
 		expect(plain).toContain("staging");
-		expect(plain).toContain("XCSH_TENANT");
+		expect(plain).toContain("Selected staging");
 
 		const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 		expect(bashEnv.XCSH_API_URL).toBe(TEST_CONTEXT_2.apiUrl);

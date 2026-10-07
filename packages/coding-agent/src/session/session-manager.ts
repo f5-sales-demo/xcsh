@@ -129,6 +129,7 @@ export interface ContextChangeEntry extends SessionEntryBase {
 	type: "context_change";
 	/** Context name from ContextStatus.activeContextName. */
 	contextName: string;
+	source?: "local" | "global";
 	/** Tenant derived from the active context's apiUrl. */
 	tenant: string;
 	/** Effective namespace (XCSH_NAMESPACE env override applied, falls back to context.defaultNamespace). */
@@ -286,6 +287,7 @@ export interface SessionContext {
 	models: Record<string, string>;
 	/** Active context name from the last context_change entry, or undefined if none. */
 	activeContextName?: string;
+	activeContextSource?: "local" | "global";
 	/** Active context tenant from the last context_change entry, or undefined if none. */
 	activeContextTenant?: string;
 	/** Names of TTSR rules that have been injected this session */
@@ -630,6 +632,7 @@ export function buildSessionContext(
 	let serviceTier: ServiceTier | undefined;
 	const models: Record<string, string> = {};
 	let activeContextName: string | undefined;
+	let activeContextSource: "local" | "global" | undefined;
 	let activeContextTenant: string | undefined;
 	let compaction: CompactionEntry | null = null;
 	const injectedTtsrRulesSet = new Set<string>();
@@ -652,6 +655,7 @@ export function buildSessionContext(
 			}
 		} else if (entry.type === "context_change") {
 			activeContextName = entry.contextName;
+			activeContextSource = entry.source ?? "global";
 			activeContextTenant = entry.tenant;
 		} else if (entry.type === "service_tier_change") {
 			serviceTier = entry.serviceTier ?? undefined;
@@ -782,6 +786,7 @@ export function buildSessionContext(
 		serviceTier,
 		models,
 		activeContextName,
+		activeContextSource,
 		activeContextTenant,
 		injectedTtsrRules,
 		selectedToolNames,
@@ -2580,13 +2585,19 @@ export class SessionManager {
 	 * @param tenant Tenant derived from the active context's apiUrl
 	 * @param namespace Effective namespace (XCSH_NAMESPACE env override applied, falls back to context.defaultNamespace)
 	 */
-	appendContextChange(contextName: string, tenant: string, namespace: string): string {
+	appendContextChange(
+		contextName: string,
+		tenant: string,
+		namespace: string,
+		source: "local" | "global" = "global",
+	): string {
 		const entry: ContextChangeEntry = {
 			type: "context_change",
 			id: generateId(this.#byId),
 			parentId: this.#leafId,
 			timestamp: new Date().toISOString(),
 			contextName,
+			source,
 			tenant,
 			namespace,
 		};

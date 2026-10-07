@@ -28,6 +28,7 @@ export interface Args {
 	allowPath?: string[];
 	provider?: string;
 	context?: string;
+	contextSource?: "local" | "global";
 	model?: string;
 	smol?: string;
 	slow?: string;
@@ -99,6 +100,9 @@ const APPLY: Record<LaunchFlagName, (result: Args, value: string | true) => void
 	},
 	provider: (r, v) => {
 		r.provider = v as string;
+	},
+	"context-source": (r, v) => {
+		r.contextSource = v as "local" | "global";
 	},
 	context: (r, v) => {
 		r.context = v as string;

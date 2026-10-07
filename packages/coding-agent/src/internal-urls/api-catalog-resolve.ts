@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import { executionEnvironmentValue } from "../services/context-execution";
 import {
 	matchesBaselineCatalogDiscoveryTerm,
 	normalizeApiCatalogDiscoveryTerm,
@@ -480,13 +481,13 @@ async function fetchNamespaceInventory(
 	data: Readonly<Record<string, ApiCatalogCategory>>,
 	url: InternalUrl,
 ): Promise<string> {
-	const apiBase = (process.env.XCSH_API_URL ?? "").replace(/\/+$/, "");
-	const apiToken = process.env.XCSH_API_TOKEN ?? "";
+	const apiBase = (executionEnvironmentValue("XCSH_API_URL") ?? "").replace(/\/+$/, "");
+	const apiToken = executionEnvironmentValue("XCSH_API_TOKEN") ?? "";
 	if (!apiBase || !apiToken) {
 		return "# Namespace Inventory\n\nError: No API credentials configured. Set XCSH_API_URL and XCSH_API_TOKEN, or activate a context.\n";
 	}
 
-	const ns = url.searchParams.get("ns") ?? process.env.XCSH_NAMESPACE ?? "default";
+	const ns = url.searchParams.get("ns") ?? executionEnvironmentValue("XCSH_NAMESPACE") ?? "default";
 	const CONFIG_PREFIX = "/api/config/namespaces/{namespace}/";
 	const APP_KW =
 		/loadbalancer|pool|firewall|_policys|setting|type|mitigation|identification|network|route|host|definition|rate_limiter|prefix_set|cdn|waf|api_/i;
