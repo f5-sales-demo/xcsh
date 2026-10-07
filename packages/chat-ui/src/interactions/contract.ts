@@ -26,6 +26,9 @@ export interface AsyncQuestionItem {
 	delivery: "async";
 	questions: AsyncInputQuestion[];
 }
+export function asyncQuestionId(itemId: string, index: number): string {
+	return JSON.stringify(["request_user_input_async", itemId, index]);
+}
 export function createAsyncQuestionItem(id: string, questions: readonly AsyncInputQuestion[]): AsyncQuestionItem {
 	const copied = questions.map(question => ({
 		...question,
@@ -61,6 +64,7 @@ const record = (value: unknown): value is Record<string, unknown> =>
 export function validInputResponse(questions: readonly InputQuestion[], value: unknown): value is InputResponse {
 	if (!record(value) || Object.keys(value).length !== 1 || !record(value.answers)) return false;
 	const answers = value.answers;
+	if (Object.keys(answers).length === 0) return true;
 	if (Object.keys(answers).length !== questions.length) return false;
 	return questions.every(question => {
 		if (!Object.hasOwn(answers, question.id)) return false;

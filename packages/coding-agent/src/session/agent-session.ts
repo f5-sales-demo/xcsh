@@ -69,6 +69,7 @@ import {
 	Snowflake,
 	setNativeKillTree,
 } from "@f5-sales-demo/pi-utils";
+import { createQuestionReply, parseQuestionReplies } from "../../../chat-ui/src/interactions/async-answer";
 import { createAsyncQuestionItem } from "../../../chat-ui/src/interactions/contract";
 import {
 	type ConversationPlan,
@@ -167,6 +168,7 @@ import {
 } from "../tools/discoverable-tool-metadata";
 import { outputMeta } from "../tools/output-meta";
 import { resolveToCwd } from "../tools/path-utils";
+import { asyncQuestionsSupported } from "../tools/question-eligibility";
 import { isAutoQaEnabled } from "../tools/report-tool-issue";
 import { getLatestTodoPhasesFromEntries, type TodoItem, type TodoPhase } from "../tools/todo-write";
 import { ToolError } from "../tools/tool-errors";
@@ -314,6 +316,8 @@ export interface AsyncJobSnapshot {
 // ============================================================================
 
 export interface AgentSessionConfig {
+	taskDepth?: number;
+	questionToolNames?: string[];
 	agent: Agent;
 	sessionManager: SessionManager;
 	settings: Settings;
@@ -591,6 +595,8 @@ export class AgentSession {
 	#eventListeners: AgentSessionEventSubscription[] = [];
 	#sessionTransitions = new SessionTransitions();
 	readonly userInteractions = new UserInteractions();
+	#taskDepth = 0;
+	#questionToolNames?: Set<string>;
 	#herdrInteractions?: HerdrInteractionBridge;
 	readonly conversationPlans = new ConversationPlans();
 	#planMessageId = "";
@@ -738,6 +744,10 @@ export class AgentSession {
 	}
 
 	constructor(config: AgentSessionConfig) {
+		this.#taskDepth = config.taskDepth ?? 0;
+		this.#questionToolNames = config.questionToolNames
+			? new Set(config.questionToolNames.map(name => name.toLowerCase()))
+			: undefined;
 		setNativeKillTree(killTree);
 
 		this.agent = config.agent;
@@ -1001,7 +1011,20 @@ export class AgentSession {
 	}
 	async deliverAsyncAnswer(itemId: string, questionId: string, answer: string): Promise<void> {
 		const generation = this.#promptGeneration;
-		await this.prompt(JSON.stringify({ type: "user_input_reply", itemId, questionId, answer }), {
+		const entry = this.sessionManager
+			.getBranch()
+			.find(
+				entry =>
+					entry.type === "custom_message" &&
+					entry.customType === "async-user-input" &&
+					(entry.details as { item?: { id?: string } } | undefined)?.item?.id === itemId,
+			);
+		const index = JSON.parse(questionId)[2] as number;
+		const question =
+			entry?.type === "custom_message"
+				? ((entry.details as { item?: { questions?: { title: string }[] } }).item?.questions?.[index]?.title ?? "")
+				: "";
+		await this.prompt(createQuestionReply(questionId, question, answer), {
 			streamingBehavior: "steer",
 			expandPromptTemplates: false,
 		});
@@ -3179,6 +3202,12 @@ export class AgentSession {
 		const validToolNames: string[] = [];
 		for (const name of toolNames) {
 			if (
+				name === "request_user_input_async" &&
+				(!asyncQuestionsSupported(this.model, this.#taskDepth) || this.#questionToolNames?.has(name) === false)
+			)
+				continue;
+			if (name === "request_user_input" && this.#questionToolNames?.has(name) === false) continue;
+			if (
 				name === "request_user_input" &&
 				!this.#planModeState?.enabled &&
 				!this.settings.get("interactions.waitingInDefault")
@@ -3240,6 +3269,7 @@ export class AgentSession {
 	 * Changes take effect before the next model call.
 	 */
 	async setActiveToolsByName(toolNames: string[]): Promise<void> {
+		this.#questionToolNames = new Set(toolNames.map(name => name.toLowerCase()));
 		await this.#applyActiveToolsByName(toolNames);
 	}
 
@@ -3450,9 +3480,18 @@ export class AgentSession {
 	}
 	#syncWaitingToolAvailability(): void {
 		const enabled = this.#planModeState?.enabled || this.settings.get("interactions.waitingInDefault");
-		const tools = this.agent.state.tools.filter(tool => tool.name !== "request_user_input");
+		const tools = this.agent.state.tools.filter(
+			tool => tool.name !== "request_user_input" && tool.name !== "request_user_input_async",
+		);
 		const waiting = this.#toolRegistry.get("request_user_input");
-		if (enabled && waiting) tools.push(waiting);
+		if (enabled && waiting && this.#questionToolNames?.has(waiting.name) !== false) tools.push(waiting);
+		const async = this.#toolRegistry.get("request_user_input_async");
+		if (
+			async &&
+			asyncQuestionsSupported(this.model, this.#taskDepth) &&
+			this.#questionToolNames?.has(async.name) !== false
+		)
+			tools.push(async);
 		this.agent.setTools(tools);
 	}
 
@@ -3551,6 +3590,9 @@ export class AgentSession {
 	 * @throws Error if no model selected or no API key available (when not streaming)
 	 */
 	async prompt(text: string, options?: PromptOptions): Promise<void> {
+		const questionReplies = parseQuestionReplies(text);
+		if (questionReplies)
+			this.userInteractions.acknowledgeAsyncReplies(questionReplies.map(reply => reply.questionItemId));
 		const generation = this.#promptGeneration;
 		this.#sessionTransitions.assertAvailable();
 		const expandPromptTemplates = options?.expandPromptTemplates ?? true;
@@ -4346,6 +4388,8 @@ export class AgentSession {
 	 * Queue a steering message to interrupt the agent mid-run.
 	 */
 	async steer(text: string, images?: ImageContent[]): Promise<void> {
+		const replies = parseQuestionReplies(text);
+		if (replies) this.userInteractions.acknowledgeAsyncReplies(replies.map(reply => reply.questionItemId));
 		this.#sessionTransitions.assertAvailable();
 		if (text.startsWith("/")) {
 			this.#throwIfExtensionCommand(text);
@@ -6072,6 +6116,7 @@ export class AgentSession {
 		}
 		this.#modelResolutionSource = source;
 		this.agent.setModel(model);
+		this.#syncWaitingToolAvailability();
 		const toolPolicy = this.#resolveToolPolicyForModel?.(model);
 		if (toolPolicy) {
 			if (toolPolicy.toolNames) {

@@ -1,4 +1,5 @@
 import type { Component } from "@f5-sales-demo/pi-tui";
+import { parseQuestionReplies } from "../../../../chat-ui/src/interactions/async-answer";
 import type { AsyncInputQuestion, AsyncQuestionItem } from "../../../../chat-ui/src/interactions/contract";
 import { theme } from "../theme/theme";
 import { selectorProse, selectorTranscriptFrame } from "./selector-frame";
@@ -22,21 +23,28 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 export function parseAsyncInputReply(text: string): AsyncInputReply | undefined {
-	let value: unknown;
+	const reply = parseQuestionReplies(text)?.[0];
+	if (!reply) return undefined;
+	let identity: unknown;
 	try {
-		value = JSON.parse(text);
+		identity = JSON.parse(reply.questionItemId);
 	} catch {
 		return undefined;
 	}
 	if (
-		!record(value) ||
-		value.type !== "user_input_reply" ||
-		typeof value.itemId !== "string" ||
-		typeof value.questionId !== "string" ||
-		typeof value.answer !== "string"
+		!Array.isArray(identity) ||
+		identity.length !== 3 ||
+		identity[0] !== "request_user_input_async" ||
+		typeof identity[1] !== "string" ||
+		!Number.isSafeInteger(identity[2])
 	)
 		return undefined;
-	return { type: "user_input_reply", itemId: value.itemId, questionId: value.questionId, answer: value.answer };
+	return {
+		type: "user_input_reply",
+		itemId: identity[1],
+		questionId: reply.questionItemId,
+		answer: reply.answer,
+	};
 }
 
 export function resolveAsyncQuestionReply(

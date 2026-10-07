@@ -270,40 +270,6 @@ export class RemoteRouter {
 	#setInteractionTitle(session: SessionEndpoint, title: string | undefined): void {
 		if ((session.thread.name === null || session.thread.name === undefined) && title) session.thread.name = title;
 	}
-	#asyncInteractionRequests(threadId: string, interactions: AsyncInteractionRegistration[]): InteractionRequest[] {
-		const groups = new Map<string, AsyncInteractionRegistration[]>();
-		for (const interaction of interactions) {
-			if (interaction.identity.threadId !== threadId) continue;
-			const entries = groups.get(interaction.identity.itemId) ?? [];
-			entries.push(interaction);
-			groups.set(interaction.identity.itemId, entries);
-		}
-		return [...groups.values()].flatMap(entries => {
-			const first = entries[0];
-			if (!first || entries.some(entry => entry.identity.turnId !== first.identity.turnId)) return [];
-			return [
-				{
-					id: first.requestId,
-					method: "item/tool/requestUserInput",
-					params: {
-						threadId,
-						turnId: first.identity.turnId,
-						itemId: first.identity.itemId,
-						questions: entries.map(entry => ({
-							id: entry.questionId,
-							header: entry.title ?? "Question",
-							question: entry.title ?? "Question",
-							isOther: true,
-							isSecret: false,
-							options: entry.options?.map(label => ({ label, description: "" })) ?? null,
-						})),
-						isBlocking: false,
-						autoResolutionMs: null,
-					},
-				},
-			];
-		});
-	}
 	#attachPublished(client: string, threadId: string, defer = false): void {
 		if (!this.#experimental.has(client)) return;
 		const subscriptions = this.#clients.get(client);
@@ -477,10 +443,7 @@ export class RemoteRouter {
 	}
 	registerSession(threadId: string, endpoint: SessionEndpoint, replacedThreadId?: string): void {
 		const previous = this.sessions.get(threadId);
-		const requests = this.validateSessionRequests(threadId, [
-			...(endpoint.requests ?? []),
-			...this.#asyncInteractionRequests(threadId, endpoint.asyncInteractions ?? []),
-		]);
+		const requests = this.validateSessionRequests(threadId, endpoint.requests ?? []);
 		endpoint.requests = requests;
 		const nextIds = new Set(requests.map(request => request.id));
 		for (const request of previous?.requests ?? []) {

@@ -47,6 +47,7 @@ import { CursorExecHandlers } from "./cursor";
 import { ProfileBuilder } from "./person-profile/builder";
 import { type MachineProfileService, machineProfileService } from "./person-profile/machine-profile";
 import { type PersonProfileService, personProfileService } from "./person-profile/service";
+import { asyncQuestionsSupported } from "./tools/question-eligibility";
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
 import { initializeWithSettings } from "./discovery";
@@ -884,6 +885,17 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	}
 
 	const taskDepth = options.taskDepth ?? 0;
+	if (model?.provider === "openai-codex") {
+		await modelRegistry.awaitBackgroundRefresh();
+		await modelRegistry.refresh("online-if-uncached");
+		const catalogModel = modelRegistry.find(model.provider, model.id);
+		if (catalogModel)
+			model = {
+				...model,
+				experimentalSupportedTools: catalogModel.experimentalSupportedTools,
+				modelMessages: catalogModel.modelMessages,
+			};
+	}
 
 	let thinkingLevel = options.thinkingLevel;
 
@@ -1040,6 +1052,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		const profileService = options.personProfileService ?? personProfileService;
 		const deviceService = options.machineProfileService ?? machineProfileService;
 		const toolSession: ToolSession = {
+			getModel: () => agent?.state.model ?? model,
 			getUserInteractions: () => session.userInteractions,
 			getInteractionIdentity: itemId => session.getInteractionIdentity(itemId),
 			publishAsyncQuestions: (itemId, questions, questionIds) =>
@@ -1737,6 +1750,16 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			if (toolRegistry.has(name) && !eagerToolNames.includes(name)) eagerToolNames.push(name);
 		}
 
+		for (let index = initialToolNames.length - 1; index >= 0; index--) {
+			const name = initialToolNames[index];
+			if (
+				(name === "request_user_input_async" && !asyncQuestionsSupported(model, taskDepth)) ||
+				(name === "request_user_input" &&
+					existingSession.mode !== "plan" &&
+					!settings.get("interactions.waitingInDefault"))
+			)
+				initialToolNames.splice(index, 1);
+		}
 		const systemPrompt = await logger.time("buildSystemPrompt", rebuildSystemPrompt, initialToolNames, toolRegistry);
 
 		const promptTemplates =
@@ -1920,6 +1943,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		}
 
 		session = new AgentSession({
+			taskDepth,
+			questionToolNames: options.toolNames,
 			agent,
 			thinkingLevel,
 			modelResolutionSource: options.modelResolutionSource,

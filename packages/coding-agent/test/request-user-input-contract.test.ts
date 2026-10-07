@@ -59,10 +59,13 @@ test("async tool immediately acknowledges and preserves pending attention withou
 	expect(result.content).toEqual([{ type: "text", text: '{"accepted":true}' }]);
 	expect(owner.pending()).toHaveLength(2);
 	expect(owner.pending().map(question => question.identity?.itemId)).toEqual(["call", "call"]);
-	expect(owner.pending().map(question => question.questionId)).toEqual(["call:0", "call:1"]);
+	expect(owner.pending().map(question => question.questionId)).toEqual([
+		'["request_user_input_async","call",0]',
+		'["request_user_input_async","call",1]',
+	]);
 	expect(owner.pending()[0].asyncBatch).toEqual({
 		requestId: "call",
-		questionIds: ["call:0", "call:1"],
+		questionIds: ['["request_user_input_async","call",0]', '["request_user_input_async","call",1]'],
 		questions: [{ title: "Which scope?", options: ["Small", "Large"] }, { title: "Any details?" }],
 		item: {
 			id: "call",
@@ -103,7 +106,7 @@ test("async replies retain the originating item and per-question identity", asyn
 	expect(owner.respond(second.id, "two")).toBe(true);
 	await Bun.sleep(0);
 	expect(delivered).toEqual([
-		["call", "call:0", "one"],
-		["call", "call:1", "two"],
+		["call", '["request_user_input_async","call",0]', "one"],
+		["call", '["request_user_input_async","call",1]', "two"],
 	]);
 });

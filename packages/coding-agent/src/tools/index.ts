@@ -107,6 +107,7 @@ export type { DiscoverableTool } from "./discoverable-tool-metadata";
 
 /** Session context for tool factories */
 export interface ToolSession {
+	getModel?: () => import("@f5-sales-demo/pi-ai").Model | undefined;
 	getUserInteractions?: () => import("../session/user-interactions").UserInteractions;
 	getInteractionIdentity?: (itemId: string) => import("../session/user-interactions").InteractionIdentity;
 	publishAsyncQuestions?: (

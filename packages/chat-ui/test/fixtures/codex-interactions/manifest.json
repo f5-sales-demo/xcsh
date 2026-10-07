@@ -23,5 +23,27 @@
       "codex-rs/collaboration-mode-templates/templates/default-normal-work.source": "1042cc643eb0147ca1039b19287c7462ceb297502f7f310d9664ac323a12feca",
       "codex-rs/core/src/tools/handlers/request_user_input_async-normal-work.source": "16be7e521e3f91aaede5bd233a52671e0cd5454ef4d8a4a67eeb71908ab06096"
     }
+  },
+  "questionParity": {
+    "commit": "ac9b5b8380517ded445b09dd3196d8d9e2ba3c59",
+    "files": {
+      "question-parity/codex-rs/prompts/src/model_messages.source": "f47258eb92d6f5668afc1ad4603b7de31d257e194a83f8fe8106a0f3a4dadc16",
+      "question-parity/codex-rs/protocol/src/openai_models.source": "88d0f8df840078761b5a480ac21011ea097a55ffad6b0b8ad3742af215417d2d",
+      "question-parity/codex-rs/collaboration-mode-templates/templates/default.source": "1042cc643eb0147ca1039b19287c7462ceb297502f7f310d9664ac323a12feca",
+      "question-parity/codex-rs/tui/src/async_question_reply.source": "47764f6c5f887aca254de6740d99cd2a422338217c278508bcb2a4f2fc467722",
+      "question-parity/codex-rs/tui/src/chatwidget.source": "8835d69fb78d4ba5ebfed79dd7ef35a147b27286dae26d1fad7ca7194aa21e22",
+      "question-parity/codex-rs/tui/src/chatwidget/questions.source": "0df97746f97297f283466512d3bfdd79013eeefbc9f39595c6a93917eb4d3084",
+      "question-parity/codex-rs/tui/src/chatwidget/tests/question_turn_end_tests.source": "b87ebd11e89449a8dd86c6d4d7e7d56c027e945c08d08b759ab7dd7ea6e64ea5",
+      "question-parity/codex-rs/tui/src/chatwidget/tests/questions_tests.source": "05dce06b2c9b51c65c397a7b9c49a45a1c76143c673e2696e88c3b20a62f530e",
+      "question-parity/codex-rs/tui/src/bottom_pane/async_questions/state.source": "6c393ddec5c2595aaa394f6a4f5744d11bd7c9b6abc959b49a046cb90ec45950",
+      "question-parity/codex-rs/tui/src/bottom_pane/async_questions/input.source": "214f38d97b743f05969054394455fc9472c123983bcb009829f499e4b67563a5",
+      "question-parity/codex-rs/tui/src/bottom_pane/async_questions/mod.source": "1116585890745c5cb7e24d187eea288bb91d1fab8e652a42312dde39810f73f6",
+      "question-parity/codex-rs/tui/src/bottom_pane/request_user_input/mod.source": "5f0d5412425b07a651dd4633e1f0befa6e2374fc5473ddd9f0be29bb8c184579",
+      "question-parity/codex-rs/context-fragments/src/answered_question.source": "944d5fb5c4fe13c00f40933e1451e19b4de6d620336826ba2ae7a491545066d6",
+      "question-parity/codex-rs/core/src/tools/spec_plan.source": "db040c0c07160af64bebd5a7a5071658cb7ff58db341edd70e2795958b1d07f3",
+      "question-parity/codex-rs/core/src/tools/handlers/request_user_input.source": "f4975978234d0ff7c143e6a5616d5523b9bddac044a6e39f8a0a32dcf0f56a38",
+      "question-parity/codex-rs/core/src/tools/handlers/request_user_input_spec.source": "86ef5b005211ea6cc14c5a99821357a4484cccbb4756c911bbeba3913315d16f",
+      "question-parity/codex-rs/core/src/tools/handlers/request_user_input_async.source": "16be7e521e3f91aaede5bd233a52671e0cd5454ef4d8a4a67eeb71908ab06096"
+    }
   }
 }

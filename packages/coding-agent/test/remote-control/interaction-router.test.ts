@@ -259,28 +259,12 @@ test("a structured async item keeps its required lifecycle when the phone opts o
 	};
 	router.publish({
 		method: "item/started",
-		params: { threadId: "secondary", turnId: "turn", item: { ...item, text: "" } },
+		params: { threadId: "secondary", turnId: "turn", item },
 	});
 	router.publish({ method: "item/completed", params: { threadId: "secondary", turnId: "turn", item } });
-	expect(sent.map(event => event.method)).toEqual([
-		"thread/started",
-		"item/tool/requestUserInput",
-		"item/started",
-		"item/completed",
-	]);
-	expect(sent[1]).toMatchObject({
-		method: "item/tool/requestUserInput",
-		params: {
-			isBlocking: false,
-			questions: [
-				{
-					header: "Phone structured UAT",
-					question: "Phone structured UAT",
-					options: [{ label: "Alpha" }, { label: "Beta" }],
-				},
-			],
-		},
-	});
+	expect(sent.map(event => event.method)).toEqual(["thread/started", "item/started", "item/completed"]);
+	expect(sent[1]).toMatchObject({ method: "item/started", params: { item } });
+	expect(sent[2]).toMatchObject({ method: "item/completed", params: { item } });
 	expect((sent[0].params.thread as Record<string, unknown>).name).toBe("Phone structured UAT");
 	expect(
 		((await router.handle("phone", { id: 2, method: "thread/list", params: {} })) as any).result.data.find(
@@ -288,12 +272,7 @@ test("a structured async item keeps its required lifecycle when the phone opts o
 		).name,
 	).toBe("Phone structured UAT");
 	router.publish({ method: "item/started", params: { threadId: "primary", turnId: "turn", item: { id: "plain" } } });
-	expect(sent.map(event => event.method)).toEqual([
-		"thread/started",
-		"item/tool/requestUserInput",
-		"item/started",
-		"item/completed",
-	]);
+	expect(sent.map(event => event.method)).toEqual(["thread/started", "item/started", "item/completed"]);
 	router.dispose();
 });
 
@@ -360,7 +339,7 @@ test("pending asynchronous registration republishes after host reconstruction wi
 		],
 		call: async () => ({ thread: { id: "secondary" }, turns: [] }),
 	});
-	expect(sent.map(value => value.event.method)).toEqual(["thread/started", "item/tool/requestUserInput"]);
+	expect(sent.map(value => value.event.method)).toEqual(["thread/started"]);
 	expect((sent[0].event.params.thread as Record<string, unknown>).name).toBe("Phone structured UAT");
 	expect(JSON.stringify(sent)).not.toContain("answer");
 	router.registerSession("secondary", {
@@ -369,11 +348,7 @@ test("pending asynchronous registration republishes after host reconstruction wi
 		asyncInteractions: [],
 		call: async () => ({ thread: { id: "secondary" }, turns: [] }),
 	});
-	expect(sent.map(value => value.event.method)).toEqual([
-		"thread/started",
-		"item/tool/requestUserInput",
-		"serverRequest/resolved",
-	]);
+	expect(sent.map(value => value.event.method)).toEqual(["thread/started"]);
 	router.dispose();
 });
 

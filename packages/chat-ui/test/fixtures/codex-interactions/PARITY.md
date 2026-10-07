@@ -44,14 +44,9 @@ This phase accepts xcsh core terminal/RPC/remote behavior, Herdr, and the existi
 
 Completion issues: xcsh #4115 and #4131, Herdr #103. No official release is part of this change.
 
-## Normal-work structured choices (xcsh #4739)
+## Current structured-question parity target (xcsh #4749)
 
-Independent upstream comparison: OpenAI Codex `4b5c11134974dd6ec733b89d0e5a5f4c7d74856d`.
-`manifest.json` pins the Default template and async handler bytes for this comparison separately from the earlier reference.
-The async question/reply contract is retained.
-xcsh intentionally extends Default policy: material missing choices use async structured input, independent work continues, and required choices remain pending until submitted. Codex's Default template limits waiting structured input to optional questions and asks required questions in plain text. Waiting-tool availability remains Plan-only with the existing Default opt-in.
-
-Progressive core includes async questions; explicit tool scopes remain authoritative. Terminal and shared chat forms open sequentially. Dismissal leaves async requests pending; reopening and reconnect never submit a highlighted recommendation. The shared completion owner and receipts remain unchanged in responsibility.
-
-Evidence: progressive-context-loading.test.ts, system-prompt-questions.test.ts, user-interactions.test.ts, interaction-parity.test.ts, interaction-panel.test.tsx and Transcript.test.tsx. The static prompt budget now includes the core question schema and guidance.
-Live model and installed macOS/Ubuntu terminal, Chrome, Visual Studio Code, Office and RPC/remote acceptance remain required; deterministic tests do not establish those gates.
+The previous intentional Default-mode difference is superseded by the pinned Codex contract.
+See [the current acceptance record](question-parity/ACCEPTANCE.md) for implemented contracts, verified source
+behavior, linked adapter PRs and explicit remaining installed/live gates. Older rows above describe historical
+qualification and cannot establish the current behavior's acceptance.

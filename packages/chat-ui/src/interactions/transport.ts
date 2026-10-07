@@ -9,6 +9,8 @@ export interface InteractionIdentity {
 	generation: number;
 }
 export interface PendingInteraction {
+	isBlocking?: boolean;
+	autoResolutionMs?: number | null;
 	id: string;
 	kind: string;
 	title: string;

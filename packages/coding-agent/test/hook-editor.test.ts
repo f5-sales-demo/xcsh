@@ -49,6 +49,7 @@ type TestContext = InteractiveModeContext & {
 
 function createControllerContext() {
 	const notifyUserPrompt = vi.fn();
+	const events = new Set<(event: any) => void>();
 	const editor = { id: "core-editor", getText: () => "draft", setText: vi.fn() };
 	const editorContainer = {
 		children: [editor] as unknown[],
@@ -84,14 +85,30 @@ function createControllerContext() {
 		requestRender: ReturnType<typeof vi.fn>;
 	};
 	const ctx = {
-		session: { userInteractions: new UserInteractions(), notifyUserPrompt },
+		session: {
+			userInteractions: new UserInteractions(),
+			notifyUserPrompt,
+			subscribe: (listener: (event: any) => void) => {
+				events.add(listener);
+				return () => events.delete(listener);
+			},
+		},
 		editor,
 		editorContainer,
 		ui,
 		hookEditor: undefined,
 	} as unknown as TestContext;
 
-	return { ctx, editor, editorContainer, notifyUserPrompt, ui };
+	return {
+		ctx,
+		editor,
+		editorContainer,
+		notifyUserPrompt,
+		ui,
+		emit: (event: any) => {
+			for (const listener of events) listener(event);
+		},
+	};
 }
 
 describe("HookEditorComponent default (hook) mode", () => {
@@ -617,4 +634,27 @@ describe("ExtensionUiController hook editor abort", () => {
 		// Result depends on what the editor captured. The key thing is it resolved.
 		expect(result).toBeDefined();
 	});
+});
+
+it("async editor recovers typed drafts at live turn end and keeps the composer draft", async () => {
+	const { ctx, editor, editorContainer, emit } = createControllerContext();
+	const controller = new ExtensionUiController(ctx);
+	controller.initializeInteractionPresenters();
+	const answer = ctx.session.userInteractions.request({
+		kind: "input",
+		delivery: "async",
+		title: "Audience?",
+		questionId: "q",
+	});
+	const pending = ctx.session.userInteractions.pending()[0];
+	expect(editorContainer.children).toEqual([editor]);
+	ctx.session.userInteractions.presentAsync(pending.id);
+	await Bun.sleep(0);
+	const widget = editorContainer.children[0] as any;
+	widget.handleInput("\x1b[200~Montréal 東京\n$(touch never)\x1b[201~");
+	emit({ type: "agent_end" });
+	await Bun.sleep(0);
+	expect(await answer).toBeUndefined();
+	expect(ctx.session.userInteractions.pending()).toEqual([]);
+	expect(editor.setText).toHaveBeenLastCalledWith("draft\n\n> Audience?\n\nMontréal 東京\n$(touch never)");
 });

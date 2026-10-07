@@ -111,6 +111,16 @@
       "99b96c66",
       "ce903418"
     ],
+    "packages/coding-agent/src/modes/components/async-question.ts": [
+      "0313e508",
+      "678897dc",
+      "e9cc6d7a",
+      "8de21bca",
+      "90752749",
+      "775ff36a",
+      "009abfb9",
+      "a0156542"
+    ],
     "packages/coding-agent/src/modes/components/btw-panel.ts": [
       "a575bef8",
       "f298befd",
@@ -262,24 +272,24 @@
       "fafc7cd0"
     ],
     "packages/coding-agent/src/modes/components/question-transcript.ts": [
-      "5f3ab920",
-      "f9d01aa0",
-      "367ef4fc",
-      "10a18f5c",
-      "763a0604",
-      "7cce1804",
-      "14de3e02",
-      "a38899a9"
+      "d48040d6",
+      "8024ce11",
+      "95188469",
+      "cd290c44",
+      "2116b827",
+      "c2ffeea5",
+      "16ccdf9c",
+      "03f23fe5"
     ],
     "packages/coding-agent/src/modes/components/request-user-input.ts": [
-      "37003796",
-      "67f2b8e3",
-      "6e722e65",
-      "cea71cde",
-      "54301f34",
-      "e7f41977",
-      "ea437d20",
-      "7d5ab1f6"
+      "3856fa16",
+      "bb1408c3",
+      "ab452887",
+      "d66a4254",
+      "6a8dc4a0",
+      "a20e2ec6",
+      "223854b0",
+      "e77e5ba9"
     ],
     "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts": [
       "cb43ee0e",
@@ -1048,6 +1058,24 @@
       "entry": "selector-surfaces"
     },
     {
+      "file": "packages/coding-agent/src/modes/components/async-question.ts",
+      "line": 67,
+      "sink": "selectorFrame",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/async-question.ts",
+      "line": 77,
+      "sink": "selectorRow",
+      "entry": "selector-surfaces"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/async-question.ts",
+      "line": 79,
+      "sink": "selectorProse",
+      "entry": "selector-surfaces"
+    },
+    {
       "file": "packages/coding-agent/src/modes/components/btw-panel.ts",
       "line": 77,
       "sink": "selectorTranscriptFrame",
@@ -1457,79 +1485,79 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 102,
+      "line": 110,
       "sink": "selectorTranscriptFrame",
-      "entry": "complete-question-transcript"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 106,
-      "sink": "selectorProse",
       "entry": "complete-question-transcript"
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
       "line": 114,
+      "sink": "selectorProse",
+      "entry": "complete-question-transcript"
+    },
+    {
+      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
+      "line": 122,
       "sink": "selectorTranscriptFrame",
       "entry": "complete-question-transcript"
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 115,
+      "line": 123,
       "sink": "selectorProse",
       "entry": "complete-question-transcript"
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 116,
+      "line": 124,
       "sink": "selectorProse",
       "entry": "complete-question-transcript"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 69,
+      "line": 81,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 70,
+      "line": 82,
       "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 71,
+      "line": 83,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 72,
+      "line": 84,
       "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 74,
+      "line": 86,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 93,
+      "line": 105,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 102,
+      "line": 114,
       "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/request-user-input.ts",
-      "line": 130,
+      "line": 144,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },

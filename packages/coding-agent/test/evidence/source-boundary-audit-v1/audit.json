@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "revision": "8341e587bc88aa58e96b9afe60fbd49a5ee56b1b",
-  "fingerprint": "521e184238c1c1186409299e7bb7e56cb00dfadd4de167e428db0784e2153925",
+  "revision": "9bebb2ecc9763c343cf21162b5f1198ade67d003",
+  "fingerprint": "790b09544fa666e68fb946f36a34792c2c81b7f8d14c30da542479849c040a25",
   "counts": {
-    "total": 238,
-    "components": 96,
+    "total": 239,
+    "components": 97,
     "integrations": 142
   },
   "audits": [
@@ -345,6 +345,7 @@
         "packages/coding-agent/test/browser/chat-handler.configure.test.ts",
         "packages/coding-agent/test/browser/chat-handler.host-tools.test.ts",
         "packages/coding-agent/test/cli/flag-spec.test.ts",
+        "packages/coding-agent/test/codex-interaction-source.test.ts",
         "packages/coding-agent/test/context-add-wizard.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
         "packages/coding-agent/test/core/apply-patch-adverserial.test.ts",
@@ -357,8 +358,7 @@
         "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts",
         "packages/coding-agent/test/internal-urls/provider-documentation.test.ts",
-        "packages/coding-agent/test/internal-urls/public-citations.test.ts",
-        "packages/coding-agent/test/internal-urls/terraform-documentation-snapshot.test.ts"
+        "packages/coding-agent/test/internal-urls/public-citations.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/normalize.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1106,6 +1106,24 @@
         "packages/tui/test/markdown.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/assistant-message.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
+      "source": "packages/coding-agent/src/modes/components/async-question.ts",
+      "kind": "component",
+      "ownership": "caller-owned-draft",
+      "domain": "core",
+      "sha256": "0313e508678897dce9cc6d7a8de21bca90752749775ff36a009abfb9a0156542",
+      "exports": [
+        "AsyncQuestionComponent"
+      ],
+      "interactionSignals": [
+        "render",
+        "keyboard-input",
+        "terminal-control"
+      ],
+      "persistenceSignals": [],
+      "directTests": [],
+      "classification": "packages/coding-agent/src/modes/components/async-question.ts is individually classified as caller-owned-draft in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/modes/components/auth-link-presenter.ts",
@@ -2139,7 +2157,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "5f3ab920f9d01aa0367ef4fc10a18f5c763a06047cce180414de3e02a38899a9",
+      "sha256": "d48040d68024ce1195188469cd290c442116b827c2ffeea516ccdf9c03f23fe5",
       "exports": [
         "AsyncInputReply",
         "QuestionTranscriptComponent",
@@ -2217,13 +2235,14 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "3700379667f2b8e36e722e65cea71cde54301f34e7f41977ea437d207d5ab1f6",
+      "sha256": "3856fa16bb1408c3ab452887d66a42546a8dc4a0a20e2ec6223854b0e77e5ba9",
       "exports": [
         "RequestUserInputComponent"
       ],
       "interactionSignals": [
         "render",
         "keyboard-input",
+        "async-progress",
         "terminal-control"
       ],
       "persistenceSignals": [],
@@ -2231,6 +2250,7 @@
         "packages/coding-agent/test/codex-interaction-source.test.ts",
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/normal-work-question-matrix.test.ts",
+        "packages/coding-agent/test/question-parity-4749.test.ts",
         "packages/coding-agent/test/remote-control/interaction-host.test.ts",
         "packages/coding-agent/test/request-user-input-contract.test.ts",
         "packages/coding-agent/test/request-user-input-polish.test.ts"
@@ -3243,7 +3263,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "56ab42a4c3fd027592404da2814e08ef85211d38ca40009b38ad5f8acee9e6ff",
+      "sha256": "3142dc0f5c91467abd612fc50852057a1d3e1aae1384b8cceccaa2127dfc61e8",
       "exports": [
         "ExtensionUiController"
       ],
@@ -4299,7 +4319,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "606a4c9781a11904a3aacb45678520c61b687249f32669a345f0a55bdea62eb2",
+      "sha256": "117403a3c210cfaada84e047b2c85cf3c815df534e188574b0a413b7c8ab701f",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -6341,11 +6361,11 @@
         "packages/coding-agent/test/cursor-generic-tool-bridge.test.ts",
         "packages/coding-agent/test/e2e/bench/multi-resource-report.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
+        "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/host-software.test.ts",
         "packages/coding-agent/test/interaction-parity.test.ts",
         "packages/coding-agent/test/internal-urls/console-field-metadata.test.ts",
-        "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts",
-        "packages/coding-agent/test/modes/controllers/selector-controller-oauth-login.test.ts"
+        "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts"
       ],
       "classification": "packages/tui/src/events.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

@@ -47,7 +47,10 @@ describe("progressive context loading", () => {
 			agentDir: tempDir,
 			sessionManager: manager,
 			settings: Settings.isolated({ "context.loadingMode": mode }),
-			model: getBundledModel("openai", "gpt-4o-mini"),
+			model: {
+				...getBundledModel("openai", "gpt-4o-mini"),
+				experimentalSupportedTools: ["request_user_input_async"],
+			},
 			disableExtensionDiscovery: true,
 			extensions: [extension],
 			skills: [],
@@ -159,18 +162,10 @@ describe("progressive context loading", () => {
 		try {
 			expect(session.settings.get("context.loadingMode")).toBe("eager");
 			const activeToolNames = session.getActiveToolNames();
+			expect(activeToolNames).not.toContain("request_user_input_async");
 			expect(activeToolNames).toContain("xcsh_context");
 			expect(activeToolNames).toEqual(
-				expect.arrayContaining([
-					"read",
-					"grep",
-					"find",
-					"bash",
-					"edit",
-					"write",
-					"search_tool_bm25",
-					"request_user_input_async",
-				]),
+				expect.arrayContaining(["read", "grep", "find", "bash", "edit", "write", "search_tool_bm25"]),
 			);
 			expect(
 				activeToolNames.every(name =>
@@ -195,7 +190,7 @@ describe("progressive context loading", () => {
 
 			await session.setModel(openai);
 			expect(session.getActiveToolNames()).toContain("task");
-			expect(session.getActiveToolNames()).toContain("request_user_input_async");
+			expect(session.getActiveToolNames()).not.toContain("request_user_input_async");
 			expect(session.getActiveToolNames()).toContain("deferred_weather");
 			expect(session.getActiveToolNames()).not.toContain("search_tool_bm25");
 
@@ -203,7 +198,7 @@ describe("progressive context loading", () => {
 			expect(session.getActiveToolNames()).not.toContain("task");
 			expect(session.getActiveToolNames()).not.toContain("deferred_weather");
 			expect(session.getActiveToolNames()).toContain("search_tool_bm25");
-			expect(session.getActiveToolNames()).toContain("request_user_input_async");
+			expect(session.getActiveToolNames()).not.toContain("request_user_input_async");
 		} finally {
 			await session.dispose();
 		}
@@ -263,7 +258,7 @@ describe("progressive context loading", () => {
 
 		try {
 			expect(session.getActiveToolNames()).toContain("task");
-			expect(session.getActiveToolNames()).toContain("request_user_input_async");
+			expect(session.getActiveToolNames()).not.toContain("request_user_input_async");
 			expect(session.getActiveToolNames()).toContain("deferred_weather");
 		} finally {
 			await session.dispose();
@@ -304,7 +299,7 @@ describe("progressive context loading", () => {
 			const request = session.userInteractions.pending()[0];
 			expect(session.userInteractions.respond(request.id, "B")).toBe(true);
 			await Bun.sleep(0);
-			expect(delivered).toHaveBeenCalledWith("call", "call:0", "B");
+			expect(delivered).toHaveBeenCalledWith("call", '["request_user_input_async","call",0]', "B");
 		} finally {
 			await session.dispose();
 		}
