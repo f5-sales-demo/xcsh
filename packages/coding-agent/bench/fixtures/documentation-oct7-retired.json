@@ -118,5 +118,20 @@
 		"source": "www-f5-com",
 		"stablePath": "products/distributed-cloud-services/l3-and-l7-ddos-attack-mitigation",
 		"url": "https://www.f5.com/products/distributed-cloud-services/l3-and-l7-ddos-attack-mitigation"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "shared-configuration/how-tos/alerting/alerts-opsgenie",
+		"url": "https://docs.cloud.f5.com/docs-v2/shared-configuration/how-tos/alerting/alerts-opsgenie"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "shared-configuration/how-tos/alerting/alerts-pagerduty",
+		"url": "https://docs.cloud.f5.com/docs-v2/shared-configuration/how-tos/alerting/alerts-pagerduty"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "shared-configuration/how-tos/alerting/alerts-slack",
+		"url": "https://docs.cloud.f5.com/docs-v2/shared-configuration/how-tos/alerting/alerts-slack"
 	}
 ]
