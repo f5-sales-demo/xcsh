@@ -36,7 +36,7 @@ export async function measureDocumentationRequests(
 			response = (await read(request)).content;
 			times.push(performance.now() - start);
 			context = "";
-			const destination = [...response.matchAll(/^Read: (\S+)/gm)][0]?.[1];
+			const destination = [...response.matchAll(/^(?:- )?Read: `?(xcsh:\/\/[^`\s]+)`?/gm)][0]?.[1];
 			if (destination) {
 				validateDocumentationMeasurementRequests([destination]);
 				context = (await read(destination)).content;

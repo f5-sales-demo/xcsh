@@ -16,7 +16,7 @@ test("general measurement checks five identical full responses and anchored foll
 		calls.push(uri);
 		return {
 			content: uri.includes("search=")
-				? "Read: xcsh://documentation/docs-cloud-f5-com/dns/index.md#setup\nCite: https://docs.cloud.f5.com/docs-v2/dns"
+				? "Read: `xcsh://documentation/docs-cloud-f5-com/dns/index.md#setup`\nCite: https://docs.cloud.f5.com/docs-v2/dns"
 				: "# Setup\n\n```sh\ndig example.com\n```",
 		};
 	});
