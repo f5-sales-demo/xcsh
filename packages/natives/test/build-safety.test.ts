@@ -4,6 +4,7 @@ import {
 	hasAvx512Markers,
 	nativeSymbolCommand,
 	undefinedScannerSymbols,
+	unsupportedGlibcSymbols,
 } from "../../../scripts/ci-release-verify-natives";
 import { buildZigArgs } from "../scripts/zig-safe-wrapper";
 
@@ -121,5 +122,21 @@ describe("native scanner symbol inspection", () => {
 		).toEqual(["/usr/bin/llvm-nm-18", "--undefined-only"]);
 		expect(() => nativeSymbolCommand("darwin-arm64", "linux", () => null)).toThrow("requires llvm-nm");
 		expect(nativeSymbolCommand("darwin-arm64", "darwin", () => null)).toEqual(["nm", "-u"]);
+	});
+});
+
+describe("vendored crypto release ABI", () => {
+	it("rejects unversioned C23 glibc imports that evade version scanning", () => {
+		expect(
+			unsupportedGlibcSymbols(" U __isoc23_strtol\n U __isoc23_sscanf@GLIBC_2.38\n U strtol@GLIBC_2.2.5\n"),
+		).toEqual(["__isoc23_strtol", "__isoc23_sscanf"]);
+		expect(unsupportedGlibcSymbols(" U strtol@GLIBC_2.2.5\n U napi_create_object\n")).toEqual([]);
+	});
+	it("routes x64 and ARM64 release C compilation through napi target compilers", async () => {
+		const build = await Bun.file(new URL("../scripts/build-native.ts", import.meta.url)).text();
+		expect(build).toContain("if (releaseLinuxTarget) {");
+		expect(build).toContain('Bun.env.CC_x86_64_unknown_linux_gnu = path.join(import.meta.dir, "release-clang.sh")');
+		expect(build).toContain("Bun.env.TARGET_CC = targetCc;");
+		expect(build).toContain('Bun.env.CFLAGS_x86_64_unknown_linux_gnu = "-D_BSD_SOURCE -D_XOPEN_SOURCE=700"');
 	});
 });
