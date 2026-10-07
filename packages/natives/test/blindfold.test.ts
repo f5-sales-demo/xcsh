@@ -1,13 +1,18 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { createDecipheriv, generateKeyPairSync } from "node:crypto";
+import { createDecipheriv, createPrivateKey } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { blindfoldPrepare } from "@f5-sales-demo/pi-natives";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "blindfold-test-"));
-const pair = generateKeyPairSync("rsa", { modulusLength: 2048, publicExponent: 65537 });
-const jwk = pair.privateKey.export({ format: "jwk" });
+const synthetic = (await Bun.file(path.join(import.meta.dir, "fixtures/blindfold-synthetic.json")).json()) as Record<
+	string,
+	string
+>;
+// Policy-derived RSA exponents are not coprime with every random key's totient.
+// Pin the synthetic tenant key so independent recovery has a deterministic inverse.
+const jwk = createPrivateKey(Buffer.from(synthetic["rsa-key.pem"]!, "base64")).export({ format: "jwk" });
 const b64 = (v: string) => Buffer.from(v, "base64url").toString("base64");
 const pub = JSON.stringify({
 	data: { tenant: "example-tenant", key_version: 1, modulus_base64: b64(jwk.n!), public_exponent_base64: b64(jwk.e!) },
@@ -65,6 +70,13 @@ function recover(location: string, pid = 101n, tamper = false): Buffer {
 	return Buffer.concat([aes.update(ciphertext.subarray(0, -16)), aes.final()]);
 }
 describe("native Blindfold protocol", () => {
+	test("uses a fixed synthetic tenant key compatible with the policy exponent", () => {
+		const fixtureKey = createPrivateKey(Buffer.from(synthetic["rsa-key.pem"]!, "base64")).export({ format: "jwk" });
+		expect(jwk.n).toBe(fixtureKey.n);
+		const p = integer(Buffer.from(jwk.p!, "base64url")),
+			q = integer(Buffer.from(jwk.q!, "base64url"));
+		expect(() => inverse(65537n * (203n + (1n << 31n)), (p - 1n) * (q - 1n))).not.toThrow();
+	});
 	test("independently recovers a 2 KB secret and validates binary fields", () =>
 		expect(recover(prepare().location)).toEqual(Buffer.alloc(2048, 120)));
 	test("randomizes envelopes", () => expect(prepare().location).not.toBe(prepare().location));
@@ -99,10 +111,6 @@ describe("native Blindfold protocol", () => {
 		).toThrow("Cannot read Blindfold input");
 	});
 });
-const synthetic = (await Bun.file(path.join(import.meta.dir, "fixtures/blindfold-synthetic.json")).json()) as Record<
-	string,
-	string
->;
 for (const [name, bytes] of Object.entries(synthetic))
 	fs.writeFileSync(path.join(dir, name), Buffer.from(bytes, "base64"), { mode: 0o600 });
 const fixture = (name: string) => path.join(dir, name);
