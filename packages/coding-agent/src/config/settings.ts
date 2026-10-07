@@ -33,6 +33,7 @@ import {
 	setForceSlot,
 	setSymbolPreset,
 } from "../modes/theme/theme";
+import { currentContextExecution } from "../services/context-execution";
 import { AgentStorage } from "../session/agent-storage";
 import { applyHyperlinkSetting } from "../tui/hyperlink";
 import { type EditMode, normalizeEditMode } from "../utils/edit-mode";
@@ -232,6 +233,10 @@ export class Settings {
 	 * Returns the merged value from global + project + overrides, or the default.
 	 */
 	get<P extends SettingPath>(path: P): SettingValue<P> {
+		const execution = currentContextExecution();
+		if (execution && path === "bash.environment") return execution.environment as SettingValue<P>;
+		if (execution && path === "xcsh.sensitiveKeys") return execution.sensitiveKeys as SettingValue<P>;
+		if (execution && path === "xcsh.contextSource") return execution.source as SettingValue<P>;
 		const segments = path.split(".");
 		const value = getByPath(this.#merged, segments);
 		if (value !== undefined) {

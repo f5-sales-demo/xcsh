@@ -402,6 +402,7 @@ async function buildSessionOptions(
 	const options: CreateAgentSessionOptions = {
 		cwd: parsed.cwd ?? getProjectDir(),
 		contextName: parsed.context,
+		contextSource: parsed.contextSource,
 	};
 
 	// Auto-discover SYSTEM.md if no CLI system prompt provided
