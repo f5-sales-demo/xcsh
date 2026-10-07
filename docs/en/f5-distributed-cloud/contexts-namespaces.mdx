@@ -12,7 +12,8 @@ A context chooses the tenant endpoint and API credential. A namespace chooses th
 
 Run `/context` to open the picker. Type to search names, endpoints, namespaces or storage sources. Use Up/Down and Page Up/Page Down to move, then Enter to select. The active context receives initial focus. Local and global contexts with the same name remain separate choices.
 
-Selection applies immediately to future turns. `Checking` means authentication is still running; `Connected` confirms it succeeded. A failed check retains the selection and offers recovery through context actions. Running work, retries and descendant jobs retain the context captured when their turn began. When a selection differs from running work, xcsh displays `Current work: A · Next turn: B`.
+Selection applies immediately to future turns.
+`Checking` means authentication is still running; `Connected` confirms it succeeded. A failed check retains the selection and offers recovery through context actions. Running work, retries and descendant jobs retain the context captured when their turn began. When a selection differs from running work, xcsh displays `Current work: A · Next turn: B`.
 
 Use Ctrl+O for details, validation, editing, namespace, rename, deletion, environment and project-link actions. Customize this binding as `app.context.actions` in keybindings. Escape returns one level; at the root it closes the picker. `/context list` is an explicit read-only report. `/context show NAME` displays saved details without contacting the tenant; `/context validate NAME` checks credentials separately.
 
