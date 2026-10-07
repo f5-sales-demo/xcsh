@@ -404,6 +404,55 @@ describe("AgentSession concurrent prompt guard", () => {
 		).toBe(true);
 	});
 
+	it("holds A through a running response and admits queued follow-up with B", async () => {
+		const model = getBundledModel("anthropic", "claude-sonnet-4-5")!;
+		const settings = Settings.isolated({
+			"bash.environment": {
+				XCSH_CONTEXT_NAME: "a",
+				XCSH_API_URL: "https://a.example.test",
+				XCSH_API_TOKEN: "synthetic-a",
+			},
+		});
+		const targets: string[] = [];
+		let firstStream: MockAssistantStream | undefined;
+		const agent = new Agent({
+			getApiKey: () => "test-key",
+			initialState: { model, systemPrompt: "Test", tools: [] },
+			streamFn: () => {
+				targets.push(settings.get("bash.environment").XCSH_CONTEXT_NAME);
+				const stream = new MockAssistantStream();
+				if (targets.length === 1) firstStream = stream;
+				else
+					queueMicrotask(() => {
+						stream.push({ type: "done", reason: "stop", message: createAssistantMessage("Done") });
+					});
+				return stream;
+			},
+		});
+		const authStorage = await AuthStorage.create(path.join(tempDir, "context-auth.db"));
+		authStorages.push(authStorage);
+		authStorage.setRuntimeApiKey("anthropic", "test-key");
+		session = new AgentSession({
+			agent,
+			settings,
+			sessionManager: SessionManager.inMemory(),
+			modelRegistry: new ModelRegistry(authStorage, path.join(tempDir, "models.yml")),
+		});
+		const first = session.prompt("First");
+		await waitFor(() => targets.length === 1);
+		settings.override("bash.environment", {
+			XCSH_CONTEXT_NAME: "b",
+			XCSH_API_URL: "https://b.example.test",
+			XCSH_API_TOKEN: "synthetic-b",
+		});
+		expect(session.currentWorkContextName).toBe("a");
+		await session.prompt("Follow-up", { streamingBehavior: "followUp" });
+		firstStream!.push({ type: "done", reason: "stop", message: createAssistantMessage("First done") });
+		await first;
+		await session.waitForIdle();
+		expect(targets).toEqual(["a", "b"]);
+	});
+
 	it("should allow prompt() after previous completes", async () => {
 		// Create session with a stream that completes immediately
 		const model = getBundledModel("anthropic", "claude-sonnet-4-5")!;

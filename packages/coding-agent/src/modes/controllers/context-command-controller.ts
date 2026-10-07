@@ -6,12 +6,13 @@ import {
 	getProjectDir,
 	isSafeContextName,
 } from "@f5-sales-demo/pi-utils";
-import type { XCSHContext } from "../../services/xcsh-context";
+import { type ContextOperation, executeContextOperation } from "../../services/context-operations";
+import type { ContextTarget, XCSHContext } from "../../services/xcsh-context";
 import { ContextService } from "../../services/xcsh-context";
 import { isSensitiveEnvKey } from "../../services/xcsh-env";
-import { renderContextMessage } from "../../services/xcsh-table";
 import { expandTilde } from "../../tools/path-utils";
 import { ContextAddWizard } from "../components/context-add-wizard";
+import { ContextInput, ContextMenu, ContextPicker } from "../components/context-picker";
 import type { ActionReview } from "../components/reviewed-action";
 import { runReviewedAction } from "../components/reviewed-action-dialog";
 import { ReportDetailsComponent } from "../components/selector-frame";
@@ -28,25 +29,6 @@ function digest(value: unknown): string {
 function contextSummary(context: XCSHContext | undefined): string {
 	if (!context) return "Absent";
 	return `${context.apiUrl} · namespace ${context.defaultNamespace || "(none)"} · credential masked`;
-}
-
-function sameContextConfiguration(left: XCSHContext, right: XCSHContext): boolean {
-	return (
-		digest({
-			apiUrl: left.apiUrl,
-			apiToken: left.apiToken,
-			defaultNamespace: left.defaultNamespace,
-			env: left.env,
-			sensitiveKeys: left.sensitiveKeys,
-		}) ===
-		digest({
-			apiUrl: right.apiUrl,
-			apiToken: right.apiToken,
-			defaultNamespace: right.defaultNamespace,
-			env: right.env,
-			sensitiveKeys: right.sensitiveKeys,
-		})
-	);
 }
 
 function parseEnvAssignments(text: string): Record<string, string> {
@@ -90,6 +72,8 @@ function importSource(rawArgs: string): { parsed: unknown; overwrite: boolean; s
 
 export class ContextCommandController {
 	#ctx: InteractiveModeContext;
+	#pickerActive = false;
+	#draftActivated = false;
 
 	constructor(ctx: InteractiveModeContext) {
 		this.#ctx = ctx;
@@ -109,13 +93,92 @@ export class ContextCommandController {
 			);
 			return;
 		}
-		await this.#handleWizard();
+		void this.#handleWizard();
 	}
 
 	async handle(command: { name: string; args: string; text: string }): Promise<void> {
-		const sub = command.args.trim().split(/\s+/)[0];
+		const tokens = command.args.trim().split(/\s+/);
+		const sub = tokens[0]?.toLowerCase();
+		const service = await ContextService.getOrInit(undefined, getProjectDir());
+		if (!sub || (sub === "activate" && !tokens[1])) return this.#picker();
+		if (sub === "edit") {
+			void this.#edit(tokens[1] ? { name: tokens[1], source: "global" } : undefined);
+			return;
+		}
+		if (sub === "create" && tokens.length < 4) {
+			void this.#handleWizard(tokens.slice(1));
+			return;
+		}
+		if (
+			sub === "activate" ||
+			sub === "-" ||
+			((await service.listContexts()).some(context => context.name === tokens[0]) && tokens.length === 1)
+		) {
+			const target =
+				sub === "-" ? undefined : { name: sub === "activate" ? tokens[1] : tokens[0], source: "global" as const };
+			return this.#activate(target, sub === "-");
+		}
+		if (
+			[
+				"rename",
+				"delete",
+				"link",
+				"namespace",
+				"validate",
+				"import",
+				"export",
+				"env",
+				"set",
+				"unset",
+				"add",
+				"remove",
+				"clear",
+			].includes(sub) &&
+			(tokens.length === 1 ||
+				(sub === "rename" && tokens.length < 3) ||
+				(sub === "delete" && !tokens.includes("--confirm")))
+		)
+			return this.#guided(sub, tokens.slice(1));
+		if (sub === "namespace" && tokens[1]) {
+			service.setNamespace(tokens.slice(1).join(" "));
+			this.#ctx.showStatus(`Namespace ${service.getStatus().activeContextNamespace} · future turns`);
+			return;
+		}
+		if (sub === "env" && ["set", "unset", "add", "remove"].includes(tokens[1]) && tokens.length < 3)
+			return this.#guided(tokens[1]);
+		const activeTarget = service.activeTarget;
+		if (activeTarget?.source === "local") {
+			const nested = sub === "env" ? tokens[1] : sub;
+			if (["set", "add", "unset", "remove", "clear"].includes(nested)) {
+				const values = tokens.slice(sub === "env" ? 2 : 1);
+				if (!values.length) return this.#guided(nested, [], activeTarget);
+				if (["set", "add"].includes(nested))
+					return this.#reviewOperation({
+						action: "env",
+						target: activeTarget,
+						env: parseEnvAssignments(values.join(" ")),
+					});
+				return this.#reviewOperation({ action: "env", target: activeTarget, unset: values });
+			}
+			if (sub === "env" && (!tokens[1] || tokens[1] === "list")) {
+				const result = await executeContextOperation(
+					service,
+					{ action: "env", target: activeTarget },
+					getProjectDir(),
+				);
+				this.#ctx.showStatus(JSON.stringify(result, null, 2));
+				return;
+			}
+			if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(command.args))
+				return this.#reviewOperation({
+					action: "env",
+					target: activeTarget,
+					env: parseEnvAssignments(command.args),
+				});
+		}
 		if (sub === "wizard") {
-			return this.#handleWizard();
+			void this.#handleWizard();
+			return;
 		}
 		const { handleContextCommand } = await import("../../services/xcsh-context-command");
 		let prepared: { review: ActionReview; target: ContextReviewTarget } | undefined;
@@ -139,6 +202,361 @@ export class ContextCommandController {
 		else if (outcome === "busy") this.#ctx.showStatus("Another reviewed action is already open.");
 		else if (outcome === "unresolved")
 			this.#ctx.showError("The context change remains unresolved. Reopen /context to review and retry it.");
+	}
+
+	async #input(title: string, detail = "", value = "", masked = false): Promise<string | undefined> {
+		return this.#ctx.showHookCustom<string | undefined>(
+			(ui, _theme, _keys, done) => new ContextInput(title, detail, value, masked, done, () => ui.terminal.rows),
+		);
+	}
+	async #menu(title: string, labels: string[]): Promise<number | undefined> {
+		return this.#ctx.showHookCustom<number | undefined>(
+			(ui, _theme, _keys, done) => new ContextMenu(title, labels, done, () => ui.terminal.rows),
+		);
+	}
+	async #chooseTarget(): Promise<ContextTarget | undefined> {
+		const service = await ContextService.getOrInit();
+		const choices = await service.listChoices();
+		const index = await this.#menu(
+			"Choose context",
+			choices.map(choice => `${choice.target.name} · ${choice.target.source}`),
+		);
+		return index === undefined ? undefined : choices[index]?.target;
+	}
+	async #picker(): Promise<void> {
+		if (this.#pickerActive) return;
+		this.#pickerActive = true;
+		try {
+			const service = await ContextService.getOrInit();
+			let state: import("../components/context-picker").ContextPickerState | undefined;
+			for (;;) {
+				const choices = await service.listChoices();
+				const result = await this.#ctx.showHookCustom<
+					import("../components/context-picker").ContextPickerResult | undefined
+				>((ui, _theme, _keys, done) => {
+					const picker = new ContextPicker(
+						choices,
+						service.activeTarget,
+						result => {
+							state = picker.state;
+							done(result);
+						},
+						() => ui.terminal.rows,
+						state,
+					);
+					return picker;
+				});
+				if (!result) return;
+				if (result.action === "activate") {
+					await this.#activate(result.target);
+					return;
+				}
+				if (result.action === "create") {
+					await this.#handleWizard();
+					if (this.#draftActivated) return;
+					continue;
+				}
+				if (result.action === "manage") {
+					await this.#manage();
+					continue;
+				}
+				if (result.action === "actions") {
+					await this.#actions(result.target);
+					if (this.#draftActivated) return;
+				}
+			}
+		} finally {
+			this.#pickerActive = false;
+		}
+	}
+	async #activate(target?: ContextTarget, previous = false, reportOnly = true): Promise<void> {
+		try {
+			const service = await ContextService.getOrInit();
+			const context = previous ? await service.activatePrevious() : await service.activate(target!);
+			const generation = service.getStatus().activationGeneration;
+			const currentWork = this.#ctx.session?.currentWorkContextName;
+			if (currentWork && currentWork !== context.name)
+				this.#ctx.showStatus(`Current work: ${currentWork} · Next turn: ${context.name}`);
+			this.#ctx.showStatus(
+				`Selected ${context.name} · namespace ${service.getStatus().activeContextNamespace} · Checking`,
+				{ dim: false },
+			);
+			this.#ctx.statusLine?.invalidate();
+			this.#ctx.updateEditorTopBorder?.();
+			this.#invalidateIntegrations();
+			void service.validateToken({ timeoutMs: 5000 }).then(result => {
+				if (service.getStatus().activationGeneration !== generation) return;
+				this.#ctx.showStatus(
+					result.status === "connected"
+						? `Connected · ${context.name}`
+						: `Selected ${context.name} · ${result.failureReason ?? "connection unavailable"}. Open context actions to validate or edit credentials.`,
+					{ dim: false },
+				);
+				this.#ctx.statusLine?.invalidate();
+				this.#ctx.ui.requestRender();
+			});
+		} catch (error) {
+			if (!reportOnly) throw error;
+			this.#ctx.showError(error instanceof Error ? error.message : "Selection failed");
+		}
+	}
+	async #actions(target: ContextTarget): Promise<void> {
+		const index = await this.#menu(`${target.name} · ${target.source}`, [
+			"Details",
+			"Validate",
+			"Edit",
+			"Session namespace",
+			"Rename",
+			"Delete",
+			"Environment",
+			"Link to project",
+		]);
+		if (index === undefined) return;
+		if (index === 0 || index === 1) {
+			const service = await ContextService.getOrInit();
+			const result = await executeContextOperation(
+				service,
+				{ action: index === 0 ? "show" : "validate", target },
+				getProjectDir(),
+			);
+			await this.#ctx.showHookCustom<void>(
+				(ui, _theme, _keys, done) =>
+					new ReportDetailsComponent(
+						index === 0 ? "Context details" : "Connection result",
+						`${target.name} · ${target.source}`,
+						JSON.stringify(result, null, 2),
+						() => done(),
+						() => ui.terminal.rows,
+					),
+			);
+		} else if (index === 2) await this.#edit(target);
+		else await this.#guided(["", "", "", "namespace", "rename", "delete", "env", "link"][index], [], target);
+	}
+	async #manage(): Promise<void> {
+		const labels = [
+			"Create context",
+			"Edit",
+			"Rename",
+			"Delete",
+			"Project link",
+			"Unlink project",
+			"Environment",
+			"Import bundle",
+			"Export bundle",
+		];
+		const index = await this.#menu("Manage contexts", labels);
+		if (index === 0) return this.#handleWizard();
+		if (index === 1) return this.#edit();
+		if (index !== undefined)
+			await this.#guided(["", "", "rename", "delete", "link", "unlink", "env", "import", "export"][index]);
+	}
+	async #reviewOperation(op: ContextOperation): Promise<void> {
+		const service = await ContextService.getOrInit();
+		const cwd = getProjectDir();
+		const prepare = async () => {
+			const file = op.target ? service.targetPath(op.target) : undefined;
+			const raw = file && fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
+			return {
+				target: op,
+				review: {
+					identity: `context:${op.target?.source ?? "global"}:${op.target?.name ?? op.action}`,
+					scope:
+						op.target?.source === "local"
+							? `Project-local configuration · ${cwd}`
+							: "Global context configuration",
+					revision: digest({
+						raw,
+						op,
+						contexts: op.action === "import" ? await service.listContexts() : undefined,
+					}),
+					changes: [
+						{ field: "Operation", before: "Saved configuration", after: op.action },
+						...(op.newName
+							? [
+									{
+										field: op.action === "link" ? "Linked global context" : "Name",
+										before: op.target?.name ?? "Absent",
+										after: op.newName,
+									},
+								]
+							: []),
+						...(op.namespace !== undefined
+							? [
+									{
+										field: "Default namespace",
+										before: op.target ? service.resolveTarget(op.target).defaultNamespace : "Absent",
+										after: op.namespace,
+									},
+								]
+							: []),
+						...Object.entries(op.env ?? {}).map(([key, value]) => ({
+							field: key,
+							before: "Saved value",
+							after:
+								isSensitiveEnvKey(key) ||
+								(op.target && service.resolveTarget(op.target).sensitiveKeys?.includes(key))
+									? "Masked replacement"
+									: value,
+						})),
+						...(op.unset ?? []).map(key => ({ field: key, before: "Saved value", after: "Removed" })),
+						...(op.action === "import"
+							? [
+									{
+										field: "Bundle",
+										before: "Current global contexts",
+										after: "Import global contexts; conflicting names require explicit overwrite",
+									},
+								]
+							: []),
+					],
+					consequence: "Applies only the specified saved change. Credentials remain masked.",
+				},
+			};
+		};
+		const prepared = await prepare();
+		await runReviewedAction(this.#ctx, "context change", {
+			review: prepared.review,
+			resolve: prepare,
+			execute: async operation => {
+				const result = await executeContextOperation(service, operation, cwd);
+				if (result && typeof result === "object" && "status" in result && result.status !== "connected")
+					throw new Error("Credential validation failed; saved configuration is unchanged.");
+				this.#ctx.showStatus(`Saved ${op.target?.name ?? op.action}`);
+			},
+		});
+	}
+	async #guided(sub: string, args: string[] = [], selected?: ContextTarget): Promise<void> {
+		const service = await ContextService.getOrInit();
+		if (sub === "import") {
+			const source = args[0] ?? (await this.#input("Import bundle", "Enter a file path or complete bundle JSON"));
+			if (!source) return;
+			let bundle: unknown;
+			try {
+				bundle = JSON.parse(source.startsWith("{") ? source : fs.readFileSync(expandTilde(source), "utf8"));
+			} catch {
+				this.#ctx.showError("Import must contain valid JSON.");
+				return;
+			}
+			return this.#reviewOperation({ action: "import", bundle });
+		}
+		if (sub === "export") {
+			const target =
+				selected ?? (args[0] ? { name: args[0], source: "global" as const } : await this.#chooseTarget());
+			if (!target) return;
+			const result = await executeContextOperation(service, { action: "export", target }, getProjectDir());
+			this.#ctx.showStatus(JSON.stringify(result, null, 2));
+			return;
+		}
+		if (sub === "namespace") {
+			const namespaces = service.getCachedNamespaces();
+			const index = await this.#menu("Session namespace", [...namespaces, "Enter namespace"]);
+			if (index === undefined) return;
+			const value =
+				index < namespaces.length
+					? namespaces[index]
+					: await this.#input(
+							"Session namespace",
+							"Applies to future turns",
+							service.getStatus().activeContextNamespace ?? "default",
+						);
+			if (value) {
+				service.setNamespace(value);
+				this.#ctx.showStatus(`Namespace ${value} · future turns`);
+			}
+			return;
+		}
+		const target = selected ?? (args[0] ? { name: args[0], source: "global" as const } : await this.#chooseTarget());
+		if (!target) return;
+		if (sub === "validate") {
+			const result = await executeContextOperation(service, { action: "validate", target }, getProjectDir());
+			this.#ctx.showStatus(JSON.stringify(result, null, 2));
+			return;
+		}
+		if (sub === "rename") {
+			const newName = args[1] ?? (await this.#input("Rename context", `${target.name} · ${target.source}`));
+			if (newName) await this.#reviewOperation({ action: "rename", target, newName });
+			return;
+		}
+		if (sub === "delete") return this.#reviewOperation({ action: "delete", target, confirm: true });
+		if (sub === "link") {
+			const localName = await this.#input(
+				"Project link name",
+				`Links to global context ${target.name}`,
+				target.name,
+			);
+			if (localName)
+				await this.#reviewOperation({
+					action: "link",
+					target: { name: localName, source: "local" },
+					newName: target.name,
+				});
+			return;
+		}
+		if (sub === "unlink") return this.#reviewOperation({ action: "unlink", target: { ...target, source: "local" } });
+		const action = ["unset", "remove", "clear"].includes(sub)
+			? 1
+			: ["set", "add"].includes(sub)
+				? 0
+				: await this.#menu("Environment", ["Set variable", "Remove variable", "View variables"]);
+		if (action === undefined) return;
+		if (action === 2) {
+			const result = await executeContextOperation(service, { action: "env", target }, getProjectDir());
+			this.#ctx.showStatus(JSON.stringify(result, null, 2));
+			return;
+		}
+		const key = await this.#input("Environment variable", "Non-reserved XCSH_ key");
+		if (!key) return;
+		if (action === 1) return this.#reviewOperation({ action: "env", target, unset: [key] });
+		const value = await this.#input(`Value for ${key}`, "Saved on the selected context", "", isSensitiveEnvKey(key));
+		if (value === undefined) return;
+		return this.#reviewOperation({ action: "env", target, env: { [key]: value } });
+	}
+	async #edit(selected?: ContextTarget): Promise<void> {
+		const service = await ContextService.getOrInit();
+		let target = selected ?? (await this.#chooseTarget());
+		if (!target) return;
+		let file = service.targetPath(target);
+		let original = fs.readFileSync(file, "utf8");
+		const parsed = JSON.parse(original);
+		if (target.source === "local" && typeof parsed.context === "string") {
+			const action = await this.#menu("Edit project link", [
+				"Local namespace",
+				"Local environment",
+				`Global URL/token · ${parsed.context}`,
+			]);
+			if (action === 0) {
+				const value = await this.#input(
+					"Default namespace",
+					"Stored only in this project pointer",
+					parsed.overrides?.defaultNamespace ?? "default",
+				);
+				if (value !== undefined) await this.#reviewOperation({ action: "edit", target, namespace: value });
+				return;
+			}
+			if (action === 1) return this.#guided("env", [], target);
+			if (action !== 2) return;
+			target = { name: parsed.context, source: "global" };
+			file = service.targetPath(target);
+			original = fs.readFileSync(file, "utf8");
+		}
+		const context = service.resolveTarget(target);
+		const editTarget = target;
+		let savedDraft: string | undefined;
+		await this.#openDraft(
+			context,
+			`${target.source} saved configuration · ${target.name}`,
+			async (draft, activate) => {
+				if (savedDraft && savedDraft !== digest(draft)) throw new Error("Draft changed after saving. Reopen Edit.");
+				if (!savedDraft) {
+					await service.saveTarget(editTarget, draft, original);
+					savedDraft = digest(draft);
+					original = fs.readFileSync(file, "utf8");
+				}
+				if (fs.readFileSync(file, "utf8") !== original) throw new Error("Saved context changed. Reopen Edit.");
+				if (activate) await this.#activate(editTarget, false, false);
+				else this.#ctx.showStatus(`Saved ${editTarget.name}`);
+			},
+		);
 	}
 
 	#invalidateIntegrations(): void {
@@ -195,12 +613,17 @@ export class ContextCommandController {
 			ui: this.#ctx.ui,
 		});
 		if (!report) return;
+		report = Bun.stripANSI(report)
+			.split("\n")
+			.filter(line => !/^[╭╰]/.test(line))
+			.map(line => line.replace(/^│\s?/, "").replace(/\s*│$/, ""))
+			.join("\n");
 		const action = command.args.trim() || "list";
 		await this.#ctx.showHookCustom<void>(
 			(ui, _theme, _keys, done) =>
 				new ReportDetailsComponent(
-					"F5 XC contexts",
-					`/context ${action} · saved configuration and current runtime state`,
+					"Saved contexts",
+					`/context ${action}`,
 					report!,
 					() => done(),
 					() => ui.terminal.rows,
@@ -479,90 +902,58 @@ export class ContextCommandController {
 		return undefined;
 	}
 
-	async #handleWizard(): Promise<void> {
-		const done = () => {
-			this.#ctx.editorContainer.clear();
-			this.#ctx.editorContainer.addChild(this.#ctx.editor);
-			this.#ctx.ui.setFocus(this.#ctx.editor);
-		};
-
-		const wizard = new ContextAddWizard(
-			async (context, shouldActivate) => {
-				done();
-				try {
-					const service = await ContextService.getOrInit();
-					const prepare = async () => {
-						const contexts = await service.listContexts();
-						const existing = contexts.find(candidate => candidate.name === context.name);
-						if (existing && !sameContextConfiguration(existing, context))
-							throw new Error(`Context '${context.name}' now exists with different values.`);
-						const needsCreate = !existing;
-						const currentActive = service.getStatus().activeContextName;
-						return {
-							target: { needsCreate },
-							review: {
-								identity: `context:${context.name}`,
-								scope: "Global F5 XC context configuration",
-								revision: digest({ contexts, context, shouldActivate, currentActive, needsCreate }),
-								changes: [
-									...(needsCreate
-										? [{ field: "Context", before: "Absent", after: contextSummary(context) }]
-										: []),
-									{
-										field: "API credential",
-										before: needsCreate ? "Absent" : "Saved",
-										after: "Saved (masked)",
-									},
-									...(shouldActivate && currentActive !== context.name
-										? [
-												{
-													field: "Active context",
-													before: currentActive ?? "None",
-													after: context.name,
-												},
-											]
-										: []),
-								],
-								consequence: `${needsCreate ? "Creates a private credential-bearing context file. " : "The context file is already saved. "}${shouldActivate ? "Activates it for this process after saving; validation was performed separately." : "It remains inactive; validation was performed separately."}`,
-							},
-						};
-					};
-					const prepared = await prepare();
-					const outcome = await runReviewedAction(this.#ctx, "context creation", {
-						review: prepared.review,
-						resolve: prepare,
-						execute: async target => {
-							if (target.needsCreate) await service.createContext(context);
-							if (shouldActivate) await service.activate(context.name);
+	async #openDraft(
+		initial: XCSHContext | undefined,
+		scope: string,
+		save: (draft: XCSHContext, activate: boolean) => Promise<void>,
+		prefill?: { name?: string; url?: string; token?: string },
+	): Promise<void> {
+		this.#draftActivated = false;
+		await this.#ctx
+			.showHookCustom<boolean>(
+				(ui, _theme, _keys, done) =>
+					new ContextAddWizard(
+						async (draft, activate) => {
+							await save(draft, activate);
+							this.#draftActivated = activate;
+							this.#invalidateIntegrations();
+							done(!activate);
 						},
-					});
-					if (outcome === "succeeded") {
-						this.#invalidateIntegrations();
-						this.#ctx.showStatus(
-							renderContextMessage(context.name, shouldActivate ? "Created and activated." : "Created."),
-							{ dim: false },
-						);
-						this.#ctx.statusLine?.invalidate();
-						this.#ctx.updateEditorTopBorder?.();
-						this.#ctx.ui?.requestRender();
-					} else if (outcome === "busy") this.#ctx.showStatus("Another reviewed action is already open.");
-					else if (outcome === "unresolved")
-						this.#ctx.showError("Context creation remains unresolved. Reopen the wizard to retry.");
-				} catch (err) {
-					this.#ctx.showError(`Failed to create context: ${err instanceof Error ? err.message : String(err)}`);
-				}
-			},
-			() => {
-				done();
-			},
-			() => {
-				this.#ctx.ui.requestRender();
-			},
-		);
+						() => done(false),
+						() => ui.requestRender(),
+						{ initial, scope, prefill },
+					),
+			)
+			.then(savedOnly => {
+				if (savedOnly && !this.#pickerActive) void this.#picker();
+			})
+			.catch(error => this.#ctx.showError(error instanceof Error ? error.message : "Draft failed"));
+	}
 
-		this.#ctx.editorContainer.clear();
-		this.#ctx.editorContainer.addChild(wizard);
-		this.#ctx.ui.setFocus(wizard);
-		this.#ctx.ui.requestRender();
+	async #handleWizard(prefill: string[] = []): Promise<void> {
+		const service = await ContextService.getOrInit();
+		let saved: string | undefined;
+		let savedDraft: string | undefined;
+		await this.#openDraft(
+			undefined,
+			"Global saved configuration",
+			async (context, shouldActivate) => {
+				if (!saved)
+					await service.saveTarget(
+						{ name: context.name, source: "global" },
+						{ ...context, version: 1, metadata: { createdAt: new Date().toISOString() } },
+						null,
+					);
+				if (savedDraft && savedDraft !== digest(context))
+					throw new Error("Draft changed after saving. Reopen Edit to review the saved context.");
+				savedDraft ??= digest(context);
+				saved ??= fs.readFileSync(service.targetPath({ name: context.name, source: "global" }), "utf8");
+				if (fs.readFileSync(service.targetPath({ name: context.name, source: "global" }), "utf8") !== saved)
+					throw new Error("Saved context changed. Reopen the editor.");
+				if (shouldActivate) await this.#activate({ name: context.name, source: "global" }, false, false);
+				else this.#ctx.showStatus(`Saved ${context.name}`);
+			},
+			{ name: prefill[0], url: prefill[1], token: prefill[2] },
+		);
 	}
 }
