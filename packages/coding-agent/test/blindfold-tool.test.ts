@@ -69,3 +69,54 @@ describe("Blindfold assistant boundary", () => {
 		}
 	});
 });
+
+describe("Blindfold admitted tenant snapshot", () => {
+	test("uses admitted A despite ambient B and never consults mutable context", async () => {
+		const { runWithContextExecution } = await import("../src/services/context-execution");
+		const priorUrl = process.env.XCSH_API_URL,
+			priorToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://b.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "synthetic-b";
+		const previousFetch = globalThis.fetch;
+		const seen: Array<{ url: string; token: string | null }> = [];
+		globalThis.fetch = (async (url, init) => {
+			seen.push({ url: String(url), token: new Headers(init?.headers).get("Authorization") });
+			return Response.json({ data: { tenant: "a" } });
+		}) as typeof fetch;
+		const adapter = new XcshBlindfoldTool({
+			cwd: root,
+			settings,
+			getContextService: async () => {
+				throw new Error("mutable context must not be consulted");
+			},
+		} as never);
+		try {
+			const result = await runWithContextExecution(
+				{
+					environment: Object.freeze({
+						XCSH_API_URL: "https://a.console.ves.volterra.io",
+						XCSH_API_TOKEN: "synthetic-a",
+						XCSH_CONTEXT_NAME: "a",
+						XCSH_NAMESPACE: "example-a",
+					}),
+					sensitiveKeys: [],
+					source: "global",
+				},
+				() => adapter.execute("admitted", { operation: "public-key", contextName: "a" }),
+			);
+			expect(seen).toEqual([
+				{
+					url: "https://a.console.ves.volterra.io/api/secret_management/get_public_key",
+					token: "APIToken synthetic-a",
+				},
+			]);
+			expect(JSON.stringify(result)).not.toContain("synthetic-a");
+		} finally {
+			globalThis.fetch = previousFetch;
+			if (priorUrl === undefined) delete process.env.XCSH_API_URL;
+			else process.env.XCSH_API_URL = priorUrl;
+			if (priorToken === undefined) delete process.env.XCSH_API_TOKEN;
+			else process.env.XCSH_API_TOKEN = priorToken;
+		}
+	});
+});
