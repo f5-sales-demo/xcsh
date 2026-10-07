@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "39f7c37beedae59ce1a037c823c5d687a405f181",
-  "fingerprint": "abb4e0be4851fc4da2648fc84d99b905fea9bbfe1a3f34abe8b087ccdccb86af",
+  "revision": "dec363fcfe8d9ff104c351071b1d5b1e58dca0cb",
+  "fingerprint": "60736aeb53b2637ea44bbb78a32e3ca18bd2474ff236a658005f07f2d1d3bb8e",
   "counts": {
     "total": 239,
     "components": 97,
@@ -688,6 +688,7 @@
         "packages/coding-agent/test/agent-session-auto-compaction-x-initiator.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
         "packages/coding-agent/test/agent-session-compaction.test.ts",
+        "packages/coding-agent/test/agent-session-configuration-lifecycle.test.ts",
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
@@ -699,8 +700,7 @@
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/agent-session-user-shortcut-hooks.test.ts",
         "packages/coding-agent/test/args.test.ts",
-        "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
-        "packages/coding-agent/test/autoresearch-state.test.ts"
+        "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/types.ts is individually classified as public-extension-contract in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1112,7 +1112,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "core",
-      "sha256": "fc5204b741925f4eea4a7363d97ef77093f8cc1df99b97239e55471fe77c82af",
+      "sha256": "eb5c6b6a227f3c3f9fa48397d62cb3383c150797572437972d23a2d457e4050c",
       "exports": [
         "AsyncQuestionComponent"
       ],
@@ -1122,7 +1122,9 @@
         "terminal-control"
       ],
       "persistenceSignals": [],
-      "directTests": [],
+      "directTests": [
+        "packages/coding-agent/test/hook-editor.test.ts"
+      ],
       "classification": "packages/coding-agent/src/modes/components/async-question.ts is individually classified as caller-owned-draft in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
@@ -1514,6 +1516,7 @@
         "packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts",
         "packages/coding-agent/test/agent-session-auto-compaction-x-initiator.test.ts",
         "packages/coding-agent/test/agent-session-before-agent-start-attribution.test.ts",
+        "packages/coding-agent/test/agent-session-configuration-lifecycle.test.ts",
         "packages/coding-agent/test/agent-session-extension-tools.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
@@ -1528,8 +1531,7 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/autoresearch-tools.test.ts",
         "packages/coding-agent/test/bench-instant-extension.test.ts",
-        "packages/coding-agent/test/browser/chat-conformance.test.ts",
-        "packages/coding-agent/test/browser/dt-context.test.ts"
+        "packages/coding-agent/test/browser/chat-conformance.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/extensions/types.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3263,12 +3265,13 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "3142dc0f5c91467abd612fc50852057a1d3e1aae1384b8cceccaa2127dfc61e8",
+      "sha256": "22a1d746ad953b31fc454d9aa9d51ad7a50555fc2597df35bb9a18978fe3d331",
       "exports": [
         "ExtensionUiController"
       ],
       "interactionSignals": [
         "keyboard-input",
+        "async-progress",
         "terminal-control"
       ],
       "persistenceSignals": [
@@ -3660,7 +3663,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "968f70c39bd5ac541d946874264fe0ca2af1eef1f64c195d34bc28ca43837c26",
+      "sha256": "ee7e90db57ae7a9fa2cfd56317f787f4d0d3a9e7b3e917fb3f7d9c1898aac947",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4319,7 +4322,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "117403a3c210cfaada84e047b2c85cf3c815df534e188574b0a413b7c8ab701f",
+      "sha256": "e8a6ddfcb01670330a3422fbee5ab35359407406739ae6099c52777ad6f86885",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -4485,7 +4488,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "2f1fbb387f3445944085cb7c4d6978ecbec9e55fe7bbf0233fb5e12f85cf030a",
+      "sha256": "697a109910c9bc35787a07b2c07845cec02b2df6bf59b4f0a7bb180d58c8c262",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
