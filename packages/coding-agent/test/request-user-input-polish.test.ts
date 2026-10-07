@@ -36,6 +36,28 @@ const questions = [
 ] as const;
 
 describe("question TUI polish", () => {
+	test("nonblocking presentation returns empty answers after the fixed grace and countdown", () => {
+		vi.useFakeTimers();
+		try {
+			const done = vi.fn();
+			const component = new RequestUserInputComponent(
+				tui(80, 24),
+				[questions[0]],
+				done,
+				new AbortController().signal,
+				false,
+			);
+			vi.advanceTimersByTime(59_000);
+			expect(Bun.stripANSI(component.render(80).join("\n"))).not.toContain("automatically");
+			vi.advanceTimersByTime(1000);
+			expect(Bun.stripANSI(component.render(80).join("\n"))).toContain("60s");
+			vi.advanceTimersByTime(60_000);
+			expect(done).toHaveBeenCalledWith({ answers: {} });
+			component.dispose();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 	test("uses the shared responsive frame across themes, symbols, and supported terminal sizes", async () => {
 		for (const themeName of ["xcsh-dark", "xcsh-light"])
 			for (const symbols of ["unicode", "ascii"] as const)

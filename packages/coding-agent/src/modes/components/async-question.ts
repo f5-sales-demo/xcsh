@@ -28,7 +28,7 @@ export class AsyncQuestionComponent implements Component {
 		this.#editor.disableSubmit = true;
 		this.#editor.setBorderVisible(false);
 		this.#editor.setText(draft);
-		this.#editor.onChange = saveDraft;
+		this.#editor.onChange = () => saveDraft(this.#editor.getExpandedText());
 		this.#abort = () => this.#finish(undefined);
 		signal.addEventListener("abort", this.#abort, { once: true });
 		if (signal.aborted) queueMicrotask(this.#abort);
@@ -36,7 +36,7 @@ export class AsyncQuestionComponent implements Component {
 	#finish(answer: string | undefined): void {
 		if (this.#closed) return;
 		this.#closed = true;
-		this.saveDraft(this.#editor.getText());
+		this.saveDraft(this.#editor.getExpandedText());
 		this.done(answer);
 	}
 	handleInput(data: string): void {
@@ -46,7 +46,7 @@ export class AsyncQuestionComponent implements Component {
 			if (this.#editing && this.#editor.getText()) this.#editor.setText("");
 			else this.#finish(undefined);
 		} else if (matchesSelectorKey(data, "confirm")) {
-			const answer = this.#editing ? this.#editor.getText() : this.options?.[this.#selected];
+			const answer = this.#editing ? this.#editor.getExpandedText() : this.options?.[this.#selected];
 			if (answer?.trim()) this.#finish(answer);
 		} else if (!this.#editing && (matchesKey(data, "up") || matchesKey(data, "down"))) {
 			const count = (this.options?.length ?? 0) + 1;

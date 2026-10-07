@@ -584,7 +584,7 @@ export class RemoteRouter {
 			const item = event.params.item as Record<string, unknown>;
 			const started: Notification = {
 				method: "item/started",
-				params: { ...event.params, item: { ...item, text: "" } },
+				params: { ...event.params, item: { ...item } },
 			};
 			for (const client of this.#clients.keys())
 				if (this.subscribed(client, threadId)) {

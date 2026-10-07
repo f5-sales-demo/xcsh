@@ -53,6 +53,33 @@ function fixture(
 	return { remote: new RemoteSession(target, "21.22.0", controls), prompts, finish: () => finish(), settings };
 }
 
+test("async item starts and completes with identical full question content", async () => {
+	let emit!: (event: any) => void;
+	const { remote, finish } = fixture("async-wire", {}, {
+		subscribe: (listener: (event: any) => void) => {
+			emit = listener;
+			return () => {};
+		},
+	} as any);
+	const events: any[] = [];
+	remote.subscribe(event => events.push(event));
+	await remote.call("start", "turn/start", { threadId: "async-wire", input: [{ type: "text", text: "Draft" }] });
+	const item = {
+		id: "call",
+		type: "agentMessage",
+		text: "Audience?\n- Engineers\n- Users",
+		phase: "final_answer",
+		delivery: "async",
+		questions: [{ title: "Audience?", options: ["Engineers", "Users"] }],
+	};
+	emit({ type: "async_user_input", item, questionIds: ['["request_user_input_async","call",0]'] });
+	const items = events.filter(event => event.method === "item/started" || event.method === "item/completed");
+	expect(items.map(event => event.params.item)).toEqual([item, item]);
+	expect(events.some(event => event.method === "item/tool/requestUserInput")).toBe(false);
+	finish();
+	await remote.close();
+});
+
 test("blocking questions set waitingOnUserInput and clear it atomically at resolution", async () => {
 	const interactions = new UserInteractions();
 	const { remote } = fixture("waiting-status", {}, { userInteractions: interactions });

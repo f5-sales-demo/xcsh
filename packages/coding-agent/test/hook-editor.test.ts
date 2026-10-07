@@ -658,3 +658,22 @@ it("async editor recovers typed drafts at live turn end and keeps the composer d
 	expect(ctx.session.userInteractions.pending()).toEqual([]);
 	expect(editor.setText).toHaveBeenLastCalledWith("draft\n\n> Audience?\n\nMontréal 東京\n$(touch never)");
 });
+
+it("async answers expand large paste markers before delivery", async () => {
+	const { ctx, editorContainer } = createControllerContext();
+	const controller = new ExtensionUiController(ctx);
+	controller.initializeInteractionPresenters();
+	const result = ctx.session.userInteractions.request({
+		kind: "input",
+		delivery: "async",
+		title: "Details?",
+		questionId: "q",
+	});
+	ctx.session.userInteractions.presentAsync(ctx.session.userInteractions.pending()[0].id);
+	await Bun.sleep(0);
+	const text = Array.from({ length: 12 }, (_, index) => `line ${index}: Montréal 東京`).join("\n");
+	const widget = editorContainer.children[0] as any;
+	widget.handleInput(`\x1b[200~${text}\x1b[201~`);
+	widget.handleInput("\r");
+	expect(await result).toBe(text);
+});
