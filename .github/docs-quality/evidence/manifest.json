@@ -486,6 +486,21 @@
       "sourceDigest": "cd5b50251630100e05a402552a68814003abd8bd",
       "verificationLevel": "executed-live",
       "xcshVersion": "22.14.4"
+    },
+    {
+      "cleanupResult": "released demos retained with private ownership/expiry/teardown; candidate removed during cleanup",
+      "command": "released xcsh request secrets workflow; existing create/update; strict HTTPS and assistant containment checks on Ubuntu then Mac",
+      "exitStatus": 0,
+      "id": "blindfold-compatibility-live-4791",
+      "receipt": ".github/docs-quality/evidence/blindfold-compatibility-live-4791.txt",
+      "receiptSha256": "57e84ad2f3477cbaffbc3782cb93938ed0a68d861977847710347d7ce2753160",
+      "sections": [
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx",
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Replace the vesctl secrets procedure"
+      ],
+      "sourceDigest": "785fcc49cfabf4d097525639643fd3438a644412",
+      "verificationLevel": "executed-live",
+      "xcshVersion": "22.15.0"
     }
   ],
   "schemaVersion": 1

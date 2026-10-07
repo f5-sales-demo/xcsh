@@ -11,6 +11,40 @@ Use `xcsh blindfold` to encrypt private keys with your tenant's public key befor
 [Choose the context and namespace](/xcsh/en/f5-distributed-cloud/contexts-namespaces/) first. Commands use the existing xcsh context and environment rules; certificate namespace
 defaults to `XCSH_NAMESPACE`, and secret policy defaults to `shared/ves-io-allow-volterra`. The policy and public key must identify the same canonical tenant.
 
+## Replace the vesctl secrets procedure
+
+The three secrets commands in a vesctl Blindfold procedure can use `xcsh` with the same command paths. Select your tenant through `/context`; xcsh uses its saved context and native authentication. The namespace and name below select a secret policy, independently of your tenant context or certificate namespace.
+
+```bash
+xcsh request secrets get-public-key > pubkey
+xcsh request secrets get-policy-document \
+  --namespace shared --name ves-io-allow-volterra > policy
+xcsh request secrets encrypt \
+  --policy-document policy --public-key pubkey key.pem > key.blindfold
+```
+
+`key.blindfold` contains one `string:///` value and a trailing newline. Use that exact value in `spec.private_key.blindfold_secret_info.location` when creating your certificate through `xcsh create`; encryption does not create a certificate or load balancer. Keep plaintext keys and encrypted artifacts in your private runtime directory.
+
+The two public-material file flags must be supplied together. With both files, encryption runs offline without resolving a context, reading credentials, or making a network request. With neither file, xcsh retrieves material from the selected native context. Supplied documents must contain a single JSON or YAML document with the API `data` wrapper and matching tenant identities.
+
+JSON is the default retrieval format. YAML and the `-n` namespace shorthand are also supported:
+
+```bash
+xcsh request secrets get-public-key --output yaml > pubkey.yaml
+xcsh request secrets get-policy-document -n shared \
+  --name ves-io-allow-volterra --output yaml > policy.yaml
+cat key.pem | xcsh request secrets encrypt \
+  --public-key pubkey.yaml --policy-document policy.yaml - > key.blindfold
+```
+
+Encryption accepts one positional filename, `--input FILE`, `-` for redirected stdin, or redirected stdin with no filename. Use `--` before filenames that begin with a dash. An interactive invocation without input fails immediately. Stdin is read by the native module with the same bounded, zeroizing input boundary; Ctrl-C exits with code 130. Invalid command usage exits with code 2, and operational failures exit with code 1. Diagnostics go to stderr.
+
+Canonical `xcsh blindfold public-key`, `policy`, and `encrypt` commands support the same file, format, and input options. Canonical `--policy namespace/name` remains available; do not combine it with explicit policy `--namespace` or `--name`. `--context-name` asserts the selected online context and does not activate another context.
+
+Compatibility covers only these three secrets commands. xcsh does not read `.vesconfig` or VES credential variables, accept legacy authentication flags, emulate vesctl resource commands, or depend on a vesctl executable. Use native `/context` setup and xcsh resource commands. Legacy `--outfmt`, `--outfile`, `--key-version`, and request aliases are unsupported. `--output json|yaml` selects the public-document format; it is not a vesctl output-directory flag.
+
+Use `--output-file` for a new atomically published artifact with mode 0600, or `--result-file` for a public JSON report. `--json` prints the public report and suppresses ciphertext; conflicting output selections fail before input is read. Ordinary shell redirection uses your shell's umask.
+
 ## Retrieve public encryption material
 
 ```bash

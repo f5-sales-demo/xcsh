@@ -1687,14 +1687,14 @@
           "text": "How do I prevent a scope mistake?"
         },
         {
-          "text": "Create or edit a context",
-          "readerQuestion": "How do I create or edit a saved context?",
-          "purpose": "Explain masked credential collection, validation and one review.",
           "evidence": [
             "source-authority",
             "candidate-cli"
           ],
-          "legacyConceptIds": []
+          "legacyConceptIds": [],
+          "purpose": "Explain masked credential collection, validation and one review.",
+          "readerQuestion": "How do I create or edit a saved context?",
+          "text": "Create or edit a context"
         },
         {
           "evidence": [
@@ -1715,14 +1715,14 @@
           "text": "Where is context data stored?"
         },
         {
-          "text": "Automate management",
-          "readerQuestion": "How do I manage contexts without a terminal menu?",
-          "purpose": "Explain deterministic context CLI targets, input/output contracts and exit codes.",
           "evidence": [
             "source-authority",
             "candidate-cli"
           ],
-          "legacyConceptIds": []
+          "legacyConceptIds": [],
+          "purpose": "Explain deterministic context CLI targets, input/output contracts and exit codes.",
+          "readerQuestion": "How do I manage contexts without a terminal menu?",
+          "text": "Automate management"
         }
       ],
       "path": "docs/en/f5-distributed-cloud/contexts-namespaces.mdx",
@@ -3321,9 +3321,19 @@
       "audience": "F5 Distributed Cloud operators",
       "classification": "how-to",
       "evidence": [
-        "blindfold-native-live-4750"
+        "blindfold-native-live-4750",
+        "blindfold-compatibility-live-4791"
       ],
       "headings": [
+        {
+          "evidence": [
+            "blindfold-compatibility-live-4791"
+          ],
+          "legacyConceptIds": [],
+          "purpose": "Run the three secrets compatibility commands with native context and offline file or stdin encryption.",
+          "readerQuestion": "How do I replace vesctl secrets commands?",
+          "text": "Replace the vesctl secrets procedure"
+        },
         {
           "evidence": [
             "blindfold-native-live-4750"
@@ -3397,7 +3407,10 @@
         "packages/coding-agent/src/tools/xcsh-blindfold.ts",
         "crates/pi-natives/src/blindfold.rs",
         "packages/natives/test/blindfold.test.ts",
-        "packages/coding-agent/test/blindfold-service.test.ts"
+        "packages/coding-agent/test/blindfold-service.test.ts",
+        "packages/coding-agent/src/commands/blindfold-args.ts",
+        "packages/coding-agent/src/services/blindfold-documents.ts",
+        "packages/coding-agent/test/blindfold-process.test.ts"
       ]
     }
   ],
