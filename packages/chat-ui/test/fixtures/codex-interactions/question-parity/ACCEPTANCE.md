@@ -69,7 +69,7 @@ Chrome PRs 661, 663, 665 and 667 are merged. Final v1.33.3 is immutable; ZIP SHA
 The real Ubuntu sidebar loaded that ZIP with normal development public-key injection; only the
 manifest key differs. Its synthetic page is fulfilled locally without tenant network/content.
 After an idle turn, End users was accepted with a correlated receipt, the form closed, and the
-sidebar displayed Answer recorded: End users followed by the completed end-user outline.
+sidebar displayed Answer recorded: End users followed by the completed end user outline.
 Session `159c7fe9c41e38b7`, turn `3`, receipt `1d524c9a-e90a-4b9d-a652-1c296c8b55b5`
 identify this installed acceptance. Downstream Chrome suites pass 444 tests plus types and build.
 
