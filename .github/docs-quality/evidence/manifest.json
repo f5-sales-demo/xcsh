@@ -467,12 +467,12 @@
       "xcshVersion": "21.29.2"
     },
     {
-      "cleanupResult": "final rotated RSA demo retained; auxiliary EC absence HTTP 404",
+      "cleanupResult": "working final RSA demo retained; auxiliary EC absent; private ownership and teardown recorded",
       "command": "bun run dev blindfold create/replace; fixed-response LB create/update; SNI/VIP TLS trust and fingerprint/HTTPS checks",
       "exitStatus": 0,
       "id": "blindfold-native-live-4750",
       "receipt": ".github/docs-quality/evidence/blindfold-native-live-4750.txt",
-      "receiptSha256": "559313242c41634b1fd27e1e7c79b6bf00aedc26a81a486154b6d44b9e6848af",
+      "receiptSha256": "26bd061c81ac3e34ca7a0bd5299edf071a68ac9902fac158badb8de6fe50bca4",
       "sections": [
         "docs/en/f5-distributed-cloud/blindfold-certificates.mdx",
         "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Retrieve public encryption material",
@@ -483,9 +483,9 @@
         "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Resolve failures and uncertain writes",
         "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Tear down an owned demo"
       ],
-      "sourceDigest": "d48ba1b2bc09d99c88d28bcece27cde827ad4734",
+      "sourceDigest": "cd5b50251630100e05a402552a68814003abd8bd",
       "verificationLevel": "executed-live",
-      "xcshVersion": "22.13.0 source candidate"
+      "xcshVersion": "22.14.4"
     }
   ],
   "schemaVersion": 1
