@@ -22,7 +22,7 @@ The follow-up contract suites pass 57 tests, form/configuration suites pass 87, 
 suites pass 37. Idle browser continuation and ordinary tool-turn regressions pass three tests after
 a failing-first reproduction. Documentation contract tests pass 28 tests when run without concurrent
 generators. Required workspace types, dependency consistency, source audits and privacy gates pass.
-Final PR CI and release acceptance are tracked separately below.
+Final PR 4767 is merged; release publication and installed acceptance are tracked separately below.
 
 Terminal tests cover Other typing with Up/Down choice navigation, Alt+Up/Down pending-question
 navigation, Ctrl+5/Ctrl+] local skip, Ctrl+C text clearing, and Esc live interruption.
@@ -81,15 +81,84 @@ normal publication workflows. v22.13.2 Linux executable SHA-256 is
 `ebe11c57ec31f5d1a5b32007ab749589217afc0753b3198124ddac8dacc0eaed`.
 macOS v22.13.1 signature validation passes and Gatekeeper accepts its notarized installer package.
 Those releases precede the final policy, waiting-registration and idle-browser repairs in PR 4767.
-Final core PR CI, a release containing it, and installed terminal repeats against that immutable
-identity remain acceptance gates. Earlier source/candidate results do not substitute for them.
+Core PR 4767 merged at `63ac37d4de1bdf6cf0952ff1ca88a92f7bc2013a`; release PR 4776 merged
+at `7fac9a24967cd3cfad4dc6ba87f6b516f5f33221` and tags v22.14.3. Publication run 37582022148 passed build, test, signing, notarization and immutable GitHub publication.
+Final channel verification is tracked below. Immutable v22.14.3 Linux executable SHA-256 is
+`6b5dd4953183d8522681d51edec294e56f699551f353c6992f182beece1e71ac`; macOS arm64 ZIP SHA-256 is
+`7ad2bc69a7d68d0b601d56f2cf785e52a31ab718117a8be16d2c374f1daf2e9c`.
+Both downloaded hashes match GitHub metadata. macOS signature verification passes. The normal
+Homebrew upgrade installs the same executable SHA-256
+`9f4f5a23c0a0b258f5dc8e480ae081ae289de497bc900185cbf58133f897c4cd` as the verified ZIP.
 
-Voice now uses the subscription-created WebRTC call and existing-call sideband, resolving the
-standalone socket initialization failure. Synthetic audio input connected the peer and ICE,
-produced adapter transcript signals, and received nonzero output audio bytes and energy.
-This establishes live transport/audio receipt; audible UI question observation remains unverified.
+Voice uses the subscription-created WebRTC call and existing-call sideband, resolving the
+standalone socket initialization failure. Natural Pro session `159c8bc4c7a87862` selected an async
+audience question while independent work continued. Synthetic speech requested that question;
+the output transcript was: Who should the release-note outline target: Engineers or end users?
+Either choice is acceptable. Peer and ICE were connected, 49,479 audio bytes were received with
+nonzero energy, and the adapter emitted correlated transcript events without a waiting request.
+This proves live voice contract and audio behavior, without physical-phone UI equivalence.
 
 Real Excel, Word and PowerPoint verification is explicitly deferred by the user. Office source
 build is 199.8 KB gzip; 436 tests pass with four existing layout skips. Installed Office input,
 rendering and answer delivery remain unverified. Non-open-source clients claim shared-contract
 conformance only; no closed-source UI or physical-phone equivalence is claimed.
+
+## Final source and adapter repeats
+
+Fresh `bun dev` in task-owned Herdr pane `w7A:p6` asked Which tax jurisdiction applies?, calculated
+the synthetic USD 150 subtotal and left the final total pending. Sequential Plan forms selected
+HTTPS, supplied certificates and inline certificate/key placeholders; the plan reflected each choice.
+No deployment or account inspection occurred.
+
+The async source repeat delivered the Unicode and literal shell-like answer exactly in
+the canonical envelope and displayed a readable answer summary. Independent work completed at
+90.000 seconds, used the audience label, created no `never` file and retained a separate composer draft.
+A second 45.000-second run showed the countdown, snoozed when opened and recovered an unsubmitted
+Unicode draft into the composer on turn completion without answering automatically.
+
+Final source suites pass 12 merged policy/registration/idle tests, 53 owner/adapter tests,
+23 exposure/history tests, 63 terminal/Herdr tests and 80 voice tests. Shared UI's normal package
+runner passes 186 component tests and 86 Markdown tests. Frozen source/hash tests pass 12 tests.
+A direct component command without the DOM preload failed environmentally; the required package
+runner passed with its configured preload.
+
+Immutable installed Herdr v0.19.3 Linux SHA-256 is
+`417630640dc1fcc39be985a654990608cd366d6f3d69ecdb50e59bf5ed130d53`.
+Its isolated session advertised the required interaction/journal capabilities. Tracked execution
+`questions-installed-optional-001`, session `159c916203406227`, published the unchanged async item;
+reply receipt `questions-herdr-expanded-001` moved from queued to accepted, the question became
+answered and the pane rendered Expanded output. Public records contained no answer payload.
+This repeat found Herdr's empty waiting-answer validator gap. Issue 136 and PR 137 repair it;
+the regression failed first, and full `just check` passed 3,748 Rust tests plus maintenance,
+integration, documentation and Windows compilation. Release-intent CI passed all OS checks.
+Replacement v0.19.4 completed publication run 37584336684 and is immutable; Linux SHA-256 is
+`19620e7fc6f37347e1478cc0533b629984f1bee966ac896cb5f434447ed0067c`.
+Installed tracked execution `questions-installed-waiting-194`, session `159c9a95edc4b11e`,
+published `isBlocking=false`; empty reply receipt `questions-empty-194-001` became accepted.
+The form closed, xcsh displayed the unchanged empty answers object and completed a compact
+synthetic report. The issue was closed by release automation. Shared servers remained untouched.
+
+## Final immutable CLI acceptance
+
+Ubuntu Pro and macOS LiteLLM final v22.14.3 terminals asked one concise plain-text jurisdiction
+question, prepared the synthetic USD 150 formula and left the final total unresolved.
+Both installed Plan routes asked type before certificate configuration. macOS selected HTTPS
+with custom certificate references; Ubuntu selected HTTPS, custom certificates and inline
+certificate/key placeholders. Completed plans reflected those selections without deployment.
+The fully specified macOS Terraform example finished without questions, account inspection or deployment.
+
+Final Ubuntu async RPC session `159c9d2169b392ca` accepted Engineers and completed an Engineers
+outline after an independent 10.000-second wait. Identical receipt retry was accepted and a
+competing response was rejected. Final optional waiting session `159c9d5b6d253e88` emitted
+`isBlocking=false`, preserved empty answers, accepted an identical receipt retry, rejected a
+competing response and completed compact synthetic output. Prompts named no question tools.
+An earlier optional run naturally selected async preferences; the waiting repeat used the
+authorized restricted waiting tool list with the existing Default opt-in.
+
+macOS LiteLLM used a plain-text optional audience question in its installed independent-work run.
+That route completed normally; async exposure and natural invocation acceptance use supported
+Ubuntu Pro catalog metadata. Final Ubuntu terminal session `159c9e9abb652b58` naturally selected async audience input.
+Opening `/questions` snoozed local expiry; unsubmitted Unicode and literal shell-like text stayed
+in the editor while work continued. At 90.001 seconds the form closed and that exact draft was
+recovered into the composer. The model used its mixed-audience assumption, without delivering
+the unsubmitted draft or executing the literal text.

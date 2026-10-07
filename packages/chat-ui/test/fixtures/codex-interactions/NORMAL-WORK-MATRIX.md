@@ -1,28 +1,27 @@
 # Normal-work question acceptance matrix
 
-Issue: [#4739](https://github.com/f5-sales-demo/xcsh/issues/4739)
+Target: OpenAI Codex `ac9b5b8380517ded445b09dd3196d8d9e2ba3c59`.
+Implementation: xcsh issues 4749, 4755 and 4765. Final records: issue 4777.
+Earlier issue 4739 policy is superseded by this target.
 
-The live model prompts never name question tools and use automatic tool choice. Test inputs are synthetic; the Terraform scenario uses example.com and placeholders, with no tenant lookup or deployment. Source tests and live model checks are separate from installed client acceptance.
+Live prompts use automatic tool choice without naming question tools. Workspaces contain synthetic
+inputs only; Terraform examples use placeholders without tenant lookup or deployment.
 
 | Scenario | Required observation | Evidence |
 | --- | --- | --- |
-| Required sequential Terraform choices | Standard HTTP/HTTPS versus CDN, then HTTP versus automatic HTTPS; produce HCL after both submitted replies | Live OpenAI subscription GPT-6.1 Sol run; both correlated receipts accepted and both replies in model history |
-| Required free-text input while idle | Ask release name, remain pending, resume from idle on Release Maple | Live model run; correlated receipt accepted |
-| Fully specified control | Produce requested two sentences without questions | Live model run; no tools invoked |
-| Independent work and unanswered input | Async tool returns immediately; independent work continues; silence and blank replies remain pending | normal-work-question-matrix.test.ts |
-| Streaming and idle correlated replies | Retain item/question identity and deliver once | normal-work-question-matrix.test.ts; progressive-context-loading.test.ts |
-| Final-poll race | Reply arriving at agent_end reaches the next model turn | agent-session-before-agent-start-attribution.test.ts; failed before guarded resume |
-| Provider streaming boundary | Correlated replies defer to model boundary; ordinary live steering remains supported | agent/test/tool-discovery-continuation.test.ts; failed before boundary guard |
-| Dismissal, free text and reopening | No default submission; retain local draft and pending request | user-interactions.test.ts; chat-ui/interaction-panel.test.tsx |
-| Competing clients and duplicate receipts | One acceptance, identical retry succeeds, conflicting retry and stale identity fail | normal-work-question-matrix.test.ts; interaction-parity.test.ts |
-| Reconnect and owner recovery | Existing request identity and owner receipts survive transport reconnect | remote-control/interaction-host.test.ts; remote-control/interactions.test.ts |
-| Progressive/eager, resume, model changes and plugin refresh | Async tool available unless explicitly restricted | progressive-context-loading.test.ts |
-| Plan/Default waiting availability | Waiting input retains Plan mode and configured Default opt-in | interactive-mode-plan-review.test.ts; request-user-input-contract.test.ts |
-| Terminal drafts and pause | Presentation queue respects pauses and restores editor text | hook-editor.test.ts; user-interactions.test.ts |
-| Readable summaries | Correlated JSON remains model-facing; display answer text | chat-ui/Transcript.test.tsx |
-| macOS and Ubuntu source | Focused owner/boundary tests pass on both hosts | macOS 23 tests; Ubuntu focused and full TypeScript workspace checks |
-| Chrome and Visual Studio Code | Shared sequential forms and receipts reach consumer UI | Chrome #656: 441 tests/types/build; Visual Studio Code #1639: 1371 tests/types/build plus forwarding regression tests |
-| Office and RPC/remote | Shared form inheritance, existing question/reply contract | Office 436 tests; RPC/remote focused checks |
-| Installed clients | Published immutable artifact and scenario repeated in terminal, Chrome, Visual Studio Code, Office, RPC/remote | Pending release and installed acceptance |
+| Fully specified request | Execute without unnecessary clarification | macOS LiteLLM and Ubuntu terminal checks |
+| Required Default fact | One concise plain-text question; independent formula; no inferred jurisdiction | Natural Pro source and final installed repeats |
+| Sequential Plan choices | Blocking type choice precedes relevant certificate choice; plan reflects answers | Real Herdr terminal forms and persisted identities |
+| Optional waiting | isBlocking=false; empty answers preserved; resolution before completion | Live Pro app-server trace and contract tests |
+| Async independent work | Immediate acknowledgement, no waiting request, work continues | Natural Pro app-server and voice traces |
+| Streaming and idle replies | Same identity, one acceptance and visible continuation | RPC harness, Chrome/VS Code installed panes |
+| Free text, paste and drafts | Exact Unicode/multiline/literal text; readable summary; draft recovery | Hook/form suites and live terminal observations |
+| Unanswered, skip and interruption | No automatic recommendation; timer snooze; editor closes at completion | Timer/form tests and live terminal observations |
+| Competing clients, reconnect and receipts | Authenticated ownership, duplicate retry, stale/conflicting rejection | Broker, transport, Herdr and remote replay suites |
+| Exposure transitions | Catalog/root support, restricted lists, resume/model/mode/discovery agree | Frozen parity, progressive and normal-work suites |
+| Voice | Natural async question mirrored with transcript/audio, no waiting synthesis | Real subscription-created WebRTC plus existing-call sideband |
+| Office | Shared source contracts pass; installed input/rendering unverified | Explicit user deferral of Excel, Word and PowerPoint |
 
-Public evidence excludes raw provider traces, answers from real users, credentials and encrypted reasoning. Private temporary synthetic traces retain timing and correlated replies for inspection.
+See [artifact acceptance](question-parity/ACCEPTANCE.md) for verified releases and exact evidence limits.
+Public evidence excludes credentials, real user answers, private provider traces and raw audio.
+Temporary synthetic traces retain semantic identity, timing and correlated receipts for inspection.
