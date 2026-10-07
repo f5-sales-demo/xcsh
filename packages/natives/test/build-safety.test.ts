@@ -4,6 +4,7 @@ import {
 	hasAvx512Markers,
 	nativeSymbolCommand,
 	undefinedScannerSymbols,
+	unsupportedGlibcSymbols,
 } from "../../../scripts/ci-release-verify-natives";
 import { buildZigArgs } from "../scripts/zig-safe-wrapper";
 
@@ -63,6 +64,23 @@ describe("native build safety", () => {
 				".env({ ...Bun.env, CONST_RANDOM_SEED: constRandomSeed, SOURCE_DATE_EPOCH: sourceDateEpoch })",
 			);
 			expect(build).toContain("xcsh-pi-natives-v1:");
+		});
+
+		it("rejects unversioned C23 imports missed by version inspection", () => {
+			expect(unsupportedGlibcSymbols(" U __isoc23_strtol\n U __isoc23_sscanf\n U napi_create_object\n")).toEqual([
+				"__isoc23_strtol",
+				"__isoc23_sscanf",
+			]);
+			expect(unsupportedGlibcSymbols(" U strtol@GLIBC_2.2.5\n")).toEqual([]);
+		});
+
+		it("targets vendored C compilation to the Linux cross sysroot", async () => {
+			const build = await Bun.file(new URL("../scripts/build-native.ts", import.meta.url)).text();
+			expect(build).toContain("if (releaseLinuxTarget) {");
+			expect(build).toContain("Bun.env.CC_x86_64_unknown_linux_gnu = Bun.env.TARGET_CC");
+			expect(build).toContain(
+				"`--sysroot=${sysroot} --gcc-toolchain=${toolchain} -D_BSD_SOURCE -D_XOPEN_SOURCE=700`",
+			);
 		});
 
 		it("rejects glibc requirements above the 2.17 release floor", () => {

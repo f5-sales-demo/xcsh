@@ -1,4 +1,6 @@
 import * as fs from "node:fs/promises";
+import { createRequire } from "node:module";
+import { homedir } from "node:os";
 import * as path from "node:path";
 import { $ } from "bun";
 import { detectHostAvx2Support } from "../../../scripts/host-detect";
@@ -60,18 +62,19 @@ function resolveReleaseLinuxTarget(): string | null {
 }
 
 const releaseLinuxTarget = resolveReleaseLinuxTarget();
-if (releaseLinuxTarget === "aarch64-unknown-linux-gnu") {
+if (releaseLinuxTarget) {
 	const targetCc = Bun.which("clang");
 	const targetCxx = Bun.which("clang++");
 	if (!targetCc || !targetCxx) {
 		throw new Error(
-			"Linux ARM64 release builds require clang and clang++; install them on the build runner before invoking napi-rs.",
+			"Linux release builds require clang and clang++; install them on the build runner before invoking napi-rs.",
 		);
 	}
 	Bun.env.TARGET_CC = targetCc;
 	Bun.env.TARGET_CXX = targetCxx;
 	// The legacy cross sysroot hides _setjmp in BSD-only mode; X/Open keeps OpenSSL async declarations visible.
 	Bun.env.CFLAGS_aarch64_unknown_linux_gnu = "-D_BSD_SOURCE -D_XOPEN_SOURCE=700";
+	Bun.env.CFLAGS_x86_64_unknown_linux_gnu = "-D_BSD_SOURCE -D_XOPEN_SOURCE=700";
 }
 
 function resolveLinuxHostZigTarget(): "x86_64-linux-gnu" | "x86_64-linux-musl" {
@@ -317,6 +320,17 @@ const napiBin = Bun.which("napi", {
 });
 if (!napiBin) {
 	throw new Error("Could not locate @napi-rs/cli `napi` binary in node_modules/.bin");
+}
+if (releaseLinuxTarget === "x86_64-unknown-linux-gnu") {
+	// cc-rs uses HOST_CC when target == host, so TARGET_CC alone misses native x64 C builds.
+	const requireNapi = createRequire(await fs.realpath(napiBin));
+	const { version } = requireNapi("@napi-rs/cross-toolchain") as { version: string };
+	const toolchain = path.join(homedir(), ".napi-rs", "cross-toolchain", version, releaseLinuxTarget);
+	const sysroot = path.join(toolchain, releaseLinuxTarget, "sysroot");
+	Bun.env.CC_x86_64_unknown_linux_gnu = Bun.env.TARGET_CC;
+	Bun.env.CXX_x86_64_unknown_linux_gnu = Bun.env.TARGET_CXX;
+	Bun.env.CFLAGS_x86_64_unknown_linux_gnu = `--sysroot=${sysroot} --gcc-toolchain=${toolchain} -D_BSD_SOURCE -D_XOPEN_SOURCE=700`;
+	Bun.env.CXXFLAGS_x86_64_unknown_linux_gnu = `--sysroot=${sysroot} --gcc-toolchain=${toolchain}`;
 }
 
 const managedCargoTargetDir = resolveManagedCargoTargetDir(profileLabel);
