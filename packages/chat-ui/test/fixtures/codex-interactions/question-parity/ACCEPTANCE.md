@@ -97,3 +97,20 @@ key differs from the release ZIP). A synthetic page was fulfilled locally, witho
 The real sidebar naturally invoked async audience input, retained independent 90-second timing work,
 accepted End users with a correlated receipt and resolved identity, and produced end user release notes.
 The Chrome release is mutable; immutable publication qualification remains open. Office is explicitly deferred.
+
+
+Follow-up #4765 live acceptance found and fixed waiting registration before tool-item admission. The normal
+Pro model selected optional waiting input: one item/tool/requestUserInput carried isBlocking=false, an empty
+answer response was preserved, serverRequest/resolved preceded turn/completed, and the model chose compact
+format. Session 159c74c8071a8862 completed semantic turn
+159c74c8071a8862-turn-6c9ffda0-b32b-4331-b811-541c1fb73c5d. Required Default policy repeat produced one concise
+plain-text jurisdiction question and prepared its formula, with no jurisdiction inferred.
+
+Installed Plan acceptance recorded two isBlocking=true questions: HTTPS supplied certificates, then certificate
+source. The resulting plan used inline certificate/key placeholders and made no deployment. The v22.13.1
+release workflow completed every publication and installed-channel job. The v22.13.2 release is still running;
+#4767 carries the final policy and waiting-registration fixes.
+
+Voice transport probe with the selected Ubuntu Pro subscription opened the native socket; session initialization
+returned backend forbidden. No speech output was produced, so live voice UI/speech acceptance remains unverified.
+Existing voice contract suites pass. Office installed verification remains explicitly deferred by the user.
