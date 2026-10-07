@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "4a6eea53c6bedfb25bb7686a90c0fabb0a9e6210",
+  "revision": "ab59adb78f9b24c87e1562c0133f2056fd6bb169",
   "fingerprint": "8313590856818f8bb6d6b2ab4da65da0046c4a13a60dbfc55782d3265d3289de",
   "counts": {
     "total": 240,
@@ -4990,6 +4990,7 @@
         "packages/coding-agent/test/auto-config.test.ts",
         "packages/coding-agent/test/bench-routing-matrix.test.ts",
         "packages/coding-agent/test/blindfold-service.test.ts",
+        "packages/coding-agent/test/blindfold-tool.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/browser/bridge-cert.test.ts",
         "packages/coding-agent/test/browser/host-profiles.test.ts",
@@ -5002,8 +5003,7 @@
         "packages/coding-agent/test/context-operations.test.ts",
         "packages/coding-agent/test/core/python-kernel.lifecycle.test.ts",
         "packages/coding-agent/test/core/python-kernel.test.ts",
-        "packages/coding-agent/test/curl-shell-execution.test.ts",
-        "packages/coding-agent/test/e2e/extension-e2e.test.ts"
+        "packages/coding-agent/test/curl-shell-execution.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/fetch.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
