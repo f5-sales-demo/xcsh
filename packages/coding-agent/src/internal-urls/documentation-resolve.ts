@@ -284,7 +284,7 @@ export function createDocumentationResolver(repository: DocumentationRepository)
 				const rawAnchor = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
 				if (/%(?:2f|5c|2e)/i.test(rawAnchor)) throw new Error("Invalid documentation anchor");
 				const anchor = rawAnchor ? decodeURIComponent(rawAnchor) : undefined;
-				if (anchor && (anchor.length > 256 || !/^[\p{L}\p{N}\p{M}_-]+$/u.test(anchor)))
+				if (anchor && (anchor.length > 1024 || !/^[\p{L}\p{N}\p{M}_-]+$/u.test(anchor)))
 					throw new Error("Invalid documentation anchor");
 				const document = await repository.readDocument(source, stablePath, anchor);
 				if (!document) throw new Error(`Documentation file not found: ${source}/${stablePath}/index.md`);

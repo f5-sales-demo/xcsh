@@ -1,6 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 import { getAgentDbPath } from "@f5-sales-demo/pi-utils";
+import retiredDocuments from "../bench/fixtures/documentation-oct7-retired.json";
 import { EMBEDDED_DOCUMENTATION_ASSETS } from "./internal-urls/documentation-assets.generated";
 import {
 	createEmbeddedDocumentationRepository,
@@ -238,6 +239,10 @@ export async function runQmdSmoke(options: QmdSmokeOptions = {}): Promise<string
 	const missingDocument = await documentation.readDocument(SOURCE, MISSING_PATH);
 	if (missingResults.length !== 0 || missingDocument !== null) {
 		throw new Error("Documentation QMD smoke did not fail closed for missing content");
+	}
+	for (const retired of retiredDocuments) {
+		if (await documentation.readDocument(retired.source as DocumentationSource, retired.stablePath))
+			throw new Error("Documentation QMD smoke found a retired document");
 	}
 	emit({ event: "documentation-missing", resource: MISSING_SEARCH_URI, outcome: "no-match-no-fetch" });
 	emit({ event: "documentation-tools-disabled", outcome: DOCUMENTATION_TOOLS_DISABLED_MESSAGE });
