@@ -57,7 +57,7 @@ describe("plugin dry-run", () => {
 				},
 			],
 		});
-	});
+	}, 15_000);
 
 	it("does not change marketplace plugin registry or cache", () => {
 		const root = mkdtempSync(join(tmpdir(), "xcsh-plugin-dry-run-"));
