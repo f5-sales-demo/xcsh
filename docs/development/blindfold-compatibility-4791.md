@@ -16,7 +16,7 @@ Reference gets only read-only synthetic fixtures and no tenant credentials. Retr
 | stdin | - treated as filename; missing positional rejected | Bounded native asynchronous read, cancellation |
 | Encryption stdout | Banner then bare Base64; empty stderr, exit 0 | One string:/// value and newline |
 | Usage errors | Exit 1; diagnostics duplicated on stdout and stderr | Exit 2, diagnostic only on stderr |
-| Output selection | --outfmt global format, --output directory, --outfile artifact | --output json/yaml on retrieval only; native --output-file/--result-file/--json |
+| Output selection | --outfmt global format, --output directory, --outfile artifact | `--output json` or `--output yaml` on retrieval only; native `--output-file`/`--result-file`/`--json` |
 | Authentication | Requires legacy config or credential flags | Native xcsh context only |
 
 Explicitly unsupported: request aliases req/r, general request/rpc/configuration commands, build-blindfold-bundle, --key-version, --policy-doc (stale help example), --outfile, --outfmt, -o, --config, --server-urls/-u, --p12-bundle, --cert/-c, --key/-k, --cacert/-a, --hw-key, --show-curl, --timeout, .vesconfig and VES credential variables.
@@ -32,7 +32,9 @@ The selected --output has xcsh format semantics. JSON remains the default. Rando
 - Focused verification: 48 tests across eight files, 226 assertions, zero failures (including assistant offline containment). Independent recovery of pinned vesctl and native envelopes validates tenant/version/policy/exponent/modulus and all binary plaintext bytes.
 - Process acceptance: file and explicit/implicit stdin, legacy configuration isolation, invalid usage before input, SIGINT 130, oversized stdin, stdout separation and broken pipe passed. Offline startup bypasses context and resource modules.
 - TypeScript: full check:ts passed. Rust: check:rs passed; test:rs passed (328 tests across the component runs).
-- Bootstrap environment: first full TypeScript run lacked the pinned generated Terraform asset. Sequential generator produced reviewed v15.2.0 SQLite and gzip hashes; package suite rerun remains in progress. An overlapping build/generator attempt failed and was stopped; no implementation claim relies on it.
+- Bootstrap environment: first full TypeScript run lacked the pinned generated Terraform asset. Sequential generator produced reviewed v15.2.0 SQLite and gzip hashes; package suite rerun completed: 10,080 passed, 562 skipped, one stale audit failure corrected by regeneration. An overlapping build/generator attempt failed and was stopped; no implementation claim relies on it.
 - Standalone source build: passed with verified documentation/native assets; compatibility help and file/stdin offline encryption passed. This is candidate validation, not released installation acceptance.
 - Source-boundary audit: regenerated after CLI changes; two tests and 1445 assertions passed. Refreshed 87 dependent authority digests; docs-quality contract passed.
-- Remaining: package-suite final result, linked PR and CI, immutable release, Ubuntu then Mac installed/live/assistant acceptance, public guide and cleanup.
+- Candidate native-context acceptance: isolated saved context and project link, real public JSON/policy YAML retrieval and exact-document offline encryption passed with empty stderr.
+- PR #4794: synced to current main, auto-merge enabled; hosted check and shell tests, Linux modern/macOS ARM64 native builds and container tests passed. Prose lint corrected by fencing literal format flags.
+- Remaining: green PR CI and merge, immutable release, Ubuntu then Mac installed/live/assistant acceptance, public guide and cleanup.
