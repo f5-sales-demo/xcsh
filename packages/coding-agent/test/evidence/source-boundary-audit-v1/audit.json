@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "8341e587bc88aa58e96b9afe60fbd49a5ee56b1b",
+  "revision": "9bebb2ecc9763c343cf21162b5f1198ade67d003",
   "fingerprint": "521e184238c1c1186409299e7bb7e56cb00dfadd4de167e428db0784e2153925",
   "counts": {
     "total": 238,
@@ -4945,6 +4945,7 @@
         "packages/coding-agent/test/auth-storage-rotation.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
         "packages/coding-agent/test/bench-routing-matrix.test.ts",
+        "packages/coding-agent/test/blindfold-service.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/browser/bridge-cert.test.ts",
         "packages/coding-agent/test/browser/host-profiles.test.ts",
@@ -4958,8 +4959,7 @@
         "packages/coding-agent/test/curl-shell-execution.test.ts",
         "packages/coding-agent/test/e2e/extension-e2e.test.ts",
         "packages/coding-agent/test/e2e/extension-panel-e2e.test.ts",
-        "packages/coding-agent/test/e2e/staging-crud.test.ts",
-        "packages/coding-agent/test/e2e/stealth-surfaces.e2e.test.ts"
+        "packages/coding-agent/test/e2e/staging-crud.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/fetch.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5903,6 +5903,7 @@
         "packages/coding-agent/test/agent-session-terraform-preflight.test.ts",
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/args.test.ts",
+        "packages/coding-agent/test/blindfold-tool.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/browser/ax.test.ts",
         "packages/coding-agent/test/browser/element-resolver.test.ts",
@@ -5911,8 +5912,7 @@
         "packages/coding-agent/test/browser/presentation-profile.test.ts",
         "packages/coding-agent/test/browser/selector.test.ts",
         "packages/coding-agent/test/chat-handler-context-paths.test.ts",
-        "packages/coding-agent/test/cli/flag-spec.test.ts",
-        "packages/coding-agent/test/component-boundary-contract.test.ts"
+        "packages/coding-agent/test/cli/flag-spec.test.ts"
       ],
       "classification": "packages/tui/src/components/box.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6526,6 +6526,8 @@
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
         "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
+        "packages/coding-agent/test/blindfold-service.test.ts",
+        "packages/coding-agent/test/blindfold-tool.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/browser/bridge-cert.test.ts",
         "packages/coding-agent/test/catalog-workflow-runner-embedded.test.ts",
@@ -6539,9 +6541,7 @@
         "packages/coding-agent/test/discovery/context-file-dedup.test.ts",
         "packages/coding-agent/test/discovery/helpers.test.ts",
         "packages/coding-agent/test/e2e/panel-harness.test.ts",
-        "packages/coding-agent/test/env-secret-masking.test.ts",
-        "packages/coding-agent/test/extension-loading-contract.test.ts",
-        "packages/coding-agent/test/extensions-discovery.test.ts"
+        "packages/coding-agent/test/env-secret-masking.test.ts"
       ],
       "classification": "packages/tui/src/keys.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

@@ -1,0 +1,89 @@
+---
+title: "Encrypt and deploy TLS certificates"
+description: "Blindfold private keys locally, create certificate resources, and verify certificate rotation over HTTPS."
+sidebar:
+  order: 7
+  label: "Blindfold certificates"
+---
+
+Use `xcsh blindfold` to encrypt private keys with your tenant's public key before creating a certificate resource. RSA and EC keys, encrypted PEM, and single-key PKCS#12 bundles are parsed inside the native module. The installed command requires neither vesctl nor an OpenSSL executable.
+
+[Choose the context and namespace](/xcsh/en/f5-distributed-cloud/contexts-namespaces/) first. Commands use the existing xcsh context and environment rules; certificate namespace defaults to `XCSH_NAMESPACE`, and secret policy defaults to `shared/ves-io-allow-volterra`. The policy and public key must identify the same canonical tenant.
+
+## Retrieve public encryption material
+
+```bash
+xcsh blindfold public-key --output-file tenant-public-key.json
+xcsh blindfold policy --policy shared/ves-io-allow-volterra --output-file policy.json
+```
+
+These operations authenticate to the selected tenant. Output files must be new; the command publishes them atomically with owner-only permissions. Tenant public material can contain tenant identity, so keep it in your runtime directory.
+
+## Encrypt a secret or prepare a certificate manifest
+
+```bash
+xcsh blindfold encrypt --input secret.txt --output-file secret.blindfold
+xcsh blindfold certificate --cert chain.pem --key server-key.pem \
+  --name example-tls --output-file certificate.json --result-file prepared.json
+```
+
+`chain.pem` must list the leaf certificate first, then its issuers. The native parser verifies key correspondence, chain signatures and order, validity dates, supported algorithms, and encoded size. Supported keys are RSA 2048–8192 bits and EC P-256/P-384. Encoded secret locations and certificate chains are limited to 131072 bytes each.
+
+The manifest encodes the public chain in `spec.certificate_url` and places the encrypted key in `spec.private_key.blindfold_secret_info.location`. It never emits a clear-key alternative. Raw encryption and manifest preparation print their artifact when no output file or `--json` is selected; use an output file to keep encrypted payloads out of transcripts.
+
+## Use protected PEM and PKCS#12 inputs
+
+Set a passphrase variable through your shell's protected input or secret manager. Supply only its name:
+
+```bash
+xcsh blindfold certificate --cert chain.pem --key protected-key.pem \
+  --passphrase-env TLS_INPUT_PASSWORD --name example-tls --output-file protected.json
+xcsh blindfold certificate --bundle server.p12 --passphrase-env TLS_INPUT_PASSWORD \
+  --name example-tls --output-file bundle.json
+```
+
+Do not put literal passwords on the command line. Choose either a bundle or separate certificate/key files. Bundles containing more than one private key fail before deployment, even when aliases collide.
+
+## Create and rotate a certificate
+
+```bash
+xcsh blindfold create --cert chain.pem --key server-key.pem --name example-tls \
+  --dry-run=client --json --result-file preview.json
+xcsh blindfold create --cert chain.pem --key server-key.pem --name example-tls \
+  --json --result-file created.json
+xcsh blindfold replace --cert rotated-chain.pem --key rotated-key.pem --name example-tls \
+  --json --result-file rotated.json
+```
+
+Use different report paths for each run. Client dry runs retrieve public material and inspect the target but perform no tenant writes. Creation fails on an existing name; replacement fails when absent. Replacement preserves the writable metadata and certificate options returned by F5's replace form.
+
+F5 rejects a public-key algorithm change while another object uses the certificate. Rotate RSA to RSA or EC to EC. To change algorithms, create another certificate and change the load balancer's certificate reference. A rejected algorithm change left the previously served RSA certificate working during live acceptance.
+
+## Verify HTTPS after API acceptance
+
+An `accepted` report means named readback matched the submitted certificate and encrypted key. Its readiness is `unverified`: load-balancer propagation and TLS must be checked separately.
+
+For a load balancer referencing the certificate, connect to its allocated VIP with the certificate's intended SNI. Trust your issuing CA and compare the served fingerprint with the public report:
+
+```bash
+curl --cacert ca.pem --resolve example.test:443:192.0.2.10 https://example.test/
+```
+
+Replace the example hostname and address with your owned load balancer's values. Live source acceptance used a private test CA and a fixed-response route: RSA creation, rotation to a second RSA pair, and a separate EC certificate each returned HTTP 200 over TLS 1.3 with the expected served SHA-256 fingerprint. The final RSA demo was restored and verified after EC acceptance.
+
+## Resolve failures and uncertain writes
+
+A wrong password, mismatched key, malformed certificate, expired chain, denied policy, or oversized payload fails before deployment. If a request outcome is uncertain, the service reads the named resource once before reporting success or an unresolved outcome; it does not automatically retry a mutation. Inspect the named resource and its current fingerprint before retrying.
+
+Artifacts require a new destination in an existing writable directory. A cancelled operation stops subsequent work; cancellation after a write can require a named read to determine its outcome. The `xcsh_blindfold` assistant tool accepts file paths and a passphrase environment-variable name, and returns public status, target, fingerprint, and artifact paths. It keeps private keys, passwords, tokens, and encrypted payloads out of tool results. Session file-access controls apply to each input and output. Plan Mode blocks deployments and artifact writing.
+
+## Tear down an owned demo
+
+Remove the load balancer first, then the certificate it references:
+
+```bash
+xcsh delete http_loadbalancer example-tls-demo -n example-ns
+xcsh delete certificate example-tls -n example-ns
+```
+
+Verify both named resources are absent. Remove your local private keys, bundles, passphrase variables, and runtime artifacts according to your team's retention policy. Keep ownership and expiry records private for any demo you intentionally retain.

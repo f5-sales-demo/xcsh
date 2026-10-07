@@ -465,6 +465,27 @@
       "sourceDigest": "a18c77dc90f9f3ad7f9c0d5f09754927dcf3fb0c",
       "verificationLevel": "executed",
       "xcshVersion": "21.29.2"
+    },
+    {
+      "cleanupResult": "final rotated RSA demo retained; auxiliary EC absence HTTP 404",
+      "command": "bun run dev blindfold create/replace; fixed-response LB create/update; SNI/VIP TLS trust and fingerprint/HTTPS checks",
+      "exitStatus": 0,
+      "id": "blindfold-native-live-4750",
+      "receipt": ".github/docs-quality/evidence/blindfold-native-live-4750.txt",
+      "receiptSha256": "ade815a905d5c6c671da6c6cdc31b4de9479c2705c1e642263454f663ce93d5a",
+      "sections": [
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx",
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Retrieve public encryption material",
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Encrypt a secret or prepare a certificate manifest",
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Use protected PEM and PKCS#12 inputs",
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Create and rotate a certificate",
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Verify HTTPS after API acceptance",
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Resolve failures and uncertain writes",
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Tear down an owned demo"
+      ],
+      "sourceDigest": "9bebb2ecc9763c343cf21162b5f1198ade67d003",
+      "verificationLevel": "executed-live",
+      "xcshVersion": "22.13.0 source candidate"
     }
   ],
   "schemaVersion": 1

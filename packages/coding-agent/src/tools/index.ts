@@ -54,6 +54,7 @@ import { SubmitResultTool } from "./submit-result";
 import { type TodoPhase, TodoWriteTool } from "./todo-write";
 import { WriteTool } from "./write";
 import { XcshApiTool } from "./xcsh-api";
+import { XcshBlindfoldTool } from "./xcsh-blindfold";
 import { XcshContextTool } from "./xcsh-context";
 
 export * from "../edit";
@@ -261,6 +262,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	search_tool_bm25: SearchToolBm25Tool.createIf,
 	write: s => new WriteTool(s),
 	xcsh_api: s => new XcshApiTool(s),
+	xcsh_blindfold: s => new XcshBlindfoldTool(s),
 	set_presentation_profile: s => new SetPresentationProfileTool(s),
 	get_page_context: GetPageContextTool.createIf,
 };
