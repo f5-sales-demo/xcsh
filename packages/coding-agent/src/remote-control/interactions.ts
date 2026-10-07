@@ -124,7 +124,12 @@ export class RemoteInteractions {
 		});
 		for (const interaction of broker.pending()) this.#open(interaction);
 	}
+	/** Tool admission can follow the broker's open notification. Retry against current ownership. */
+	refreshPending(): void {
+		for (const interaction of this.broker.pending()) this.#open(interaction);
+	}
 	#open(interaction: UserInteraction): void {
+		if (this.#requests.has(interaction.id)) return;
 		if (interaction.delivery === "async") return;
 		if (!interaction.toolCallId) return;
 		const context = this.context(interaction.toolCallId, interaction);

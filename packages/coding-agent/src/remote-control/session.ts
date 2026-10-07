@@ -1798,6 +1798,7 @@ export class RemoteSession {
 		const index = this.#active.items.findIndex(value => value.id === id);
 		if (index < 0) this.#active.items.push(item);
 		else this.#active.items[index] = item;
+		this.#interactions?.refreshPending();
 		if (done && !this.#completedItems.has(id)) {
 			this.#completedItems.add(id);
 			this.#emit("item/completed", { turnId: this.#active.id, item });
