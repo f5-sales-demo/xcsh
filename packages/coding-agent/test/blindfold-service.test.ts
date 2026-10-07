@@ -14,8 +14,10 @@ const material = {
 	expiresAt: "future",
 	algorithm: "RSA",
 };
-const publicKey = { data: { tenant: "example-tenant" } };
-const policy = { data: { tenant: "example-tenant" } };
+const publicKey = {
+	data: { tenant: "example-tenant", key_version: 1, modulus_base64: "AQ==", public_exponent_base64: "AQAB" },
+};
+const policy = { data: { tenant: "example-tenant", policy_id: "101" } };
 function fixture(existing?: Record<string, unknown>, uncertain = false) {
 	const calls: string[] = [];
 	let saved = existing;
@@ -94,7 +96,11 @@ describe("Blindfold service safety", () => {
 			new BlindfoldService({
 				env: { ...env, XCSH_API_URL: "https://other.console.ves.volterra.io" },
 				fetch: async url =>
-					Response.json(url.includes("get_policy_document") ? { data: { tenant: "other-tenant" } } : publicKey),
+					Response.json(
+						url.includes("get_policy_document")
+							? { data: { ...policy.data, tenant: "example-other" } }
+							: publicKey,
+					),
 				prepare: () => material,
 			}).run(args),
 		).rejects.toThrow("tenant");

@@ -1,0 +1,19 @@
+{
+  "repository": "https://github.com/A-Haines/xc-lb-byoc-demo-automation",
+  "revision": "e7acf7fd53b2f19d9aca7ca43f23e47c2187ab9e",
+  "article": "examples/blindfold/README.md",
+  "commands": [
+    "vesctl request secrets get-public-key > pubkey",
+    "vesctl request secrets get-policy-document --namespace shared --name ves-io-allow-volterra > policy",
+    "vesctl request secrets encrypt --policy-document policy --public-key pubkey /path/to/key.pem | tail -1 > certs/key.blindfold"
+  ],
+  "consumer_file": "certificate.tf",
+  "consumer_expression": "location = \"string:///${local.blindfold_key_location}\"",
+  "readme_inaccuracy": "README describes key.blindfold as string:///<base64>; vesctl actually emits bare base64 and the Terraform consumer adds the prefix.",
+  "provider_boundary": "The example uses deprecated volterra. The unreleased next-generation f5-sales-demo/terraform-provider-xcsh remains under feature iteration; this reference does not qualify its completeness or deployment.",
+  "article_sha256": "9c48d76e4e341a218f01a59eece4c924e62aa10d2e61042f362f9573c76b1590",
+  "consumer_sha256": "60a4474e256eec0ee3ffc8487a00bf2b125468c1027d2e8f9ac38b233ead9505",
+  "file_consumption": "blindfold_key_location = fileexists(local.blindfold_file) ? trimspace(file(local.blindfold_file)) : \"\"",
+  "file_consumption_source": "locals.tf",
+  "file_consumption_sha256": "ee159c00b75ee8d2493087e7f01165636881180e7e9fccf53e29acb9151bd257"
+}

@@ -1,0 +1,17 @@
+{
+  "assistant_cases": [
+    {
+      "case": 1,
+      "successful_tool_result": true,
+      "secure_location_artifact": true,
+      "provider_tool_scan": true
+    },
+    {
+      "case": 2,
+      "successful_tool_result": true,
+      "secure_location_artifact": true,
+      "provider_tool_scan": true
+    }
+  ],
+  "containment": true
+}

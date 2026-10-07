@@ -14,6 +14,10 @@ export const blindfoldFlags = {
 	policy: Flags.string({ description: "Secret policy namespace/name (default shared/ves-io-allow-volterra)" }),
 	"passphrase-env": Flags.string({ description: "Passphrase environment variable name" }),
 	"context-name": Flags.string({ description: "Assert selected native context (online only)" }),
+	encoding: Flags.string({ description: "Encryption text encoding", options: ["base64", "location"] }),
+	outfile: Flags.string({ description: "New raw binary envelope file (0600; compatibility only)" }),
+	outfmt: Flags.string({ description: "Compatibility public document format", options: ["json", "yaml"] }),
+	"key-version": Flags.string({ description: "Unsigned 32-bit public key version; zero selects server default" }),
 	output: Flags.string({ description: "Public material format", options: ["json", "yaml"] }),
 	"output-file": Flags.string({ description: "New artifact file (0600)" }),
 	"result-file": Flags.string({ description: "New public JSON report file (0600)" }),
@@ -23,14 +27,22 @@ export const blindfoldFlags = {
 const aliases = { "get-public-key": "public-key", "get-policy-document": "policy", encrypt: "encrypt" } as const;
 const supported = ["public-key", "policy", "encrypt", "certificate", "create", "replace"];
 const common = ["context-name", "output-file", "result-file", "json"];
-export function flagsForBlindfold(operation: string) {
+export function flagsForBlindfold(operation: string, compatibility = false) {
 	const names =
 		operation === "public-key"
-			? [...common, "output"]
+			? [...common, "output", "key-version", ...(compatibility ? ["outfmt"] : [])]
 			: operation === "policy"
-				? [...common, "output", "policy", "namespace", "name"]
+				? [...common, "output", "namespace", "name", ...(compatibility ? ["outfmt"] : ["policy"])]
 				: operation === "encrypt"
-					? [...common, "input", "policy", "public-key", "policy-document"]
+					? [
+							...common,
+							"input",
+							"policy",
+							"public-key",
+							"policy-document",
+							"encoding",
+							...(compatibility ? ["outfile", "outfmt"] : []),
+						]
 					: [...common, "cert", "key", "bundle", "name", "namespace", "policy", "passphrase-env", "dry-run"];
 	return Object.fromEntries(names.map(name => [name, blindfoldFlags[name as keyof typeof blindfoldFlags]]));
 }
@@ -49,7 +61,7 @@ export function parseBlindfoldCli(
 			throw new CliUsageError("Legacy authentication is unsupported; configure xcsh context with xcsh context");
 	}
 	const parsed = parseCommandArgv(parts, {
-		flags: flagsForBlindfold(operation),
+		flags: flagsForBlindfold(operation, compatibility),
 		args: operation === "encrypt" ? { file: Args.string() } : {},
 	});
 	if (parsed.argv.length > (operation === "encrypt" ? 1 : 0)) throw new CliUsageError("Surplus positional arguments");
@@ -58,6 +70,9 @@ export function parseBlindfoldCli(
 		throw new CliUsageError("Select one secret input source");
 	const args: BlindfoldArgs & { json?: boolean } = {
 		operation: operation as BlindfoldOperation,
+		compatibility,
+		encoding: f.encoding as "base64" | "location" | undefined,
+		outfile: f.outfile as string | undefined,
 		input: (f.input ?? parsed.args.file) as string | undefined,
 		publicKey: f["public-key"] as string | undefined,
 		policyDocument: f["policy-document"] as string | undefined,
@@ -69,12 +84,28 @@ export function parseBlindfoldCli(
 		policy: f.policy as string | undefined,
 		passphraseEnv: f["passphrase-env"] as string | undefined,
 		contextName: f["context-name"] as string | undefined,
-		output: f.output as "json" | "yaml" | undefined,
+		output: (f.output ?? (operation !== "encrypt" ? f.outfmt : undefined)) as "json" | "yaml" | undefined,
 		outputFile: f["output-file"] as string | undefined,
 		resultFile: f["result-file"] as string | undefined,
 		dryRun: f["dry-run"] as "client" | undefined,
 		json: f.json as boolean | undefined,
 	};
+	if (f.output !== undefined && f.outfmt !== undefined)
+		throw new CliUsageError("Conflicting public material format selectors");
+	if (f["key-version"] !== undefined) {
+		const version = String(f["key-version"]);
+		if (!/^[0-9]+$/.test(version) || !Number.isSafeInteger(Number(version)) || Number(version) > 0xffffffff)
+			throw new CliUsageError("Key version must be an unsigned 32-bit integer");
+		args.keyVersion = Number(version);
+	}
+	if (compatibility && operation === "policy") {
+		if (!args.name) throw new CliUsageError("Compatibility policy retrieval requires --name");
+		args.namespace ??= "default";
+	}
+	if (args.outfile && (args.outputFile || args.json || args.encoding))
+		throw new CliUsageError("Binary --outfile conflicts with textual encoding, --output-file or --json");
+	if (args.outfile && args.resultFile && resolve(args.outfile) === resolve(args.resultFile))
+		throw new CliUsageError("Artifact and report destinations must differ");
 	if (Boolean(args.publicKey) !== Boolean(args.policyDocument))
 		throw new CliUsageError("--public-key and --policy-document must be supplied together");
 	if (args.publicKey && args.contextName)
@@ -88,7 +119,11 @@ export function parseBlindfoldCli(
 		throw new CliUsageError("Policy must be namespace/name");
 	if ([args.name, args.namespace].some(v => v !== undefined && !label.test(v)))
 		throw new CliUsageError("Invalid resource namespace or name");
-	if ([args.input, args.publicKey, args.policyDocument, args.outputFile, args.resultFile].some(v => v === ""))
+	if (
+		[args.input, args.publicKey, args.policyDocument, args.outputFile, args.outfile, args.resultFile].some(
+			v => v === "",
+		)
+	)
 		throw new CliUsageError("File paths must be nonempty");
 	if (["certificate", "create", "replace"].includes(operation)) {
 		if (!args.name || (args.bundle ? args.cert || args.key : !args.cert || !args.key))

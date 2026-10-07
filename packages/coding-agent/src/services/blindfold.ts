@@ -8,12 +8,22 @@ import {
 } from "@f5-sales-demo/pi-natives";
 import type { HttpTransport, ResourceManifest } from "@f5-sales-demo/pi-resource-management";
 
-import { readBlindfoldDocument, serializeBlindfoldDocument } from "./blindfold-documents";
+import {
+	canonicalBlindfoldDocument,
+	normalizeBlindfoldDocument,
+	readBlindfoldDocument,
+	readBlindfoldResponse,
+	serializeBlindfoldDocument,
+} from "./blindfold-documents";
 
 export const BLINDFOLD_OPERATIONS = ["public-key", "policy", "encrypt", "certificate", "create", "replace"] as const;
 export type BlindfoldOperation = (typeof BLINDFOLD_OPERATIONS)[number];
 export interface BlindfoldArgs {
 	operation: BlindfoldOperation;
+	compatibility?: boolean;
+	encoding?: "base64" | "location";
+	outfile?: string;
+	keyVersion?: number;
 	input?: string;
 	publicKey?: string;
 	policyDocument?: string;
@@ -74,7 +84,11 @@ function tenantOf(url: string): string {
 	return parsed.hostname.split(".")[0]!;
 }
 /** Exclusive atomic publication avoids following or overwriting an existing artifact/symlink. */
-export async function writeBlindfoldArtifact(destination: string, content: string, guard: () => void): Promise<void> {
+export async function writeBlindfoldArtifact(
+	destination: string,
+	content: string | Uint8Array,
+	guard: () => void,
+): Promise<void> {
 	const temp = path.join(path.dirname(destination), `.blindfold-${crypto.randomUUID()}.tmp`);
 	let handle: fs.FileHandle | undefined;
 	try {
@@ -106,8 +120,25 @@ export class BlindfoldService {
 		};
 		guard();
 		if (!BLINDFOLD_OPERATIONS.includes(args.operation)) throw new Error("Invalid Blindfold operation");
-		if (runtime.planMode && (args.outputFile || args.resultFile || ["create", "replace"].includes(args.operation)))
+		if (
+			runtime.planMode &&
+			(args.outputFile || args.outfile || args.resultFile || ["create", "replace"].includes(args.operation))
+		)
 			throw new Error("Plan mode: Blindfold deployments and artifact writes are blocked");
+		if (
+			args.keyVersion !== undefined &&
+			(args.operation !== "public-key" ||
+				!Number.isInteger(args.keyVersion) ||
+				args.keyVersion < 0 ||
+				args.keyVersion > 0xffffffff)
+		)
+			throw new Error("Key version must be an unsigned 32-bit integer for public key retrieval");
+		if (args.encoding && (args.operation !== "encrypt" || !["base64", "location"].includes(args.encoding)))
+			throw new Error("Invalid encryption encoding");
+		if (args.outfile && (!args.compatibility || args.operation !== "encrypt" || args.outputFile || args.encoding))
+			throw new Error("Binary outfile conflicts with textual output or operation");
+		if (args.compatibility && args.operation === "policy" && !args.name)
+			throw new Error("Compatibility policy retrieval requires name");
 		const offline = Boolean(args.publicKey && args.policyDocument);
 		if (Boolean(args.publicKey) !== Boolean(args.policyDocument))
 			throw new Error("Public key and policy document files must be supplied together");
@@ -123,7 +154,11 @@ export class BlindfoldService {
 		if (args.operation === "public-key" && (args.namespace || args.policy))
 			throw new Error("Public key retrieval does not select a policy namespace");
 		const resolve = (v: string | undefined) => (v ? path.resolve(this.#options.cwd ?? process.cwd(), v) : undefined);
-		if (args.outputFile && args.resultFile && resolve(args.outputFile) === resolve(args.resultFile))
+		if (
+			(args.outputFile || args.outfile) &&
+			args.resultFile &&
+			resolve(args.outputFile ?? args.outfile) === resolve(args.resultFile)
+		)
 			throw new Error("Artifact and report destinations must differ");
 		const env = offline ? {} : this.#options.env;
 		const apiUrl = env.XCSH_API_URL?.replace(/\/+$/, "");
@@ -151,7 +186,7 @@ export class BlindfoldService {
 					},
 					body: body ? JSON.stringify(body) : undefined,
 				});
-				const parsed = await response.json().catch(() => ({}));
+				const parsed = response.ok ? await readBlindfoldResponse(response) : {};
 				guard();
 				return { httpStatus: response.status, body: parsed as Record<string, unknown> };
 			} catch {
@@ -167,15 +202,16 @@ export class BlindfoldService {
 		};
 		const policyParts = (
 			args.operation === "policy"
-				? (args.policy ?? `${args.namespace ?? "shared"}/${args.name ?? "ves-io-allow-volterra"}`)
+				? (args.policy ??
+					`${args.namespace ?? (args.compatibility ? "default" : "shared")}/${args.name ?? "ves-io-allow-volterra"}`)
 				: (args.policy ?? "shared/ves-io-allow-volterra")
 		).split("/");
 		if (policyParts.length !== 2) throw new Error("Policy must be namespace/name");
 		const policyNamespace = identity(policyParts[0], "policy namespace"),
 			policyName = identity(policyParts[1], "policy name");
-		const publicUrl = `${apiUrl}/api/secret_management/get_public_key`;
+		const publicUrl = `${apiUrl}/api/secret_management/get_public_key${args.keyVersion ? `?key_version=${args.keyVersion}` : ""}`;
 		const policyUrl = `${apiUrl}/api/secret_management/namespaces/${policyNamespace}/secret_policys/${policyName}/get_policy_document`;
-		let artifact: string | undefined;
+		let artifact: string | Uint8Array | undefined;
 		let report: BlindfoldReport;
 		if (args.operation === "public-key" || args.operation === "policy") {
 			if (
@@ -188,12 +224,21 @@ export class BlindfoldService {
 				args.passphraseEnv
 			)
 				throw new Error("Public material operations do not accept certificate or deployment inputs");
-			const material = await get(args.operation === "public-key" ? publicUrl : policyUrl);
+			const material = canonicalBlindfoldDocument(
+				await get(args.operation === "public-key" ? publicUrl : policyUrl),
+				args.operation,
+			) as { data: Record<string, unknown> };
+			if (args.keyVersion && material.data.key_version !== args.keyVersion)
+				throw new Error("Blindfold public key version mismatch");
 			const canonicalTenant = (material.data as Record<string, unknown> | undefined)?.tenant;
 			if (typeof canonicalTenant !== "string" || !label.test(canonicalTenant))
 				throw new Error("Malformed Blindfold tenant identity");
 			target.tenant = canonicalTenant;
-			artifact = serializeBlindfoldDocument(material, args.output);
+			artifact = serializeBlindfoldDocument(
+				material,
+				args.output ?? (args.compatibility ? "yaml" : "json"),
+				args.compatibility,
+			);
 			report = {
 				status: "material-retrieved",
 				materialSource: "retrieved",
@@ -213,11 +258,11 @@ export class BlindfoldService {
 			}
 			const publicKey = offline
 				? await readBlindfoldDocument(resolve(args.publicKey)!, "public-key")
-				: await get(publicUrl);
+				: normalizeBlindfoldDocument(await get(publicUrl), "public-key");
 			guard();
 			const policy = offline
 				? await readBlindfoldDocument(resolve(args.policyDocument)!, "policy")
-				: await get(policyUrl);
+				: normalizeBlindfoldDocument(await get(policyUrl), "policy");
 			const canonicalTenant = (publicKey.data as Record<string, unknown> | undefined)?.tenant;
 			if (
 				typeof canonicalTenant !== "string" ||
@@ -257,8 +302,12 @@ export class BlindfoldService {
 				algorithm: prepared.algorithm,
 				artifacts: [],
 			};
-			if (args.operation === "encrypt") artifact = `${prepared.location}\n`;
-			else {
+			if (args.operation === "encrypt") {
+				const base64 = prepared.location.slice("string:///".length);
+				artifact = args.outfile
+					? Buffer.from(base64, "base64")
+					: `${(args.encoding ?? (args.compatibility ? "base64" : "location")) === "base64" ? base64 : prepared.location}\n`;
+			} else {
 				const { ResourceClient, validateManifest } = await import("@f5-sales-demo/pi-resource-management");
 				const { kindResolver } = await import("../resource-management/index");
 				const spec: Record<string, unknown> = {
@@ -351,8 +400,8 @@ export class BlindfoldService {
 				}
 			}
 		}
-		if (args.outputFile) {
-			const destination = path.resolve(this.#options.cwd ?? process.cwd(), args.outputFile);
+		if (args.outputFile || args.outfile) {
+			const destination = path.resolve(this.#options.cwd ?? process.cwd(), (args.outputFile ?? args.outfile)!);
 			await writeBlindfoldArtifact(destination, artifact!, guard);
 			report.artifacts.push(destination);
 		}
@@ -361,7 +410,12 @@ export class BlindfoldService {
 			report.artifacts.push(destination);
 			await writeBlindfoldArtifact(destination, `${JSON.stringify(report, null, 2)}\n`, guard);
 		}
-		if (artifact && !args.outputFile && !["create", "replace"].includes(args.operation))
+		if (
+			typeof artifact === "string" &&
+			!args.outputFile &&
+			!args.outfile &&
+			!["create", "replace"].includes(args.operation)
+		)
 			this.#options.emit?.(artifact);
 		return report;
 	}

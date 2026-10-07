@@ -1,0 +1,33 @@
+{
+  "version": "xcsh/22.15.0",
+  "binary_sha256": "1d0f52af915f99df0429f4032facb58170cd01a9ba5654b22a16c37cf75a8d1e",
+  "host": "Linux",
+  "checks": [
+    {
+      "generation": 1,
+      "fingerprint": "0d6bedb593812027a6ecdad10e916760a44ccd7fc59764710e23e0cd0817edef",
+      "ca_trust": true,
+      "sni": true,
+      "fingerprint_match": true,
+      "https": 200,
+      "ready": true,
+      "certificate_valid": true
+    },
+    {
+      "generation": 2,
+      "fingerprint": "79863bb34ad1f785cc639be38031c6c5e44e87289960d9525153962c22983026",
+      "ca_trust": true,
+      "sni": true,
+      "fingerprint_match": true,
+      "https": 200,
+      "ready": true,
+      "certificate_valid": true
+    }
+  ],
+  "cleanup": true,
+  "rotation": true,
+  "article_pipeline": true,
+  "public_report_containment": true,
+  "qualification": "source-candidate-not-installed-release",
+  "source_base": "159909645"
+}

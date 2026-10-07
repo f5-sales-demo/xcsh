@@ -36,7 +36,7 @@ export function showBlindfoldHelp(argv: string[], bin: string): void {
 					: operation === "policy"
 						? "Retrieve a secret policy document; namespace/name select the policy"
 						: "Native Blindfold operation";
-			static flags = flagsForBlindfold(operation!);
+			static flags = flagsForBlindfold(operation!, compatibility);
 			static args: Record<string, ArgDescriptor> =
 				operation === "encrypt"
 					? { file: Args.string({ description: "Filename or -; omit for redirected stdin" }) }

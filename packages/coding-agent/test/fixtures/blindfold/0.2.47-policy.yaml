@@ -1,0 +1,5 @@
+data:
+  name: ves-io-allow-volterra
+  namespace: shared
+  policyId: "101"
+  tenant: example-tenant
