@@ -347,7 +347,7 @@ export async function createManagedSessionRuntime(request: ManagedSessionRuntime
 	const remote = new RemoteSession(session, VERSION, {
 		getCollaborationMode: () => (session.getPlanModeState()?.enabled ? "plan" : "default"),
 		setCollaborationMode: async mode => {
-			session.setPlanModeState(mode === "plan" ? { enabled: true } : undefined);
+			await session.setPlanModeState(mode === "plan" ? { enabled: true } : undefined);
 			session.sessionManager.appendModeChange(mode === "plan" ? "plan" : "none");
 			await session.sessionManager.flush();
 		},
