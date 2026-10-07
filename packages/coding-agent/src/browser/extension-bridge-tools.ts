@@ -77,6 +77,8 @@ export const EXTENSION_AGENT_TOOL_NAMES: readonly string[] = EXTENSION_CAPABILIT
  * the bridge via `set_host_tools`, registered at runtime by the ChatHandler.
  */
 export const BROWSER_TOOL_NAMES: readonly string[] = [
+	"request_user_input",
+	"request_user_input_async",
 	"catalog_workflow_runner",
 	"navigate",
 	"click",

@@ -89,7 +89,7 @@ describe("OFFICE_TOOL_NAMES (full CLI-parity tool set)", () => {
 	});
 
 	test("excludes every browser-automation tool (nonsensical in a document pane)", () => {
-		for (const n of BROWSER_TOOL_NAMES) {
+		for (const n of BROWSER_TOOL_NAMES.filter(name => !name.startsWith("request_user_input"))) {
 			expect(OFFICE_TOOL_NAMES).not.toContain(n);
 		}
 	});
