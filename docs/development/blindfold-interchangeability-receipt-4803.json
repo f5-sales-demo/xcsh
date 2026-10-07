@@ -1,0 +1,118 @@
+{
+  "release": "v23.0.0",
+  "immutable": true,
+  "source_commit": "e2f2413e7bd7a48dcbe12727b3a81af80824b790",
+  "workflow": "37683390178",
+  "reference": {
+    "image": "kreynoldsf5/vesctl@sha256:6ef8dc145b53130273bca4d3400ff9349e057ae36ed8e36d943eb1465e7edd82",
+    "binary_sha256": "35d29e517498feff9f12a41ff702e90f10a1cc8a20c589c3e524474dbfe53801",
+    "matrix_cases": 16,
+    "reference_format_cases": 12,
+    "independent_recovery": true,
+    "authenticated_integrity": true,
+    "binary_outfile": true,
+    "article_pipeline": true,
+    "synthetic_credentials_only": true,
+    "offline_containers_network": "none"
+  },
+  "ubuntu": {
+    "version": "xcsh/23.0.0",
+    "binary_sha256": "653f78a8c9a2ae88170a357cd8a3f46b03f0917b1808ae1bb0e949b6569fd893",
+    "host": "Linux",
+    "checks": [
+      {
+        "generation": 1,
+        "fingerprint": "a3dc5a75ef27a072f7dfb9d46f64cfdf1cd28c8aed2b827dc07dd62ec9817bc6",
+        "ca_trust": true,
+        "sni": true,
+        "fingerprint_match": true,
+        "https": 200,
+        "ready": true,
+        "certificate_valid": true
+      },
+      {
+        "generation": 2,
+        "fingerprint": "741d2e47cb924c88efdcc213662e413df796427cbcf81e42871c15e149b055e2",
+        "ca_trust": true,
+        "sni": true,
+        "fingerprint_match": true,
+        "https": 200,
+        "ready": true,
+        "certificate_valid": true
+      }
+    ],
+    "cleanup": true,
+    "rotation": true,
+    "article_pipeline": true,
+    "public_report_containment": true
+  },
+  "ubuntu_assistant": {
+    "assistant_cases": [
+      {
+        "case": 1,
+        "successful_tool_result": true,
+        "secure_location_artifact": true,
+        "provider_tool_scan": true
+      },
+      {
+        "case": 2,
+        "successful_tool_result": true,
+        "secure_location_artifact": true,
+        "provider_tool_scan": true
+      }
+    ],
+    "containment": true
+  },
+  "mac": {
+    "version": "xcsh/23.0.0",
+    "binary_sha256": "6aea330fccb3c157d3e41bb956e5d543e6782f129aadd6602eecaa8b5b5caa8e",
+    "host": "Darwin",
+    "checks": [
+      {
+        "generation": 1,
+        "fingerprint": "79c36c578d3ca936dd118ea0297b21cda7688218b86e5b428bcad16f42348b3d",
+        "ca_trust": true,
+        "sni": true,
+        "fingerprint_match": true,
+        "https": 200,
+        "ready": true,
+        "certificate_valid": true
+      },
+      {
+        "generation": 2,
+        "fingerprint": "019575f2fd7583bd0246e50e7e27143abd5ced19d32784af2f11d6a42344bae0",
+        "ca_trust": true,
+        "sni": true,
+        "fingerprint_match": true,
+        "https": 200,
+        "ready": true,
+        "certificate_valid": true
+      }
+    ],
+    "cleanup": true,
+    "rotation": true,
+    "article_pipeline": true,
+    "public_report_containment": true
+  },
+  "cleanup": "all run-owned cloud resources verified absent",
+  "harness_sha256": "1fc97cd2d745b671d1ad8d8aa8c0038a8203ff9e7d5857fc0edd37d6247bac7f",
+  "mac_assistant": {
+    "assistant_cases": [
+      {
+        "case": 1,
+        "successful_tool_result": true,
+        "secure_location_artifact": true,
+        "provider_tool_scan": true
+      },
+      {
+        "case": 2,
+        "successful_tool_result": true,
+        "secure_location_artifact": true,
+        "provider_tool_scan": true
+      }
+    ],
+    "containment": true
+  },
+  "qualification": "released-installed-live",
+  "release_workflow_conclusion": "success"
+}

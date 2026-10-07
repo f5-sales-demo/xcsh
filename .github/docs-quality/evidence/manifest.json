@@ -493,14 +493,28 @@
       "exitStatus": 0,
       "id": "blindfold-compatibility-live-4791",
       "receipt": ".github/docs-quality/evidence/blindfold-compatibility-live-4791.txt",
-      "receiptSha256": "57e84ad2f3477cbaffbc3782cb93938ed0a68d861977847710347d7ce2753160",
+      "receiptSha256": "05a32521cbb8f7cde7a66cf0bcfcc6527ffc0e8686ecc6cf6f6fe4bdd434081d",
       "sections": [
-        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx",
-        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Replace the vesctl secrets procedure"
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx"
       ],
       "sourceDigest": "785fcc49cfabf4d097525639643fd3438a644412",
       "verificationLevel": "executed-live",
       "xcshVersion": "22.15.0"
+    },
+    {
+      "id": "blindfold-interchangeability-live-4803",
+      "receipt": ".github/docs-quality/evidence/blindfold-interchangeability-live-4803.txt",
+      "receiptSha256": "f919f28fc86bc7ddb9ad7ebbe470a949462f6de0cd33d95611fd38c9f1ff207d",
+      "sourceDigest": "e2f2413e7bd7a48dcbe12727b3a81af80824b790",
+      "xcshVersion": "23.0.0",
+      "verificationLevel": "executed-live",
+      "command": "released Ubuntu standalone then independent Mac Homebrew exact article pipeline, strict HTTPS rotation and file-only assistant containment",
+      "exitStatus": 0,
+      "cleanupResult": "all run-owned cloud resources verified absent; existing demos preserved",
+      "sections": [
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx",
+        "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Replace the vesctl secrets procedure"
+      ]
     }
   ],
   "schemaVersion": 1

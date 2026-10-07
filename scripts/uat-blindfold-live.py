@@ -266,6 +266,10 @@ def main():
                 "/CN=Blindfold UAT CA",
                 "-addext",
                 "basicConstraints=critical,CA:true",
+                "-addext",
+                "keyUsage=critical,keyCertSign,cRLSign",
+                "-addext",
+                "subjectKeyIdentifier=hash",
             ]
         )
         (root / "leaf.cnf").write_text(

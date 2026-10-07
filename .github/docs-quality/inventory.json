@@ -3322,12 +3322,13 @@
       "classification": "how-to",
       "evidence": [
         "blindfold-native-live-4750",
-        "blindfold-compatibility-live-4791"
+        "blindfold-compatibility-live-4791",
+        "blindfold-interchangeability-live-4803"
       ],
       "headings": [
         {
           "evidence": [
-            "blindfold-compatibility-live-4791"
+            "blindfold-interchangeability-live-4803"
           ],
           "legacyConceptIds": [],
           "purpose": "Run the three secrets compatibility commands with native context and offline file or stdin encryption.",
@@ -3410,7 +3411,12 @@
         "packages/coding-agent/test/blindfold-service.test.ts",
         "packages/coding-agent/src/commands/blindfold-args.ts",
         "packages/coding-agent/src/services/blindfold-documents.ts",
-        "packages/coding-agent/test/blindfold-process.test.ts"
+        "packages/coding-agent/test/blindfold-process.test.ts",
+        "packages/coding-agent/test/blindfold-interchangeability.test.ts",
+        "packages/coding-agent/test/blindfold-producer-matrix.test.ts",
+        "scripts/uat-blindfold-live.py",
+        "scripts/uat-blindfold-reference.py",
+        "scripts/uat-blindfold-assistant.py"
       ]
     }
   ],

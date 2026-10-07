@@ -103,6 +103,28 @@ Optional `--retain-hours` records private ownership, expiry and teardown.
 - Candidate live harness passed: trusted CA/SNI/fingerprint and HTTPS 200, ready/valid state, fresh rotation, exact consumer, canonical stdin/YAML, secure raw files, public-report containment and verified run-owned cleanup. Initial harness readback used a replace form that omitted runtime state; fixed and rerun fresh. Failed run resources were also removed and verified absent.
 - Candidate assistant: two successful file-only preparations, secure location artifacts and private provider/tool/stdout/stderr scans passed.
 - Full TypeScript suite passed: coding-agent 10,088 passed, 562 skipped, zero failures; other workspace suites passed. Full check:ts, docs-quality and 28 checker tests passed; Python harness lint, prose lint and final diff checks passed.
-- Remaining delivery: CI/review/merge,
-  breaking immutable release, released Ubuntu then independent Mac Homebrew
-  live/assistant acceptance, sanitized receipts, guide publication and cleanup.
+- Feature PR #4804 merged at `580901c517c95dd3c581066410501705d8dc2ad4`.
+  Final head CI `37678176558`, lint `37678177309` and container `37678176588`
+  all passed. Release freshness was repaired through #4807 after authoritative
+  Claude Code version drift; the gate remains enforced.
+- Release PR #4808 merged at `e2f2413e7bd7a48dcbe12727b3a81af80824b790`.
+  [v23.0.0](https://github.com/f5-sales-demo/xcsh/releases/tag/v23.0.0) is immutable.
+  Full release native/code/test/install matrix passed in `37683390178`.
+  Intel modern-addon notarization assessment passed on attempt 3 after Apple
+  had already accepted the prior signed bundle; signing policy was preserved.
+- Released Ubuntu standalone verified immutable binary/provenance/native hashes.
+  Sales Demo native-context article pipeline, trusted CA/SNI/fingerprints/HTTPS 200,
+  ready/valid state, rotation, canonical stdin/YAML, raw artifacts, public reports,
+  two assistant preparations and provider/tool containment passed. Run-owned LB
+  and certificate were deleted and absence verified. A first tenant run hit the
+  route quota and was cleaned up; the user authorized Sales Demo for the retry.
+- Mac Homebrew `23.0.0` CLI/native immutable hashes and strict Developer ID /
+  notarization checks passed. Python strict CA acceptance exposed missing CA
+  key-usage metadata in the harness; add explicit keyCertSign/cRLSign and rerun
+  fresh after cleanup. No trust checks were relaxed.
+- Mac strict CA live rerun passed: intended SNI/private CA/fingerprint/HTTPS 200, ready/valid state, fresh rotation, native-context article pipeline and canonical/raw regressions. Both run-owned resources and the first failed run resources were deleted and absence verified.
+- Released Mac assistant: two successful file-only preparations and secure location artifacts; private provider/tool/stdout/stderr scans found no key, token or ciphertext leakage. Complete release workflow `37683390178` is green, including npm, Homebrew and MDM installed channel checks.
+- Sanitized released acceptance receipt: `blindfold-interchangeability-receipt-4803.json`. Public guide/evidence publication tracked in #4805.
+- Remaining delivery: public guide and final
+  sanitized receipts/cleanup. Implementation and repair worktrees were retired
+  after ignored-file inspection; private evidence remains outside Git.

@@ -2,7 +2,7 @@
 
 Historical v22.15.0 contract. Its selected interfaces did not prove executable-only
 replacement in the BYOC article: location output, snake_case documents and policy
-defaults differ from vesctl. [Issue 4803 acceptance](blindfold-interchangeability-4803.md)
+defaults differ from vesctl. [v23.0.0 interchangeability acceptance](blindfold-interchangeability-4803.md)
 corrects that scope and records the new container interchangeability qualification.
 
 
