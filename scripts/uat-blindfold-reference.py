@@ -1,4 +1,5 @@
-# ruff: noqa: N999, ANN001, ANN002, ANN201, ANN202, D101, D102, D103, EM101, TRY003, PLR2004, S603, S607, S310, S101, PT018, E731
+# pylint: disable=invalid-name
+# ruff: noqa: N999, ANN001, ANN002, ANN201, ANN202, D101, D102, D103, EM101, TRY003, PLR2004, S603, S607, S310, S101, PT018
 import argparse
 import base64
 import gzip
@@ -14,6 +15,7 @@ import subprocess
 import sys
 import threading
 import urllib.request
+from typing import Any
 
 import yaml
 from cryptography.exceptions import InvalidTag
@@ -25,23 +27,26 @@ parser = argparse.ArgumentParser(
     description="Synthetic Ubuntu container-only vesctl interchangeability UAT"
 )
 parser.add_argument("--run-dir", type=pathlib.Path, required=True)
-args = parser.parse_args()
+options = parser.parse_args()
 if sys.flags.optimize:
     raise SystemExit("Reference assertions require Python without optimization")
 if sys.platform != "linux":
     raise SystemExit("Reference acceptance requires Ubuntu containers")
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-D = args.run_dir.resolve()
+D = options.run_dir.resolve()
 D.mkdir(mode=0o700)
 if D.stat().st_mode & 0o077:
     raise SystemExit("Run directory must be private")
-url = "https://downloads.volterra.io/releases/vesctl/0.2.47/vesctl.linux-amd64.gz"
-binary = gzip.decompress(urllib.request.urlopen(url, timeout=60).read())
+DOWNLOAD_URL = (
+    "https://downloads.volterra.io/releases/vesctl/0.2.47/vesctl.linux-amd64.gz"
+)
+with urllib.request.urlopen(DOWNLOAD_URL, timeout=60) as download:
+    BINARY = gzip.decompress(download.read())
 assert (
-    hashlib.sha256(binary).hexdigest()
+    hashlib.sha256(BINARY).hexdigest()
     == "35d29e517498feff9f12a41ff702e90f10a1cc8a20c589c3e524474dbfe53801"
 )
-(D / "vesctl-0.2.47").write_bytes(binary)
+(D / "vesctl-0.2.47").write_bytes(BINARY)
 (D / "vesctl-0.2.47").chmod(0o700)
 subprocess.run(
     [
@@ -60,7 +65,12 @@ k = serialization.load_pem_private_key(
     base64.b64decode(synthetic["rsa-key.pem"]), None
 ).private_numbers()
 public_numbers = k.public_numbers
-b64 = lambda n: base64.b64encode(n.to_bytes((n.bit_length() + 7) // 8, "big")).decode()
+
+
+def b64(n: int) -> str:
+    return base64.b64encode(n.to_bytes((n.bit_length() + 7) // 8, "big")).decode()
+
+
 pub = {
     "data": {
         "tenant": "example-tenant",
@@ -103,7 +113,7 @@ subprocess.run(
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL,
 )
-paths = []
+paths: list[str] = []
 
 
 def recover(raw):
@@ -153,9 +163,9 @@ ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 ctx.load_cert_chain(D / "client.pem", D / "client.key")
 server.socket = ctx.wrap_socket(server.socket, server_side=True)
 threading.Thread(target=server.serve_forever, daemon=True).start()
-receipt = {
+receipt: dict[str, Any] = {
     "image": IMAGE,
-    "binary_sha256": hashlib.sha256(binary).hexdigest(),
+    "binary_sha256": hashlib.sha256(BINARY).hexdigest(),
     "reference": {},
 }
 bridge = D / "xcsh-bridge.ts"
@@ -201,9 +211,20 @@ for version, entry in [
     ("historical", "/opt/vesctl"),
     ("0.2.47", "/fixture/vesctl-0.2.47"),
 ]:
-    records = []
+    reference_records: list[dict[str, Any]] = []
+    records = reference_records
 
-    def run(name, args, online=False, entry=entry, records=records, version=version):
+    def run(
+        name,
+        args,
+        online=False,
+        entry=entry,
+        records=None,
+        version=version,
+        sink=(records,),
+    ):
+        if records is None:
+            records = sink[0]
         extra = (
             [
                 "--server-urls",

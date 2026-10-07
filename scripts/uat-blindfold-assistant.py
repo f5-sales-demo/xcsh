@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name,too-many-locals
 # ruff: noqa: N999, S603, PLR2004, EM101, TRY003
 """Verify file-only assistant preparation and scan private provider/tool traces."""
 

@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name,too-many-locals,too-many-branches,too-many-statements
 # ruff: noqa: ANN001, ANN201, ANN202, D103, EM101, TRY003, PLR2004, S603, S607, S310, N999
 """Accept an installed xcsh Blindfold workflow using only fresh run-owned resources."""
 
@@ -15,6 +16,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 
 def main():
@@ -172,9 +174,10 @@ def main():
                         socket.create_connection((ip, 443), timeout=5) as raw,
                         trust.wrap_socket(raw, server_hostname=domain) as tls,
                     ):
-                        actual = hashlib.sha256(
-                            tls.getpeercert(binary_form=True)
-                        ).hexdigest()
+                        peer = tls.getpeercert(binary_form=True)
+                        if peer is None:
+                            continue
+                        actual = hashlib.sha256(peer).hexdigest()
                         tls.sendall(
                             (
                                 "GET / HTTP/1.1\r\nHost: "
@@ -209,7 +212,7 @@ def main():
             time.sleep(5)
         raise RuntimeError("Trusted HTTPS readiness acceptance timed out")
 
-    receipt = {
+    receipt: dict[str, Any] = {
         "version": subprocess.check_output([cli, "--version"], text=True).strip(),
         "binary_sha256": hashlib.sha256(Path(cli).read_bytes()).hexdigest(),
         "host": os.uname().sysname,
