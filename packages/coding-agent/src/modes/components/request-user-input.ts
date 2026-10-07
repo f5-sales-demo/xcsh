@@ -35,13 +35,23 @@ export class RequestUserInputComponent implements Component {
 	#confirmation = 0;
 	#closed = false;
 	#abort: () => void;
+	#timer?: ReturnType<typeof setInterval>;
 	constructor(
 		private readonly tui: TUI,
 		questions: readonly InputQuestion[],
 		private readonly done: (value: InputResponse | undefined) => void,
 		private readonly signal: AbortSignal,
+		blocking = true,
 	) {
-		this.form = new QuestionForm(questions);
+		this.form = new QuestionForm(questions, blocking);
+		if (!blocking) {
+			this.#timer = setInterval(() => {
+				const response = this.form.tick(Date.now());
+				if (response) this.#finish(response);
+				else this.tui.requestRender();
+			}, 1000);
+			this.#timer.unref?.();
+		}
 		this.#editor.disableSubmit = true;
 		this.#editor.setBorderVisible(false);
 		this.#editor.onChange = text => this.form.editNotes(text);
@@ -52,9 +62,11 @@ export class RequestUserInputComponent implements Component {
 	#finish(value: InputResponse | undefined): void {
 		if (this.#closed) return;
 		this.#closed = true;
+		if (this.#timer) clearInterval(this.#timer);
 		this.done(value);
 	}
 	dispose(): void {
+		if (this.#timer) clearInterval(this.#timer);
 		this.signal.removeEventListener("abort", this.#abort);
 		this.#closed = true;
 	}
@@ -127,6 +139,8 @@ export class RequestUserInputComponent implements Component {
 				this.form.notesVisible ? rawKeyHint(interruptKeys, "interrupt") : selectorCancelHint("interrupt"),
 			].join(" · "),
 		];
+		const countdown = this.form.countdown(Date.now());
+		if (countdown !== undefined) footer.push(`Continuing automatically in ${countdown}s`);
 		return selectorFrame(
 			width,
 			height,

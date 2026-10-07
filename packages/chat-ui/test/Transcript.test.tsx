@@ -333,7 +333,7 @@ test("reduced motion keeps a text timeline on its first frame", async () => {
 });
 
 test("correlated async replies render readable answer summaries", () => {
-	const text = JSON.stringify({ type: "user_input_reply", itemId: "i", questionId: "i:0", answer: "HTTP" });
+	const text = `<send_user_message_question_reply>\n${JSON.stringify([{questionItemId: '["request_user_input_async","i",0]',question: "Protocol?", answer: "HTTP"}])}\n</send_user_message_question_reply>`;
 	render(<Transcript messages={[msg({ id: "reply", role: "user", text })]} streaming={false} />);
 	expect(screen.getByText("Answer recorded: HTTP")).toBeDefined();
 	expect(screen.queryByText(text)).toBeNull();

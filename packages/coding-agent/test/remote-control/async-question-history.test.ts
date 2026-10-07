@@ -15,7 +15,7 @@ test("replay preserves structured async questions and their original item identi
 		customType: "async-user-input",
 		content: item.text,
 		display: true,
-		details: { item, questionIds: ["call:0"] },
+		details: { item, questionIds: ['["request_user_input_async","call",0]'] },
 		timestamp: 1,
 	});
 	expect(result).toEqual([item]);

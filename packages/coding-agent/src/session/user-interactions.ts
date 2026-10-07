@@ -20,6 +20,8 @@ export interface UserInteractionSpec {
 	identity?: InteractionIdentity;
 	questionId?: string;
 	delivery?: "waiting" | "async";
+	isBlocking?: boolean;
+	autoResolutionMs?: number | null;
 	kind: "select" | "input" | "request_user_input";
 	inputQuestions?: readonly InputQuestion[];
 	title: string;
@@ -69,11 +71,12 @@ const copy = (interaction: UserInteraction): UserInteraction => structuredClone(
 
 /** One completion owner shared by terminal presentation and remote answers. */
 export class UserInteractions {
-	#asyncPresenter?: (request: UserInteractionSpec, signal: AbortSignal) => Promise<string | undefined>;
+	#asyncPresenter?: (request: UserInteraction, signal: AbortSignal) => Promise<string | undefined>;
 	#receipts = new Map<string, { requestId: string; value: unknown; identity: InteractionIdentity }>();
 	#questionPresenter?: (
 		questions: readonly InputQuestion[],
 		signal: AbortSignal,
+		request: UserInteractionSpec,
 	) => Promise<InputResponse | undefined>;
 	#revision = 0;
 	#notificationQueue: UserInteractionEvent[] = [];
@@ -86,9 +89,7 @@ export class UserInteractions {
 	#cancelling = false;
 	#localActive?: string;
 	#localPauses = 0;
-	setAsyncPresenter(
-		presenter: (request: UserInteractionSpec, signal: AbortSignal) => Promise<string | undefined>,
-	): void {
+	setAsyncPresenter(presenter: (request: UserInteraction, signal: AbortSignal) => Promise<string | undefined>): void {
 		this.#asyncPresenter = presenter;
 		for (const pending of this.#pending.values())
 			if (pending.interaction.delivery === "async") pending.hasLocal = true;
@@ -102,7 +103,11 @@ export class UserInteractions {
 		return true;
 	}
 	setQuestionPresenter(
-		presenter: (questions: readonly InputQuestion[], signal: AbortSignal) => Promise<InputResponse | undefined>,
+		presenter: (
+			questions: readonly InputQuestion[],
+			signal: AbortSignal,
+			request: UserInteractionSpec,
+		) => Promise<InputResponse | undefined>,
 	): void {
 		this.#questionPresenter = presenter;
 		for (const pending of this.#pending.values())
@@ -120,7 +125,8 @@ export class UserInteractions {
 			return Promise.reject(new Error("Invalid question identities"));
 		return this.#request(
 			{ ...spec, kind: "request_user_input" },
-			async localSignal => this.#questionPresenter?.(spec.inputQuestions, localSignal),
+			async localSignal =>
+				this.#questionPresenter?.(spec.inputQuestions, localSignal, { ...spec, kind: "request_user_input" }),
 			signal,
 		);
 	}
@@ -243,13 +249,19 @@ export class UserInteractions {
 	): Promise<string | undefined> {
 		return this.#request(
 			spec,
-			spec.delivery === "async" ? abort => this.#asyncPresenter?.(spec, abort) ?? Promise.resolve(undefined) : local,
+			spec.delivery === "async"
+				? (abort, _done, request) => this.#asyncPresenter?.(request, abort) ?? Promise.resolve(undefined)
+				: local,
 			signal,
 		);
 	}
 	#request<T>(
 		spec: UserInteractionSpec,
-		local?: (signal: AbortSignal, complete: (value: T | undefined) => void) => Promise<T | undefined>,
+		local?: (
+			signal: AbortSignal,
+			complete: (value: T | undefined) => void,
+			request: UserInteraction,
+		) => Promise<T | undefined>,
 		signal?: AbortSignal,
 	): Promise<T | undefined> {
 		if (this.#closed || this.#cancelling || signal?.aborted) return Promise.resolve(undefined);
@@ -296,7 +308,7 @@ export class UserInteractions {
 			const startLocal = () => {
 				if (!local) return;
 				try {
-					void local(abort.signal, completeLocal).then(completeLocal, error =>
+					void local(abort.signal, completeLocal, interaction).then(completeLocal, error =>
 						finish(undefined, false, { error }),
 					);
 				} catch (error) {
@@ -307,7 +319,7 @@ export class UserInteractions {
 				interaction,
 				finish,
 				startLocal,
-				presentationRequested: interaction.delivery === "async",
+				presentationRequested: false,
 				hasLocal:
 					interaction.delivery === "async"
 						? this.#asyncPresenter !== undefined
@@ -415,5 +427,16 @@ export class UserInteractions {
 		this.cancelAll("owner_lost");
 		this.#listeners.clear();
 		this.#receipts.clear();
+	}
+	/** An authenticated user message already carries the answer; close its editors without reinjecting it. */
+	acknowledgeAsyncReplies(questionIds: readonly string[]): void {
+		for (const pending of [...this.#pending.values()]) {
+			const request = pending.interaction;
+			if (
+				request.delivery === "async" &&
+				(questionIds.includes(request.questionId ?? "") || questionIds.includes(request.toolCallId ?? ""))
+			)
+				pending.finish(undefined, true, undefined, "answered");
+		}
 	}
 }

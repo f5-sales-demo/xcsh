@@ -489,6 +489,7 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 					};
 				case "custom":
 				case "hookMessage": {
+					if (m.customType === "async-user-input") return undefined;
 					const content = typeof m.content === "string" ? [{ type: "text" as const, text: m.content }] : m.content;
 					const role = [
 						"remote-voice-start",

@@ -129,7 +129,11 @@ export class HerdrInteractionBridge {
 			payload:
 				request.delivery === "async"
 					? asyncItem
-					: { questions: request.inputQuestions, isBlocking: true, autoResolutionMs: null },
+					: {
+							questions: request.inputQuestions,
+							isBlocking: request.isBlocking ?? true,
+							autoResolutionMs: request.autoResolutionMs ?? null,
+						},
 		};
 		const entry: Entry = { target, identity: structuredClone(identity), report };
 		if (request.delivery === "async") {

@@ -175,7 +175,7 @@ test("nested terminal pauses retain queued input while remote answers still comp
 	expect(presentations).toBe(1);
 });
 
-test("async questions open sequentially, preserve pauses, and remain pending after dismissal", async () => {
+test("async questions open on request, preserve pauses, and remain pending after dismissal", async () => {
 	const owner = new UserInteractions();
 	const resume = owner.pauseLocalPresentation();
 	const forms: ReturnType<typeof Promise.withResolvers<string | undefined>>[] = [];
@@ -190,6 +190,8 @@ test("async questions open sequentially, preserve pauses, and remain pending aft
 	]);
 	expect(forms).toHaveLength(0);
 	const [first, second] = owner.pending();
+	owner.presentAsync(first.id);
+	owner.presentAsync(second.id);
 	resume();
 	expect(forms).toHaveLength(1);
 	forms[0].resolve(undefined);
@@ -205,7 +207,7 @@ test("async questions open sequentially, preserve pauses, and remain pending aft
 	expect(owner.pending()).toEqual([]);
 });
 
-test("registering an async presenter opens queued input without consuming a recommendation", async () => {
+test("registering an async presenter retains queued input without taking focus", async () => {
 	const owner = new UserInteractions();
 	const result = owner.request({ kind: "input", delivery: "async", title: "Choice", options: ["Recommended"] });
 	let shown = 0;
@@ -213,6 +215,8 @@ test("registering an async presenter opens queued input without consuming a reco
 		shown++;
 		return new Promise(() => {});
 	});
+	expect(shown).toBe(0);
+	expect(owner.presentAsync(owner.pending()[0].id)).toBe(true);
 	expect(shown).toBe(1);
 	expect(owner.pending()).toHaveLength(1);
 	owner.cancelAll();

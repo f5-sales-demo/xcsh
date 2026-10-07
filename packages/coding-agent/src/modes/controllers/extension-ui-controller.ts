@@ -21,6 +21,7 @@ import { HookSelectorComponent } from "../../modes/components/hook-selector";
 import { getAvailableThemesWithPaths, getThemeByName, setTheme, type Theme, theme } from "../../modes/theme/theme";
 import type { InteractiveModeContext } from "../../modes/types";
 import { setSessionTerminalTitle, setTerminalTitle } from "../../utils/title-generator";
+import { AsyncQuestionComponent } from "../components/async-question";
 import { RequestUserInputComponent } from "../components/request-user-input";
 
 const MAX_WIDGET_LINES = 10;
@@ -36,31 +37,54 @@ export class ExtensionUiController {
 	 * Initialize the hook system with TUI-based UI context.
 	 */
 	initializeInteractionPresenters(): void {
+		const drafts = new Map<string, { title: string; text: string }>();
+		const presentations = new Set<Promise<string | undefined>>();
+		this.ctx.session.subscribe(async event => {
+			if (event.type !== "agent_end") return;
+			for (const request of this.ctx.session.userInteractions.pending()) {
+				if (request.delivery === "async") this.ctx.session.userInteractions.resolve(request.id, "expired");
+			}
+			// Await the real editor lifecycle before appending recovered drafts.
+			await Promise.allSettled([...presentations]);
+			const recovered = [...drafts.values()]
+				.filter(draft => draft.text.trim())
+				.map(draft => `> ${draft.title.replace(/\n/g, "\n> ")}\n\n${draft.text}`);
+			if (recovered.length)
+				this.ctx.editor.setText([this.ctx.editor.getText(), ...recovered].filter(Boolean).join("\n\n"));
+			drafts.clear();
+		});
 		this.ctx.session.userInteractions.setAsyncPresenter(async (request, signal) => {
-			const id = request.identity?.itemId ?? "answer";
-			const response = await this.showHookCustom<
-				import("../../../../chat-ui/src/interactions/contract").InputResponse | undefined
-			>(
+			const presentation = this.showHookCustom<string | undefined>(
 				(tui, _theme, _keys, done) =>
-					new RequestUserInputComponent(
+					new AsyncQuestionComponent(
 						tui,
-						[
-							{
-								id,
-								header: "Question",
-								question: request.title,
-								isOther: true,
-								options: request.options?.map(label => ({ label, description: "" })),
-							},
-						],
+						request.title,
+						request.options,
 						done,
 						signal,
+						drafts.get(request.id)?.text ?? "",
+						text =>
+							drafts.set(request.id, {
+								title: request.title,
+								text,
+							}),
 					),
 			);
-			return response?.answers[id]?.answers.join("\n");
+			presentations.add(presentation);
+			let answer: string | undefined;
+			try {
+				answer = await presentation;
+			} finally {
+				presentations.delete(presentation);
+			}
+			if (answer !== undefined) drafts.delete(request.id);
+			return answer;
 		});
-		this.ctx.session.userInteractions.setQuestionPresenter((questions, signal) =>
-			this.showHookCustom((tui, _theme, _keys, done) => new RequestUserInputComponent(tui, questions, done, signal)),
+		this.ctx.session.userInteractions.setQuestionPresenter((questions, signal, request) =>
+			this.showHookCustom(
+				(tui, _theme, _keys, done) =>
+					new RequestUserInputComponent(tui, questions, done, signal, request.isBlocking ?? true),
+			),
 		);
 	}
 

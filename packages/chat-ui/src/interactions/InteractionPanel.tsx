@@ -152,6 +152,7 @@ export function InteractionPanel({
 								key={request.id}
 								requestId={request.id}
 								questions={request.inputQuestions}
+								isBlocking={request.isBlocking}
 								onRespond={respond}
 								onInterrupt={() =>
 									transport.send({

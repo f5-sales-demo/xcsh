@@ -4,6 +4,7 @@ import { open, realpath } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { getModelEffectiveContextWindow, type Model, type Usage } from "@f5-sales-demo/pi-ai";
+import { parseQuestionReplies } from "../../../chat-ui/src/interactions/async-answer";
 import { isInteractionCommand } from "../../../chat-ui/src/interactions/transport";
 import { filterCurrentBrowserModels } from "../config/model-catalog";
 import {
@@ -1429,6 +1430,8 @@ export class RemoteSession {
 		this.#validateEffort(params.effort);
 		const text = params.input.map(item => item.text).join("\n");
 		if (!text.trim()) throw new ProtocolError(-32602, "Empty turn input");
+		const replies = parseQuestionReplies(text);
+		if (replies) this.target.userInteractions?.acknowledgeAsyncReplies(replies.map(reply => reply.questionItemId));
 		if (method === "turn/steer") {
 			if (!this.#active || params.expectedTurnId !== this.#active.id)
 				throw new ProtocolError(-32602, "Active turn mismatch");
@@ -1789,7 +1792,7 @@ export class RemoteSession {
 			this.#startedItems.add(id);
 			this.#emit("item/started", {
 				turnId: this.#active.id,
-				item: item.type === "agentMessage" ? { ...item, text: "" } : { ...item },
+				item: item.type === "agentMessage" && item.delivery !== "async" ? { ...item, text: "" } : { ...item },
 			});
 		}
 		const index = this.#active.items.findIndex(value => value.id === id);

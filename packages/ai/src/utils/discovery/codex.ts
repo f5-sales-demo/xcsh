@@ -293,6 +293,25 @@ function normalizeCodexModelEntry(entry: unknown, baseUrl: string): NormalizedCo
 		model: applyCodexInteractionMetadata(
 			{
 				id: slug,
+				experimentalSupportedTools: Array.isArray(payload.experimental_supported_tools)
+					? payload.experimental_supported_tools.filter((tool): tool is string => typeof tool === "string")
+					: [],
+				modelMessages: isRecord(payload.model_messages)
+					? {
+							requestUserInputAsyncDescription:
+								isRecord(payload.model_messages.tools) &&
+								isRecord(payload.model_messages.tools.send_user_message_async) &&
+								typeof payload.model_messages.tools.send_user_message_async.description === "string"
+									? payload.model_messages.tools.send_user_message_async.description
+									: undefined,
+							requestUserInputAsyncParameters:
+								isRecord(payload.model_messages.tools) &&
+								isRecord(payload.model_messages.tools.send_user_message_async) &&
+								typeof payload.model_messages.tools.send_user_message_async.parameters === "string"
+									? payload.model_messages.tools.send_user_message_async.parameters
+									: undefined,
+						}
+					: undefined,
 				name,
 				api: "openai-codex-responses",
 				provider: "openai-codex",

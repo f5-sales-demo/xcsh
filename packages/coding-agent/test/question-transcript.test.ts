@@ -37,13 +37,12 @@ describe("question transcript presentation", () => {
 	});
 
 	test("correlates the exact model-facing payload into a friendly answer summary", () => {
-		const raw =
-			'{"type":"user_input_reply","itemId":"transport-item","questionId":"transport-item:0","answer":"Montréal"}';
+		const raw = `<send_user_message_question_reply>\n${JSON.stringify([{ questionItemId: '["request_user_input_async","transport-item",0]', question: "Where?", answer: "Montréal" }])}\n</send_user_message_question_reply>`;
 		const reply = parseAsyncInputReply(raw);
 		expect(reply).toEqual({
 			type: "user_input_reply",
 			itemId: "transport-item",
-			questionId: "transport-item:0",
+			questionId: '["request_user_input_async","transport-item",0]',
 			answer: "Montréal",
 		});
 		const resolved = resolveAsyncQuestionReply(
@@ -51,7 +50,13 @@ describe("question transcript presentation", () => {
 				{
 					role: "custom",
 					customType: "async-user-input",
-					details: { item, questionIds: ["transport-item:0", "transport-item:1"] },
+					details: {
+						item,
+						questionIds: [
+							'["request_user_input_async","transport-item",0]',
+							'["request_user_input_async","transport-item",1]',
+						],
+					},
 				},
 			],
 			reply!,
@@ -68,7 +73,7 @@ describe("question transcript presentation", () => {
 	test("does not claim unrelated or stale JSON and masks a correlated secret", () => {
 		expect(parseAsyncInputReply('{"type":"ordinary","answer":"x"}')).toBeUndefined();
 		const reply = parseAsyncInputReply(
-			'{"type":"user_input_reply","itemId":"transport-item","questionId":"missing","answer":"private-value"}',
+			`<send_user_message_question_reply>\n${JSON.stringify([{ questionItemId: '["request_user_input_async","transport-item",99]', question: "Where?", answer: "private-value" }])}\n</send_user_message_question_reply>`,
 		)!;
 		expect(resolveAsyncQuestionReply([], reply)).toBeUndefined();
 		const secret = {
@@ -87,7 +92,7 @@ describe("question transcript presentation", () => {
 			reply: {
 				type: "user_input_reply" as const,
 				itemId: "transport-item",
-				questionId: "transport-item:1",
+				questionId: '["request_user_input_async","transport-item",1]',
 				answer: "user_note: final operator note",
 			},
 			question: item.questions[1],
@@ -100,14 +105,19 @@ describe("question transcript presentation", () => {
 	});
 
 	test("does not correlate a user payload with a question that appears later in replay", () => {
-		const raw =
-			'{"type":"user_input_reply","itemId":"transport-item","questionId":"transport-item:0","answer":"Montréal"}';
+		const raw = `<send_user_message_question_reply>\n${JSON.stringify([{ questionItemId: '["request_user_input_async","transport-item",0]', question: "Where?", answer: "Montréal" }])}\n</send_user_message_question_reply>`;
 		const reply = { role: "user", content: [{ type: "text", text: raw }] };
 		const custom = {
 			role: "custom",
 			customType: "async-user-input",
 			display: true,
-			details: { item, questionIds: ["transport-item:0", "transport-item:1"] },
+			details: {
+				item,
+				questionIds: [
+					'["request_user_input_async","transport-item",0]',
+					'["request_user_input_async","transport-item",1]',
+				],
+			},
 			content: item.text,
 		};
 		const children: any[] = [];
@@ -124,7 +134,7 @@ describe("question transcript presentation", () => {
 		helpers.addMessageToChat(reply as any);
 		helpers.addMessageToChat(custom as any);
 		const replayed = Bun.stripANSI(children.flatMap(child => child.render(80)).join("\n"));
-		expect(replayed).toContain("user_input_reply");
+		expect(replayed).toContain("send_user_message_question_reply");
 		expect(replayed).not.toContain("Answer recorded");
 	});
 
@@ -133,7 +143,13 @@ describe("question transcript presentation", () => {
 			role: "custom",
 			customType: "async-user-input",
 			display: true,
-			details: { item, questionIds: ["transport-item:0", "transport-item:1"] },
+			details: {
+				item,
+				questionIds: [
+					'["request_user_input_async","transport-item",0]',
+					'["request_user_input_async","transport-item",1]',
+				],
+			},
 			content: item.text,
 		};
 		const reply = {
@@ -141,7 +157,7 @@ describe("question transcript presentation", () => {
 			content: [
 				{
 					type: "text",
-					text: '{"type":"user_input_reply","itemId":"transport-item","questionId":"transport-item:0","answer":"Montréal"}',
+					text: `<send_user_message_question_reply>\n${JSON.stringify([{ questionItemId: '["request_user_input_async","transport-item",0]', question: "Where?", answer: "Montréal" }])}\n</send_user_message_question_reply>`,
 				},
 			],
 		};
@@ -188,7 +204,10 @@ describe("question transcript presentation", () => {
 		await controller.handleEvent({
 			type: "async_user_input",
 			item,
-			questionIds: ["transport-item:0", "transport-item:1"],
+			questionIds: [
+				'["request_user_input_async","transport-item",0]',
+				'["request_user_input_async","transport-item",1]',
+			],
 		});
 		await controller.handleEvent({ type: "message_start", message: reply } as any);
 		expect(showStatus).not.toHaveBeenCalled();
