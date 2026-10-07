@@ -38,3 +38,22 @@ The selected --output has xcsh format semantics. JSON remains the default. Rando
 - Candidate native-context acceptance: isolated saved context and project link, real public JSON/policy YAML retrieval and exact-document offline encryption passed with empty stderr.
 - PR #4794: synced to current main, auto-merge enabled; hosted check and shell tests, Linux modern/macOS ARM64 native builds and container tests passed. Prose lint corrected by fencing literal format flags.
 - Remaining: green PR CI and merge, immutable release, Ubuntu then Mac installed/live/assistant acceptance, public guide and cleanup.
+
+## Released acceptance
+
+Immutable [v22.15.0](https://github.com/f5-sales-demo/xcsh/releases/tag/v22.15.0), source `785fcc49cfabf4d097525639643fd3438a644412`, release workflow `37653536435`. Feature PR
+PR #4794 and release PR #4798 merged; full feature and release code/native matrices passed. Intel native notarization verification passed on rerun after Apple had accepted the
+submission.
+
+Ubuntu standalone acceptance ran first, then an independent Mac Homebrew installation. Both created fresh private test CA/protected keys, retrieved JSON/YAML through a saved native
+context, encrypted offline via file and stdin, supplied the exact location to existing `xcsh create`, attached a fresh fixed-response HTTP-LB, and verified strict CA trust,
+intended SNI, matching fingerprint and HTTPS 200. Existing `xcsh update` rotated the certificate; changed fingerprint and HTTPS 200 passed. Generic resource CLI received the
+matching native credential snapshot through its existing environment interface.
+
+Each installed host ran two assistant prompts with file paths and required artifacts. Private provider requests, tool results, stdout/stderr were scanned for
+key/password/token/ciphertext markers; zero leaks. Mac CLI and native hashes match published provenance, strict codesign passes, and both are accepted as Notarized Developer ID.
+Ubuntu binary/provenance checksums and embedded native digests match immutable GitHub assets.
+
+Linux x64 binary SHA-256: `0e64b0ac0975168e03d867d7d6629fa88f2e5506d789dbc161caa3be50fe06a6`. Mac ARM64 binary: `f97008269551ad7ebb84dfa23dc3048da2bc464cc9683e39dc6c6a5d43acc9ca`; native: `312b82bde28eac6dc9fac4fd3a20f9d37d611a641bda6d12f83e319a4dfa8596`.
+
+Private per-host ownership/expiry/teardown records retain the released demos. Candidate auxiliary resources are removed during cleanup. Guide publication and task worktree retirement are tracked in #4799.

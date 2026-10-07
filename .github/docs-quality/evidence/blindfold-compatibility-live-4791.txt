@@ -1,0 +1,9 @@
+Immutable xcsh v22.15.0 acceptance
+Source: 785fcc49cfabf4d097525639643fd3438a644412
+Release workflow: 37653536435
+Ubuntu standalone first; independent Mac Homebrew second.
+Both: isolated native saved context; JSON/YAML retrieval; offline file/stdin encryption; exact ciphertext in xcsh create; fresh fixed-response HTTPS LB; strict CA/SNI/fingerprint/HTTPS 200; update rotation and changed fingerprint/HTTPS 200.
+Each installation: two assistant prompts; private requests/results/stdout/stderr scans found zero key/passphrase/token/ciphertext leaks.
+Installed binary/native digests matched immutable GitHub assets and provenance. Mac strict signatures and Notarized Developer ID assessments passed.
+Private ownership, 30-day expiry and teardown recorded for released demos. Candidate auxiliary demo removed during task cleanup.
+No tenant identifiers, private keys, credentials or encrypted payloads are present in this receipt.
