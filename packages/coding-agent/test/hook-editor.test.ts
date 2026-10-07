@@ -97,6 +97,7 @@ function createControllerContext() {
 		editor,
 		editorContainer,
 		ui,
+		statusLine: { setHookStatus: vi.fn() },
 		hookEditor: undefined,
 	} as unknown as TestContext;
 
@@ -806,5 +807,22 @@ it("async option shortcuts cannot submit an option hidden by a small viewport", 
 	await Bun.sleep(0);
 	expect(ctx.session.userInteractions.pending()).toHaveLength(1);
 	ctx.session.userInteractions.respond(request.id, "External");
+	await result;
+});
+
+it("async countdown status clears when the editor opens", async () => {
+	const { ctx } = createControllerContext();
+	let now = 1000;
+	vi.spyOn(Date, "now").mockImplementation(() => now);
+	new ExtensionUiController(ctx).initializeInteractionPresenters();
+	const result = ctx.session.userInteractions.request({ kind: "input", delivery: "async", title: "Details?" });
+	const request = ctx.session.userInteractions.pending()[0];
+	now += 11000;
+	await Bun.sleep(1100);
+	expect(ctx.statusLine.setHookStatus).toHaveBeenLastCalledWith("async-questions", expect.stringContaining("19s"));
+	ctx.session.userInteractions.presentAsync(request.id);
+	await Bun.sleep(0);
+	expect(ctx.statusLine.setHookStatus).toHaveBeenLastCalledWith("async-questions", undefined);
+	ctx.session.userInteractions.close();
 	await result;
 });

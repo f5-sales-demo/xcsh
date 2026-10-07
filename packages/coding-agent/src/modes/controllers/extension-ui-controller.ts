@@ -46,6 +46,8 @@ export class ExtensionUiController {
 		const stopTimer = () => {
 			if (timer) clearInterval(timer);
 			timer = undefined;
+			this.ctx.statusLine?.setHookStatus("async-questions", undefined);
+			this.ctx.ui.requestRender();
 		};
 		owner.subscribe(event => {
 			if (event.interaction.delivery !== "async") return;
@@ -64,6 +66,7 @@ export class ExtensionUiController {
 			}
 			if (!deadlines.size) stopTimer();
 		});
+		this.ctx.session.addDisposeHook?.(stopTimer);
 		const tick = () => {
 			let countdown: number | undefined;
 			for (const [id, deadline] of deadlines)
@@ -77,7 +80,13 @@ export class ExtensionUiController {
 				const seconds = Math.ceil((deadline - Date.now()) / 1000);
 				if (seconds > 0 && seconds <= 20) countdown = Math.min(countdown ?? seconds, seconds);
 			}
-			if (countdown !== undefined) this.ctx.showStatus?.(`Questions skip in ${countdown}s · /questions to answer`);
+			if (countdown !== undefined) {
+				this.ctx.statusLine?.setHookStatus(
+					"async-questions",
+					`Questions skip in ${countdown}s · /questions to answer`,
+				);
+				this.ctx.ui.requestRender();
+			}
 			if (!deadlines.size) stopTimer();
 		};
 
