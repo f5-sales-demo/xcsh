@@ -64,6 +64,11 @@ export function undefinedScannerSymbols(stdout: string, exitCode: number, stderr
   return stdout.split("\n").filter(line => /\b_?tree_sitter_\w+_external_scanner_/.test(line));
 }
 
+/** Unversioned C23 libc imports can escape readelf's version-floor scan. */
+export function unsupportedGlibcSymbols(stdout: string): string[] {
+ return stdout.split("\n").flatMap(line=>{const symbol=line.match(/\b(__isoc23_\w+)\b/);return symbol?[symbol[1]!]:[];});
+}
+
 async function main(): Promise<void> {
 	const entries = await fs.readdir(nativeDir);
 
@@ -130,6 +135,10 @@ async function main(): Promise<void> {
 			nmProc.exited,
 		]);
 		const unresolvedScanners = undefinedScannerSymbols(output, exitCode, errorOutput);
+        if(platform.startsWith("linux-")) {
+            const unsupported=unsupportedGlibcSymbols(output);
+            if(unsupported.length>0) {console.error(`SYMBOL ERROR pi_natives.${platform}.node: unsupported libc imports ${unsupported.join(", ")}`);symbolErrors++;}
+        }
 
 		if (unresolvedScanners.length > 0) {
 			console.error(`SYMBOL ERROR pi_natives.${platform}.node: ${unresolvedScanners.length} undefined tree-sitter scanner symbol(s)`);
@@ -143,7 +152,7 @@ async function main(): Promise<void> {
 	}
 
 	if (symbolErrors > 0) {
-		console.error(`\n${symbolErrors} addon(s) have undefined tree-sitter scanner symbols`);
+		console.error(`\n${symbolErrors} addon(s) have unsupported undefined symbols`);
 		process.exit(1);
 	}
 }

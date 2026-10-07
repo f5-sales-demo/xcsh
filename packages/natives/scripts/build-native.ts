@@ -60,18 +60,26 @@ function resolveReleaseLinuxTarget(): string | null {
 }
 
 const releaseLinuxTarget = resolveReleaseLinuxTarget();
-if (releaseLinuxTarget === "aarch64-unknown-linux-gnu") {
+if (releaseLinuxTarget) {
 	const targetCc = Bun.which("clang");
 	const targetCxx = Bun.which("clang++");
 	if (!targetCc || !targetCxx) {
 		throw new Error(
-			"Linux ARM64 release builds require clang and clang++; install them on the build runner before invoking napi-rs.",
+			"Linux release builds require clang and clang++; install them on the build runner before invoking napi-rs.",
 		);
 	}
 	Bun.env.TARGET_CC = targetCc;
 	Bun.env.TARGET_CXX = targetCxx;
 	// The legacy cross sysroot hides _setjmp in BSD-only mode; X/Open keeps OpenSSL async declarations visible.
 	Bun.env.CFLAGS_aarch64_unknown_linux_gnu = "-D_BSD_SOURCE -D_XOPEN_SOURCE=700";
+	Bun.env.CFLAGS_x86_64_unknown_linux_gnu = "-D_BSD_SOURCE -D_XOPEN_SOURCE=700";
+	// cc-rs uses HOST_* when host and target triples match. Target-specific names take precedence.
+	if (releaseLinuxTarget === "x86_64-unknown-linux-gnu") {
+		Bun.env.PI_NATIVE_RELEASE_CC = targetCc;
+		Bun.env.PI_NATIVE_RELEASE_CXX = targetCxx;
+		Bun.env.CC_x86_64_unknown_linux_gnu = path.join(import.meta.dir, "release-clang.sh");
+		Bun.env.CXX_x86_64_unknown_linux_gnu = path.join(import.meta.dir, "release-clangxx.sh");
+	}
 }
 
 function resolveLinuxHostZigTarget(): "x86_64-linux-gnu" | "x86_64-linux-musl" {
