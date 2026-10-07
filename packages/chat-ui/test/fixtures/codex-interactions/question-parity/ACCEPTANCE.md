@@ -95,5 +95,5 @@ The canonical v22.13.2 release PR #4764 includes the later editor fixes and rema
 Chrome v1.33.1 loaded in an isolated profile using its normal development public-key injection (only manifest
 key differs from the release ZIP). A synthetic page was fulfilled locally, without tenant network/data.
 The real sidebar naturally invoked async audience input, retained independent 90-second timing work,
-accepted End users with a correlated receipt and resolved identity, and produced end-user release notes.
+accepted End users with a correlated receipt and resolved identity, and produced end user release notes.
 The Chrome release is mutable; immutable publication qualification remains open. Office is explicitly deferred.
