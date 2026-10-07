@@ -351,9 +351,9 @@ function searchRows(
 	return database
 		.query(`WITH scored AS (
 			SELECT dd.*, p.anchor, p.heading, p.markdown AS passage_markdown, p.ordinal,
-				ABS(bm25(documents_fts, 1.5, 4.0, 1.0)) /
+				ROUND(ABS(bm25(documents_fts, 1.5, 4.0, 1.0)) /
 				(1.0 + ABS(bm25(documents_fts, 1.5, 4.0, 1.0))) *
-				CASE dd.lifecycle WHEN 'deprecated' THEN 0.85 WHEN 'superseded' THEN 0.65 ELSE 1.0 END AS score
+				CASE dd.lifecycle WHEN 'deprecated' THEN 0.85 WHEN 'superseded' THEN 0.65 ELSE 1.0 END, 12) AS score
 			FROM documents_fts
 			JOIN documents d ON d.id = documents_fts.rowid
 			JOIN documentation_passages p ON p.source = d.collection AND p.qmd_path = d.path

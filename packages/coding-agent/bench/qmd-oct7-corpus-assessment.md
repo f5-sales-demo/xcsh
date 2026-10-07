@@ -158,3 +158,8 @@ Ubuntu candidate acceptance passed 715 queries with five repetitions per query, 
 network-disabled QMD and Terraform smokes. Complete-corpus checks passed 715 documents, 4,883
 anchors, all public media links and all removed identities. Historical retirement impact is recorded
 separately for eight evidence files; their bytes and frozen qualification labels remain unchanged.
+
+Cross-platform complete response comparison found one floating-point section-selection tie.
+Rounding BM25 before the per-document section choice resolves it deterministically by ordinal.
+The query regression failed before the fix and passed afterward. All 715 complete response hashes
+now match across Mac and Ubuntu, with five repetitions; warm p95 Mac 13.98 ms and Ubuntu 21.93 ms.

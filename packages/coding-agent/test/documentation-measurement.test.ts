@@ -27,3 +27,24 @@ test("general measurement checks five identical full responses and anchored foll
 		measureDocumentationRequests(["xcsh://documentation/"], async () => ({ content: String(Math.random()) })),
 	).rejects.toThrow("Non-deterministic");
 });
+
+test("current port query selects the earliest section when platform BM25 scores round to a tie", async () => {
+	const { EMBEDDED_DOCUMENTATION_ASSETS } = await import("../src/internal-urls/documentation-assets.generated");
+	if (!EMBEDDED_DOCUMENTATION_ASSETS) return;
+	const { createEmbeddedDocumentationRepository } = await import("../src/internal-urls/documentation-repository");
+	const { mkdtemp, rm } = await import("node:fs/promises");
+	const os = await import("node:os");
+	const path = await import("node:path");
+	const root = await mkdtemp(path.join(os.tmpdir(), "xcsh-qmd-tie-"));
+	try {
+		const repository = createEmbeddedDocumentationRepository(EMBEDDED_DOCUMENTATION_ASSETS, { cacheRoot: root });
+		const results = await repository.search(
+			"What ports are being used by the F5 Distributed Cloud platform?",
+			"my-f5-com",
+			5,
+		);
+		expect(results.find(result => result.stablePath === "K000147971")?.anchor).toBe("resolutionanswer");
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
