@@ -134,7 +134,8 @@ describe("startHeadlessChatBridge", () => {
 			expect(o?.toolNames as string[]).toContain(name);
 		}
 		// No browser builtin tool leaks into the Office session.
-		for (const name of BROWSER_TOOL_NAMES) expect(o?.toolNames as string[]).not.toContain(name);
+		for (const name of BROWSER_TOOL_NAMES.filter(name => !name.startsWith("request_user_input")))
+			expect(o?.toolNames as string[]).not.toContain(name);
 		// The bundled filesystem sandbox loads even though discovery is disabled —
 		// the CLI's safety net for the now-enabled bash/read/write tools.
 		expect(o?.bundledExtensions).toEqual(["sandbox-guard"]);
@@ -278,6 +279,8 @@ describe("startHeadlessChatBridge worker profile", () => {
 				additionalExtensionPaths: ["/tmp/bench-extension.ts"],
 			});
 			expect(options?.toolNames).toEqual([...new Set([...BROWSER_TOOL_NAMES, ...EXTENSION_AGENT_TOOL_NAMES])]);
+			expect(options?.toolNames).toContain("request_user_input");
+			expect(options?.toolNames).toContain("request_user_input_async");
 			expect(((options?.customTools ?? []) as Array<{ name: string }>).map(tool => tool.name)).toEqual([
 				...EXTENSION_AGENT_TOOL_NAMES,
 			]);
