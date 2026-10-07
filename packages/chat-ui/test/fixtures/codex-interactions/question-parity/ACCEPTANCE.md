@@ -82,3 +82,18 @@ v10.0.1-261007025924 accepted End users and rendered the completed report with v
 The user explicitly deferred real Excel, Word and PowerPoint verification. Their source builds and shared
 contract tests remain evidence; installed Office input, rendering and answer delivery are unverified.
 The task-owned Mac sideload process was stopped. Other client and release acceptance remains in scope.
+
+
+Immutable xcsh v22.13.1 was downloaded and verified on Ubuntu (CLI SHA-256
+44d1af5f538fb07cdaa3a3cb32b1fa8fa26100b05c3827d79708caa994215afa) and macOS arm64 (ZIP SHA-256
+5f0dc1f1fb33aca46930bafdbc77edac611bd17bdd9a1733bc51177e15fa4311). Mac code-signature validation passes;
+Gatekeeper accepts the notarized installer package. The Mac LiteLLM installed binary generated the fully
+specified placeholder status report. Installed Ubuntu Pro required-invoice acceptance kept jurisdiction
+uninvented and prepared the formula but selected async forms; #4765 strengthens required Default guidance.
+The canonical v22.13.2 release PR #4764 includes the later editor fixes and remains active.
+
+Chrome v1.33.1 loaded in an isolated profile using its normal development public-key injection (only manifest
+key differs from the release ZIP). A synthetic page was fulfilled locally, without tenant network/data.
+The real sidebar naturally invoked async audience input, retained independent 90-second timing work,
+accepted End users with a correlated receipt and resolved identity, and produced end-user release notes.
+The Chrome release is mutable; immutable publication qualification remains open. Office is explicitly deferred.
