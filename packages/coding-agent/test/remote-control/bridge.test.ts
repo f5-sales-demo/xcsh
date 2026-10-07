@@ -246,41 +246,19 @@ test("a hidden session publishes its async item lifecycle in order", async () =>
 		);
 		secondaryEvent({ type: "async_user_input", item, questionIds: ["ask:0"] });
 		const requestDeadline = Date.now() + 1_000;
-		while (!events.some(event => event.method === "item/tool/requestUserInput") && Date.now() < requestDeadline) {
+		while (!events.some(event => event.method === "item/completed") && Date.now() < requestDeadline)
 			await Bun.sleep(10);
-		}
 		const lifecycle = events.filter(event =>
 			["thread/started", "item/started", "item/completed"].includes(event.method),
 		);
 		expect(lifecycle.map(event => event.method)).toEqual(["thread/started", "item/started", "item/completed"]);
-		expect(events.find(event => event.method === "item/tool/requestUserInput")).toMatchObject({
-			params: {
-				isBlocking: false,
-				questions: [
-					{ id: "ask:0", header: "Phone structured UAT", options: [{ label: "Alpha" }, { label: "Beta" }] },
-				],
-			},
-		});
-		expect(lifecycle[1].params.item).toEqual({ ...item, text: "" });
+		expect(events.some(event => event.method === "item/tool/requestUserInput")).toBe(false);
+		expect(lifecycle[1].params.item).toEqual(item);
 		expect(lifecycle[2].params.item).toEqual(item);
-		const request = events.find(event => event.method === "item/tool/requestUserInput")!;
-		expect(
-			await host.router.handle("phone", {
-				id: request.id,
-				result: { answers: { "ask:0": { answers: ["Beta"] } } },
-			}),
-		).toBeNull();
+		const request = interactions.pending()[0];
+		expect(interactions.respond(request.id, "Beta")).toBe(true);
 		expect(await Promise.all(answers)).toEqual(["Beta"]);
-		expect(
-			events.filter(event => event.method === "serverRequest/resolved" && event.params.requestId === request.id),
-		).toHaveLength(1);
-		await host.router.handle("phone", {
-			id: request.id,
-			result: { answers: { "ask:0": { answers: ["Beta"] } } },
-		});
-		expect(
-			events.filter(event => event.method === "serverRequest/resolved" && event.params.requestId === request.id),
-		).toHaveLength(1);
+		expect(events.some(event => event.method === "serverRequest/resolved")).toBe(false);
 	} finally {
 		interactions.cancelAll();
 		for (const stop of stops.toReversed()) await stop();

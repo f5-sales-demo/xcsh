@@ -187,8 +187,8 @@ export class RemoteInteractions {
 												: null,
 									},
 								],
-					isBlocking: true,
-					autoResolutionMs: null,
+					isBlocking: interaction.isBlocking ?? true,
+					autoResolutionMs: interaction.autoResolutionMs ?? null,
 				},
 			};
 		this.#requests.set(interaction.id, { interaction, request });
@@ -226,7 +226,6 @@ export class RemoteInteractions {
 		}
 		if (!record(response) || !record(response.answers)) throw invalid();
 		if (pending.interaction.kind === "request_user_input") {
-			if (Object.keys(response.answers).length === 0) return { accepted: this.broker.resolve(id, "dismissed") };
 			if (!this.broker.respond(id, response)) throw invalid();
 			return { accepted: true };
 		}

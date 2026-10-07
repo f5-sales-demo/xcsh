@@ -1,40 +1,59 @@
-import { useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { INPUT_COPY, type InputQuestion, type InputResponse } from "./contract";
 import { QuestionForm } from "./question-form";
 
 export interface QuestionCardProps {
 	requestId: string;
 	questions: readonly InputQuestion[];
+	isBlocking?: boolean;
 	onRespond: (response: InputResponse) => Promise<{ accepted: boolean }>;
 	onInterrupt: () => void;
 }
 
 /** Drafts remain within this component until the user explicitly submits. */
-export function QuestionCard({ requestId, questions, onRespond, onInterrupt }: QuestionCardProps) {
+export function QuestionCard({ requestId, questions, onRespond, onInterrupt, isBlocking = true }: QuestionCardProps) {
 	// A replayed snapshot has fresh object references; retain local drafts for this request.
-	const [form] = useState(() => new QuestionForm(questions));
+	const [form] = useState(() => new QuestionForm(questions, isBlocking));
 	const [, render] = useReducer((value: number, _action: null) => value + 1, 0);
 	const [sending, setSending] = useState(false);
 	const [error, setError] = useState("");
-	const send = async (response: InputResponse) => {
-		setSending(true);
-		setError("");
-		try {
-			const receipt = await onRespond(response);
-			if (!receipt.accepted) setError("This request is no longer available.");
-		} catch {
-			setError("Unable to send your answer. Try again.");
-		} finally {
-			setSending(false);
-		}
-	};
+	const send = useCallback(
+		async (response: InputResponse) => {
+			setSending(true);
+			setError("");
+			try {
+				const receipt = await onRespond(response);
+				if (!receipt.accepted) setError("This request is no longer available.");
+			} catch {
+				setError("Unable to send your answer. Try again.");
+			} finally {
+				setSending(false);
+			}
+		},
+		[onRespond],
+	);
 	const submit = () => {
 		const result = form.submit();
 		if (result.kind === "submitted") void send(result.response);
 		render(null);
 	};
+	useEffect(() => {
+		if (isBlocking) return;
+		let settled = false;
+		const timer = setInterval(() => {
+			const response = form.tick(Date.now());
+			if (response && !settled) {
+				settled = true;
+				void send(response);
+			} else render(null);
+		}, 1000);
+		return () => clearInterval(timer);
+	}, [form, isBlocking, send]);
 	return (
 		<section aria-label="User input" data-request-id={requestId}>
+			{form.countdown(Date.now()) !== undefined ? (
+				<p>Continuing automatically in {form.countdown(Date.now())}s</p>
+			) : null}
 			{form.confirming ? (
 				<>
 					<h3>{INPUT_COPY.confirm}</h3>

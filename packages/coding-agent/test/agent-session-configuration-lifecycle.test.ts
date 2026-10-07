@@ -36,6 +36,30 @@ async function fixture(extra: Partial<AgentSessionConfig> = {}) {
 	return { session, registry, original, target, manager };
 }
 
+test("question exposure and guidance follow model and mode transitions", async () => {
+	const waiting = tool("request_user_input");
+	const asynchronous = tool("request_user_input_async");
+	const { session, original, target } = await fixture({
+		toolRegistry: new Map([
+			[waiting.name, waiting],
+			[asynchronous.name, asynchronous],
+		]),
+		rebuildSystemPrompt: async names => names.join(","),
+	});
+	await session.setModelTemporary({ ...target, experimentalSupportedTools: ["send_user_message_async"] });
+	expect(session.getActiveToolNames()).toContain("request_user_input_async");
+	expect(session.systemPrompt).toContain("request_user_input_async");
+	await session.setModelTemporary(original);
+	expect(session.getActiveToolNames()).not.toContain("request_user_input_async");
+	expect(session.systemPrompt).not.toContain("request_user_input_async");
+	session.setPlanModeState({ enabled: true } as any);
+	expect(session.getActiveToolNames()).toContain("request_user_input");
+	await session.setActiveToolsByName([]);
+	session.setPlanModeState(undefined);
+	session.setPlanModeState({ enabled: true } as any);
+	expect(session.getActiveToolNames()).not.toContain("request_user_input");
+});
+
 for (const method of [
 	"setModel",
 	"setModelTemporary",

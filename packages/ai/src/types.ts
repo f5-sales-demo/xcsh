@@ -738,6 +738,13 @@ export interface VercelGatewayRouting {
 
 // Model interface for the unified model system
 export interface Model<TApi extends Api = any> {
+	/** Catalog-supported model-facing tools; absence does not imply support. */
+	experimentalSupportedTools?: string[];
+	/** Catalog overrides for async question guidance and JSON parameters. */
+	modelMessages?: {
+		requestUserInputAsyncDescription?: string;
+		requestUserInputAsyncParameters?: string;
+	};
 	type?: "chat";
 	id: string;
 	name: string;

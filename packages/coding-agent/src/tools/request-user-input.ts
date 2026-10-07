@@ -1,8 +1,13 @@
 import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import { type Static, Type } from "@sinclair/typebox";
-import { type AsyncInputQuestion, createAsyncQuestionItem } from "../../../chat-ui/src/interactions/contract";
+import {
+	type AsyncInputQuestion,
+	asyncQuestionId,
+	createAsyncQuestionItem,
+} from "../../../chat-ui/src/interactions/contract";
 import asyncDescription from "../prompts/tools/request-user-input-async.md" with { type: "text" };
 import type { ToolSession } from ".";
+import { asyncQuestionsSupported } from "./question-eligibility";
 import { ToolAbortError, ToolError } from "./tool-errors";
 
 // Field text and strictness are pinned to Codex request_user_input_spec.rs.
@@ -76,6 +81,8 @@ export class RequestUserInputTool implements AgentTool<typeof requestUserInputSc
 		args: Static<typeof requestUserInputSchema>,
 		signal?: AbortSignal,
 	): Promise<AgentToolResult> {
+		if ((this.session.taskDepth ?? 0) > 0)
+			throw new ToolError("request_user_input can only be used by the root thread");
 		if (!this.session.getPlanModeState?.()?.enabled && !this.session.settings.get("interactions.waitingInDefault"))
 			throw new ToolError("request_user_input is unavailable in Default mode");
 		if (args.questions.some(question => !question.options?.length))
@@ -86,6 +93,8 @@ export class RequestUserInputTool implements AgentTool<typeof requestUserInputSc
 			{
 				title: "Questions",
 				toolCallId: callId,
+				isBlocking: this.session.getPlanModeState?.()?.enabled === true,
+				autoResolutionMs: null,
 				identity: this.session.getInteractionIdentity?.(callId),
 				inputQuestions: args.questions.map(question => ({ ...question, isOther: true, isSecret: false })),
 			},
@@ -99,11 +108,33 @@ export class RequestUserInputTool implements AgentTool<typeof requestUserInputSc
 export class RequestUserInputAsyncTool implements AgentTool<typeof requestUserInputAsyncSchema> {
 	readonly name = "request_user_input_async";
 	readonly label = "Ask asynchronously";
-	readonly description = asyncDescription.trim();
+	get description(): string {
+		return this.session.getModel?.()?.modelMessages?.requestUserInputAsyncDescription ?? asyncDescription.trim();
+	}
 	readonly strict = false;
-	readonly parameters = requestUserInputAsyncSchema;
+	get parameters(): typeof requestUserInputAsyncSchema {
+		const override = this.session.getModel?.()?.modelMessages?.requestUserInputAsyncParameters;
+		if (override) {
+			try {
+				const schema = JSON.parse(override);
+				if (
+					schema &&
+					schema.type === "object" &&
+					schema.properties &&
+					typeof schema.properties === "object" &&
+					!Array.isArray(schema.properties)
+				)
+					return schema;
+			} catch {
+				/* Invalid catalog parameters use the bundled schema. */
+			}
+		}
+		return requestUserInputAsyncSchema;
+	}
 	constructor(private readonly session: ToolSession) {}
 	async execute(callId: string, args: Static<typeof requestUserInputAsyncSchema>): Promise<AgentToolResult> {
+		if (this.session.getModel && !asyncQuestionsSupported(this.session.getModel(), this.session.taskDepth))
+			throw new ToolError("request_user_input_async is unavailable for this thread or model");
 		if (!args.questions.length) throw new ToolError("questions must not be empty");
 		for (const question of args.questions) {
 			if (!question.title.trim()) throw new ToolError("question titles must not be empty");
@@ -113,7 +144,7 @@ export class RequestUserInputAsyncTool implements AgentTool<typeof requestUserIn
 		const owner = this.session.getUserInteractions?.();
 		if (!owner) throw new ToolError("Session interaction owner unavailable");
 		const identity = this.session.getInteractionIdentity?.(callId);
-		const questionIds = args.questions.map((_, index) => `${callId}:${index}`);
+		const questionIds = args.questions.map((_, index) => asyncQuestionId(callId, index));
 		const item = createAsyncQuestionItem(callId, args.questions as AsyncInputQuestion[]);
 		const pending = owner.requestAsyncBatch(
 			args.questions.map((question, index) => ({

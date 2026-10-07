@@ -2,11 +2,32 @@ import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { FRESH_PLAN_PREFIX, PLAN_ACTIONS } from "../../chat-ui/src/interactions/conversation-plan";
 import { requestUserInputSchema } from "../src/tools/request-user-input";
 
 const root = resolve(import.meta.dir, "../../chat-ui/test/fixtures/codex-interactions");
 const manifest = JSON.parse(readFileSync(resolve(root, "manifest.json"), "utf8"));
+test("question contracts retain the frozen acceptance revision and hashes", () => {
+	expect(manifest.questionParity.commit).toBe("ac9b5b8380517ded445b09dd3196d8d9e2ba3c59");
+	for (const [file, digest] of Object.entries(manifest.questionParity.files))
+		expect(
+			createHash("sha256")
+				.update(readFileSync(resolve(root, file)))
+				.digest("hex"),
+		).toBe(String(digest));
+	const normalize = (text: string) => prompt.format(text).replaceAll("...", "…").replace(/\s+/g, " ").trim();
+	expect(
+		normalize(readFileSync(resolve(import.meta.dir, "../src/prompts/system/default-mode-active.md"), "utf8")),
+	).toBe(
+		normalize(
+			readFileSync(
+				resolve(root, "question-parity/codex-rs/collaboration-mode-templates/templates/default.source"),
+				"utf8",
+			),
+		),
+	);
+});
 test("pinned reference fixture bytes retain independent upstream provenance", () => {
 	expect(manifest.commit).toBe("d6d43270bd791c41624fd3ee25a37e80a38d374e");
 	expect(manifest.upstreamComparisonCommit).toBe("ebc05da3bdb76f25861e7cb418bd06d28cadc609");

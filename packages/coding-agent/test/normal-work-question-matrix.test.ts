@@ -53,7 +53,7 @@ for (const timing of ["streaming", "idle"] as const) {
 		const request = owner.pending()[0];
 		expect(owner.respondExternal(request.id, "receipt", "Maple", identity)).toBe(true);
 		await Bun.sleep(0);
-		expect(replies).toEqual([["choice", "choice:0", "Maple"]]);
+		expect(replies).toEqual([["choice", '["request_user_input_async","choice",0]', "Maple"]]);
 	});
 }
 
