@@ -394,13 +394,13 @@
           "text": "How do I audit a prompt change?"
         },
         {
-          "text": "How should API examples differ from execution?",
-          "readerQuestion": "When should curl examples execute API operations?",
-          "purpose": "Explain non-executing examples, explicit curl execution, native defaults and authoritative API evidence.",
           "evidence": [
             "source-authority"
           ],
-          "legacyConceptIds": []
+          "legacyConceptIds": [],
+          "purpose": "Explain non-executing examples, explicit curl execution, native defaults and authoritative API evidence.",
+          "readerQuestion": "When should curl examples execute API operations?",
+          "text": "How should API examples differ from execution?"
         }
       ],
       "path": "docs/en/architecture-contribution/prompt-authoring.mdx",
@@ -3315,6 +3315,89 @@
         "scripts/runner-optimization-profile.sh",
         "scripts/run-ts-tests.ts",
         "tests/test_ci_capacity_contract.py"
+      ]
+    },
+    {
+      "audience": "F5 Distributed Cloud operators",
+      "classification": "how-to",
+      "evidence": [
+        "blindfold-native-live-4750"
+      ],
+      "headings": [
+        {
+          "evidence": [
+            "blindfold-native-live-4750"
+          ],
+          "legacyConceptIds": [],
+          "purpose": "Retrieve public encryption material.",
+          "readerQuestion": "Retrieve public encryption material?",
+          "text": "Retrieve public encryption material"
+        },
+        {
+          "evidence": [
+            "blindfold-native-live-4750"
+          ],
+          "legacyConceptIds": [],
+          "purpose": "Encrypt a secret or prepare a certificate manifest.",
+          "readerQuestion": "Encrypt a secret or prepare a certificate manifest?",
+          "text": "Encrypt a secret or prepare a certificate manifest"
+        },
+        {
+          "evidence": [
+            "blindfold-native-live-4750"
+          ],
+          "legacyConceptIds": [],
+          "purpose": "Use protected PEM and PKCS#12 inputs.",
+          "readerQuestion": "Use protected PEM and PKCS#12 inputs?",
+          "text": "Use protected PEM and PKCS#12 inputs"
+        },
+        {
+          "evidence": [
+            "blindfold-native-live-4750"
+          ],
+          "legacyConceptIds": [],
+          "purpose": "Create and rotate a certificate.",
+          "readerQuestion": "Create and rotate a certificate?",
+          "text": "Create and rotate a certificate"
+        },
+        {
+          "evidence": [
+            "blindfold-native-live-4750"
+          ],
+          "legacyConceptIds": [],
+          "purpose": "Verify HTTPS after API acceptance.",
+          "readerQuestion": "Verify HTTPS after API acceptance?",
+          "text": "Verify HTTPS after API acceptance"
+        },
+        {
+          "evidence": [
+            "blindfold-native-live-4750"
+          ],
+          "legacyConceptIds": [],
+          "purpose": "Resolve failures and uncertain writes.",
+          "readerQuestion": "Resolve failures and uncertain writes?",
+          "text": "Resolve failures and uncertain writes"
+        },
+        {
+          "evidence": [
+            "blindfold-native-live-4750"
+          ],
+          "legacyConceptIds": [],
+          "purpose": "Tear down an owned demo.",
+          "readerQuestion": "Tear down an owned demo?",
+          "text": "Tear down an owned demo"
+        }
+      ],
+      "path": "docs/en/f5-distributed-cloud/blindfold-certificates.mdx",
+      "purpose": "Document measured native Blindfold preparation, deployment, TLS verification and cleanup.",
+      "readerNeed": "Encrypt local TLS keys and create or explicitly rotate an owned tenant certificate.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/services/blindfold.ts",
+        "packages/coding-agent/src/commands/blindfold.ts",
+        "packages/coding-agent/src/tools/xcsh-blindfold.ts",
+        "crates/pi-natives/src/blindfold.rs",
+        "packages/natives/test/blindfold.test.ts",
+        "packages/coding-agent/test/blindfold-service.test.ts"
       ]
     }
   ],

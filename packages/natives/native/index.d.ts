@@ -332,6 +332,29 @@ export interface AstReplaceResult {
   parseErrors?: Array<string>
 }
 
+export interface BlindfoldInput {
+  publicKeyJson: string
+  policyJson: string
+  input?: string
+  cert?: string
+  key?: string
+  bundle?: string
+  passphraseEnv?: string
+  maxEncodedSize?: number
+}
+
+/** Read secret files directly into native memory and return only encrypted/public material. */
+export declare function blindfoldPrepare(input: BlindfoldInput): BlindfoldPrepared
+
+export interface BlindfoldPrepared {
+  location: string
+  certificateUrl?: string
+  fingerprint?: string
+  expiresAt?: string
+  algorithm?: string
+  tenant: string
+}
+
 /**
  * How chunk anchors are formatted in rendered output (name and checksum
  * visibility).

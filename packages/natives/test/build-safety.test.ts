@@ -88,7 +88,7 @@ describe("native build safety", () => {
 			expect(build).toContain("if (!targetCc || !targetCxx)");
 			expect(build).toContain("Bun.env.TARGET_CC = targetCc;");
 			expect(build).toContain("Bun.env.TARGET_CXX = targetCxx;");
-			expect(build).toContain('Bun.env.CFLAGS_aarch64_unknown_linux_gnu = "-D_BSD_SOURCE"');
+			expect(build).toContain('Bun.env.CFLAGS_aarch64_unknown_linux_gnu = "-D_BSD_SOURCE -D_XOPEN_SOURCE=700"');
 			expect(workflow).not.toContain("CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER");
 		});
 

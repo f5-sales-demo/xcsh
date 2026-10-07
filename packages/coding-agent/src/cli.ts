@@ -54,6 +54,7 @@ process.title = APP_NAME;
 
 const commands: CommandEntry[] = [
 	{ name: "context", load: () => import("./commands/context").then(m => m.default) },
+	{ name: "blindfold", load: () => import("./commands/blindfold").then(m => m.default) },
 	{ name: "remote-control", load: () => import("./commands/remote-control").then(m => m.default) },
 	{ name: "apply", load: () => import("./commands/apply").then(m => m.default) },
 	{ name: "launch", load: () => import("./commands/launch").then(m => m.default) },
