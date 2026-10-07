@@ -332,6 +332,9 @@ export interface AstReplaceResult {
   parseErrors?: Array<string>
 }
 
+/** Secret bytes never cross N-API. Polling keeps pipe reads cancellable without changing fd flags. */
+export declare function blindfoldEncryptInput(input: BlindfoldInput, signal?: unknown | undefined | null): Promise<BlindfoldPrepared>
+
 export interface BlindfoldInput {
   publicKeyJson: string
   policyJson: string

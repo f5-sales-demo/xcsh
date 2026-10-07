@@ -12,6 +12,8 @@ export const blindfoldSchema = Type.Object(
 	{
 		operation: Type.Union(BLINDFOLD_OPERATIONS.map(v => Type.Literal(v))),
 		input: Type.Optional(Type.String()),
+		publicKey: Type.Optional(Type.String()),
+		policyDocument: Type.Optional(Type.String()),
 		cert: Type.Optional(Type.String()),
 		key: Type.Optional(Type.String()),
 		bundle: Type.Optional(Type.String()),
@@ -46,29 +48,39 @@ export class XcshBlindfoldTool implements AgentTool<typeof blindfoldSchema> {
 			throw new Error(
 				"Blindfold preparation requires outputFile so encrypted material is retained outside tool results",
 			);
-		const admitted = currentContextExecution();
-		const context = admitted
-			? undefined
-			: this.session.getContextService
-				? await this.session.getContextService()
-				: await ContextService.getOrInit(undefined, this.session.cwd);
+		if (args.operation === "encrypt" && (!args.input || args.input === "-"))
+			throw new Error("Assistant encryption requires an input file path");
+		if (Boolean(args.publicKey) !== Boolean(args.policyDocument))
+			throw new Error("Public key and policy document paths must be supplied together");
+		const offline = Boolean(args.publicKey && args.policyDocument);
+		const admitted = offline ? undefined : currentContextExecution();
+		const context =
+			offline || admitted
+				? undefined
+				: this.session.getContextService
+					? await this.session.getContextService()
+					: await ContextService.getOrInit(undefined, this.session.cwd);
 		const snapshot = context?.getStatus();
-		const env = admitted
-			? admitted.environment
-			: {
-					...(this.session.settings.get("bash.environment") as Record<string, string> | undefined),
-					...process.env,
-				};
-		const credentialSnapshot = env.XCSH_API_TOKEN;
-		const namespaceSnapshot = env.XCSH_NAMESPACE;
-		const guard = () => {
-			const current = context?.getStatus();
-			const now = admitted
+		const env = offline
+			? {}
+			: admitted
 				? admitted.environment
 				: {
 						...(this.session.settings.get("bash.environment") as Record<string, string> | undefined),
 						...process.env,
 					};
+		const credentialSnapshot = env.XCSH_API_TOKEN;
+		const namespaceSnapshot = env.XCSH_NAMESPACE;
+		const guard = () => {
+			const current = context?.getStatus();
+			const now = offline
+				? {}
+				: admitted
+					? admitted.environment
+					: {
+							...(this.session.settings.get("bash.environment") as Record<string, string> | undefined),
+							...process.env,
+						};
 			if (now.XCSH_API_TOKEN !== credentialSnapshot || now.XCSH_NAMESPACE !== namespaceSnapshot)
 				throw new Error("Blindfold context credentials or namespace changed; retry against the selected context");
 			if (

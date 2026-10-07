@@ -3,7 +3,7 @@ import { createDecipheriv, createPrivateKey } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { blindfoldPrepare } from "@f5-sales-demo/pi-natives";
+import { blindfoldEncryptInput, blindfoldPrepare } from "@f5-sales-demo/pi-natives";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "blindfold-test-"));
 const synthetic = (await Bun.file(path.join(import.meta.dir, "fixtures/blindfold-synthetic.json")).json()) as Record<
@@ -70,6 +70,27 @@ function recover(location: string, pid = 101n, tamper = false): Buffer {
 	return Buffer.concat([aes.update(ciphertext.subarray(0, -16)), aes.final()]);
 }
 describe("native Blindfold protocol", () => {
+	test("independently decrypts the pinned vesctl synthetic envelope", async () => {
+		const ref = await Bun.file(path.join(import.meta.dir, "fixtures/blindfold-vesctl-reference.json")).json();
+		expect(recover(ref.location)).toEqual(Buffer.from(Array.from({ length: 2048 }, (_, i) => i % 256)));
+	});
+	test("asynchronous file encryption preserves every binary byte", async () => {
+		const binary = path.join(dir, "binary");
+		const bytes = Buffer.from(Array.from({ length: 4096 }, (_, i) => i % 256));
+		fs.writeFileSync(binary, bytes);
+		const result = await blindfoldEncryptInput({ publicKeyJson: pub, policyJson: policy, input: binary });
+		expect(recover(result.location)).toEqual(bytes);
+	});
+	test("asynchronous input rejects cancellation and bounded file size", async () => {
+		await expect(
+			blindfoldEncryptInput({ publicKeyJson: pub, policyJson: policy, input: file }, AbortSignal.abort()),
+		).rejects.toThrow();
+		const oversized = path.join(dir, "oversized");
+		fs.writeFileSync(oversized, Buffer.alloc(2 * 1024 * 1024 + 1));
+		await expect(blindfoldEncryptInput({ publicKeyJson: pub, policyJson: policy, input: oversized })).rejects.toThrow(
+			"2 MiB",
+		);
+	});
 	test("uses a fixed synthetic tenant key compatible with the policy exponent", () => {
 		const fixtureKey = createPrivateKey(Buffer.from(synthetic["rsa-key.pem"]!, "base64")).export({ format: "jwk" });
 		expect(jwk.n).toBe(fixtureKey.n);

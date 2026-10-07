@@ -1,19 +1,23 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { type BlindfoldInput, type BlindfoldPrepared, blindfoldPrepare } from "@f5-sales-demo/pi-natives";
 import {
-	type HttpTransport,
-	ResourceClient,
-	type ResourceManifest,
-	validateManifest,
-} from "@f5-sales-demo/pi-resource-management";
-import { kindResolver } from "../resource-management/index";
+	type BlindfoldInput,
+	type BlindfoldPrepared,
+	blindfoldEncryptInput,
+	blindfoldPrepare,
+} from "@f5-sales-demo/pi-natives";
+import type { HttpTransport, ResourceManifest } from "@f5-sales-demo/pi-resource-management";
+
+import { readBlindfoldDocument, serializeBlindfoldDocument } from "./blindfold-documents";
 
 export const BLINDFOLD_OPERATIONS = ["public-key", "policy", "encrypt", "certificate", "create", "replace"] as const;
 export type BlindfoldOperation = (typeof BLINDFOLD_OPERATIONS)[number];
 export interface BlindfoldArgs {
 	operation: BlindfoldOperation;
 	input?: string;
+	publicKey?: string;
+	policyDocument?: string;
+	output?: "json" | "yaml";
 	cert?: string;
 	key?: string;
 	bundle?: string;
@@ -29,7 +33,8 @@ export interface BlindfoldArgs {
 export interface BlindfoldReport {
 	status: "material-retrieved" | "prepared" | "dry-run" | "accepted";
 	operation: BlindfoldOperation;
-	target: { apiUrl: string; tenant: string; namespace?: string; name?: string; contextName?: string };
+	materialSource?: "retrieved" | "supplied";
+	target: { apiUrl?: string; tenant: string; namespace?: string; name?: string; contextName?: string };
 	fingerprint?: string;
 	expiresAt?: string;
 	algorithm?: string;
@@ -48,6 +53,7 @@ interface Options {
 	cwd?: string;
 	fetch?: (url: string, init?: RequestInit) => Promise<Response>;
 	prepare?: (input: BlindfoldInput) => BlindfoldPrepared;
+	prepareInput?: (input: BlindfoldInput, signal?: AbortSignal) => Promise<BlindfoldPrepared>;
 }
 const label = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const identity = (v: string | undefined, what: string) => {
@@ -102,11 +108,28 @@ export class BlindfoldService {
 		if (!BLINDFOLD_OPERATIONS.includes(args.operation)) throw new Error("Invalid Blindfold operation");
 		if (runtime.planMode && (args.outputFile || args.resultFile || ["create", "replace"].includes(args.operation)))
 			throw new Error("Plan mode: Blindfold deployments and artifact writes are blocked");
-		const env = this.#options.env;
+		const offline = Boolean(args.publicKey && args.policyDocument);
+		if (Boolean(args.publicKey) !== Boolean(args.policyDocument))
+			throw new Error("Public key and policy document files must be supplied together");
+		if ((args.publicKey || args.policyDocument) && args.operation !== "encrypt")
+			throw new Error("Supplied public material is supported only for encrypt");
+		if (offline && args.contextName) throw new Error("Offline encryption does not select a context");
+		if (args.output && !["public-key", "policy"].includes(args.operation))
+			throw new Error("Output format applies only to public material retrieval");
+		if (args.output && !["json", "yaml"].includes(args.output))
+			throw new Error("Invalid public material output format");
+		if (args.operation === "policy" && args.policy && (args.namespace !== undefined || args.name !== undefined))
+			throw new Error("Cannot combine policy with explicit namespace/name");
+		if (args.operation === "public-key" && (args.namespace || args.policy))
+			throw new Error("Public key retrieval does not select a policy namespace");
+		const resolve = (v: string | undefined) => (v ? path.resolve(this.#options.cwd ?? process.cwd(), v) : undefined);
+		if (args.outputFile && args.resultFile && resolve(args.outputFile) === resolve(args.resultFile))
+			throw new Error("Artifact and report destinations must differ");
+		const env = offline ? {} : this.#options.env;
 		const apiUrl = env.XCSH_API_URL?.replace(/\/+$/, "");
 		const token = env.XCSH_API_TOKEN;
-		if (!apiUrl || !token) throw new Error("Blindfold requires tenant API credentials");
-		const tenant = tenantOf(apiUrl);
+		if (!offline && (!apiUrl || !token)) throw new Error("Blindfold requires tenant API credentials");
+		const tenant = offline ? "" : tenantOf(apiUrl!);
 		if (args.contextName && args.contextName !== env.XCSH_CONTEXT_NAME) throw new Error("Blindfold context mismatch");
 		const fetcher = this.#options.fetch ?? ((url, init) => fetch(url, init));
 		const target: BlindfoldReport["target"] = { apiUrl, tenant, contextName: env.XCSH_CONTEXT_NAME };
@@ -142,7 +165,11 @@ export class BlindfoldService {
 				throw new Error(`Blindfold public material request failed (HTTP ${value.httpStatus})`);
 			return value.body;
 		};
-		const policyParts = (args.policy ?? "shared/ves-io-allow-volterra").split("/");
+		const policyParts = (
+			args.operation === "policy"
+				? (args.policy ?? `${args.namespace ?? "shared"}/${args.name ?? "ves-io-allow-volterra"}`)
+				: (args.policy ?? "shared/ves-io-allow-volterra")
+		).split("/");
 		if (policyParts.length !== 2) throw new Error("Policy must be namespace/name");
 		const policyNamespace = identity(policyParts[0], "policy namespace"),
 			policyName = identity(policyParts[1], "policy name");
@@ -151,27 +178,46 @@ export class BlindfoldService {
 		let artifact: string | undefined;
 		let report: BlindfoldReport;
 		if (args.operation === "public-key" || args.operation === "policy") {
-			if (args.input || args.cert || args.key || args.bundle || args.name || args.dryRun || args.passphraseEnv)
+			if (
+				args.input ||
+				args.cert ||
+				args.key ||
+				args.bundle ||
+				(args.operation !== "policy" && args.name) ||
+				args.dryRun ||
+				args.passphraseEnv
+			)
 				throw new Error("Public material operations do not accept certificate or deployment inputs");
 			const material = await get(args.operation === "public-key" ? publicUrl : policyUrl);
 			const canonicalTenant = (material.data as Record<string, unknown> | undefined)?.tenant;
 			if (typeof canonicalTenant !== "string" || !label.test(canonicalTenant))
 				throw new Error("Malformed Blindfold tenant identity");
 			target.tenant = canonicalTenant;
-			artifact = `${JSON.stringify(material, null, 2)}\n`;
-			report = { status: "material-retrieved", operation: args.operation, target, artifacts: [] };
+			artifact = serializeBlindfoldDocument(material, args.output);
+			report = {
+				status: "material-retrieved",
+				materialSource: "retrieved",
+				operation: args.operation,
+				target,
+				artifacts: [],
+			};
 		} else {
 			if (args.operation === "encrypt") {
 				if (!args.input || args.cert || args.key || args.bundle || args.name || args.passphraseEnv || args.dryRun)
-					throw new Error("Encrypt requires only --input FILE");
+					throw new Error("Encrypt requires only an input filename or stdin");
 			} else {
 				if (args.input || (args.bundle ? args.cert || args.key : !args.cert || !args.key))
 					throw new Error("Use either --bundle FILE or --cert FILE and --key FILE");
 				target.name = identity(args.name, "certificate name");
 				target.namespace = identity(args.namespace ?? env.XCSH_NAMESPACE, "certificate namespace");
 			}
-			const publicKey = await get(publicUrl);
-			const policy = await get(policyUrl);
+			const publicKey = offline
+				? await readBlindfoldDocument(resolve(args.publicKey)!, "public-key")
+				: await get(publicUrl);
+			guard();
+			const policy = offline
+				? await readBlindfoldDocument(resolve(args.policyDocument)!, "policy")
+				: await get(policyUrl);
 			const canonicalTenant = (publicKey.data as Record<string, unknown> | undefined)?.tenant;
 			if (
 				typeof canonicalTenant !== "string" ||
@@ -181,19 +227,21 @@ export class BlindfoldService {
 				throw new Error("Blindfold material tenant mismatch");
 			target.tenant = canonicalTenant;
 			guard();
-			const resolve = (v: string | undefined) =>
-				v ? path.resolve(this.#options.cwd ?? process.cwd(), v) : undefined;
 			let prepared: BlindfoldPrepared;
 			try {
-				prepared = (this.#options.prepare ?? blindfoldPrepare)({
+				const nativeInput = {
 					publicKeyJson: JSON.stringify(publicKey),
 					policyJson: JSON.stringify(policy),
-					input: resolve(args.input),
+					input: args.input === "-" ? "-" : resolve(args.input),
 					cert: resolve(args.cert),
 					key: resolve(args.key),
 					bundle: resolve(args.bundle),
 					passphraseEnv: args.passphraseEnv,
-				});
+				};
+				prepared =
+					args.operation === "encrypt" && !this.#options.prepare
+						? await (this.#options.prepareInput ?? blindfoldEncryptInput)(nativeInput, runtime.signal)
+						: (this.#options.prepare ?? blindfoldPrepare)(nativeInput);
 			} catch (error) {
 				guard();
 				throw error;
@@ -202,6 +250,7 @@ export class BlindfoldService {
 			report = {
 				status: args.dryRun ? "dry-run" : "prepared",
 				operation: args.operation,
+				materialSource: offline ? "supplied" : "retrieved",
 				target,
 				fingerprint: prepared.fingerprint,
 				expiresAt: prepared.expiresAt,
@@ -210,6 +259,8 @@ export class BlindfoldService {
 			};
 			if (args.operation === "encrypt") artifact = `${prepared.location}\n`;
 			else {
+				const { ResourceClient, validateManifest } = await import("@f5-sales-demo/pi-resource-management");
+				const { kindResolver } = await import("../resource-management/index");
 				const spec: Record<string, unknown> = {
 					certificate_url: prepared.certificateUrl,
 					private_key: { blindfold_secret_info: { location: prepared.location } },
@@ -239,7 +290,12 @@ export class BlindfoldService {
 						}
 					},
 				};
-				const client = new ResourceClient({ apiUrl, apiToken: token, namespace: target.namespace!, transport });
+				const client = new ResourceClient({
+					apiUrl: apiUrl!,
+					apiToken: token!,
+					namespace: target.namespace!,
+					transport,
+				});
 				if (args.operation === "create" || args.operation === "replace") {
 					const existing = await client.get(resolved, target.name, target.namespace);
 					guard();

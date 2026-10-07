@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { createPrivateKey } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _resetSettingsForTest, Settings } from "../src/config/settings";
@@ -31,10 +32,63 @@ function tool() {
 	} as never);
 }
 describe("Blindfold assistant boundary", () => {
+	test("offline assistant preparation bypasses context and retains ciphertext only in the artifact", async () => {
+		const fixture = await Bun.file(
+			join(import.meta.dir, "../../natives/test/fixtures/blindfold-synthetic.json"),
+		).json();
+		const jwk = createPrivateKey(Buffer.from(fixture["rsa-key.pem"], "base64")).export({ format: "jwk" });
+		writeFileSync(
+			join(root, "pub"),
+			JSON.stringify({
+				data: {
+					tenant: "example-tenant",
+					key_version: 1,
+					modulus_base64: Buffer.from(jwk.n!, "base64url").toString("base64"),
+					public_exponent_base64: Buffer.from(jwk.e!, "base64url").toString("base64"),
+				},
+			}),
+		);
+		writeFileSync(join(root, "policy"), JSON.stringify({ data: { tenant: "example-tenant", policy_id: "101" } }));
+		writeFileSync(join(root, "input"), "synthetic-private-marker");
+		const adapter = new XcshBlindfoldTool({
+			cwd: root,
+			settings,
+			getContextService: async () => {
+				throw new Error("offline context access forbidden");
+			},
+			getPlanModeState: () => undefined,
+		} as never);
+		const result = await adapter.execute("offline", {
+			operation: "encrypt",
+			input: "input",
+			publicKey: "pub",
+			policyDocument: "policy",
+			outputFile: "out",
+		});
+		const artifact = readFileSync(join(root, "out"), "utf8");
+		expect(artifact).toMatch(/^string:\/\/\//);
+		expect(JSON.stringify(result)).not.toContain(artifact.trim());
+		expect(JSON.stringify(result)).not.toContain("synthetic-private-marker");
+		expect(result.details).toMatchObject({ materialSource: "supplied" });
+	});
 	test("preparation requires a retained output path", async () => {
 		await expect(tool().execute("call", { operation: "encrypt", input: "input" })).rejects.toThrow(
 			"requires outputFile",
 		);
+	});
+	test("assistant encryption remains file based with public material paths", async () => {
+		await expect(
+			tool().execute("stdin", {
+				operation: "encrypt",
+				input: "-",
+				publicKey: "pub",
+				policyDocument: "policy",
+				outputFile: "out",
+			}),
+		).rejects.toThrow("input file path");
+		await expect(
+			tool().execute("partial", { operation: "encrypt", input: "in", publicKey: "pub", outputFile: "out" }),
+		).rejects.toThrow("together");
 	});
 	test("schema rejects plaintext keys, literal passwords and tokens", async () => {
 		for (const field of ["password", "passphrase", "token", "privateKey"]) {
@@ -61,7 +115,7 @@ describe("Blindfold assistant boundary", () => {
 			denyOnSeatbelt: [],
 			denyEnumerate: [],
 		};
-		for (const key of ["input", "cert", "key", "bundle", "outputFile", "resultFile"]) {
+		for (const key of ["input", "publicKey", "policyDocument", "cert", "key", "bundle", "outputFile", "resultFile"]) {
 			expect(
 				evaluateToolCall({ toolName: "xcsh_blindfold", input: { [key]: "/private-test/secret" }, cwd: root, fence })
 					.block,
