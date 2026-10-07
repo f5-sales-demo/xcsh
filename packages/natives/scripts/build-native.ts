@@ -70,7 +70,8 @@ if (releaseLinuxTarget === "aarch64-unknown-linux-gnu") {
 	}
 	Bun.env.TARGET_CC = targetCc;
 	Bun.env.TARGET_CXX = targetCxx;
-	Bun.env.CFLAGS_aarch64_unknown_linux_gnu = "-D_BSD_SOURCE";
+	// The legacy cross sysroot hides _setjmp in BSD-only mode; X/Open keeps OpenSSL async declarations visible.
+	Bun.env.CFLAGS_aarch64_unknown_linux_gnu = "-D_BSD_SOURCE -D_XOPEN_SOURCE=700";
 }
 
 function resolveLinuxHostZigTarget(): "x86_64-linux-gnu" | "x86_64-linux-musl" {
