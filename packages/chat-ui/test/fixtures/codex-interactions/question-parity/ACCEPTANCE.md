@@ -3,82 +3,93 @@
 Acceptance target: OpenAI Codex `ac9b5b8380517ded445b09dd3196d8d9e2ba3c59`.
 xcsh source baseline: `9bebb2ecc9763c343cf21162b5f1198ade67d003`.
 
-The `questionParity` manifest section freezes licensed upstream source bytes and SHA-256 hashes.
-The earlier Default-mode extension is superseded: required Default choices use concise plain text;
-optional waiting input uses the existing opt-in; async exposure requires catalog support and a root thread.
+The `questionParity` manifest freezes licensed upstream source bytes and SHA-256 hashes.
+Required Default choices use concise plain text; optional waiting input uses the existing opt-in;
+async exposure requires catalog support and a root thread. Restricted tool lists remain authoritative.
 
-Implemented contract evidence includes empty-answer preservation and resolution ordering, blocking metadata,
-fixed waiting timer presentation, complete async started/completed items, absence of synthesized waiting
-requests, correlated reply envelopes and JSON-array question identities, restoration/context separation,
-explicit terminal async access, draft recovery and existing authenticated receipts.
+Implemented contracts include empty-answer preservation, resolution ordering, blocking metadata,
+waiting timer presentation, identical complete async started/completed items without waiting requests,
+correlated reply envelopes and JSON-array identities, context exclusion across restoration,
+explicit terminal async access, draft recovery, and authenticated ownership and receipts.
+The final follow-up also repairs waiting registration before tool-item admission and subscribes
+idle browser answer continuations before accepting their reply.
 
-Tests: `question-parity-4749`, `codex-interaction-source`, `progressive-context-loading`,
-`request-user-input-contract`, `interaction-parity`, `user-interactions`, `hook-editor`,
-`question-transcript`, `remote-control/interactions`, `remote-control/interaction-router`,
-`herdr/interaction-bridge`, `question-catalog`, and shared form/panel/transcript suites.
+## Deterministic evidence
 
-Observed source acceptance in a task-owned Herdr pane on Ubuntu Pro GPT-6.1 Sol:
+Frozen-contract, hook, broker, form, configuration, catalog, discovery and adapter suites cover
+tool availability, mode transitions, restricted lists, concurrent ownership, replay and stale replies.
+The follow-up contract suites pass 57 tests, form/configuration suites pass 87, and session/registration
+suites pass 37. Idle browser continuation and ordinary tool-turn regressions pass three tests after
+a failing-first reproduction. Documentation contract tests pass 28 tests when run without concurrent
+generators. Required workspace types, dependency consistency, source audits and privacy gates pass.
+Final PR CI and release acceptance are tracked separately below.
 
-- Required invoice jurisdiction: concise plain-text question and independent formula preparation.
-- Plan load balancer: visible blocking structured form; HTTP and no-CDN selections reflected in the plan.
-- Async release-note audience: natural tool selection, pending transcript item without focus transfer,
-  immediate acknowledgement and independent outline preparation.
-- Live turn completion removes unanswered async editors; `/questions` reports no pending questions afterward.
-- A submitted end users choice during a two-minute independent timing check produced a correlated
-  Answer-recorded transcript and changed the model's stated audience while work continued.
+Terminal tests cover Other typing with Up/Down choice navigation, Alt+Up/Down pending-question
+navigation, Ctrl+5/Ctrl+] local skip, Ctrl+C text clearing, and Esc live interruption.
+They also cover the 30-second collapsed expiry, final 20-second countdown, opening snooze,
+external acceptance draft cleanup, hidden-option digit rejection, and turn-completion editor closure.
+Local closure preserves external ownership and never submits a recommended answer.
 
-The MacBook LiteLLM source route produced the fully specified compact status report without clarification.
-Chrome and VS Code shared vendor builds and suites pass; their linked PRs are #661 and #1648 respectively.
-Herdr #135 is merged with full `just check` evidence. Office source build is 199.8 KB gzip; 436 tests pass,
-with four layout tests skipped by their existing environment gates.
+## Live model and terminal evidence
 
-Remaining acceptance gates stay open: full workspace suite repair, semantic trace capture,
-optional timeout and snooze, complete model-transition matrix, all installed immutable-release identities,
-real Chrome pane and voice. Real Excel, Word and PowerPoint pane checks are deferred by explicit user instruction. Mac native capture works, but interactive Office
-control is currently rejected with `PERMISSION_ERROR_ACCESSIBILITY`; connected computer-use bootstrap times out.
-No protocol or mock result substitutes for these gates. Non-open-source clients claim shared-contract
-conformance only, without closed-source UI-equivalence claims.
+Prompts use synthetic workspaces and do not name question tools. Pro-subscription runs use Ubuntu;
+macOS uses LiteLLM. No tenant deployment or tenant-specific input is part of acceptance.
 
+- Source `bun dev` in a task-owned Herdr pane naturally selected blocking Plan questions and
+  non-focusing async audience input. Submitted choices changed the resulting plan or outline.
+- Live Pro app-server session `159c6471b7e53fb5`, semantic turn
+  `159c6471b7e53fb5-turn-1b53de54-f235-4395-acc1-bf6d91aa5032`, emitted identical complete
+  async items with `delivery=async` and `phase=final_answer`, without a waiting request.
+  An authenticated Engineers reply was accepted while independent 10-second work continued;
+  the completed outline addressed engineers.
+- Optional waiting session `159c74c8071a8862`, semantic turn
+  `159c74c8071a8862-turn-6c9ffda0-b32b-4331-b811-541c1fb73c5d`, emitted one request with
+  `isBlocking=false`. Empty answers remained empty; resolution preceded turn completion and
+  the model continued with compact formatting.
+- The required Default policy repeat asked one concise plain-text jurisdiction question and
+  prepared the invoice formula without inventing jurisdiction.
+- Installed Plan acceptance selected supplied HTTPS certificates, then inline certificate/key
+  placeholders in a second blocking question. The plan reflected both answers without deployment.
+- Installed waiting input showed the hidden grace, countdown and unanswered continuation.
+  Source runs also verified local async expiry and an answered two-minute independent-work turn.
 
-Follow-up #4755 source acceptance extends the frozen fixture checks:
+## Published clients
 
-- Other typing retains its draft while Up/Down return to named choices.
-- Local skip, the 30-second collapsed expiry, and live turn completion close this terminal's editor while
-  preserving authenticated ownership for other clients. No suggested answer is delivered automatically.
-- Alt+Up/Down navigate pending questions; Ctrl+C clears typed text first; Esc interrupts the live turn.
-- External acceptance discards the corresponding local draft. Hidden viewport options cannot be submitted
-  by a digit shortcut. Countdown begins in the final 20 seconds; opening the editor snoozes local expiry.
-- Discovery excludes ineligible catalog/root/restricted question tools. Mode transitions await rebuilt
-  guidance; entering Plan mode preserves explicit tool restrictions.
+Herdr PR 135 is merged; `just check` passes and v0.19.3 is immutable. The bridge accepts
+nonblocking boolean waiting requests. The existing shared server is preserved.
 
-The follow-up hook, broker, configuration and frozen-contract suites pass 95 tests. The workspace TypeScript
-check passes. Installed VS Code v10.0.1-261007020520 reproduced a message-layout collision; the failing-first
-browser UAT and repair are merged in vscode-xcsh #1652. Its replacement immutable artifact acceptance remains
-pending. xcsh release PR #4753 is merged at cbf0bec999c1ea336e836031a20505ba9ba7fc55; signing, publication and
-installed v22.13.1 acceptance remain pending. Chrome v1.33.1 release ZIP SHA-256 is
-b74159c95f871315f675e82e125a0c06e1d0c709c37481dc4a04bf97438abc45; that release currently reports immutable=false.
+VS Code PRs 1648 and 1652 are merged. Replacement v10.0.1-261007025924 is immutable;
+VSIX SHA-256 is `022424fc5509c90bf58bb1ee4d0c5de580094b283df3b7a396e3637e891216cf`.
+The installed task-owned Ubuntu pane naturally requested audience input, accepted End users,
+and rendered the resulting report in vertical document flow. The layout regression passed
+15 browser UAT tests after its failing-first reproduction.
 
+Chrome PRs 661, 663, 665 and 667 are merged. Final v1.33.3 is immutable; ZIP SHA-256 is
+`6c1e5703682346730dd78ad1dcee2b632f8045b959ecc18ef8f47678bc86baa8`.
+The real Ubuntu sidebar loaded that ZIP with normal development public-key injection; only the
+manifest key differs. Its synthetic page is fulfilled locally without tenant network/content.
+After an idle turn, End users was accepted with a correlated receipt, the form closed, and the
+sidebar displayed Answer recorded: End users followed by the completed end user outline.
+Session `159c7fe9c41e38b7`, turn `3`, receipt `1d524c9a-e90a-4b9d-a652-1c296c8b55b5`
+identify this installed acceptance. Downstream Chrome suites pass 444 tests plus types and build.
 
-Installed VS Code replacement v10.0.1-261007025924 is immutable and was installed in the task-owned Ubuntu
-profile after verifying VSIX SHA-256 022424fc5509c90bf58bb1ee4d0c5de580094b283df3b7a396e3637e891216cf.
-The real pane naturally requested an audience, accepted End users, and rendered the resulting report in
-vertical document flow. Chrome v1.33.1 ZIP was loaded into an isolated Chrome profile and its packaged panel
-renders; console activation and actual question exchange are still pending. The second Ubuntu Pro source
-turn confirms unattended local expiry removes /questions access without submitting a suggested answer.
-Its captured native session identity is 159c628661718555, turn 1; the persisted item carries delivery=async
-and phase=final_answer. Complete app-server started/completed signal capture remains pending.
+## Core release and remaining acceptance
 
+Core PRs 4751, 4756, 4759 and 4760 are merged. Immutable v22.13.1 and v22.13.2 completed
+normal publication workflows. v22.13.2 Linux executable SHA-256 is
+`9f0e4e8a04cc16889efc6867d85516235961c74942269fa7aa6ec690e22f8e33`; macOS arm64 ZIP SHA-256 is
+`ebe11c57ec31f5d1a5b32007ab749589217afc0753b3198124ddac8dacc0eaed`.
+macOS v22.13.1 signature validation passes and Gatekeeper accepts its notarized installer package.
+Those releases precede the final policy, waiting-registration and idle-browser repairs in PR 4767.
+Final core PR CI, a release containing it, and installed terminal repeats against that immutable
+identity remain acceptance gates. Earlier source/candidate results do not substitute for them.
 
-Live Pro app-server acceptance used a synthesized changes.txt and a prompt that did not name question tools.
-Session 159c6471b7e53fb5 emitted identical complete question items in item/started and item/completed with
-semantic turn 159c6471b7e53fb5-turn-1b53de54-f235-4395-acc1-bf6d91aa5032, delivery=async and phase=final_answer.
-No item/tool/requestUserInput was emitted. Authenticated correlated reply acceptance returned accepted=true,
-turn/completed reported completed, and the resulting release-note outline targeted engineers after an
-independent 10.000-second monotonic timing check. The source Herdr two-minute answered run separately rendered
-Answer recorded: Engineers and the final Engineers outline at 120.000 seconds. Installed immutable VS Code
-v10.0.1-261007025924 accepted End users and rendered the completed report with vertical paragraph/list flow.
+Voice now uses the subscription-created WebRTC call and existing-call sideband, resolving the
+standalone socket initialization failure. Synthetic audio input connected the peer and ICE,
+produced adapter transcript signals, and received nonzero output audio bytes and energy.
+This establishes live transport/audio receipt; audible UI question observation remains unverified.
 
-
-The user explicitly deferred real Excel, Word and PowerPoint verification. Their source builds and shared
-contract tests remain evidence; installed Office input, rendering and answer delivery are unverified.
-The task-owned Mac sideload process was stopped. Other client and release acceptance remains in scope.
+Real Excel, Word and PowerPoint verification is explicitly deferred by the user. Office source
+build is 199.8 KB gzip; 436 tests pass with four existing layout skips. Installed Office input,
+rendering and answer delivery remain unverified. Non-open-source clients claim shared-contract
+conformance only; no closed-source UI or physical-phone equivalence is claimed.

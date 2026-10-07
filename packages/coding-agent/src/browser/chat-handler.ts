@@ -146,12 +146,44 @@ export class ChatHandler {
 			}
 			if (isInteractionCommand(msg) && (msg.type === "interaction_respond" || msg.type === "interaction_cancel")) {
 				if (msg.type === "interaction_respond") {
+					const pending = this.#session.userInteractions.pending().find(request => request.id === msg.requestId);
+					const chatId =
+						typeof Reflect.get(msg, "chatId") === "string" ? (Reflect.get(msg, "chatId") as string) : undefined;
+					let resumed: ActiveChat | undefined;
+					if (pending?.delivery === "async" && !this.busy && chatId && /^[A-Za-z0-9:_-]{1,128}$/.test(chatId)) {
+						resumed = {
+							id: chatId,
+							items: new Map(),
+							nextItem: 0,
+							terminalSent: false,
+							unsubscribe: () => {},
+							entryAt: Date.now(),
+							promptAt: Date.now(),
+							spanEmitted: false,
+							lastKeepaliveAt: 0,
+						};
+						const chat = resumed;
+						this.#activeChats.set(chat.id, chat);
+						chat.unsubscribe = this.#session.subscribe(event => {
+							this.#handleSessionEvent(chat, event);
+							if (event.type === "agent_end") {
+								if (!chat.terminalSent) this.#sendTerminal(chat, { type: "chat_done", id: chat.id });
+								chat.unsubscribe();
+								this.#activeChats.delete(chat.id);
+							}
+						});
+					}
 					const accepted = this.#session.userInteractions.respondExternal(
 						msg.requestId,
 						msg.responseId,
 						msg.value,
 						msg.identity,
 					);
+
+					if (!accepted && resumed) {
+						resumed.unsubscribe();
+						this.#activeChats.delete(resumed.id);
+					}
 					this.#server.send({ type: "interaction_receipt", responseId: msg.responseId, accepted });
 				} else {
 					const request = this.#session.userInteractions.pending().find(request => request.id === msg.requestId);
