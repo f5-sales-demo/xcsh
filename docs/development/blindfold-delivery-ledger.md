@@ -26,8 +26,8 @@ Implement one Rust native input/encryption boundary, shared TypeScript service, 
 | Live EC | Separate EC certificate, LB reference update; TLS | EC fingerprint and HTTPS | Passed | Public sanitized receipt |
 | Retained demo | Restore rotated RSA LB reference; remove auxiliary EC | Final working demo; auxiliary absent | RSA TLS verified; EC GET 404 | Private ownership/expiry/teardown record |
 | Docs | docs-quality, unittest, PII enforcement | Source-backed guide and safe evidence | Passed; 28 checker tests | docs/en guide and evidence manifest |
-| Full TS suite | `bun run test:ts` after prescribed optional-loader reset | Full pass | Running; initial overlapping build run invalidated by generated assets, discarded | Private stable-suite log |
+| Full TS suite | `bun run test:ts` after prescribed optional-loader reset | Full pass | Unqualified: unrelated five-second test timeouts; isolated plugin/Office checks passed; hosted CI required | Private stable-suite log |
 | Hosted native matrix | Existing CI full_native_matrix | All supported platforms | Pending | Future workflow receipts |
-| Delivery | Commit/push/linked PR/CI/merge/release | Released installation and public docs | Pending | Issue #4750 |
+| Delivery | Commit/push/linked PR/CI/merge/release | Released installation and public docs | Commit d48ba1b2b, PR #4752; CI/release pending | Issue #4750 |
 
 Completion requires the final delivery rows. Local packaging acceptance is distinct from released-installation acceptance. The retained demo expires 30 days after its private creation timestamp; ownership, CA and teardown commands are recorded privately. No provider function integration is included.
