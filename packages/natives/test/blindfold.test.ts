@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { createDecipheriv, generateKeyPairSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -99,7 +99,13 @@ describe("native Blindfold protocol", () => {
 		).toThrow("Cannot read Blindfold input");
 	});
 });
-const fixture = (name: string) => path.join(import.meta.dir, "fixtures/blindfold", name);
+const synthetic = (await Bun.file(path.join(import.meta.dir, "fixtures/blindfold-synthetic.json")).json()) as Record<
+	string,
+	string
+>;
+for (const [name, bytes] of Object.entries(synthetic))
+	fs.writeFileSync(path.join(dir, name), Buffer.from(bytes, "base64"), { mode: 0o600 });
+const fixture = (name: string) => path.join(dir, name);
 describe("native certificate inputs", () => {
 	for (const algorithm of ["rsa", "ec"]) {
 		test(`${algorithm} parses PEM and protected PEM without an external executable`, () => {
@@ -223,3 +229,5 @@ describe("Blindfold certificate failure boundaries", () => {
 		}
 	});
 });
+
+afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
