@@ -1,0 +1,17 @@
+Immutable xcsh v23.0.0 Blindfold interchangeability acceptance
+Source: e2f2413e7bd7a48dcbe12727b3a81af80824b790
+Release workflow: 37683390178; final conclusion success.
+Reference article revision: e7acf7fd53b2f19d9aca7ca43f23e47c2187ab9e.
+Container image: sha256:6ef8dc145b53130273bca4d3400ff9349e057ae36ed8e36d943eb1465e7edd82.
+Container-only vesctl 0.2.47 binary: 35d29e517498feff9f12a41ff702e90f10a1cc8a20c589c3e524474dbfe53801.
+Automated: four container UAT runs passed; 16 producer/consumer matrix cases and 12 reference format cases, independent binary plaintext recovery, authenticated integrity, raw outfile and exact article pipeline. Deterministic 64-document matrix passed; full local coding-agent suite 10,088 passed, 562 skipped, zero failures. Full feature CI/lint/container and full release native/code/test/install/signing matrices passed.
+Released Ubuntu standalone first, independent Mac Homebrew second: native-context retrieval, unchanged three-command article pipeline with executable substitution, bare base64 file and exactly one consumer prefix; fresh certificate and fixed-response HTTPS LB; named readback, ready/valid state, private CA trust, intended SNI, served fingerprint and HTTPS 200; fresh rotation changed fingerprint and retained HTTPS 200.
+Both hosts: canonical location/YAML/stdin, secure raw 0600 artifacts and public reports passed. Two assistant preparations per host passed; private provider requests, tool results, stdout/stderr scanned without key/token/ciphertext leakage.
+Ubuntu binary: 653f78a8c9a2ae88170a357cd8a3f46b03f0917b1808ae1bb0e949b6569fd893.
+Mac ARM64 binary: 6aea330fccb3c157d3e41bb956e5d543e6782f129aadd6602eecaa8b5b5caa8e.
+Mac ARM64 native: adf0645fae80277284aa6a3cd10ee37b591e9408bed44366f88525ae49262b67.
+Installed hashes match immutable assets/provenance; Mac CLI/native strict Developer ID and notarization assessments passed.
+Cleanup: all candidate, failed-run and successful released-run certificates/load balancers were deleted and named absence verified. Existing demos preserved. Private local evidence retained under owner-only permissions.
+Qualification notes: first released tenant hit route quota and was cleaned up; user authorized another tenant. Mac strict TLS exposed missing synthetic CA key-usage metadata; harness corrected and rerun fresh with strict trust intact. Intel signing visibility passed on the third normal failed-job rerun after accepted Apple submissions; policy unchanged.
+The upstream article uses deprecated volterra; unreleased next-generation terraform-provider-xcsh remains under feature iteration. Future feature-rich Blindfold provider work is separate; no provider completeness or live-apply acceptance claim.
+No private tenant identifiers, credentials, keys or ciphertext are included in this receipt.

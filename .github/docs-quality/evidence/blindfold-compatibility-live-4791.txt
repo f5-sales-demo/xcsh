@@ -7,3 +7,5 @@ Each installation: two assistant prompts; private requests/results/stdout/stderr
 Installed binary/native digests matched immutable GitHub assets and provenance. Mac strict signatures and Notarized Developer ID assessments passed.
 Private ownership, 30-day expiry and teardown recorded for released demos. Candidate auxiliary demo removed during task cleanup.
 No tenant identifiers, private keys, credentials or encrypted payloads are present in this receipt.
+
+Qualification correction: v22.15.0 accepted xcsh-selected location output and native deployment, not executable-only BYOC interchangeability. Its defaults differed from container vesctl. See blindfold-interchangeability-live-4803.txt for the v23.0.0 contract.
