@@ -4,6 +4,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import template from "../prompts/tools/xcsh-blindfold.md" with { type: "text" };
 import { BLINDFOLD_OPERATIONS, BlindfoldService } from "../services/blindfold";
+import { currentContextExecution } from "../services/context-execution";
 import { ContextService } from "../services/xcsh-context";
 import type { ToolSession } from "./index";
 
@@ -45,27 +46,34 @@ export class XcshBlindfoldTool implements AgentTool<typeof blindfoldSchema> {
 			throw new Error(
 				"Blindfold preparation requires outputFile so encrypted material is retained outside tool results",
 			);
-		const context = this.session.getContextService
-			? await this.session.getContextService()
-			: await ContextService.getOrInit(undefined, this.session.cwd);
-		const snapshot = context.getStatus();
-		const env = {
-			...(this.session.settings.get("bash.environment") as Record<string, string> | undefined),
-			...process.env,
-		};
+		const admitted = currentContextExecution();
+		const context = admitted
+			? undefined
+			: this.session.getContextService
+				? await this.session.getContextService()
+				: await ContextService.getOrInit(undefined, this.session.cwd);
+		const snapshot = context?.getStatus();
+		const env = admitted
+			? admitted.environment
+			: {
+					...(this.session.settings.get("bash.environment") as Record<string, string> | undefined),
+					...process.env,
+				};
 		const credentialSnapshot = env.XCSH_API_TOKEN;
 		const namespaceSnapshot = env.XCSH_NAMESPACE;
 		const guard = () => {
-			const current = context.getStatus();
-			const now = {
-				...(this.session.settings.get("bash.environment") as Record<string, string> | undefined),
-				...process.env,
-			};
+			const current = context?.getStatus();
+			const now = admitted
+				? admitted.environment
+				: {
+						...(this.session.settings.get("bash.environment") as Record<string, string> | undefined),
+						...process.env,
+					};
 			if (now.XCSH_API_TOKEN !== credentialSnapshot || now.XCSH_NAMESPACE !== namespaceSnapshot)
 				throw new Error("Blindfold context credentials or namespace changed; retry against the selected context");
 			if (
-				current.activeContextName !== snapshot.activeContextName ||
-				current.activeContextUrl !== snapshot.activeContextUrl
+				current?.activeContextName !== snapshot?.activeContextName ||
+				current?.activeContextUrl !== snapshot?.activeContextUrl
 			)
 				throw new Error("Blindfold context changed; retry against the selected context");
 			if (
