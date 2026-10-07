@@ -57,3 +57,13 @@ browser UAT and repair are merged in vscode-xcsh #1652. Its replacement immutabl
 pending. xcsh release PR #4753 is merged at cbf0bec999c1ea336e836031a20505ba9ba7fc55; signing, publication and
 installed v22.13.1 acceptance remain pending. Chrome v1.33.1 release ZIP SHA-256 is
 b74159c95f871315f675e82e125a0c06e1d0c709c37481dc4a04bf97438abc45; that release currently reports immutable=false.
+
+
+Installed VS Code replacement v10.0.1-261007025924 is immutable and was installed in the task-owned Ubuntu
+profile after verifying VSIX SHA-256 022424fc5509c90bf58bb1ee4d0c5de580094b283df3b7a396e3637e891216cf.
+The real pane naturally requested an audience, accepted End users, and rendered the resulting report in
+vertical document flow. Chrome v1.33.1 ZIP was loaded into an isolated Chrome profile and its packaged panel
+renders; console activation and actual question exchange are still pending. The second Ubuntu Pro source
+turn confirms unattended local expiry removes /questions access without submitting a suggested answer.
+Its captured native session identity is 159c628661718555, turn 1; the persisted item carries delivery=async
+and phase=final_answer. Complete app-server started/completed signal capture remains pending.
