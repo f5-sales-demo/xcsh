@@ -165,7 +165,6 @@ export class InteractiveMode implements InteractiveModeContext {
 	#cleanupUnsubscribe?: () => void;
 	#signalTeardown?: SessionTeardown;
 	readonly #version: string;
-	#planModePreviousTools: string[] | undefined;
 	#planModePreviousModelState: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#pendingModelSwitch: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#planModeHasEntered = false;
@@ -776,15 +775,10 @@ export class InteractiveMode implements InteractiveModeContext {
 			return;
 		}
 
-		const previousTools = this.session.getActiveToolNames();
-		await this.session.setActiveToolsByName([
-			...new Set([...previousTools, "request_user_input", "request_user_input_async"]),
-		]);
 		this.planModePaused = false;
-		this.#planModePreviousTools = previousTools;
 		this.planModeEnabled = true;
 
-		this.session.setPlanModeState({
+		await this.session.setPlanModeState({
 			enabled: true,
 			workflow: options?.workflow ?? "parallel",
 			reentry: this.#planModeHasEntered,
@@ -804,10 +798,6 @@ export class InteractiveMode implements InteractiveModeContext {
 			return;
 		}
 
-		const previousTools = this.#planModePreviousTools;
-		if (previousTools !== undefined) {
-			await this.session.setActiveToolsByName(previousTools);
-		}
 		if (this.#planModePreviousModelState) {
 			const prev = this.#planModePreviousModelState;
 			if (modelsAreEqual(this.session.model, prev.model)) {
@@ -824,10 +814,9 @@ export class InteractiveMode implements InteractiveModeContext {
 				await this.session.setModelTemporary(prev.model, prev.thinkingLevel);
 			}
 		}
-		this.session.setPlanModeState(undefined);
+		await this.session.setPlanModeState(undefined);
 		this.planModeEnabled = false;
 		this.planModePaused = options?.paused ?? false;
-		this.#planModePreviousTools = undefined;
 		this.#planModePreviousModelState = undefined;
 		this.#updatePlanModeStatus();
 		const paused = options?.paused ?? false;

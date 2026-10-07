@@ -64,6 +64,8 @@ type Pending = {
 	interaction: UserInteraction;
 	hasLocal: boolean;
 	presentationRequested?: boolean;
+	localSkipped?: boolean;
+	hideLocal(): void;
 	startLocal(): void;
 	finish(value: unknown, abortLocal: boolean, failure?: { error: unknown }, reason?: InteractionResolution): void;
 };
@@ -92,16 +94,35 @@ export class UserInteractions {
 	setAsyncPresenter(presenter: (request: UserInteraction, signal: AbortSignal) => Promise<string | undefined>): void {
 		this.#asyncPresenter = presenter;
 		for (const pending of this.#pending.values())
-			if (pending.interaction.delivery === "async") pending.hasLocal = true;
+			if (pending.interaction.delivery === "async" && !pending.localSkipped) pending.hasLocal = true;
 		this.#presentNext();
 	}
 	presentAsync(id: string): boolean {
 		const pending = this.#pending.get(id);
-		if (pending?.interaction.delivery !== "async" || !this.#asyncPresenter) return false;
+		if (pending?.interaction.delivery !== "async" || pending.localSkipped || !this.#asyncPresenter) return false;
 		pending.presentationRequested = true;
 		this.#presentNext();
 		return true;
 	}
+	/** Skip this client's editor without cancelling the authenticated request shared with other clients. */
+	skipAsyncLocal(id: string): boolean {
+		const pending = this.#pending.get(id);
+		if (pending?.interaction.delivery !== "async") return false;
+		pending.localSkipped = true;
+		pending.presentationRequested = false;
+		pending.hasLocal = false;
+		pending.hideLocal();
+		if (this.#localActive === id) this.#localActive = undefined;
+		this.#presentNext();
+		return true;
+	}
+
+	pendingAsyncLocal(): UserInteraction[] {
+		return [...this.#pending.values()]
+			.filter(pending => pending.interaction.delivery === "async" && !pending.localSkipped)
+			.map(pending => copy(pending.interaction));
+	}
+
 	setQuestionPresenter(
 		presenter: (
 			questions: readonly InputQuestion[],
@@ -317,6 +338,7 @@ export class UserInteractions {
 			};
 			this.#pending.set(interaction.id, {
 				interaction,
+				hideLocal: () => abort.abort(),
 				finish,
 				startLocal,
 				presentationRequested: false,

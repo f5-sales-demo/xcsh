@@ -112,14 +112,14 @@
       "ce903418"
     ],
     "packages/coding-agent/src/modes/components/async-question.ts": [
-      "fc5204b7",
-      "41925f4e",
-      "ea4a7363",
-      "d97ef770",
-      "93f8cc1d",
-      "f99b9723",
-      "9e55471f",
-      "e77c82af"
+      "eb5c6b6a",
+      "227f3c3f",
+      "9fa48397",
+      "d62cb338",
+      "3c150797",
+      "57243797",
+      "2d23a2d4",
+      "57e4050c"
     ],
     "packages/coding-agent/src/modes/components/btw-panel.ts": [
       "a575bef8",
@@ -1059,19 +1059,19 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/async-question.ts",
-      "line": 67,
+      "line": 89,
       "sink": "selectorFrame",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/async-question.ts",
-      "line": 77,
+      "line": 99,
       "sink": "selectorRow",
       "entry": "selector-surfaces"
     },
     {
       "file": "packages/coding-agent/src/modes/components/async-question.ts",
-      "line": 79,
+      "line": 101,
       "sink": "selectorProse",
       "entry": "selector-surfaces"
     },
