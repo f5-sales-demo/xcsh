@@ -291,8 +291,8 @@ async function handleActivate(ctx: CommandContext, service: ContextService, name
 		ctx.statusLine?.invalidate();
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
-		// Show the same red table as /context show
-		return handleShow(ctx, service);
+		ctx.showStatus(`Selected ${name} · namespace ${service.getStatus().activeContextNamespace}`, { dim: false });
+		return;
 	} catch (err) {
 		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
@@ -304,7 +304,11 @@ async function handleDirectSwitch(ctx: CommandContext, service: ContextService, 
 		ctx.statusLine?.invalidate();
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
-		return handleShow(ctx, service);
+		ctx.showStatus(
+			`Selected ${service.getStatus().activeContextName} · namespace ${service.getStatus().activeContextNamespace}`,
+			{ dim: false },
+		);
+		return;
 	} catch (err) {
 		if (err instanceof ContextError && err.message.includes("not found")) {
 			ctx.showError(t("context.activate.notFound", { name }));
@@ -320,7 +324,11 @@ async function handleActivatePrevious(ctx: CommandContext, service: ContextServi
 		ctx.statusLine?.invalidate();
 		ctx.updateEditorTopBorder?.();
 		ctx.ui?.requestRender();
-		return handleShow(ctx, service);
+		ctx.showStatus(
+			`Selected ${service.getStatus().activeContextName} · namespace ${service.getStatus().activeContextNamespace}`,
+			{ dim: false },
+		);
+		return;
 	} catch (err) {
 		ctx.showError(err instanceof ContextError ? err.message : String(err));
 	}
@@ -342,8 +350,7 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 	// Derive tenant from URL
 	const tenant = deriveTenantFromUrl(context.apiUrl) ?? "";
 
-	// Validate the shown context's token (not necessarily the active one)
-	const auth = await service.validateToken({ timeoutMs: 3000, apiUrl: context.apiUrl, apiToken: context.apiToken });
+	const auth = { status: "unknown" as const, latencyMs: undefined, errorClass: undefined };
 
 	// Build table rows — auth section first
 	const rows: TableRow[] = [
@@ -357,7 +364,13 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 	for (const key of authKeys) {
 		const value = context.env?.[key];
 		if (value) {
-			rows.push({ key: sanitize(key), value: isSensitiveEnvKey(key) ? service.maskToken(value) : sanitize(value) });
+			rows.push({
+				key: sanitize(key),
+				value:
+					isSensitiveEnvKey(key) || context.sensitiveKeys?.includes(key)
+						? service.maskToken(value)
+						: sanitize(value),
+			});
 		}
 	}
 
@@ -372,7 +385,13 @@ async function handleShow(ctx: CommandContext, service: ContextService, name?: s
 	if (context.env) {
 		for (const [key, value] of Object.entries(context.env)) {
 			if (authKeys.includes(key) || RESERVED_ENV_KEYS.has(key)) continue;
-			rows.push({ key: sanitize(key), value: isSensitiveEnvKey(key) ? service.maskToken(value) : sanitize(value) });
+			rows.push({
+				key: sanitize(key),
+				value:
+					isSensitiveEnvKey(key) || context.sensitiveKeys?.includes(key)
+						? service.maskToken(value)
+						: sanitize(value),
+			});
 		}
 	}
 

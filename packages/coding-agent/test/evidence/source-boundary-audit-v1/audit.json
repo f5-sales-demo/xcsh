@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "revision": "5e0065e850aa5cd9385ccb0714c7101aed4622e7",
-  "fingerprint": "abb4e0be4851fc4da2648fc84d99b905fea9bbfe1a3f34abe8b087ccdccb86af",
+  "revision": "d9ce5745af1ddea41de228bb133105bdb4656009",
+  "fingerprint": "0d32bf7e7fcc5ccb9e64266c752933152217886157b4b886fa0b43ec97dd8e8e",
   "counts": {
-    "total": 239,
-    "components": 97,
+    "total": 240,
+    "components": 98,
     "integrations": 142
   },
   "audits": [
@@ -203,7 +203,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "settings",
-      "sha256": "b6c8798a7647d11f3ac497fc4113ef0246edc798b414f2b3727b73e720d13ccc",
+      "sha256": "0aa14a79519b2866f9a593b9a10ba596623b1d54d308760fecac132cbf2ed5d3",
       "exports": [
         "AppKeybinding",
         "KEYBINDINGS",
@@ -223,6 +223,7 @@
       "directTests": [
         "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/context-picker.test.ts",
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/hook-selector-overflow.test.ts",
         "packages/coding-agent/test/input-controller-escape.test.ts",
@@ -239,8 +240,7 @@
         "packages/coding-agent/test/reviewed-action-dialog.test.ts",
         "packages/coding-agent/test/selector-contextual-bindings.test.ts",
         "packages/coding-agent/test/settings-chordtimeout.test.ts",
-        "packages/tui/test/cancellable-loader.test.ts",
-        "packages/tui/test/editor.test.ts"
+        "packages/tui/test/cancellable-loader.test.ts"
       ],
       "classification": "packages/coding-agent/src/config/keybindings.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1243,7 +1243,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "connections",
-      "sha256": "366539a03ab4aa2f8374081f7c38e7a3178d329f61b31354979ea02fe060b4d4",
+      "sha256": "f5cc11fde7c73ca95cbe947c9da4801ab402cfaf2ec266fbedf270992e3e06e0",
       "exports": [
         "ContextAddWizard",
         "buildWizardContext",
@@ -1266,6 +1266,29 @@
         "packages/coding-agent/test/slash-commands/plugin-setup.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/context-add-wizard.ts is individually classified as caller-owned-draft in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
+      "source": "packages/coding-agent/src/modes/components/context-picker.ts",
+      "kind": "component",
+      "ownership": "caller-owned-draft",
+      "domain": "connections",
+      "sha256": "554a30c70f9555fa8df7aa611aeca6de0bc63117047045b7c9c35ccde2759d46",
+      "exports": [
+        "ContextInput",
+        "ContextMenu",
+        "ContextPicker",
+        "ContextPickerResult",
+        "ContextPickerState"
+      ],
+      "interactionSignals": [
+        "render",
+        "keyboard-input"
+      ],
+      "persistenceSignals": [],
+      "directTests": [
+        "packages/coding-agent/test/context-picker.test.ts"
+      ],
+      "classification": "packages/coding-agent/src/modes/components/context-picker.ts is individually classified as caller-owned-draft in the connections domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/modes/components/copy-selector.ts",
@@ -1374,10 +1397,10 @@
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/config/resolve-config-value.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
+        "packages/coding-agent/test/context-target.test.ts",
         "packages/coding-agent/test/core/apply-patch-adverserial.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/core/apply-patch.test.ts",
-        "packages/coding-agent/test/core/chunk-tree.test.ts"
+        "packages/coding-agent/test/core/apply-patch.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/diff.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3179,13 +3202,11 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "connections",
-      "sha256": "472945890ef189084ad880b3174f9459a61ee803a14fd2db48b60ae922ac2704",
+      "sha256": "2cf43ee46242742f025b92425a4960b09b9a9027a6f1b03447dbfa75a8133f46",
       "exports": [
         "ContextCommandController"
       ],
-      "interactionSignals": [
-        "terminal-control"
-      ],
+      "interactionSignals": [],
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/modes/controllers/context-command-controller-review.test.ts",
@@ -3890,6 +3911,7 @@
         "packages/coding-agent/test/archive-install.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/context-operations.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
         "packages/coding-agent/test/core/python-executor-owner-cleanup.test.ts",
         "packages/coding-agent/test/core/python-kernel.lifecycle.test.ts",
@@ -3902,8 +3924,7 @@
         "packages/coding-agent/test/extensions-runner.test.ts",
         "packages/coding-agent/test/headless-bridge.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
-        "packages/coding-agent/test/herdr-terminal.test.ts",
-        "packages/coding-agent/test/hook-editor.test.ts"
+        "packages/coding-agent/test/herdr-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/shared.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4095,10 +4116,10 @@
         "packages/coding-agent/test/components/read-tool-group.test.ts",
         "packages/coding-agent/test/components/todo-reminder.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
+        "packages/coding-agent/test/context-picker.test.ts",
         "packages/coding-agent/test/custom-editor-keybindings.test.ts",
         "packages/coding-agent/test/debug/debug-selector-review.test.ts",
-        "packages/coding-agent/test/debug/log-viewer.test.ts",
-        "packages/coding-agent/test/event-controller-warning-outcome.test.ts"
+        "packages/coding-agent/test/debug/log-viewer.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/theme/theme.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4319,7 +4340,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "117403a3c210cfaada84e047b2c85cf3c815df534e188574b0a413b7c8ab701f",
+      "sha256": "6e93b62329812fc799cb178b6d7899d391657842f5cfc65b21294f693ef245f8",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -4385,7 +4406,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "10012e8a181cba43f0d7e23a86850c663ca15e26f3c6f9d69576dd12f9bac603",
+      "sha256": "a3c47382f622c10ff4de68631e90d086b24e98904745d71683dd40f9dd9cbc9b",
       "exports": [
         "AssistantCheckpointEntry",
         "AutomaticTitleState",
@@ -4485,7 +4506,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "2f1fbb387f3445944085cb7c4d6978ecbec9e55fe7bbf0233fb5e12f85cf030a",
+      "sha256": "1d73e352f52815bf00628b10a2c578827d9e1a624333abe4fb7fed1799a2ab8d",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4812,6 +4833,7 @@
         "session-persistence"
       ],
       "directTests": [
+        "packages/coding-agent/test/agent-session-concurrent.test.ts",
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
@@ -4828,10 +4850,9 @@
         "packages/coding-agent/test/browser/host-profiles.test.ts",
         "packages/coding-agent/test/cli-output-pipe.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/context-execution-snapshot.test.ts",
         "packages/coding-agent/test/curl-shell-execution.test.ts",
-        "packages/coding-agent/test/extension-bridge-tools.test.ts",
-        "packages/coding-agent/test/headless-bridge.test.ts",
-        "packages/coding-agent/test/highlight-languages.test.ts"
+        "packages/coding-agent/test/extension-bridge-tools.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/bash.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4972,14 +4993,14 @@
         "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction-provider-boundary.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
+        "packages/coding-agent/test/context-cli.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
+        "packages/coding-agent/test/context-operations.test.ts",
         "packages/coding-agent/test/core/python-kernel.lifecycle.test.ts",
         "packages/coding-agent/test/core/python-kernel.test.ts",
         "packages/coding-agent/test/curl-shell-execution.test.ts",
         "packages/coding-agent/test/e2e/extension-e2e.test.ts",
-        "packages/coding-agent/test/e2e/extension-panel-e2e.test.ts",
-        "packages/coding-agent/test/e2e/staging-crud.test.ts",
-        "packages/coding-agent/test/e2e/stealth-surfaces.e2e.test.ts"
+        "packages/coding-agent/test/e2e/extension-panel-e2e.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/fetch.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6497,6 +6518,7 @@
       "directTests": [
         "packages/coding-agent/test/autoresearch-dashboard-dialog.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/context-picker.test.ts",
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/hook-selector-overflow.test.ts",
         "packages/coding-agent/test/input-controller-escape.test.ts",
@@ -6513,8 +6535,7 @@
         "packages/coding-agent/test/reviewed-action-dialog.test.ts",
         "packages/coding-agent/test/searchable-select-list.test.ts",
         "packages/coding-agent/test/selector-contextual-bindings.test.ts",
-        "packages/coding-agent/test/settings-chordtimeout.test.ts",
-        "packages/tui/test/cancellable-loader.test.ts"
+        "packages/coding-agent/test/settings-chordtimeout.test.ts"
       ],
       "classification": "packages/tui/src/keybindings.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6554,14 +6575,14 @@
         "packages/coding-agent/test/config/resolve-config-value.test.ts",
         "packages/coding-agent/test/console-catalog-types.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
+        "packages/coding-agent/test/context-operations.test.ts",
+        "packages/coding-agent/test/context-picker.test.ts",
         "packages/coding-agent/test/core/python-kernel.test.ts",
         "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
         "packages/coding-agent/test/discovery/context-file-dedup.test.ts",
         "packages/coding-agent/test/discovery/helpers.test.ts",
         "packages/coding-agent/test/e2e/panel-harness.test.ts",
-        "packages/coding-agent/test/env-secret-masking.test.ts",
-        "packages/coding-agent/test/extension-loading-contract.test.ts",
-        "packages/coding-agent/test/extensions-discovery.test.ts"
+        "packages/coding-agent/test/env-secret-masking.test.ts"
       ],
       "classification": "packages/tui/src/keys.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6907,11 +6928,11 @@
         "packages/coding-agent/test/components/read-tool-group.test.ts",
         "packages/coding-agent/test/components/todo-reminder.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
+        "packages/coding-agent/test/context-picker.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
         "packages/coding-agent/test/custom-editor-keybindings.test.ts",
         "packages/coding-agent/test/debug/debug-selector-review.test.ts",
-        "packages/coding-agent/test/debug/log-viewer.test.ts",
-        "packages/coding-agent/test/event-controller-warning-outcome.test.ts"
+        "packages/coding-agent/test/debug/log-viewer.test.ts"
       ],
       "classification": "packages/tui/src/tui.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

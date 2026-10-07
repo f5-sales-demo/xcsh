@@ -1,5 +1,12 @@
 import { HerdrClient } from "../herdr/client";
 import { HerdrInteractionBridge } from "../herdr/interactions";
+import {
+	type ContextExecutionSnapshot,
+	captureContextExecution,
+	captureNextContextExecution,
+	currentContextExecution,
+	runWithContextExecution,
+} from "../services/context-execution";
 import { coordinateSessionTitle } from "../utils/title-generator";
 /**
  * AgentSession - Core abstraction for agent lifecycle and session management.
@@ -612,6 +619,7 @@ export class AgentSession {
 	#beforeDisposeHooks = new Set<() => void | Promise<void>>();
 	#disposeCall?: Promise<void>;
 	#realtimeContext = new RealtimeContext();
+	#executionSnapshot: ContextExecutionSnapshot | undefined;
 
 	/** Tracks pending steering messages for UI display. Removed when delivered. */
 	#steeringMessages: string[] = [];
@@ -905,6 +913,14 @@ export class AgentSession {
 			);
 		}
 
+		this.agent.setConversationTurnScope?.(async (action, followUp) => {
+			if (followUp) this.#executionSnapshot = captureNextContextExecution(this.settings);
+			const snapshot = this.#executionSnapshot ?? captureContextExecution(this.settings);
+			return runWithContextExecution(snapshot, async () => {
+				if (followUp) await this.refreshBaseSystemPrompt();
+				return action();
+			});
+		});
 		this.addDisposeHook(
 			this.agent.setContextMessagesProvider(messages =>
 				this.isDisposing ? [] : this.#realtimeContext.messages(this.sessionId, messages),
@@ -1032,7 +1048,9 @@ export class AgentSession {
 		// prompt finalization. Once the loop is idle, resume any reply it retained.
 		await this.agent.waitForIdle();
 		if (this.#isPromptCurrent(generation) && this.agent.hasQueuedMessages()) {
-			await this.agent.continue();
+			await (this.#executionSnapshot
+				? runWithContextExecution(this.#executionSnapshot, () => this.agent.continue())
+				: this.agent.continue());
 		}
 	}
 	reportInteractionFailure(itemId: string, _error: unknown): void {
@@ -1651,7 +1669,9 @@ export class AgentSession {
 									this.#markTtsrInjected(details.rules);
 								}
 								try {
-									await this.agent.continue();
+									await (this.#executionSnapshot
+										? runWithContextExecution(this.#executionSnapshot, () => this.agent.continue())
+										: this.agent.continue());
 								} catch {
 									this.#resolveTtsrResume();
 								}
@@ -1945,7 +1965,9 @@ export class AgentSession {
 				}
 				try {
 					await this.#maybeRestoreRetryFallbackPrimary();
-					await this.agent.continue();
+					await (this.#executionSnapshot
+						? runWithContextExecution(this.#executionSnapshot, () => this.agent.continue())
+						: this.agent.continue());
 				} catch {
 					options?.onError?.();
 				}
@@ -3080,6 +3102,11 @@ export class AgentSession {
 		return this.agent.state.isStreaming || this.#promptInFlightCount > 0;
 	}
 
+	/** Public selection hint contains names only; snapshots stay private. */
+	get currentWorkContextName(): string | undefined {
+		return this.isStreaming || this.isRetrying ? this.#executionSnapshot?.environment.XCSH_CONTEXT_NAME : undefined;
+	}
+
 	/** Current provider-owned message, used to hydrate clients that attach mid-stream. */
 	get activeStreamMessage(): AgentMessage | null {
 		return this.agent.state.streamMessage;
@@ -3638,53 +3665,61 @@ export class AgentSession {
 			return;
 		}
 
-		if (
-			!options?.synthetic &&
-			options?.toolChoice == null &&
-			this.#toolChoiceQueue.inspect().length === 0 &&
-			this.getActiveToolNames().includes("xcsh_context") &&
-			requestsContextActivation(expandedText)
-		) {
-			const contextChoice = buildNamedToolChoice("xcsh_context", this.model);
-			if (contextChoice && typeof contextChoice !== "string") {
-				this.#toolChoiceQueue.pushOnce(contextChoice, { label: "context-selection" });
+		this.#executionSnapshot = captureContextExecution(this.settings);
+		return runWithContextExecution(this.#executionSnapshot, async () => {
+			if (
+				!options?.synthetic &&
+				options?.toolChoice == null &&
+				this.#toolChoiceQueue.inspect().length === 0 &&
+				this.getActiveToolNames().includes("xcsh_context") &&
+				requestsContextActivation(expandedText)
+			) {
+				const contextChoice = buildNamedToolChoice("xcsh_context", this.model);
+				if (contextChoice && typeof contextChoice !== "string") {
+					this.#toolChoiceQueue.pushOnce(contextChoice, { label: "context-selection" });
+				}
 			}
-		}
 
-		const userContent: (TextContent | ImageContent)[] = [{ type: "text", text: expandedText }];
-		if (options?.images) {
-			userContent.push(...options.images);
-		}
-
-		const promptAttribution = options?.attribution ?? (options?.synthetic ? "agent" : "user");
-		const message = options?.synthetic
-			? { role: "developer" as const, content: userContent, attribution: promptAttribution, timestamp: Date.now() }
-			: { role: "user" as const, content: userContent, attribution: promptAttribution, timestamp: Date.now() };
-		if (message.role === "user" && this.#beforeUserInputHooks.size) await this.#prepareUserInput(message);
-
-		await this.#maybeRestoreRetryFallbackPrimary();
-		if (!this.#isPromptCurrent(generation)) return;
-
-		const delegationOutput = await this.#evaluateAndApplyRouting(
-			expandedText,
-			options?.images ? options.images.length > 0 : false,
-			{ signal: options?.signal },
-		);
-		if (!this.#isPromptCurrent(generation)) return;
-		if (delegationOutput) {
-			expandedText += delegationOutput;
-			const textBlock = userContent.find(c => c.type === "text") as Extract<
-				(typeof userContent)[0],
-				{ type: "text" }
-			>;
-			if (textBlock) {
-				textBlock.text += delegationOutput;
-			} else {
-				userContent.push({ type: "text", text: delegationOutput });
+			const userContent: (TextContent | ImageContent)[] = [{ type: "text", text: expandedText }];
+			if (options?.images) {
+				userContent.push(...options.images);
 			}
-		}
 
-		await this.#promptWithMessage(message, expandedText, options);
+			const promptAttribution = options?.attribution ?? (options?.synthetic ? "agent" : "user");
+			const message = options?.synthetic
+				? {
+						role: "developer" as const,
+						content: userContent,
+						attribution: promptAttribution,
+						timestamp: Date.now(),
+					}
+				: { role: "user" as const, content: userContent, attribution: promptAttribution, timestamp: Date.now() };
+			if (message.role === "user" && this.#beforeUserInputHooks.size) await this.#prepareUserInput(message);
+
+			await this.#maybeRestoreRetryFallbackPrimary();
+			if (!this.#isPromptCurrent(generation)) return;
+
+			const delegationOutput = await this.#evaluateAndApplyRouting(
+				expandedText,
+				options?.images ? options.images.length > 0 : false,
+				{ signal: options?.signal },
+			);
+			if (!this.#isPromptCurrent(generation)) return;
+			if (delegationOutput) {
+				expandedText += delegationOutput;
+				const textBlock = userContent.find(c => c.type === "text") as Extract<
+					(typeof userContent)[0],
+					{ type: "text" }
+				>;
+				if (textBlock) {
+					textBlock.text += delegationOutput;
+				} else {
+					userContent.push({ type: "text", text: delegationOutput });
+				}
+			}
+
+			await this.#promptWithMessage(message, expandedText, options);
+		});
 	}
 
 	async promptCustomMessage<T = unknown>(
@@ -4017,6 +4052,12 @@ export class AgentSession {
 			skipPostPromptRecoveryWait?: boolean;
 		},
 	): Promise<void> {
+		if (!currentContextExecution()) {
+			this.#executionSnapshot = captureContextExecution(this.settings);
+			return runWithContextExecution(this.#executionSnapshot, () =>
+				this.#promptWithMessage(message, expandedText, options),
+			);
+		}
 		this.#sessionTransitions.assertAvailable();
 		this.#promptInFlightCount++;
 		this.#turnPhase.startTurn();
@@ -4024,6 +4065,7 @@ export class AgentSession {
 		let settled = false;
 		let agentLoopStarted = false;
 		try {
+			await this.refreshBaseSystemPrompt();
 			// Flush any pending bash messages before the new prompt
 			this.#flushPendingBashMessages();
 			this.#flushPendingPythonMessages();

@@ -1687,6 +1687,16 @@
           "text": "How do I prevent a scope mistake?"
         },
         {
+          "text": "Create or edit a context",
+          "readerQuestion": "How do I create or edit a saved context?",
+          "purpose": "Explain masked credential collection, validation and one review.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ],
+          "legacyConceptIds": []
+        },
+        {
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -1703,15 +1713,26 @@
           "purpose": "Answer this question within Manage contexts and namespaces: Where is context data stored?.",
           "readerQuestion": "Where is context data stored?",
           "text": "Where is context data stored?"
+        },
+        {
+          "text": "Automate management",
+          "readerQuestion": "How do I manage contexts without a terminal menu?",
+          "purpose": "Explain deterministic context CLI targets, input/output contracts and exit codes.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ],
+          "legacyConceptIds": []
         }
       ],
       "path": "docs/en/f5-distributed-cloud/contexts-namespaces.mdx",
       "purpose": "Explain context and namespace state transitions and how to prove the active tenant scope safely.",
       "readerNeed": "Manage contexts and namespaces: Store named tenant connections, activate the intended context, and scope operations to a namespace.",
       "sourceAuthority": [
-        "packages/resource-management/src/resource-client.ts",
-        "packages/coding-agent/src/commands",
-        "packages/coding-agent/test/resource-management/integration"
+        "packages/coding-agent/src/services/xcsh-context.ts",
+        "packages/coding-agent/src/modes/controllers/context-command-controller.ts",
+        "packages/coding-agent/src/commands/context.ts",
+        "packages/coding-agent/test/context-cli.test.ts"
       ]
     },
     {

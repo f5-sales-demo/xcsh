@@ -3,7 +3,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import {
 	ContextResolver,
+	getLocalXCSHActiveContextPath,
+	getProjectDir,
 	getXCSHConfigDir,
+	isSafeContextName,
 	logger,
 	RESERVED_CONTEXT_NAMES,
 	xcshContextPaths,
@@ -11,6 +14,7 @@ import {
 import { validateXcshApiCredentials, type XcshAuthValidationFailure } from "@f5-sales-demo/pi-utils/xcsh-auth";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
+import { currentContextExecution } from "./context-execution";
 import { XCSHApiClient } from "./xcsh-api-client";
 import {
 	deriveTenantFromUrl,
@@ -25,6 +29,16 @@ import {
 	XCSH_NAMESPACE,
 	XCSH_TENANT,
 } from "./xcsh-env";
+
+export interface ContextTarget {
+	name: string;
+	source: "local" | "global";
+}
+export interface ContextChoice {
+	target: ContextTarget;
+	context?: XCSHContext;
+	error?: string;
+}
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
@@ -92,6 +106,8 @@ export type TokenHealth = "ok" | "expiring" | "expired";
 
 export interface ContextStatus {
 	activeContextName: string | null;
+	activeContextSource?: "local" | "global";
+	activationGeneration?: number;
 	activeContextUrl: string | null;
 	activeContextTenant: string | null;
 	activeContextNamespace: string | null;
@@ -172,6 +188,8 @@ export class ContextService {
 
 	#configDir: string;
 	#activeContext: XCSHContext | null = null;
+	#activeTarget: ContextTarget | null = null;
+	#previousTarget: ContextTarget | null = null;
 	#credentialSource: ContextStatus["credentialSource"] = "none";
 	#authStatus: AuthStatus = "unknown";
 	#contextsCache: XCSHContext[] = [];
@@ -211,6 +229,14 @@ export class ContextService {
 	}
 
 	getApiClient(): XCSHApiClient | null {
+		const execution = currentContextExecution();
+		if (execution)
+			return execution.environment[XCSH_API_URL] && execution.environment[XCSH_API_TOKEN]
+				? new XCSHApiClient({
+						apiUrl: execution.environment[XCSH_API_URL],
+						apiToken: execution.environment[XCSH_API_TOKEN],
+					})
+				: null;
 		return this.#apiClient;
 	}
 
@@ -361,6 +387,156 @@ export class ContextService {
 		return this.#previousContextName;
 	}
 
+	get activeTarget(): ContextTarget | null {
+		return this.#activeTarget ? { ...this.#activeTarget } : null;
+	}
+
+	#resolver(): ContextResolver {
+		return new ContextResolver({
+			paths: {
+				...xcshContextPaths,
+				getContextsDir: () => this.contextsDir,
+				getContextPath: name => path.join(this.contextsDir, `${name}.json`),
+				getActiveContextPath: () => this.activeContextPath,
+			},
+		});
+	}
+
+	resolveTarget(target: ContextTarget, cwd = getProjectDir()): XCSHContext {
+		this.#validateContextName(target.name);
+		const resolved = this.#resolver().resolveTarget(target, cwd);
+		if (!resolved)
+			throw new ContextError(
+				`Context '${target.name}' not found or invalid (${target.source}). Run /context list to inspect available contexts.`,
+			);
+		try {
+			const url = new URL(resolved.context.apiUrl);
+			if (url.protocol !== "https:" || url.username || url.password) throw new Error();
+		} catch {
+			throw new ContextError("Tenant endpoint is invalid; edit its HTTPS URL before activation.");
+		}
+		const context = this.#validateContextShape(resolved.context, target.name);
+		if (!context) throw new ContextError(`Context '${target.name}' (${target.source}) has invalid configuration.`);
+		this.#assertCompatibleVersion(context);
+		return context;
+	}
+
+	async listChoices(cwd = getProjectDir()): Promise<ContextChoice[]> {
+		const result: ContextChoice[] = [];
+		for (const source of ["local", "global"] as const) {
+			const dir = source === "local" ? xcshContextPaths.getLocalContextsDir(cwd) : this.contextsDir;
+			if (!fs.existsSync(dir)) continue;
+			for (const file of fs
+				.readdirSync(dir)
+				.filter(file => file.endsWith(".json"))
+				.sort()) {
+				const target = { name: file.slice(0, -5), source };
+				if (!isSafeContextName(target.name)) continue;
+				try {
+					result.push({ target, context: this.resolveTarget(target, cwd) });
+				} catch (error) {
+					result.push({
+						target,
+						error: error instanceof ContextError ? error.message : "Unreadable context file",
+					});
+				}
+			}
+		}
+		return result;
+	}
+
+	writeProjectActive(name: string, cwd = getProjectDir()): void {
+		this.#validateContextName(name);
+		const file = getLocalXCSHActiveContextPath(cwd);
+		fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+		const tmp = `${file}.${process.pid}.tmp`;
+		try {
+			fs.writeFileSync(tmp, name, { mode: 0o600, flag: "wx" });
+			fs.renameSync(tmp, file);
+			fs.chmodSync(file, 0o600);
+		} finally {
+			if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+		}
+	}
+	clearProjectActive(name: string, cwd = getProjectDir()): void {
+		const file = getLocalXCSHActiveContextPath(cwd);
+		if (fs.existsSync(file) && fs.readFileSync(file, "utf8").trim() === name) fs.unlinkSync(file);
+	}
+
+	async writePointer(
+		target: ContextTarget,
+		pointer: unknown,
+		expected: string | null,
+		cwd = getProjectDir(),
+	): Promise<void> {
+		if (target.source !== "local") throw new ContextError("Pointers must be project-local.");
+		const file = this.targetPath(target, cwd);
+		if ((fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null) !== expected)
+			throw new ContextError("Project pointer changed. Review it again.");
+		fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+		const tmp = `${file}.${process.pid}.tmp`;
+		try {
+			fs.writeFileSync(tmp, JSON.stringify(pointer, null, 2), { mode: 0o600, flag: "wx" });
+			fs.renameSync(tmp, file);
+			fs.chmodSync(file, 0o600);
+		} finally {
+			if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+		}
+	}
+
+	/** Save an already validated draft after comparing its original raw file. */
+	async saveTarget(
+		target: ContextTarget,
+		context: XCSHContext,
+		expected: string | null,
+		cwd = getProjectDir(),
+	): Promise<void> {
+		this.#validateContextName(target.name);
+		this.#assertNotReserved(target.name);
+		try {
+			const url = new URL(context.apiUrl);
+			if (url.protocol !== "https:" || url.username || url.password) throw new Error();
+		} catch {
+			throw new ContextError("Tenant URL must be HTTPS without embedded credentials.");
+		}
+		const file = this.targetPath(target, cwd);
+		const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
+		if (current !== expected)
+			throw new ContextError("Saved context changed. Reopen the editor to review the current values.");
+		if (!this.#validateContextShape(context, target.name)) throw new ContextError("Invalid context configuration.");
+		this.#assertCompatibleVersion(context);
+		fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+		const tmp = `${file}.${process.pid}.tmp`;
+		try {
+			fs.writeFileSync(
+				tmp,
+				JSON.stringify(
+					{
+						...(current ? JSON.parse(current) : {}),
+						...context,
+						name: target.name,
+						apiUrl: normalizeApiUrl(context.apiUrl),
+					},
+					null,
+					2,
+				),
+				{ mode: 0o600, flag: "wx" },
+			);
+			fs.renameSync(tmp, file);
+			fs.chmodSync(file, 0o600);
+		} finally {
+			if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+		}
+		await this.listContexts();
+	}
+
+	targetPath(target: ContextTarget, cwd = getProjectDir()): string {
+		this.#validateContextName(target.name);
+		return target.source === "local"
+			? xcshContextPaths.getLocalContextPath(target.name, cwd)
+			: path.join(this.contextsDir, `${target.name}.json`);
+	}
+
 	get contextsDir(): string {
 		return path.join(this.#configDir, "contexts");
 	}
@@ -371,12 +547,16 @@ export class ContextService {
 
 	/** Active context's API/console base URL, or null when no context is active. */
 	get activeApiUrl(): string | null {
-		return this.#activeContext?.apiUrl ?? null;
+		return currentContextExecution()
+			? (currentContextExecution()!.environment[XCSH_API_URL] ?? null)
+			: (this.#activeContext?.apiUrl ?? null);
 	}
 
 	/** Active context's default namespace, or null when no context is active. */
 	get activeNamespace(): string | null {
-		return this.#activeContext?.defaultNamespace ?? null;
+		return currentContextExecution()
+			? (currentContextExecution()!.environment[XCSH_NAMESPACE] ?? null)
+			: (this.#activeContext?.defaultNamespace ?? null);
 	}
 
 	/** The project-local (`.xcsh/`) context NAME for `cwd`, or null. No activation,
@@ -385,7 +565,7 @@ export class ContextService {
 		try {
 			const resolver = new ContextResolver({ paths: xcshContextPaths });
 			const local = await resolver.resolve(cwd);
-			if (local && local.source === "local") return (local.context as XCSHContext).name ?? null;
+			if (local && local.source === "local") return path.basename(local.sourcePath, ".json");
 		} catch {
 			/* no local context */
 		}
@@ -420,6 +600,8 @@ export class ContextService {
 				}
 				if (versionOk) {
 					this.#activeContext = localContext;
+					this.#activeTarget = { name: path.basename(localResult.sourcePath, ".json"), source: "local" };
+					localContext.name = this.#activeTarget.name;
 					this.#applyToSettings(localContext);
 					this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
 					this.#refreshApiClient(localContext);
@@ -481,6 +663,7 @@ export class ContextService {
 		}
 
 		this.#activeContext = context;
+		this.#activeTarget = { name: context.name, source: "global" };
 		this.#applyToSettings(context);
 		// Detect mixed source: context loaded but some fields come from process.env
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
@@ -515,7 +698,14 @@ export class ContextService {
 		};
 	}
 
-	async activate(name: string, options?: { revision: string; beforeCommit: () => void }): Promise<XCSHContext> {
+	async activate(
+		nameOrTarget: string | ContextTarget,
+		options?: { revision: string; beforeCommit: () => void },
+		cwd = getProjectDir(),
+	): Promise<XCSHContext> {
+		const target: ContextTarget =
+			typeof nameOrTarget === "string" ? { name: nameOrTarget, source: "global" } : nameOrTarget;
+		const name = target.name;
 		// Reject activation when env overrides are present — before any I/O
 		if (process.env[XCSH_API_URL]) {
 			throw new ContextError(
@@ -529,7 +719,7 @@ export class ContextService {
 		}
 
 		this.#validateContextName(name);
-		const context = this.#readContext(name);
+		const context = this.resolveTarget(target, cwd);
 		if (!context) {
 			throw new ContextError(`Context '${name}' not found. Run \`/context list\` to see available contexts.`, name);
 		}
@@ -542,11 +732,12 @@ export class ContextService {
 			throw new ContextError("Context selection changed during approval. Inspect and retry the selection.");
 		}
 
-		if (this.#activeContext && this.#activeContext.name !== name) {
+		if (this.#activeContext && (this.#activeContext.name !== name || this.#activeTarget?.source !== target.source)) {
 			this.#previousContextName = this.#activeContext.name;
+			this.#previousTarget = this.#activeTarget;
 		}
 		this.#activeContext = context;
-		this.#applyToSettings(context);
+		this.#activeTarget = target;
 		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
 		this.#namespacesCache = [];
 		this.#activationEpoch += 1;
@@ -558,6 +749,7 @@ export class ContextService {
 		this.#lastAuthLatencyMs = undefined;
 		this.#lastAuthCheckedAt = undefined;
 		this.#refreshApiClient(context);
+		this.#applyToSettings(context);
 
 		return context;
 	}
@@ -566,7 +758,7 @@ export class ContextService {
 		if (!this.#previousContextName) {
 			throw new ContextError("No previous context. Switch contexts first with /context activate <name>.");
 		}
-		return this.activate(this.#previousContextName);
+		return this.activate(this.#previousTarget ?? this.#previousContextName);
 	}
 
 	async listContexts(): Promise<XCSHContext[]> {
@@ -628,6 +820,7 @@ export class ContextService {
 		this.#contextsCache = this.#contextsCache.filter(p => p.name !== name);
 		if (this.#previousContextName === name) {
 			this.#previousContextName = null;
+			this.#previousTarget = null;
 		}
 	}
 
@@ -872,7 +1065,7 @@ export class ContextService {
 		// active context leaves the session talking to the wrong tenant with the
 		// wrong token until the user restarts or re-activates manually.
 		const activeName = this.#activeContext?.name;
-		if (activeName && overwritten.includes(activeName)) {
+		if (activeName && this.#activeTarget?.source !== "local" && overwritten.includes(activeName)) {
 			await this.activate(activeName);
 		}
 
@@ -963,8 +1156,11 @@ export class ContextService {
 			.sort((a, b) => a.name.localeCompare(b.name));
 		if (this.#previousContextName === oldName) {
 			this.#previousContextName = newName;
+			if (this.#previousTarget?.source === "global" && this.#previousTarget.name === oldName)
+				this.#previousTarget = { name: newName, source: "global" };
 		}
-		if (wasActive && this.#activeContext) {
+		if (wasActive && this.#activeContext && this.#activeTarget?.source !== "local") {
+			this.#activeTarget = { name: newName, source: "global" };
 			this.#activeContext = { ...this.#activeContext, name: newName };
 			for (const cb of ContextService.#onContextChangeListeners) {
 				cb(this.#activeContext);
@@ -1149,6 +1345,8 @@ export class ContextService {
 		const tenant = url ? deriveTenantFromUrl(url) : null;
 		return {
 			activeContextName: this.#activeContext?.name ?? null,
+			activeContextSource: this.#activeTarget?.source ?? "global",
+			activationGeneration: this.#activationEpoch,
 			activeContextUrl: url,
 			activeContextTenant: tenant,
 			activeContextNamespace:
@@ -1472,6 +1670,7 @@ export class ContextService {
 
 		Settings.instance.override("bash.environment", merged);
 		Settings.instance.override("xcsh.sensitiveKeys", context.sensitiveKeys ?? []);
+		Settings.instance.override("xcsh.contextSource", this.#activeTarget?.source ?? "global");
 
 		// Notify listeners (e.g. obfuscator refresh) about the context change.
 		for (const cb of ContextService.#onContextChangeListeners) {

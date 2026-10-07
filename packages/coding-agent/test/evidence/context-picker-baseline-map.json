@@ -1,0 +1,111 @@
+{
+  "revision": "d9ce5745af1ddea41de228bb133105bdb4656009",
+  "kind": "synthetic handler observations",
+  "observations": [
+    {
+      "command": "create demo https://tenant.example.test [masked] default",
+      "output": [
+        "╭─ demo ───────────────────────────────────────────────╮\n│ Created. Use /context activate demo to switch to it. │\n╰──────────────────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "list",
+      "output": [
+        "╭─ contexts ─────────────────────────────╮\n│   demo  https://tenant.example.test    │\n╰────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "show demo",
+      "output": [
+        "╭─ demo ──────────────────────────────────────╮\n│ XCSH_TENANT     tenant                      │\n│ XCSH_API_URL    https://tenant.example.test │\n│ XCSH_API_TOKEN  ...oken                     │\n│ Status          ✅ Connected (0ms)          │\n├─ Environment ───────────────────────────────┤\n│ XCSH_NAMESPACE  default                     │\n├─ Metadata ──────────────────────────────────┤\n│ Created         just now                    │\n╰─────────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "activate demo",
+      "output": [
+        "╭─ demo ──────────────────────────────────────╮\n│ XCSH_TENANT     tenant                      │\n│ XCSH_API_URL    https://tenant.example.test │\n│ XCSH_API_TOKEN  ...oken                     │\n│ Status          ✅ Connected (0ms)          │\n├─ Environment ───────────────────────────────┤\n│ XCSH_NAMESPACE  default                     │\n├─ Metadata ──────────────────────────────────┤\n│ Created         just now                    │\n╰─────────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "namespace team",
+      "output": [
+        "╭─ namespace ────────────────────────────╮\n│ Namespace → team                       │\n╰────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "env set XCSH_REGION=demo",
+      "output": [
+        "╭─ demo ─────────────────────────────────╮\n│ Set 1 variable on 'demo':              │\n│   XCSH_REGION=demo                     │\n╰────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "env",
+      "output": [
+        "╭─ demo env ─────────────────────────────╮\n│ XCSH_REGION  demo                      │\n╰────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "env unset XCSH_REGION",
+      "output": [
+        "╭─ demo ─────────────────────────────────╮\n│ Removed 1 variable from 'demo':        │\n│   XCSH_REGION                          │\n╰────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "link demo",
+      "output": [
+        "╭─ demo ───────────────────────────────────────────────╮\n│ Linked local context 'demo' → global context 'demo'. │\n╰──────────────────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "unlink",
+      "output": [
+        "╭─ demo ─────────────────────────────────╮\n│ Unlinked local context 'demo'.         │\n╰────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "rename demo renamed",
+      "output": [
+        "╭─ renamed ──────────────────────────────╮\n│ Renamed from 'demo'.                   │\n╰────────────────────────────────────────╯"
+      ],
+      "errors": []
+    },
+    {
+      "command": "export renamed",
+      "output": [
+        "{\n  \"version\": 1,\n  \"exportedAt\": \"2026-10-07T02:51:07.128Z\",\n  \"tokensMasked\": true,\n  \"contexts\": [\n    {\n      \"name\": \"renamed\",\n      \"apiUrl\": \"https://tenant.example.test\",\n      \"apiToken\": \"...oken\",\n      \"defaultNamespace\": \"default\",\n      \"version\": 1,\n      \"metadata\": {\n        \"createdAt\": \"2026-10-07T02:51:07.120Z\"\n      }\n    }\n  ]\n}"
+      ],
+      "errors": []
+    },
+    {
+      "command": "delete renamed",
+      "output": [],
+      "errors": [
+        "Cannot delete the active context. Run `/context activate <other>` to switch first."
+      ]
+    },
+    {
+      "command": "delete renamed --confirm",
+      "output": [],
+      "errors": [
+        "Cannot delete the active context. Run `/context activate <other>` to switch first."
+      ]
+    },
+    {
+      "command": "import {\"version\":1,\"tokensMasked\":false,\"contexts\":[{\"name\":\"imported\",\"apiUrl\":\"https://tenant.example.test\",\"apiToken\":\"[masked]\",\"defaultNamespace\":\"default\"}]}",
+      "output": [
+        "╭─ import ───────────────────────────────╮\n│ Imported 1 context:                    │\n│   + imported                           │\n╰────────────────────────────────────────╯"
+      ],
+      "errors": []
+    }
+  ]
+}

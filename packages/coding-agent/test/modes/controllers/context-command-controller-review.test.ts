@@ -178,7 +178,7 @@ test("context environment reviews mask secrets and persist only after confirmati
 	expect((await service.listContexts())[0].env).toEqual({ API_TOKEN: secret, REGION: "ca" });
 });
 
-test("context namespace review distinguishes effective state from the unchanged saved default", async () => {
+test("context namespace selection distinguishes effective state from the unchanged saved default", async () => {
 	const service = ContextService.instance;
 	await service.createContext({
 		name: "demo",
@@ -194,10 +194,7 @@ test("context namespace review distinguishes effective state from the unchanged 
 		text: "/context namespace runtime-only",
 	});
 
-	expect(h.screens[0]).toContain("current process only");
-	expect(h.screens[0]).toContain("Effective namespace: saved-default → runtime-only");
-	expect(h.screens[0]).toContain("Saved default namespace: saved-default → saved-default (unchanged)");
-	expect(h.screens[0]).toContain("No context file is written");
+	expect(h.screens).toHaveLength(0);
 	expect(service.activeNamespace).toBe("runtime-only");
 	expect((await service.listContexts()).find(context => context.name === "demo")?.defaultNamespace).toBe(
 		"saved-default",
@@ -261,83 +258,47 @@ test("context unlink renews a stale pointer proposal and cancellation preserves 
 	await pending;
 });
 
-test("context wizard retries only activation after a create-then-activate partial failure", async () => {
+test("wizard has one Cancel-first review and saves and activates once", async () => {
 	const service = ContextService.instance;
 	service.validateToken = vi.fn(async () => ({ status: "connected" as const, latencyMs: 1 }));
-	const activate = service.activate.bind(service);
-	let activationAttempts = 0;
-	service.activate = vi.fn(async name => {
-		activationAttempts++;
-		if (activationAttempts === 1) throw new Error("synthetic activation failure");
-		return activate(name);
-	});
-
 	const h = harness([]);
-	await h.controller.handle({ name: "context", args: "wizard", text: "/context wizard" });
+	await h.controller.handle({ name: "context", args: "create", text: "/context create" });
 	h.input("https://demo.example.invalid");
 	h.input("\r");
 	h.input("token-value");
 	h.input("\r");
 	h.input("\r");
-	await waitFor(() => h.text().includes("Step 5: Default Namespace"));
-	for (let step = 0; step < 3; step++) h.input("\r");
+	await waitFor(() => h.text().includes("Default namespace"));
 	h.input("\r");
-	h.input("\r");
-	await waitFor(() => h.screens.length === 1);
-	h.input("\x1b[B");
-	h.input("\r");
-	await waitFor(() => h.text().includes("synthetic activation failure"));
-
-	const contextPath = join(directory, "contexts", "demo.json");
-	const saved = fs.readFileSync(contextPath, "utf8");
-	expect(service.getStatus().activeContextName).toBeNull();
-	expect(activationAttempts).toBe(1);
-
-	// The first retry revalidates the now-saved context and requires review of
-	// the activation-only proposal. The second confirmation performs only that
-	// unresolved step; the context file remains byte-identical.
-	h.input("\x1b[B");
-	h.input("\r");
-	await waitFor(() => h.text().includes("proposal changed"));
-	expect(h.text()).toContain("The context file is already saved");
+	expect(h.text()).toContain("Review context");
+	expect(h.text()).toContain("Save and activate");
+	expect(h.text()).not.toContain("token-value");
+	expect(fs.existsSync(join(directory, "contexts", "demo.json"))).toBe(false);
 	h.input("\x1b[B");
 	h.input("\r");
 	await waitFor(() => service.getStatus().activeContextName === "demo");
-	expect(fs.readFileSync(contextPath, "utf8")).toBe(saved);
-	expect(activationAttempts).toBe(2);
+	expect(h.screens.filter(screen => screen.includes("Review context"))).toHaveLength(0);
+	expect(fs.existsSync(join(directory, "contexts", "demo.json"))).toBe(true);
 });
 
-test("context activation and direct-name switching are Cancel-first before replacing persisted state", async () => {
+test("explicit activation is immediate and leaves saved files unchanged", async () => {
 	const service = ContextService.instance;
+	service.validateToken = vi.fn(async () => ({ status: "connected" as const }));
 	for (const name of ["first", "second"])
 		await service.createContext({
 			name,
 			apiUrl: `https://${name}.example.invalid`,
 			apiToken: `${name}-token`,
-			defaultNamespace: `${name}-namespace`,
+			defaultNamespace: "default",
 		});
 	await service.activate("first");
-	const firstPath = join(directory, "contexts", "first.json");
-	const secondPath = join(directory, "contexts", "second.json");
-	const before = [fs.readFileSync(firstPath, "utf8"), fs.readFileSync(secondPath, "utf8")];
-
-	const cancelled = harness([["\r"]]);
-	await cancelled.controller.handle({
-		name: "context",
-		args: "activate second",
-		text: "/context activate second",
-	});
-	expect(cancelled.screens[0]).toContain("Review context change");
-	expect(cancelled.screens[0]).toContain("Active context: first → second");
-	expect(service.getStatus().activeContextName).toBe("first");
-	expect([fs.readFileSync(firstPath, "utf8"), fs.readFileSync(secondPath, "utf8")]).toEqual(before);
-
-	const confirmed = harness([["\x1b[B", "\r"]]);
-	await confirmed.controller.handle({ name: "context", args: "second", text: "/context second" });
-	expect(confirmed.screens[0]).toContain("context-activation:second");
+	const before = fs.readFileSync(join(directory, "contexts", "second.json"), "utf8");
+	const h = harness([]);
+	await h.controller.handle({ name: "context", args: "activate second", text: "/context activate second" });
 	expect(service.getStatus().activeContextName).toBe("second");
-	expect([fs.readFileSync(firstPath, "utf8"), fs.readFileSync(secondPath, "utf8")]).toEqual(before);
-	expect(confirmed.invalidateIntegration).toHaveBeenCalledTimes(1);
+	expect(h.screens).toHaveLength(0);
+	expect(fs.readFileSync(join(directory, "contexts", "second.json"), "utf8")).toBe(before);
+	expect(h.ctx.showStatus).toHaveBeenCalledWith("Selected second · namespace default · Checking", { dim: false });
 });
 
 test("documented context delete confirmation still requires Cancel-first review", async () => {
@@ -377,8 +338,8 @@ test("context read-only output uses the bounded shared report", async () => {
 	});
 	const h = harness([["\x1b"]]);
 	await h.controller.handle({ name: "context", args: "list", text: "/context list" });
-	expect(h.screens[0]).toContain("F5 XC contexts");
-	expect(h.screens[0]).toContain("/context list · saved configuration and current runtime state");
+	expect(h.screens[0]).toContain("Saved contexts");
+	expect(h.screens[0]).toContain("/context list");
 	expect(h.screens[0]).toContain("demo");
 	expect(h.screens[0]).toContain("Esc: close");
 });
@@ -406,4 +367,76 @@ test("guided Platform setup offers saved contexts instead of reopening context c
 		].join("\n"),
 	);
 	expect(h.ctx.editorContainer.addChild).not.toHaveBeenCalled();
+});
+
+test("wizard cancellation writes nothing and saved editing retains unrelated fields", async () => {
+	const service = ContextService.instance;
+	service.validateToken = vi.fn(async () => ({ status: "connected" as const }));
+	const cancelled = harness([]);
+	await cancelled.controller.handle({ name: "context", args: "create", text: "/context create" });
+	cancelled.input("https://draft.example.test");
+	cancelled.input("\r");
+	cancelled.input("synthetic-token");
+	cancelled.input("\r");
+	cancelled.input("\r");
+	await waitFor(() => cancelled.text().includes("Default namespace"));
+	cancelled.input("\r");
+	cancelled.input("\r");
+	expect((await service.listContexts()).length).toBe(0);
+	await service.createContext({
+		name: "demo",
+		apiUrl: "https://demo.example.test",
+		apiToken: "synthetic-original",
+		defaultNamespace: "default",
+		env: { XCSH_REGION: "region" },
+		includeSkills: ["demo"],
+	});
+	const before = service.resolveTarget({ name: "demo", source: "global" });
+	const editor = harness([]);
+	await editor.controller.handle({ name: "context", args: "edit demo", text: "/context edit demo" });
+	editor.input("\r");
+	expect(editor.text()).not.toContain("synthetic-original");
+	editor.input("\r");
+	editor.input("\r");
+	await waitFor(() => editor.text().includes("Default namespace"));
+	editor.input("\r");
+	editor.input("\x1b[B");
+	editor.input("\x1b[B");
+	editor.input("\r");
+	await waitFor(() => !editor.text().includes("Saving"));
+	const after = service.resolveTarget({ name: "demo", source: "global" });
+	expect(after.apiToken).toBe(before.apiToken);
+	expect(after.env).toEqual(before.env);
+	expect(after.metadata).toEqual(before.metadata);
+	expect(after.includeSkills).toEqual(before.includeSkills);
+});
+
+test("save and activate retries only activation after partial failure", async () => {
+	const service = ContextService.instance;
+	service.validateToken = vi.fn(async () => ({ status: "connected" as const }));
+	const activate = service.activate.bind(service);
+	let calls = 0;
+	service.activate = vi.fn(async (name, options) => {
+		calls++;
+		if (calls === 1) throw new Error("synthetic activation failure");
+		return activate(name, options);
+	});
+	const h = harness([]);
+	await h.controller.handle({ name: "context", args: "create", text: "/context create" });
+	h.input("https://draft.example.test");
+	h.input("\r");
+	h.input("synthetic-token");
+	h.input("\r");
+	h.input("\r");
+	await waitFor(() => h.text().includes("Default namespace"));
+	h.input("\r");
+	h.input("\x1b[B");
+	h.input("\r");
+	await waitFor(() => h.text().includes("synthetic activation failure"));
+	const file = join(directory, "contexts", "draft.json");
+	const saved = fs.readFileSync(file, "utf8");
+	h.input("\r");
+	await waitFor(() => service.getStatus().activeContextName === "draft");
+	expect(calls).toBe(2);
+	expect(fs.readFileSync(file, "utf8")).toBe(saved);
 });

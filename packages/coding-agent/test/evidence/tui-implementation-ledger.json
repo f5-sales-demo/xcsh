@@ -931,9 +931,9 @@
         "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
         "kind": "command"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -961,16 +961,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -980,9 +975,9 @@
         "kind": "typed-arguments",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1010,16 +1005,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1029,9 +1019,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1059,16 +1049,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1078,9 +1063,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1108,16 +1093,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1127,9 +1107,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1157,16 +1137,31 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/context edit",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/context"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
       ]
     },
     {
@@ -1176,9 +1171,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1206,16 +1201,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1225,9 +1215,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1255,16 +1245,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1274,9 +1259,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1304,16 +1289,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1323,9 +1303,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1353,16 +1333,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1372,9 +1347,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1402,16 +1377,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1421,9 +1391,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1451,16 +1421,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1470,9 +1435,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1500,16 +1465,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1519,9 +1479,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1549,16 +1509,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1568,9 +1523,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1598,16 +1553,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1617,9 +1567,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1647,16 +1597,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1666,9 +1611,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1696,16 +1641,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1715,9 +1655,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1745,16 +1685,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1764,9 +1699,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1794,16 +1729,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -1813,9 +1743,9 @@
         "kind": "subcommand",
         "parent": "/context"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -1843,16 +1773,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {
@@ -10566,9 +10491,9 @@
         "source": "packages/coding-agent/src/modes/components/context-add-wizard.ts",
         "kind": "component"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -10596,16 +10521,30 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
+      ]
+    },
+    {
+      "surface": {
+        "id": "source:packages/coding-agent/src/modes/components/context-picker.ts",
+        "source": "packages/coding-agent/src/modes/components/context-picker.ts",
+        "kind": "component"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
       ]
     },
     {
@@ -14483,9 +14422,9 @@
         "source": "packages/coding-agent/src/modes/controllers/context-command-controller.ts",
         "kind": "integration"
       },
-      "status": "verified",
-      "adapter": "ContextCommandController and ContextAddWizard → source handleContextCommand and ContextService → shared report/review lifecycle",
-      "reviewPolicy": "Read-only list/show/status/validate surfaces do not mutate. Create, import, activation, namespace/environment edits, rename/delete, and project link/unlink resolve exact saved/runtime targets and old→new state before Cancel-first review; retries re-resolve and execute only unresolved work.",
+      "status": "in-progress",
+      "adapter": "Source-aware ContextPicker and single-review ContextAddWizard; shared context operations and per-turn execution snapshots",
+      "reviewPolicy": "Selection and runtime namespace are immediate. Saved mutations require one Cancel-first review; draft cancellation writes nothing.",
       "states": [
         "list",
         "details",
@@ -14513,16 +14452,11 @@
       "persistence": [
         "test/evidence/terminal-connections-final-v1/matrix.json · 16/16 isolated storage/process/loopback receipts prove cancellation, successful writes, stale-target preservation, saved-vs-runtime boundaries, and independent reopen"
       ],
-      "captures": [
-        "test/evidence/terminal-connections-final-v1 · 256 actual-terminal viewport state sets and 16 contact sheets"
-      ],
-      "visualVerdicts": [
-        "test/evidence/terminal-connections-final-v1/visual-review.md · all 256 PNGs directly inspected; pass-actual-terminal slice verdict"
-      ],
-      "fingerprint": "2c12f53f426e1c326e0c7801b636043f192aaeedf118bd55a4b7d983e21d40ba",
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
       "notes": [
-        "Slice verified across the required 16 variants; complete-candidate convergence and release remain pending.",
-        "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+        "Issue #4754 supersedes the prior navigation and wizard acceptance. Historical terminal captures do not qualify this implementation. See context-picker-4754.md for current evidence and open criteria."
       ]
     },
     {

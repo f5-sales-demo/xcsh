@@ -113,6 +113,8 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 * continues with another turn.
 	 */
 	getFollowUpMessages?: () => Promise<AgentMessage[]>;
+	/** Scope one admitted user turn, including all tool continuations and retries. */
+	runConversationTurn?: <T>(action: () => Promise<T>, followUp: boolean) => Promise<T>;
 
 	/**
 	 * Provides tool execution context, resolved per tool call.

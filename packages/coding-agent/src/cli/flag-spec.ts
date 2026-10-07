@@ -46,6 +46,7 @@ export const LAUNCH_FLAGS = defineFlags({
 	slow: { arity: "value", description: "Slow/reasoning model for thorough analysis (or PI_SLOW_MODEL env)" },
 	plan: { arity: "value", description: "Plan model for architectural planning (or PI_PLAN_MODEL env)" },
 	provider: { arity: "value", description: "Provider to use (legacy; prefer --model)" },
+	"context-source": { arity: "value", description: "Context storage source", options: ["local", "global"] },
 	context: { arity: "value", description: "Bind this session to a named F5 XC context" },
 	"api-key": { arity: "value", description: "API key (defaults to env vars)" },
 	"system-prompt": { arity: "value", description: "System prompt (default: coding assistant prompt)" },

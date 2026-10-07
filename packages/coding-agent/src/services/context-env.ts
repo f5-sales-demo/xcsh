@@ -1,4 +1,5 @@
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
+import { currentContextExecution } from "./context-execution";
 import { XCSH_API_TOKEN, XCSH_API_URL, XCSH_CONTEXT_NAME, XCSH_NAMESPACE, XCSH_TENANT } from "./xcsh-env";
 
 /** Keys excluded from the system prompt context variables listing. */
@@ -70,7 +71,7 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 				const envKey = key === "namespace" ? XCSH_NAMESPACE : `XCSH_${key.toUpperCase()}`;
 				// Never auto-inject credential or sensitive values into URL paths
 				if (isSensitiveKey(envKey, PAYLOAD_HIDDEN, sensitive)) return match;
-				return env[envKey] ?? process.env[envKey] ?? match;
+				return env[envKey] ?? (currentContextExecution() ? undefined : process.env[envKey]) ?? match;
 			});
 			return resolved;
 		},
@@ -83,7 +84,7 @@ export function createContextEnv(settings: { get(key: string): unknown }, option
 				const key = `XCSH_${suffix}`;
 				// Never expand credential keys into payloads
 				if (isSensitiveKey(key, PAYLOAD_HIDDEN, sensitive)) return match;
-				const value = env[key] ?? process.env[key];
+				const value = env[key] ?? (currentContextExecution() ? undefined : process.env[key]);
 				if (value === undefined) return match;
 				// JSON-escape the substituted value to prevent injection
 				return JSON.stringify(value).slice(1, -1);

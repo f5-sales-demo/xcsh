@@ -1,23 +1,72 @@
 ---
 title: "Manage contexts and namespaces"
-description: "Store named tenant connections, activate the intended context, and scope operations to a namespace."
+description: "Select a tenant, check its connection, and manage saved context configuration."
 sidebar:
   order: 1
   label: "Contexts and namespaces"
 ---
 
-A context chooses the tenant endpoint and credential. A namespace chooses the resource scope inside that tenant. They are separate decisions.
+A context chooses the tenant endpoint and API credential. A namespace chooses the resource scope inside that tenant.
 
 ## How do I prevent a scope mistake?
 
-Launch with `xcsh --context <NAME>` and inspect `/context status`. For automation, pass `-n <NAMESPACE>` to the resource command instead of relying on ambient state. Stop if either value is unexpected.
+Run `/context` to open the picker. Type to search names, endpoints, namespaces or storage sources. Use Up/Down and Page Up/Page Down to move, then Enter to select. The active context receives initial focus. Local and global contexts with the same name remain separate choices.
+
+Selection applies immediately to future turns. `Checking` means authentication is still running; `Connected` confirms it succeeded. A failed check retains the selection and offers recovery through context actions. Running work, retries and descendant jobs retain the context captured when their turn began. When a selection differs from running work, xcsh displays `Current work: A · Next turn: B`.
+
+Use Ctrl+O for details, validation, editing, namespace, rename, deletion, environment and project-link actions. Customize this binding as `app.context.actions` in keybindings. Escape returns one level; at the root it closes the picker. `/context list` is an explicit read-only report. `/context show NAME` displays saved details without contacting the tenant; `/context validate NAME` checks credentials separately.
+
+An explicit `/context activate NAME`, `/context NAME` or `/context -` switches immediately. Unqualified names select global contexts. To select a local inline context or project pointer, use its local picker row.
+
+## Create or edit a context
+
+Run `/context create` or choose Create context. Enter the HTTPS tenant URL, masked API token and context name. Validation happens before the default namespace and review. Failed validation offers retry or correction while retaining other draft values. Console credentials are optional and available from the review.
+
+The review starts on Cancel and offers Save and activate or Save only. No file is written when a draft or review is cancelled. Save only leaves the context inactive. If saving succeeds but activation fails, retry completes activation without rewriting the saved file.
+
+Run `/context edit NAME` or select Edit in context actions. Saved values are prefilled. Leave token input empty to keep the saved token; enter a replacement explicitly. Changed credentials validate before saving. Editing preserves metadata, environment, knowledge sources and skill configuration. Renaming has a separate action.
 
 ## Where is context data stored?
 
-Context files live under `.xcsh/contexts/` at project scope or the xcsh user data directory. Never commit them: they can contain credentials and tenant identifiers.
+Global files live under `~/.config/xcsh/contexts/`, or `$XDG_CONFIG_HOME/xcsh/contexts/`. Project files live under `.xcsh/contexts/`. Keep credential-bearing files out of Git and shared transcripts.
 
-Select context and namespace before any live read or write, then issue a read-only command for an
-expected resource and inspect the returned tenant scope. Context files contain connection metadata
-and may reference credentials; keep them out of repositories and transcripts. Changing the active
-scope affects later commands only. After a temporary test, restore the prior context and namespace
-and repeat the read-only check.
+A project pointer links a local name to a global context. Its namespace and environment overrides remain in the project. URL or token editing opens the linked global context and identifies that scope. Inline local contexts remain local.
+
+`/context namespace` opens the session namespace selector with manual entry. `/context namespace NAME` applies a runtime override. It does not change the saved default. Validate the tenant and namespace with a read-only resource request before performing live work.
+
+If `XCSH_API_URL` is set in the process environment, it overrides saved selection. Unset it and restart before choosing a saved context. Token and namespace environment overrides retain their existing precedence.
+
+## Automate management
+
+`xcsh context` runs without menus or model inference. Bare invocation lists saved contexts. Use `--json` for structured output. Management commands require explicit names; `--source global` is the default, and `--source local` selects project storage.
+
+```sh
+xcsh context list --json
+xcsh context show demo --source global --json
+xcsh context validate demo --json
+xcsh context create demo https://tenant.example.test --token-stdin < token.txt
+xcsh context edit demo --namespace app
+xcsh context edit demo --token-stdin < replacement-token.txt
+xcsh context rename demo demonstration
+xcsh context delete demonstration --confirm
+xcsh context link project-demo demo --source local
+xcsh context unlink project-demo --source local
+xcsh context env demo set XCSH_REGION=example
+xcsh context env demo unset XCSH_REGION
+xcsh context import bundle.json --overwrite --json
+xcsh context import - --json < bundle.json
+xcsh context export demo > masked-bundle.json
+```
+
+Ordinary output masks credentials and sensitive environment values. Export emits the global bundle directly and masks tokens by default. An importable secret-bearing export requires explicit `--include-token`; protect that file privately. Imports preserve the existing bundle version, overwrite and masking rules.
+
+Usage errors exit 2, execution or authentication failures exit 1, and success exits 0. CLI commands never prompt for confirmation. Deletion requires `--confirm`.
+
+Session selection is explicit at launch:
+
+```sh
+xcsh --context demo
+xcsh --context project-demo --context-source local
+```
+
+There is no persistent global switch command. For scripted resource operations, pass an explicit namespace rather than relying on ambient session state.

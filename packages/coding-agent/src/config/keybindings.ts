@@ -27,6 +27,7 @@ interface AppKeybindings {
 	"app.model.select": true;
 	"app.model.selectTemporary": true;
 	"app.tools.expand": true;
+	"app.context.actions": true;
 	"app.editor.external": true;
 	"app.message.followUp": true;
 	"app.message.dequeue": true;
@@ -100,6 +101,7 @@ export const KEYBINDINGS = {
 		defaultKeys: "alt+p",
 		description: "Select temporary model for current session",
 	},
+	"app.context.actions": { defaultKeys: "ctrl+o", description: "Open selected context actions in the context picker" },
 	"app.tools.expand": {
 		defaultKeys: "ctrl+o",
 		description: "Expand tools",

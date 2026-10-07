@@ -96,9 +96,14 @@ describe("/plugin setup", () => {
 	it("opens the native context wizard for a guided Platform setup without a no-op review", async () => {
 		const children: unknown[] = [];
 		const setFocus = vi.fn();
-		const showHookCustom = vi.fn(() => {
-			throw new Error("a native guided setup must not open a generic review");
-		});
+		const showHookCustom = vi.fn(
+			(factory: (ui: unknown, theme: unknown, keys: unknown, done: (result: unknown) => void) => unknown) => {
+				const child = factory({ requestRender: vi.fn(), terminal: { rows: 24 } }, {}, {}, () => {});
+				children.push(child);
+				setFocus(child);
+				return new Promise(() => {});
+			},
+		);
 		const showError = vi.fn();
 		const plan = {
 			pluginDependencies: [],
@@ -137,7 +142,7 @@ describe("/plugin setup", () => {
 		expect(await executeBuiltinSlashCommand("/plugin setup platform", { ctx, handleBackgroundCommand() {} })).toBe(
 			true,
 		);
-		expect(showHookCustom).not.toHaveBeenCalled();
+		expect(showHookCustom).toHaveBeenCalledTimes(1);
 		expect(showError.mock.calls).toEqual([]);
 		expect(children.at(-1)?.constructor.name).toBe("ContextAddWizard");
 		expect(setFocus).toHaveBeenCalledWith(children.at(-1));

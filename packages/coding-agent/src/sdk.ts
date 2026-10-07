@@ -47,6 +47,7 @@ import { CursorExecHandlers } from "./cursor";
 import { ProfileBuilder } from "./person-profile/builder";
 import { type MachineProfileService, machineProfileService } from "./person-profile/machine-profile";
 import { type PersonProfileService, personProfileService } from "./person-profile/service";
+import { currentContextExecution } from "./services/context-execution";
 import { asyncQuestionsSupported } from "./tools/question-eligibility";
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
@@ -170,6 +171,7 @@ export interface CreateAgentSessionOptions {
 	agentDir?: string;
 	/** Named F5 XC context to bind explicitly for this session. */
 	contextName?: string;
+	contextSource?: "local" | "global";
 	/** Manager-provided tenant binding. Default: XCSH_SESSION_TENANT. */
 	sessionTenant?: string;
 	/** Spawns to allow. Default: "*" */
@@ -782,6 +784,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		// shouldRunSessionContextBootstrap. Cold workers and interactive CLI are
 		// unchanged (they have no spare marker).
 		if (
+			!currentContextExecution() &&
 			shouldRunSessionContextBootstrap({
 				XCSH_API_URL: process.env.XCSH_API_URL,
 				XCSH_WORKER_SPARE: process.env.XCSH_WORKER_SPARE,
@@ -790,7 +793,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const bound = existingSession.activeContextName; // resumed binding, if any
 			const tenantKey = options.sessionTenant ?? process.env.XCSH_SESSION_TENANT;
 			if (options.contextName) {
-				await svc.activate(options.contextName); // fires onContextChange → records context_change
+				await svc.activate(
+					{ name: options.contextName, source: options.contextSource ?? "global" },
+					undefined,
+					cwd,
+				); // fires onContextChange → records context_change
 				await svc.validateToken();
 			} else if (tenantKey) {
 				// Extension worker: match a context to this worker's tenant (shared with pool late-bind).
@@ -811,7 +818,18 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				const choice = chooseSessionContext(bound, autoBind);
 				if ("activate" in choice) {
 					try {
-						await svc.activate(choice.activate); // fires onContextChange → records context_change
+						await svc.activate(
+							{
+								name: choice.activate,
+								source: bound
+									? (existingSession.activeContextSource ?? "global")
+									: folderContext
+										? "local"
+										: "global",
+							},
+							undefined,
+							cwd,
+						); // fires onContextChange → records context_change
 						await svc.validateToken(); // authenticate; non-blocking
 					} catch (err) {
 						// Context deleted since last use, or auth failed → surface, never block.
@@ -1565,7 +1583,19 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				  }
 				| undefined;
 			try {
-				const status = contextServiceRef?.instance?.getStatus();
+				const selectedStatus = contextServiceRef?.instance?.getStatus();
+				const admitted = currentContextExecution();
+				const status = admitted
+					? {
+							...selectedStatus,
+							isConfigured: Boolean(admitted.environment.XCSH_API_URL && admitted.environment.XCSH_API_TOKEN),
+							activeContextTenant: admitted.environment.XCSH_TENANT,
+							activeContextNamespace: admitted.environment.XCSH_NAMESPACE,
+							activeContextUrl: admitted.environment.XCSH_API_URL,
+							credentialSource: "context",
+							authStatus: "unknown",
+						}
+					: selectedStatus;
 				// The LLM needs to anchor on tenant + namespace regardless of whether credentials
 				// come from a named context or from XCSH_API_URL/XCSH_API_TOKEN env vars. For the
 				// env-only path, activeContextName is null but activeContextTenant (derived from
@@ -1579,7 +1609,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						authStatus: status.authStatus,
 						apiUrl: status.activeContextUrl ?? undefined,
 					};
-					const sensitiveKeys = contextServiceRef?.instance?.getActiveSensitiveKeys();
+					const sensitiveKeys = admitted
+						? new Set(admitted.sensitiveKeys)
+						: contextServiceRef?.instance?.getActiveSensitiveKeys();
 					const ctxEnv = createContextEnv(settings, sensitiveKeys?.size ? { sensitiveKeys } : undefined);
 					const envVars = ctxEnv.getNonSensitiveVars();
 					if (Object.keys(envVars).length > 0) {
@@ -1935,6 +1967,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						status.activeContextName,
 						status.activeContextTenant,
 						status.activeContextNamespace ?? "default",
+						status.activeContextSource,
 					);
 				}
 			} catch {
@@ -2009,10 +2042,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			// Seed from current state so re-activating the same context, or firing for env-only
 			// mutations, does not produce a spurious "Context switched" directive.
 			const seedStatus = service.instance.getStatus();
-			let lastEmittedContext: { name: string; namespace: string } | undefined =
+			let lastEmittedContext: { name: string; namespace: string; source?: "local" | "global" } | undefined =
 				seedStatus.activeContextName && seedStatus.activeContextTenant
 					? {
 							name: seedStatus.activeContextName,
+							source: seedStatus.activeContextSource,
 							namespace: seedStatus.activeContextNamespace ?? "default",
 						}
 					: undefined;
@@ -2056,11 +2090,17 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					const changed =
 						!lastEmittedContext ||
 						currentName !== lastEmittedContext.name ||
+						currentStatus.activeContextSource !== lastEmittedContext.source ||
 						currentNamespace !== lastEmittedContext.namespace;
 					if (!changed) return;
 
 					// Append the context_change entry for replay/resume state reconstruction.
-					sessionManager.appendContextChange(currentName, currentTenant, currentNamespace);
+					sessionManager.appendContextChange(
+						currentName,
+						currentTenant,
+						currentNamespace,
+						currentStatus.activeContextSource,
+					);
 
 					// Push a custom_message into BOTH agent.state.messages AND the session log so
 					// the LLM sees the directive on its next turn. sendCustomMessage handles
@@ -2070,37 +2110,49 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					const prefix = nameChanged
 						? `[Context switched to ${currentName}]`
 						: `[F5 XC namespace changed to ${currentNamespace}]`;
-					void session.sendCustomMessage({
-						customType: "context_change_notice",
-						content:
-							`${prefix} Tenant: ${currentTenant}, ` +
-							`namespace: ${currentNamespace}. Target this tenant and namespace ` +
-							`for subsequent F5 XC operations.`,
-						display: true,
-						attribution: "agent",
-					});
-					lastEmittedContext = { name: currentName, namespace: currentNamespace };
-					void session.refreshBaseSystemPrompt();
+					void session.sendCustomMessage(
+						{
+							customType: "context_change_notice",
+							content:
+								`${prefix} Tenant: ${currentTenant}, ` +
+								`namespace: ${currentNamespace}. Target this tenant and namespace ` +
+								`for subsequent F5 XC operations.`,
+							display: true,
+							attribution: "agent",
+						},
+						{ deliverAs: "nextTurn" },
+					);
+					lastEmittedContext = {
+						name: currentName,
+						namespace: currentNamespace,
+						source: currentStatus.activeContextSource,
+					};
+					if (!session.isStreaming && !session.isRetrying) void session.refreshBaseSystemPrompt();
 					// Role 3: background-validate credentials after context switch so the
 					// LLM knows whether the new context is usable. Fire-and-forget — do
 					// not block the context change notification.
 					void (async () => {
 						try {
+							const activationGeneration = service.instance.getStatus().activationGeneration;
 							const { status: authStatus, latencyMs } = await service.instance.validateToken({
 								timeoutMs: 5000,
 							});
+							if (service.instance.getStatus().activationGeneration !== activationGeneration) return;
 							const qualifier =
 								authStatus === "connected"
 									? `connected${latencyMs ? ` (${latencyMs}ms)` : ""}`
 									: authStatus === "auth_error"
 										? "credential error -- token may be invalid or expired"
 										: "unreachable -- network error or tenant offline";
-							void session.sendCustomMessage({
-								customType: "context_validation_result",
-								content: `[Auth status: ${authStatus}] Credentials for ${currentTenant}: ${qualifier}.`,
-								display: true,
-								attribution: "agent",
-							});
+							void session.sendCustomMessage(
+								{
+									customType: "context_validation_result",
+									content: `[Auth status: ${authStatus}] Credentials for ${currentTenant}: ${qualifier}.`,
+									display: true,
+									attribution: "agent",
+								},
+								{ deliverAs: "nextTurn" },
+							);
 						} catch {
 							// Validation failed (e.g., no credentials configured) -- skip silently.
 						}
