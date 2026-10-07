@@ -1,4 +1,4 @@
-import { type Component, Editor, matchesKey, type TUI } from "@f5-sales-demo/pi-tui";
+import { type Component, Editor, matchesKey, type TUI, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
 import { getEditorTheme } from "../theme/theme";
 import {
 	matchesSelectorKey,
@@ -69,7 +69,7 @@ export class AsyncQuestionComponent implements Component {
 			this.tui.terminal.rows || 24,
 			"Answer question",
 			"Work continues while you answer",
-			[this.title],
+			[],
 			[
 				...(this.options ?? [])
 					.slice(0, 32)
@@ -78,7 +78,7 @@ export class AsyncQuestionComponent implements Component {
 					),
 				selectorProse("Other: type your answer"),
 			],
-			this.#editing ? this.#editor.render(inner) : [],
+			[...wrapTextWithAnsi(this.title, inner), ...(this.#editing ? this.#editor.render(inner) : [])],
 			["Enter: submit · Esc: answer later"],
 			{},
 		);

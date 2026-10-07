@@ -6118,11 +6118,7 @@ export class AgentSession {
 		this.agent.setModel(model);
 		this.#syncWaitingToolAvailability();
 		const toolPolicy = this.#resolveToolPolicyForModel?.(model);
-		if (toolPolicy) {
-			if (toolPolicy.toolNames) {
-				await this.#applyActiveToolsByName(toolPolicy.toolNames, { isCurrent });
-			}
-		}
+		await this.#applyActiveToolsByName(toolPolicy?.toolNames ?? this.getActiveToolNames(), { isCurrent });
 	}
 
 	#closeCodexProviderSessionsForHistoryRewrite(): void {

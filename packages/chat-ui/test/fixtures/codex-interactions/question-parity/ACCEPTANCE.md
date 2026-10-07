@@ -24,7 +24,7 @@ Observed source acceptance in a task-owned Herdr pane on Ubuntu Pro GPT-6.1 Sol:
 - Async release-note audience: natural tool selection, pending transcript item without focus transfer,
   immediate acknowledgement and independent outline preparation.
 - Live turn completion removes unanswered async editors; `/questions` reports no pending questions afterward.
-- A submitted End-users choice during a two-minute independent timing check produced a correlated
+- A submitted end users choice during a two-minute independent timing check produced a correlated
   Answer-recorded transcript and changed the model's stated audience while work continued.
 
 The MacBook LiteLLM source route produced the fully specified compact status report without clarification.
