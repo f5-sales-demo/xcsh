@@ -1,0 +1,122 @@
+[
+	{
+		"source": "community-f5-com",
+		"stablePath": "t/69411",
+		"url": "https://community.f5.com/t/69411"
+	},
+	{
+		"source": "community-f5-com",
+		"stablePath": "t/69781",
+		"url": "https://community.f5.com/t/69781"
+	},
+	{
+		"source": "community-f5-com",
+		"stablePath": "t/71350",
+		"url": "https://community.f5.com/t/71350"
+	},
+	{
+		"source": "community-f5-com",
+		"stablePath": "t/75640",
+		"url": "https://community.f5.com/t/75640"
+	},
+	{
+		"source": "community-f5-com",
+		"stablePath": "t/76970",
+		"url": "https://community.f5.com/t/76970"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "audit-logs-and-alerts/reference/auditlog-ref",
+		"url": "https://docs.cloud.f5.com/docs-v2/audit-logs-and-alerts/reference/auditlog-ref"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "content-delivery-network/how-to/cdn-mgmt/conf-cdn-dis",
+		"url": "https://docs.cloud.f5.com/docs-v2/content-delivery-network/how-to/cdn-mgmt/conf-cdn-dis"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "dns-management/how-to/delegate-domain",
+		"url": "https://docs.cloud.f5.com/docs-v2/dns-management/how-to/delegate-domain"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "docs/how-to/app-networking/cdn-distribution",
+		"url": "https://docs.cloud.f5.com/docs-v2/docs/how-to/app-networking/cdn-distribution"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "docs/how-to/app-networking/domain-delegation",
+		"url": "https://docs.cloud.f5.com/docs-v2/docs/how-to/app-networking/domain-delegation"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "docs/reference",
+		"url": "https://docs.cloud.f5.com/docs-v2/docs/reference"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "multi-cloud-app-connect/concepts/ocsp-staple",
+		"url": "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/concepts/ocsp-staple"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "multi-cloud-app-connect/how-to/adv-security/configure-ocsp",
+		"url": "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/how-to/adv-security/configure-ocsp"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "multi-cloud-app-connect/how-to/manage-multiple-custom-certificates",
+		"url": "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/how-to/manage-multiple-custom-certificates"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "multi-cloud-network-connect/how-to/adv-security/blindfold-tls-certs",
+		"url": "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-to/adv-security/blindfold-tls-certs"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "platform/how-to/volt-automation/vesctl",
+		"url": "https://docs.cloud.f5.com/docs-v2/platform/how-to/volt-automation/vesctl"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "platform/quickstart/app-delivery-network",
+		"url": "https://docs.cloud.f5.com/docs-v2/platform/quickstart/app-delivery-network"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "platform/quickstart/web-app-security-performance",
+		"url": "https://docs.cloud.f5.com/docs-v2/platform/quickstart/web-app-security-performance"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "platform/reference",
+		"url": "https://docs.cloud.f5.com/docs-v2/platform/reference"
+	},
+	{
+		"source": "docs-cloud-f5-com",
+		"stablePath": "platform/reference/migrate-api-ns-ref",
+		"url": "https://docs.cloud.f5.com/docs-v2/platform/reference/migrate-api-ns-ref"
+	},
+	{
+		"source": "my-f5-com",
+		"stablePath": "K000148731",
+		"url": "https://my.f5.com/manage/s/article/K000148731"
+	},
+	{
+		"source": "www-f5-com",
+		"stablePath": "products/distributed-cloud-services/distributed-cloud-console",
+		"url": "https://www.f5.com/products/distributed-cloud-services/distributed-cloud-console"
+	},
+	{
+		"source": "www-f5-com",
+		"stablePath": "products/distributed-cloud-services/distributed-cloud-waf",
+		"url": "https://www.f5.com/products/distributed-cloud-services/distributed-cloud-waf"
+	},
+	{
+		"source": "www-f5-com",
+		"stablePath": "products/distributed-cloud-services/l3-and-l7-ddos-attack-mitigation",
+		"url": "https://www.f5.com/products/distributed-cloud-services/l3-and-l7-ddos-attack-mitigation"
+	}
+]

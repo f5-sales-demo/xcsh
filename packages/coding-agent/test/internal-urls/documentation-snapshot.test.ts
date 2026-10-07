@@ -48,7 +48,7 @@ function document(source: string, title: string, slug: string, url: string, body
 	);
 }
 
-async function tarGz(entries: ReadonlyMap<string, Buffer>): Promise<Buffer> {
+async function tarGz(entries: Iterable<readonly [string, Buffer]>): Promise<Buffer> {
 	const pack = tar.pack();
 	const gzip = createGzip({ level: 9 });
 	const chunks: Buffer[] = [];
@@ -92,7 +92,11 @@ const MARKETING_PAGES = [
 	],
 ] as const;
 
-async function fixture(root: string, mutateManifest?: (value: Record<string, unknown>) => void) {
+async function fixture(
+	root: string,
+	mutateManifest?: (value: Record<string, unknown>) => void,
+	mutateMembers?: (members: Array<readonly [string, Buffer]>) => void,
+) {
 	const docsCloud = document(
 		"docs-cloud-f5-com",
 		"Protect Applications",
@@ -245,7 +249,9 @@ async function fixture(root: string, mutateManifest?: (value: Record<string, unk
 			.join(""),
 	);
 	payload.set("SHA256SUMS", sums);
-	const archive = await tarGz(payload);
+	const members = [...payload];
+	mutateMembers?.(members);
+	const archive = await tarGz(members);
 	await mkdir(root, { recursive: true });
 	await writeFile(path.join(root, "html-to-markdown-content.tar.gz"), archive);
 	await writeFile(
@@ -307,6 +313,58 @@ describe("offline documentation release", () => {
 	let root: string;
 	afterEach(async () => {
 		if (root) await rm(root, { recursive: true, force: true });
+	});
+
+	it.each([
+		"../escape",
+		"/absolute",
+		"content/docs-cloud-f5-com/../escape/index.md",
+		"content/docs-cloud-f5-com/%2e%2e/index.md",
+	])("rejects unsafe archive member %s with valid outer receipts", async name => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const { pin } = await fixture(root, undefined, members => members.push([name, Buffer.from("bad")]));
+		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow();
+	});
+	it("rejects duplicate archive members even when the outer archive is correctly attested", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const { pin } = await fixture(root, undefined, members => members.push(members[0]!));
+		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow("duplicate member");
+	});
+	it("rejects a corrupt receipt and an attested receipt with the wrong source commit", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const { pin } = await fixture(root);
+		const receiptPath = path.join(root, "publication.json");
+		const original = await readFile(receiptPath);
+		await writeFile(receiptPath, Buffer.alloc(original.length));
+		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow("asset digest mismatch");
+		const receipt = JSON.parse(original.toString());
+		receipt.source_commit = "4".repeat(40);
+		const bytes = Buffer.from(`${JSON.stringify(receipt)}\n`);
+		await writeFile(receiptPath, bytes);
+		pin.receipt_sha256 = sha256(bytes);
+		pin.assets["publication.json"] = { sha256: sha256(bytes), size_bytes: bytes.length };
+		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow("publication identity mismatch");
+	});
+	it("rejects a malformed gzip archive with a valid asset and publication envelope", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const { pin } = await fixture(root);
+		const bytes = Buffer.from("not a gzip stream");
+		await writeFile(path.join(root, "html-to-markdown-content.tar.gz"), bytes);
+		await writeFile(
+			path.join(root, "html-to-markdown-content.tar.gz.sha256"),
+			`${sha256(bytes)}  html-to-markdown-content.tar.gz\n`,
+		);
+		for (const name of ["html-to-markdown-content.tar.gz", "html-to-markdown-content.tar.gz.sha256"]) {
+			const value = await readFile(path.join(root, name));
+			pin.assets[name] = { sha256: sha256(value), size_bytes: value.length };
+		}
+		const receipt = JSON.parse(await readFile(path.join(root, "publication.json"), "utf8"));
+		for (const asset of receipt.assets) Object.assign(asset, pin.assets[asset.name]);
+		const publication = Buffer.from(`${JSON.stringify(receipt)}\n`);
+		await writeFile(path.join(root, "publication.json"), publication);
+		pin.assets["publication.json"] = { sha256: sha256(publication), size_bytes: publication.length };
+		pin.receipt_sha256 = sha256(publication);
+		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow();
 	});
 
 	it("rejects augmented pins and release directories", async () => {

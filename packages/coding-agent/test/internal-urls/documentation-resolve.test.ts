@@ -279,3 +279,9 @@ describe("xcsh://documentation", () => {
 		await expect(router().resolve(value)).rejects.toThrow();
 	});
 });
+
+it("supports verified long heading anchors while rejecting oversized routes", async () => {
+	const uri = "xcsh://documentation/my-f5-com/K000000001/index.md#";
+	await expect(router().resolve(uri + "a".repeat(293))).resolves.toBeDefined();
+	await expect(router().resolve(uri + "a".repeat(1025))).rejects.toThrow("Invalid documentation anchor");
+});

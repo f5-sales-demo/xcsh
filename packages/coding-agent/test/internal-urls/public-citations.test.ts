@@ -244,3 +244,15 @@ test("double-backtick protocol examples remain literal during citation projectio
 	expect(normalizeAssistantDocumentationCitations(fenced)).toContain("~~~~text\n" + read + "\n~~~~");
 	expect(normalizeAssistantDocumentationCitations(fenced)).toContain("(https://community.f5.com/t/65170)");
 });
+
+test("all October 7 retired destinations fail closed in current citations", async () => {
+	const retired = await Bun.file(
+		new URL("../../bench/fixtures/documentation-oct7-retired.json", import.meta.url),
+	).json();
+	for (const row of retired) {
+		expect(publicCitationForInternalUri(`xcsh://documentation/${row.source}/${row.stablePath}/index.md`)).toEqual({
+			readUri: `xcsh://documentation/${row.source}/${row.stablePath}/index.md`,
+			reason: "missing-public-mapping",
+		});
+	}
+});
