@@ -68,11 +68,17 @@ fn read_file(path: &str) -> Result<Zeroizing<Vec<u8>>> {
 	if !metadata.is_file() || metadata.len() > 2 * 1024 * 1024 {
 		return Err(fail("Blindfold input must be a file smaller than 2 MiB"));
 	}
-	let bytes = fs::read(path).map_err(|_| fail("Cannot read Blindfold input"))?;
+	use std::io::Read;
+	let file = fs::File::open(path).map_err(|_| fail("Cannot read Blindfold input"))?;
+	let mut bytes = Zeroizing::new(Vec::with_capacity(2 * 1024 * 1024 + 1));
+	file
+		.take(2 * 1024 * 1024 + 1)
+		.read_to_end(&mut bytes)
+		.map_err(|_| fail("Cannot read Blindfold input"))?;
 	if bytes.len() > 2 * 1024 * 1024 {
 		return Err(fail("Blindfold input exceeds 2 MiB"));
 	}
-	Ok(Zeroizing::new(bytes))
+	Ok(bytes)
 }
 fn password(env: Env, name: Option<&str>) -> Result<Zeroizing<String>> {
 	match name {
@@ -370,4 +376,110 @@ pub fn blindfold_prepare(env: Env, input: BlindfoldInput) -> Result<BlindfoldPre
 		algorithm,
 		tenant: public.data.tenant,
 	})
+}
+
+/// Secret bytes never cross N-API. Polling keeps pipe reads cancellable without changing fd flags.
+#[napi(ts_return_type = "Promise<BlindfoldPrepared>")]
+pub fn blindfold_encrypt_input(
+	input: BlindfoldInput,
+	signal: Option<Unknown>,
+) -> AsyncTask<crate::task::Blocking<BlindfoldPrepared>> {
+	use napi::JsValue;
+	let already_aborted = signal
+		.as_ref()
+		.and_then(|v| v.coerce_to_object().ok())
+		.and_then(|v| v.get_named_property::<bool>("aborted").ok())
+		.unwrap_or(false);
+	let cancel = crate::task::CancelToken::new(None, signal);
+	crate::task::blocking("blindfold_encrypt_input", cancel, move |cancel| {
+		if already_aborted {
+			return Err(fail("Blindfold operation cancelled"));
+		}
+		cancel.heartbeat()?;
+		if input.cert.is_some()
+			|| input.key.is_some()
+			|| input.bundle.is_some()
+			|| input.passphrase_env.is_some()
+		{
+			return Err(fail("Secret encryption accepts only an input file or stdin"));
+		}
+		let public: Document<PublicKey> = serde_json::from_str(&input.public_key_json)
+			.map_err(|_| fail("Malformed tenant public key document"))?;
+		let policy: Document<Policy> = serde_json::from_str(&input.policy_json)
+			.map_err(|_| fail("Malformed secret policy document"))?;
+		let source = input
+			.input
+			.as_deref()
+			.ok_or_else(|| fail("Secret input is required"))?;
+		let secret = if source == "-" {
+			read_stdin(&cancel)?
+		} else {
+			read_file(source)?
+		};
+		cancel.heartbeat()?;
+		let location =
+			encrypt(&secret, &public.data, &policy.data, input.max_encoded_size.unwrap_or(131_072))?;
+		cancel.heartbeat()?;
+		Ok(BlindfoldPrepared {
+			location,
+			certificate_url: None,
+			fingerprint: None,
+			expires_at: None,
+			algorithm: None,
+			tenant: public.data.tenant,
+		})
+	})
+}
+#[cfg(unix)]
+fn read_stdin(cancel: &crate::task::CancelToken) -> Result<Zeroizing<Vec<u8>>> {
+	// SAFETY: isatty only inspects the process-owned standard input descriptor.
+	if unsafe { libc::isatty(libc::STDIN_FILENO) } == 1 {
+		return Err(fail("Blindfold stdin must be redirected"));
+	}
+	let mut bytes = Zeroizing::new(Vec::with_capacity(2 * 1024 * 1024 + 1));
+	let mut chunk = Zeroizing::new([0u8; 8192]);
+	loop {
+		cancel.heartbeat()?;
+		let mut descriptor =
+			libc::pollfd { fd: libc::STDIN_FILENO, events: libc::POLLIN, revents: 0 };
+		// SAFETY: descriptor points to one initialized pollfd for this bounded poll.
+		let ready = unsafe { libc::poll(&raw mut descriptor, 1, 50) };
+		if ready < 0 {
+			if std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
+				continue;
+			}
+			return Err(fail("Cannot read Blindfold stdin"));
+		}
+		if ready == 0 {
+			continue;
+		}
+		if descriptor.revents & (libc::POLLERR | libc::POLLNVAL) != 0 {
+			return Err(fail("Cannot read Blindfold stdin"));
+		}
+		cancel.heartbeat()?;
+		// SAFETY: chunk owns a writable byte buffer of exactly the supplied length.
+		let count = unsafe { libc::read(libc::STDIN_FILENO, chunk.as_mut_ptr().cast(), chunk.len()) };
+		if count < 0 {
+			if matches!(
+				std::io::Error::last_os_error().kind(),
+				std::io::ErrorKind::Interrupted | std::io::ErrorKind::WouldBlock
+			) {
+				continue;
+			}
+			return Err(fail("Cannot read Blindfold stdin"));
+		}
+		if count == 0 {
+			break;
+		}
+		let count = count as usize;
+		if bytes.len() + count > 2 * 1024 * 1024 {
+			return Err(fail("Blindfold input exceeds 2 MiB"));
+		}
+		bytes.extend_from_slice(&chunk[..count]);
+	}
+	Ok(bytes)
+}
+#[cfg(not(unix))]
+fn read_stdin(_cancel: &crate::task::CancelToken) -> Result<Zeroizing<Vec<u8>>> {
+	Err(fail("Native Blindfold stdin is supported on Unix; use an input file on this platform"))
 }

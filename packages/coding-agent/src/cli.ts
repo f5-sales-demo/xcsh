@@ -54,6 +54,7 @@ process.title = APP_NAME;
 
 const commands: CommandEntry[] = [
 	{ name: "context", load: () => import("./commands/context").then(m => m.default) },
+	{ name: "request", load: () => import("./commands/request").then(m => m.default) },
 	{ name: "blindfold", load: () => import("./commands/blindfold").then(m => m.default) },
 	{ name: "remote-control", load: () => import("./commands/remote-control").then(m => m.default) },
 	{ name: "apply", load: () => import("./commands/apply").then(m => m.default) },
@@ -125,6 +126,17 @@ function requestsHelp(args: readonly string[]): boolean {
 
 /** Run the CLI with the given argv (no `process.argv` prefix). */
 export function runCli(argv: string[]): Promise<void> {
+	if (["blindfold", "request"].includes(argv[0] ?? "")) {
+		if (requestsHelp(argv.slice(1)))
+			return import("./commands/blindfold-help").then(m => m.showBlindfoldHelp(argv, APP_NAME));
+		return import("./commands/blindfold")
+			.then(m => m.runBlindfold(argv.slice(1), argv[0] === "request"))
+			.catch(error => {
+				if (!(error instanceof CliUsageError)) throw error;
+				writeCliOutput(process.stderr, `Error: ${error.message}\n`);
+				process.exitCode = 2;
+			});
+	}
 	// --help and --version are handled by run() directly, don't rewrite those.
 	// Everything else that isn't a known subcommand routes to "launch".
 	// Keeping this routing boundary explicit makes the CLI fallback easy to audit.

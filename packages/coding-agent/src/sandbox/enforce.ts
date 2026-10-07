@@ -65,6 +65,8 @@ interface PathArgSpec {
  */
 const TOOL_PATHS: Record<string, PathArgSpec[]> = {
 	xcsh_blindfold: [
+		{ keys: ["publicKey"], access: "read" },
+		{ keys: ["policyDocument"], access: "read" },
 		{ keys: ["input"], access: "read" },
 		{ keys: ["cert"], access: "read" },
 		{ keys: ["key"], access: "read" },
