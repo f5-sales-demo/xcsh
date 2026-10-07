@@ -42,7 +42,7 @@ The selected --output has xcsh format semantics. JSON remains the default. Rando
 ## Released acceptance
 
 Immutable [v22.15.0](https://github.com/f5-sales-demo/xcsh/releases/tag/v22.15.0), source `785fcc49cfabf4d097525639643fd3438a644412`, release workflow `37653536435`. Feature PR
-#4794 and release PR #4798 merged; full feature and release code/native matrices passed. Intel native notarization verification passed on rerun after Apple had accepted the
+PR #4794 and release PR #4798 merged; full feature and release code/native matrices passed. Intel native notarization verification passed on rerun after Apple had accepted the
 submission.
 
 Ubuntu standalone acceptance ran first, then an independent Mac Homebrew installation. Both created fresh private test CA/protected keys, retrieved JSON/YAML through a saved native
