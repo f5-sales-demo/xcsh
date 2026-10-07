@@ -1232,7 +1232,7 @@ test("complete resource HCL drafting starts from documented minimal configuratio
 test("complete ephemeral declaration can restrict supplied inputs", () => {
 	expect(
 		terraformTaskDestination(
-			'Draft HCL for ephemeral "xcsh_fixture" "example" with namespace = "lab". Use only this supported input field.',
+			'Draft HCL for ephemeral "xcsh_fixture" "example" with namespace = "demo-app". Use only this supported input field.',
 		),
 	).toEqual({ role: "fundamentals", anchor: "minimal-configuration" });
 });

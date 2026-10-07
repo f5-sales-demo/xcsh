@@ -1,0 +1,838 @@
+{
+  "historical": [
+    {
+      "name": "help-0",
+      "args": [
+        "version"
+      ],
+      "exit": 0,
+      "stdout": "0-2-24 394fae804d196ebd18fa24b14e39c178f64485d7 2021-08-24T17:39:03+00:00 rajreddy 1530665627 nil\n\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-1",
+      "args": [
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "A command line utility to interact with ves service.\n\nUsage:\n  vesctl [command]\n\nAvailable Commands:\n  completion    Generate completion script\n  configuration Configure object\n  help          Help about any command\n  request       Execute Commands\n  site          Manage site creation through view.aws_vpc apis\n  version       Print build version\n\nFlags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n  -h, --help                  help for vesctl\n      --hw-key                Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n\nUse \"vesctl [command] --help\" for more information about a command.\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-2",
+      "args": [
+        "request",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Execute Commands\n\nUsage:\n  vesctl request [command]\n\nAliases:\n  request, req, r\n\nExamples:\nvesctl request secrets encrypt --policy-doc temp_policy --public-key pub_key secret\n\nAvailable Commands:\n  command-sequence Execute a command sequence\n  rpc              RPC Invocation\n  secrets          Execute commands for secret_management\n\nFlags:\n  -h, --help   help for request\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hw-key                Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n\nUse \"vesctl request [command] --help\" for more information about a command.\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-3",
+      "args": [
+        "request",
+        "secrets",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Execute commands for secret_management\n\nUsage:\n  vesctl request secrets [command]\n\nExamples:\nvesctl request secrets encrypt --policy-doc temp_policy --public-key pub_key secret\n\nAvailable Commands:\n  build-blindfold-bundle Build blindfold secret bundle for k8s secret\n  encrypt                Encrypt secret\n  get-policy-document    Get Policy Document\n  get-public-key         Get Public Key\n\nFlags:\n  -h, --help   help for secrets\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hw-key                Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n\nUse \"vesctl request secrets [command] --help\" for more information about a command.\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-4",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Get Public Key\n\nUsage:\n  vesctl request secrets get-public-key [--key-version <key-version>] [flags]\n\nExamples:\nvesctl request secrets get-public-key --key-version 1\n\nFlags:\n  -h, --help                 help for get-public-key\n      --key-version uint32   Key Version to fetch\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hw-key                Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-5",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Get Policy Document\n\nUsage:\n  vesctl request secrets get-policy-document --namespace <namespace> --name <name> [flags]\n\nExamples:\nvesctl request secrets get-policy-document --namespace default --name my-secret-policy\n\nFlags:\n  -h, --help               help for get-policy-document\n      --name string        Name of the secret policy\n      --namespace string   Namespace of the secret policy (default \"default\")\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hw-key                Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-6",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Encrypt secret\n\nUsage:\n  vesctl request secrets encrypt [<flags>] <path-to-file-with-secret> [flags]\n\nExamples:\nvesctl request secrets encrypt --policy-doc temp_policy --public-key pub_key secret\n\nFlags:\n  -h, --help                     help for encrypt\n      --outfile string           File to write encrypted secret\n      --policy-document string   File containing policy document for secret policy\n      --public-key string        File containing public-key\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hw-key                Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "public-7",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=0"
+      ]
+    },
+    {
+      "name": "public-8",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--outfmt",
+        "json"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=0"
+      ]
+    },
+    {
+      "name": "public-9",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--outfmt",
+        "yaml"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=0"
+      ]
+    },
+    {
+      "name": "public-10",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--key-version",
+        "7"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=7"
+      ]
+    },
+    {
+      "name": "public-11",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--key-version",
+        "0"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=0"
+      ]
+    },
+    {
+      "name": "policy-12",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--namespace",
+        "shared",
+        "--name",
+        "ves-io-allow-volterra"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  name: ves-io-allow-volterra\n  namespace: shared\n  policyId: \"101\"\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/namespaces/shared/secret_policys/ves-io-allow-volterra/get_policy_document?name=ves-io-allow-volterra&namespace=shared"
+      ]
+    },
+    {
+      "name": "policy-13",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--namespace",
+        "shared",
+        "--name",
+        "ves-io-allow-volterra",
+        "--outfmt",
+        "json"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  name: ves-io-allow-volterra\n  namespace: shared\n  policyId: \"101\"\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/namespaces/shared/secret_policys/ves-io-allow-volterra/get_policy_document?name=ves-io-allow-volterra&namespace=shared"
+      ]
+    },
+    {
+      "name": "policy-14",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--namespace",
+        "shared",
+        "--name",
+        "ves-io-allow-volterra",
+        "--outfmt",
+        "yaml"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  name: ves-io-allow-volterra\n  namespace: shared\n  policyId: \"101\"\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/namespaces/shared/secret_policys/ves-io-allow-volterra/get_policy_document?name=ves-io-allow-volterra&namespace=shared"
+      ]
+    },
+    {
+      "name": "policy-default",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--name",
+        "custom"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  name: ves-io-allow-volterra\n  namespace: shared\n  policyId: \"101\"\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/namespaces/default/secret_policys/custom/get_policy_document?name=custom&namespace=default"
+      ]
+    },
+    {
+      "name": "policy-missing-name",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document"
+      ],
+      "exit": 1,
+      "stdout": "required flag(s) \"name\" not set\n",
+      "stderr": "Error: required flag(s) \"name\" not set\nUsage:\n  vesctl request secrets get-policy-document --namespace <namespace> --name <name> [flags]\n\nExamples:\nvesctl request secrets get-policy-document --namespace default --name my-secret-policy\n\nFlags:\n  -h, --help               help for get-policy-document\n      --name string        Name of the secret policy\n      --namespace string   Namespace of the secret policy (default \"default\")\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hw-key                Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n\n",
+      "paths": []
+    },
+    {
+      "name": "encrypt-native-17",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/pub",
+        "--policy-document",
+        "/fixture/policy",
+        "/fixture/secret"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "29f75e2df1bcd317cce2ffc621a0b47a181ff283e252fd61103497680f513ca9",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-native-18",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/pub",
+        "--policy-document",
+        "/fixture/policy",
+        "/fixture/secret",
+        "--outfmt",
+        "json"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "13db7eeb1a60b4dd61d1ee52b9b020b67172c23ea27950f08a01ca01d5070351",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-native-19",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/pub",
+        "--policy-document",
+        "/fixture/policy",
+        "/fixture/secret",
+        "--outfmt",
+        "yaml"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "bec20f379c1b64029a18716186a02069401a5eed3072fa755fca71f2fca68174",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-native-20",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/pub",
+        "--policy-document",
+        "/fixture/policy",
+        "/fixture/secret",
+        "--outfile",
+        "/fixture/historical-raw"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_lines": 0
+    },
+    {
+      "name": "encrypt-historical-21",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/historical-pub",
+        "--policy-document",
+        "/fixture/historical-policy",
+        "/fixture/secret"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "a160b82f1441492369fa7b34db713b48268de7fe422569d3ee4e4b6cc9cb843e",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-historical-22",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/historical-pub",
+        "--policy-document",
+        "/fixture/historical-policy",
+        "/fixture/secret",
+        "--outfmt",
+        "json"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "ad87f0209f31da1e7be2fbaa7571d6bb31b3ac9e9bf15637fb6b3565884d9a45",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-historical-23",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/historical-pub",
+        "--policy-document",
+        "/fixture/historical-policy",
+        "/fixture/secret",
+        "--outfmt",
+        "yaml"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "92ca143bd1ad96e05a5d6f2c60bc18e28ddcd49ffeef02d8cda65414c3ffcaf2",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-historical-24",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/historical-pub",
+        "--policy-document",
+        "/fixture/historical-policy",
+        "/fixture/secret",
+        "--outfile",
+        "/fixture/historical-raw"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_lines": 0
+    },
+    {
+      "name": "binary-outfile",
+      "bytes": 2622,
+      "prefix_hex": "0000000e6578616d706c652d74656e616e7400000001000000000000006502000000030100010000",
+      "sha256": "bfcc2bf81f9d454038d1b4f51c5dac22a82729068d48010faefb1ec2152cdd05"
+    }
+  ],
+  "0.2.47": [
+    {
+      "name": "help-0",
+      "args": [
+        "version"
+      ],
+      "exit": 0,
+      "stdout": "branch: 0-2-47 amd64 <br>commit-sha: 49f77d9aea7f608daf7422b9d47c7b2fbc337d16 2023-10-11T09:36:04+00:00 mceloud 5268387815 nil <br>\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-1",
+      "args": [
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "A command line utility to interact with ves service.\n\nUsage:\n  vesctl [command]\n\nAvailable Commands:\n  api-endpoint  Execute commands for API Endpoint Discovery and Control\n  completion    Generate completion script\n  configuration Configure object\n  help          Help about any command\n  request       Execute Commands\n  site          Manage site creation through view public cloud site apis\n  version       Print build version\n\nFlags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hardwareKey           Use yubikey for TLS connection\n  -h, --help                  help for vesctl\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n\nUse \"vesctl [command] --help\" for more information about a command.\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-2",
+      "args": [
+        "request",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Execute Commands\n\nUsage:\n  vesctl request [command]\n\nAliases:\n  request, req, r\n\nExamples:\nvesctl request secrets encrypt --policy-doc temp_policy --public-key pub_key secret\n\nAvailable Commands:\n  command-sequence Execute a command sequence\n  rpc              RPC Invocation\n  secrets          Execute commands for secret_management\n\nFlags:\n  -h, --help   help for request\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hardwareKey           Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n\nUse \"vesctl request [command] --help\" for more information about a command.\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-3",
+      "args": [
+        "request",
+        "secrets",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Execute commands for secret_management\n\nUsage:\n  vesctl request secrets [command]\n\nExamples:\nvesctl request secrets encrypt --policy-doc temp_policy --public-key pub_key secret\n\nAvailable Commands:\n  build-blindfold-bundle Build blindfold secret bundle for k8s secret\n  encrypt                Encrypt secret\n  get-policy-document    Get Policy Document\n  get-public-key         Get Public Key\n  secret-info            Secret Info\n\nFlags:\n  -h, --help   help for secrets\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hardwareKey           Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n\nUse \"vesctl request secrets [command] --help\" for more information about a command.\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-4",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Get Public Key\n\nUsage:\n  vesctl request secrets get-public-key [--key-version <key-version>] [flags]\n\nExamples:\nvesctl request secrets get-public-key --key-version 1\n\nFlags:\n  -h, --help                 help for get-public-key\n      --key-version uint32   Key Version to fetch\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hardwareKey           Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-5",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Get Policy Document\n\nUsage:\n  vesctl request secrets get-policy-document --namespace <namespace> --name <name> [flags]\n\nExamples:\nvesctl request secrets get-policy-document --namespace default --name my-secret-policy\n\nFlags:\n  -h, --help               help for get-policy-document\n      --name string        Name of the secret policy\n      --namespace string   Namespace of the secret policy (default \"default\")\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hardwareKey           Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "help-6",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "Encrypt secret\n\nUsage:\n  vesctl request secrets encrypt [<flags>] <path-to-file-with-secret> [flags]\n\nExamples:\nvesctl request secrets encrypt --policy-doc temp_policy --public-key pub_key secret\n\nFlags:\n  -h, --help                     help for encrypt\n      --outfile string           File to write encrypted secret\n      --policy-document string   File containing policy document for secret policy\n      --public-key string        File containing public-key\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hardwareKey           Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n",
+      "stderr": "",
+      "paths": []
+    },
+    {
+      "name": "public-7",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=0"
+      ]
+    },
+    {
+      "name": "public-8",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--outfmt",
+        "json"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=0"
+      ]
+    },
+    {
+      "name": "public-9",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--outfmt",
+        "yaml"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=0"
+      ]
+    },
+    {
+      "name": "public-10",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--key-version",
+        "7"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=7"
+      ]
+    },
+    {
+      "name": "public-11",
+      "args": [
+        "request",
+        "secrets",
+        "get-public-key",
+        "--key-version",
+        "0"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  keyVersion: 1\n  modulusBase64: tWRnBlT5USfZE//jpYaeOis+p4N38tsDfz/blhwZVr8sSiw6UFDDfjIjHzSoryfX7g8gcZcusJV5dGzS1/jUGgcb7SJJbeNHVO3gPXnCtNx3T44wXxZMOYPiQj7pHMLQnOQY+/yuI8QzzLxdKRLuxKElzp2erX7UcWdlLw4jYWT8Dt0GkeQxz7VD6IiLb5rx+b9lXljTao3B1WZpO2W4imQiVymKQCuM+ZtjsSEdPpaVcfLCZmyj+SvDreagtAhhL7keSgmR0ljvddFxZmRuC75U4qUFdECymZukM7vCkhWu91VbgmIjsf4rxiqg5s+dhD/2GWSG2KsrmTZhmfmZ8Q==\n  publicExponentBase64: AQAB\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/get_public_key?key_version=0"
+      ]
+    },
+    {
+      "name": "policy-12",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--namespace",
+        "shared",
+        "--name",
+        "ves-io-allow-volterra"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  name: ves-io-allow-volterra\n  namespace: shared\n  policyId: \"101\"\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/namespaces/shared/secret_policys/ves-io-allow-volterra/get_policy_document?name=ves-io-allow-volterra&namespace=shared"
+      ]
+    },
+    {
+      "name": "policy-13",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--namespace",
+        "shared",
+        "--name",
+        "ves-io-allow-volterra",
+        "--outfmt",
+        "json"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  name: ves-io-allow-volterra\n  namespace: shared\n  policyId: \"101\"\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/namespaces/shared/secret_policys/ves-io-allow-volterra/get_policy_document?name=ves-io-allow-volterra&namespace=shared"
+      ]
+    },
+    {
+      "name": "policy-14",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--namespace",
+        "shared",
+        "--name",
+        "ves-io-allow-volterra",
+        "--outfmt",
+        "yaml"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  name: ves-io-allow-volterra\n  namespace: shared\n  policyId: \"101\"\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/namespaces/shared/secret_policys/ves-io-allow-volterra/get_policy_document?name=ves-io-allow-volterra&namespace=shared"
+      ]
+    },
+    {
+      "name": "policy-default",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document",
+        "--name",
+        "custom"
+      ],
+      "exit": 0,
+      "stdout": "data:\n  name: ves-io-allow-volterra\n  namespace: shared\n  policyId: \"101\"\n  tenant: example-tenant\n",
+      "stderr": "",
+      "paths": [
+        "/api/secret_management/namespaces/default/secret_policys/custom/get_policy_document?name=custom&namespace=default"
+      ]
+    },
+    {
+      "name": "policy-missing-name",
+      "args": [
+        "request",
+        "secrets",
+        "get-policy-document"
+      ],
+      "exit": 1,
+      "stdout": "required flag(s) \"name\" not set\n",
+      "stderr": "Error: required flag(s) \"name\" not set\nUsage:\n  vesctl request secrets get-policy-document --namespace <namespace> --name <name> [flags]\n\nExamples:\nvesctl request secrets get-policy-document --namespace default --name my-secret-policy\n\nFlags:\n  -h, --help               help for get-policy-document\n      --name string        Name of the secret policy\n      --namespace string   Namespace of the secret policy (default \"default\")\n\nGlobal Flags:\n  -a, --cacert string         Server CA cert file path\n  -c, --cert string           Client cert file path\n      --config string         A configuration file to use for API gateway URL and credentials (default \"/root/.vesconfig\")\n      --hardwareKey           Use yubikey for TLS connection\n  -k, --key string            Client key file path\n      --outfmt string         Output format for command\n  -o, --output string         Output dir for command (default \"./\")\n      --p12-bundle string     Client P12 bundle (key+cert) file path. Any password for this file should be in environment variable VES_P12_PASSWORD\n  -u, --server-urls strings   API endpoint URL (default [http://localhost:8001])\n      --show-curl             Emit requests from program in CURL format\n      --timeout int           Timeout (in seconds) for command to finish (default 5)\n\n",
+      "paths": []
+    },
+    {
+      "name": "encrypt-native-17",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/pub",
+        "--policy-document",
+        "/fixture/policy",
+        "/fixture/secret"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "97a260c0d3ed5104705f8458e4b3c01d4b92d04b52a67691931f7c1644307ec7",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-native-18",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/pub",
+        "--policy-document",
+        "/fixture/policy",
+        "/fixture/secret",
+        "--outfmt",
+        "json"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "e1faa7556bf6d3858ce12f98c2609dcec3eeae0c22a19eddbaac0c8e01e81d09",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-native-19",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/pub",
+        "--policy-document",
+        "/fixture/policy",
+        "/fixture/secret",
+        "--outfmt",
+        "yaml"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "08f2d15f0a3e49fab4251e684b05e37faf0f40aebf08f29de4f110699d5aec13",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-native-20",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/pub",
+        "--policy-document",
+        "/fixture/policy",
+        "/fixture/secret",
+        "--outfile",
+        "/fixture/0.2.47-raw"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_lines": 0
+    },
+    {
+      "name": "encrypt-0.2.47-21",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/0.2.47-pub",
+        "--policy-document",
+        "/fixture/0.2.47-policy",
+        "/fixture/secret"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "3f078dd2b0dd484bab555c66306481bf799aa7d31ab00985c7a963fbf556f6f4",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-0.2.47-22",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/0.2.47-pub",
+        "--policy-document",
+        "/fixture/0.2.47-policy",
+        "/fixture/secret",
+        "--outfmt",
+        "json"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "9d4f5e461c45784ac1521712090dbde427076b2e577b4657aed502e842e9efec",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-0.2.47-23",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/0.2.47-pub",
+        "--policy-document",
+        "/fixture/0.2.47-policy",
+        "/fixture/secret",
+        "--outfmt",
+        "yaml"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "b454c8c8601b7fe9a02bcb66408ee8da78d590f2db1a5ae9b2208dc001577aa0",
+      "stdout_bytes": 3532,
+      "stdout_lines": 2
+    },
+    {
+      "name": "encrypt-0.2.47-24",
+      "args": [
+        "request",
+        "secrets",
+        "encrypt",
+        "--public-key",
+        "/fixture/0.2.47-pub",
+        "--policy-document",
+        "/fixture/0.2.47-policy",
+        "/fixture/secret",
+        "--outfile",
+        "/fixture/0.2.47-raw"
+      ],
+      "exit": 0,
+      "stderr": "",
+      "paths": [],
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_lines": 0
+    },
+    {
+      "name": "binary-outfile",
+      "bytes": 2622,
+      "prefix_hex": "0000000e6578616d706c652d74656e616e7400000001000000000000006502000000030100010000",
+      "sha256": "5dd219d3fd1f02b8cc00335b4ceb737a9b7dfca31891d9fafd39c4a91a6326a1"
+    }
+  ]
+}

@@ -214,8 +214,8 @@ def main() -> None:
         parser.add_argument("--" + option, type=Path, required=True)
     parser.add_argument("--ids", required=True)
     parser.add_argument("--regression", action="store_true", required=True)
-    parser.add_argument("--codex", default="/home/robin/.local/bin/codex")
-    parser.add_argument("--bun", default="/home/robin/.bun/bin/bun")
+    parser.add_argument("--codex", default=str(Path.home() / ".local/bin/codex"))
+    parser.add_argument("--bun", default=str(Path.home() / ".bun/bin/bun"))
     args = parser.parse_args()
     if os.uname().sysname != "Linux":
         message = "Iterative model diagnostics must run on Ubuntu"

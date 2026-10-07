@@ -1,5 +1,11 @@
 # Blindfold secrets compatibility
 
+Historical v22.15.0 contract. Its selected interfaces did not prove executable-only
+replacement in the BYOC article: location output, snake_case documents and policy
+defaults differ from vesctl. [Issue 4803 acceptance](blindfold-interchangeability-4803.md)
+corrects that scope and records the new container interchangeability qualification.
+
+
 Frozen reference, before implementation: Docker Hub `kreynoldsf5/vesctl@sha256:6ef8dc145b53130273bca4d3400ff9349e057ae36ed8e36d943eb1465e7edd82`.
 Version `0-2-24`, source `394fae804d196ebd18fa24b14e39c178f64485d7`, build timestamp `2021-08-24T17:39:03+00:00`.
 Published image pulled on Ubuntu. All six help levels and version returned exit 0, help on stdout, empty stderr.

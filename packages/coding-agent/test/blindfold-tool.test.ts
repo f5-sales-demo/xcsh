@@ -135,7 +135,9 @@ describe("Blindfold admitted tenant snapshot", () => {
 		const seen: Array<{ url: string; token: string | null }> = [];
 		globalThis.fetch = (async (url, init) => {
 			seen.push({ url: String(url), token: new Headers(init?.headers).get("Authorization") });
-			return Response.json({ data: { tenant: "a" } });
+			return Response.json({
+				data: { tenant: "example-tenant", key_version: 1, modulus_base64: "AQ==", public_exponent_base64: "AQAB" },
+			});
 		}) as typeof fetch;
 		const adapter = new XcshBlindfoldTool({
 			cwd: root,

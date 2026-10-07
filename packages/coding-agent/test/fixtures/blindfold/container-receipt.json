@@ -1,0 +1,12 @@
+{
+  "image": "kreynoldsf5/vesctl@sha256:6ef8dc145b53130273bca4d3400ff9349e057ae36ed8e36d943eb1465e7edd82",
+  "binary_sha256": "35d29e517498feff9f12a41ff702e90f10a1cc8a20c589c3e524474dbfe53801",
+  "matrix_cases": 16,
+  "reference_format_cases": 12,
+  "independent_recovery": true,
+  "authenticated_integrity": true,
+  "binary_outfile": true,
+  "article_pipeline": true,
+  "synthetic_credentials_only": true,
+  "offline_containers_network": "none"
+}

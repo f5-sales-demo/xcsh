@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- `request secrets encrypt` now emits bare base64; its policy retrieval requires `--name` and defaults to namespace `default`. Public documents default to camelCase YAML. The article consumer adds exactly one `string:///`. Canonical `blindfold` keeps snake_case JSON and location defaults.
+- Both paths accept known camelCase/snake_case aliases and explicit encryption encoding; compatibility `--outfile` writes raw envelopes securely, `--outfmt` selects public document format, and public-key retrieval supports exact unsigned key versions. No legacy authentication or runtime vesctl dependency is introduced.
+
+
 ### Added
 
 - Added shared host-aware software setup with live management probes, reviewed package-manager routes, checksum-verified per-user archives, and asynchronous CLI/TUI setup preparation ([#4598](https://github.com/f5-sales-demo/xcsh/issues/4598)).

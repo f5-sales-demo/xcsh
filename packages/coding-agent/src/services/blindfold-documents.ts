@@ -6,15 +6,57 @@ const label = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 function object(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
 }
-/** Only the observed API data wrapper is accepted; unrelated fields never reach native encryption. */
+const aliases: Readonly<Record<string, string>> = {
+	keyVersion: "key_version",
+	modulusBase64: "modulus_base64",
+	publicExponentBase64: "public_exponent_base64",
+	policyId: "policy_id",
+	policyInfo: "policy_info",
+	clientName: "client_name",
+	clientNameMatcher: "client_name_matcher",
+	clientSelector: "client_selector",
+	exactValues: "exact_values",
+	regexValues: "regex_values",
+};
+function canonicalize(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(canonicalize);
+	if (!object(value)) return value;
+	const entries = new Map<string, unknown>();
+	for (const [key, item] of Object.entries(value)) {
+		const name = aliases[key] ?? key;
+		const normalized = canonicalize(item);
+		if (entries.has(name) && !equal(entries.get(name), normalized))
+			throw new Error("Conflicting Blindfold field aliases");
+		entries.set(name, normalized);
+	}
+	return Object.fromEntries(entries);
+}
+function equal(a: unknown, b: unknown): boolean {
+	if (Object.is(a, b)) return true;
+	if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => equal(v, b[i]));
+	if (object(a) && object(b))
+		return (
+			Object.keys(a).length === Object.keys(b).length &&
+			Object.keys(a).every(k => Object.hasOwn(b, k) && equal(a[k], b[k]))
+		);
+	return false;
+}
+/** Preserve public information for retrieval; only explicitly known aliases change spelling. */
+export function canonicalBlindfoldDocument(value: unknown, kind: "public-key" | "policy") {
+	const material = canonicalize(value);
+	normalizeBlindfoldDocument(material, kind);
+	return material;
+}
+/** Native encryption receives only required, validated fields. */
 export function normalizeBlindfoldDocument(value: unknown, kind: "public-key" | "policy") {
-	if (!object(value) || !object(value.data)) throw new Error("Malformed Blindfold public material document");
+	const material = canonicalize(value);
+	if (!object(material) || !object(material.data)) throw new Error("Malformed Blindfold public material document");
 	const fields =
 		kind === "public-key"
 			? ["tenant", "key_version", "modulus_base64", "public_exponent_base64"]
 			: ["tenant", "policy_id"];
-	if (fields.some(field => field in value)) throw new Error("Ambiguous Blindfold public material document");
-	const data = value.data;
+	if (fields.some(field => field in material)) throw new Error("Ambiguous Blindfold public material document");
+	const data = material.data;
 	if (typeof data.tenant !== "string" || !label.test(data.tenant))
 		throw new Error("Malformed Blindfold tenant identity");
 	if (kind === "public-key") {
@@ -26,7 +68,8 @@ export function normalizeBlindfoldDocument(value: unknown, kind: "public-key" | 
 				v =>
 					typeof v !== "string" ||
 					!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(v) ||
-					v.length === 0,
+					v.length === 0 ||
+					Buffer.from(v, "base64").toString("base64") !== v,
 			)
 		)
 			throw new Error("Malformed Blindfold public key fields");
@@ -37,6 +80,32 @@ export function normalizeBlindfoldDocument(value: unknown, kind: "public-key" | 
 	)
 		throw new Error("Malformed Blindfold policy ID");
 	return { data: Object.fromEntries(fields.map(field => [field, data[field]])) };
+}
+export function parseBlindfoldDocument(text: string): unknown {
+	if (Buffer.byteLength(text, "utf8") > MAX_DOCUMENT) throw new Error("Blindfold public material exceeds 2 MiB");
+	const docs = parseAllDocuments(text, { uniqueKeys: true, merge: false });
+	if (docs.length !== 1 || docs[0]!.errors.length)
+		throw new Error("Malformed or ambiguous Blindfold public material document");
+	return docs[0]!.toJS({ maxAliasCount: 0 });
+}
+export async function readBlindfoldResponse(response: Response): Promise<unknown> {
+	const reader = response.body?.getReader();
+	if (!reader) throw new Error("Missing Blindfold public material response");
+	const chunks: Uint8Array[] = [];
+	let size = 0;
+	try {
+		for (;;) {
+			const chunk = await reader.read();
+			if (chunk.done) break;
+			size += chunk.value.length;
+			if (size > MAX_DOCUMENT) throw new Error("Blindfold public material exceeds 2 MiB");
+			chunks.push(chunk.value);
+		}
+		return parseBlindfoldDocument(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
+	} finally {
+		await reader.cancel().catch(() => {});
+		reader.releaseLock();
+	}
 }
 export async function readBlindfoldDocument(filename: string, kind: "public-key" | "policy") {
 	let text: string;
@@ -61,13 +130,18 @@ export async function readBlindfoldDocument(filename: string, kind: "public-key"
 		throw new Error("Cannot read Blindfold public material; require a file no larger than 2 MiB");
 	}
 	try {
-		const docs = parseAllDocuments(text, { uniqueKeys: true, merge: false });
-		if (docs.length !== 1 || docs[0]!.errors.length) throw new Error();
-		return normalizeBlindfoldDocument(docs[0]!.toJS({ maxAliasCount: 0 }), kind);
+		return normalizeBlindfoldDocument(parseBlindfoldDocument(text), kind);
 	} catch {
 		throw new Error("Malformed or ambiguous Blindfold public material document");
 	}
 }
-export function serializeBlindfoldDocument(material: unknown, output: "json" | "yaml" = "json") {
-	return output === "yaml" ? stringify(material) : `${JSON.stringify(material, null, 2)}\n`;
+function camelize(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(camelize);
+	if (!object(value)) return value;
+	const reverse = Object.fromEntries(Object.entries(aliases).map(([camel, snake]) => [snake, camel]));
+	return Object.fromEntries(Object.entries(value).map(([key, item]) => [reverse[key] ?? key, camelize(item)]));
+}
+export function serializeBlindfoldDocument(material: unknown, output: "json" | "yaml" = "json", compatibility = false) {
+	const value = compatibility ? camelize(material) : material;
+	return output === "yaml" ? stringify(value) : `${JSON.stringify(value, null, 2)}\n`;
 }

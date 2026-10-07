@@ -60,9 +60,20 @@ describe("Blindfold CLI native process boundary", () => {
 			const r = await result(child);
 			expect(r.code).toBe(0);
 			expect(r.err).toBe("");
-			expect(r.out).toMatch(/^string:\/\/\/[A-Za-z0-9+/]+=*\n$/);
-			expect(r.out.trim().length).toBe(3506);
+			expect(r.out).toMatch(/^[A-Za-z0-9+/]+=*\n$/);
+			expect(r.out.trim().length).toBe(3496);
 		}
+	}, 60000);
+	test("raw outfile suppresses stdout and explicit location preserves canonical output", async () => {
+		const raw = join(dir, "raw-envelope");
+		const report = join(dir, "raw-report");
+		const r = await result(start([...base, join(dir, "secret"), "--outfile", raw, "--result-file", report], bytes));
+		expect(r).toEqual({ code: 0, out: "", err: "" });
+		expect((await Bun.file(raw).bytes()).slice(0, 4)).toEqual(new Uint8Array([0, 0, 0, 14]));
+		expect(await Bun.file(report).text()).not.toContain("string:///");
+		const location = await result(start([...base, join(dir, "secret"), "--encoding", "location"], bytes));
+		expect(location.code).toBe(0);
+		expect(location.out).toMatch(/^string:\/\/\/[A-Za-z0-9+/]+=*\n$/);
 	}, 60000);
 	test("usage errors produce stderr and never wait for input", async () => {
 		for (const args of [
