@@ -7,7 +7,7 @@
   "report": "v1240-reproducible-corpus-view-audit.json.gz",
   "sha256": "c29f63cd61c43ae2c3df25ae963cf37aa4ce56c0fdcfc6fb74ca2a95acec857e",
   "gzip_sha256": "48f9efa90c3a17af719da233d2bc8edbbd72dff267d7f74431bef6deece6c3e2",
-  "command": "sudo -n unshare --net runuser -u robin -- /home/robin/.bun/bin/bun packages/coding-agent/bench/terraform-retrieval/audit-corpus-views.ts --assets <embedded-assets.json> --cache <cache> --output <report.json>",
+  "command": "sudo -n unshare --net runuser -u <user> -- <bun-executable> packages/coding-agent/bench/terraform-retrieval/audit-corpus-views.ts --assets <embedded-assets.json> --cache <cache> --output <report.json>",
   "summary": {
     "source_only": true,
     "qualification_passed": false,
