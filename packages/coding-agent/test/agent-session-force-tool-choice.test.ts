@@ -179,3 +179,12 @@ it("a tool removed while the force chooser is open cannot be queued", async () =
 	expect(modelCalls).toBe(0);
 	expect(toolCalls).toBe(0);
 });
+
+it("registry diagnostics retain dormant tools without changing active tools or choices", () => {
+	const active = session.getActiveToolNames();
+	session.toolChoiceQueue.pushOnce("none", { label: "fixture" });
+	expect(session.getRegisteredToolNames()).toEqual(["bash", "write"]);
+	expect(session.getActiveToolNames()).toEqual(active);
+	expect(session.toolChoiceQueue.snapshot()).toEqual({ queuedLabels: ["fixture"] });
+	expect(session.toolChoiceQueue.nextToolChoice()).toBe("none");
+});

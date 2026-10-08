@@ -279,3 +279,26 @@ describe("onInvoked / peekInFlightInvoker", () => {
 		expect(invocationCount).toBe(1);
 	});
 });
+
+it("diagnostic snapshot does not advance generators or consume in-flight choice", () => {
+	const queue = new ToolChoiceQueue();
+	let advances = 0;
+	function* choices() {
+		advances++;
+		yield "required" as const;
+		advances++;
+		yield "none" as const;
+	}
+	queue.push(choices(), { label: "fixture" });
+	expect(queue.snapshot()).toEqual({ queuedLabels: ["fixture"] });
+	expect(queue.snapshot()).toEqual({ queuedLabels: ["fixture"] });
+	expect(advances).toBe(0);
+	expect(queue.nextToolChoice()).toBe("required");
+	expect(queue.snapshot()).toEqual({ queuedLabels: ["fixture"], inFlight: { label: "fixture", choice: "required" } });
+	const copy = queue.snapshot();
+	copy.queuedLabels.length = 0;
+	expect(queue.snapshot().queuedLabels).toEqual(["fixture"]);
+	expect(advances).toBe(1);
+	queue.resolve();
+	expect(queue.nextToolChoice()).toBe("none");
+});

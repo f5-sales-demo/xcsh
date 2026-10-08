@@ -136,6 +136,10 @@ export interface RpcSessionState {
 	todoPhases: TodoPhase[];
 	/** For session dump / export (plain-text parity with /dump). */
 	systemPrompt?: string;
+	/** Read-only execution diagnostics; no credentials, inputs, or callback state. */
+	registeredToolNames?: string[];
+	activeToolNames?: string[];
+	toolChoiceState?: ReturnType<import("../../session/tool-choice-queue").ToolChoiceQueue["snapshot"]>;
 	dumpTools?: Array<{ name: string; description: string; parameters: unknown }>;
 }
 

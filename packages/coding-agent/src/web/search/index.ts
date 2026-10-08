@@ -6,11 +6,12 @@
  *
  */
 
-import type {
-	AgentTool,
-	AgentToolContext,
-	AgentToolResult,
-	AgentToolUpdateCallback,
+import {
+	type AgentTool,
+	type AgentToolContext,
+	AgentToolError,
+	type AgentToolResult,
+	type AgentToolUpdateCallback,
 } from "@f5-sales-demo/pi-agent-core";
 import { StringEnum } from "@f5-sales-demo/pi-ai";
 import { prompt } from "@f5-sales-demo/pi-utils";
@@ -185,13 +186,16 @@ function formatForLLM(response: SearchResponse): string {
 async function executeSearch(
 	_toolCallId: string,
 	params: SearchQueryParams,
-): Promise<{ content: Array<{ type: "text"; text: string }>; details: SearchRenderDetails }> {
+	signal?: AbortSignal,
+): Promise<{ content: Array<{ type: "text"; text: string }>; details: SearchRenderDetails; isError?: boolean }> {
+	signal?.throwIfAborted();
 	params = { ...params, user_location: normalizeUserLocation(params.user_location) };
 	const validation = validateWebSearchParams(params);
 	if (!validation.valid) {
 		const message = `web_search invalid parameter: ${validation.error}`;
 		return {
 			content: [{ type: "text" as const, text: `Error: ${message}` }],
+			isError: true,
 			details: { response: { provider: "none", sources: [] }, error: message },
 		};
 	}
@@ -209,6 +213,7 @@ async function executeSearch(
 		const message = "No web search provider configured.";
 		return {
 			content: [{ type: "text" as const, text: `Error: ${message}` }],
+			isError: true,
 			details: { response: { provider: "none", sources: [] }, error: message },
 		};
 	}
@@ -221,6 +226,7 @@ async function executeSearch(
 		try {
 			const searchStart = performance.now();
 			const response = await provider.search({
+				signal,
 				query: params.query.replace(/202\d/g, String(new Date().getFullYear())), // LUL
 				limit: params.limit,
 				recency: params.recency,
@@ -243,6 +249,11 @@ async function executeSearch(
 				details: { response },
 			};
 		} catch (error) {
+			if (
+				signal?.aborted ||
+				(error instanceof Error && (error.name === "AbortError" || error.name === "ToolAbortError"))
+			)
+				throw error;
 			lastError = error;
 		}
 	}
@@ -255,6 +266,7 @@ async function executeSearch(
 
 	return {
 		content: [{ type: "text" as const, text: `Error: ${message}` }],
+		isError: true,
 		details: { response: { provider: lastProvider.id, sources: [] }, error: message },
 	};
 }
@@ -264,8 +276,9 @@ async function executeSearch(
  */
 export async function runSearchQuery(
 	params: SearchQueryParams,
-): Promise<{ content: Array<{ type: "text"; text: string }>; details: SearchRenderDetails }> {
-	return executeSearch("cli-web-search", params);
+	signal?: AbortSignal,
+): Promise<{ content: Array<{ type: "text"; text: string }>; details: SearchRenderDetails; isError?: boolean }> {
+	return executeSearch("cli-web-search", params, signal);
 }
 
 /**
@@ -292,7 +305,9 @@ export class SearchTool implements AgentTool<typeof webSearchSchema, SearchRende
 		_onUpdate?: AgentToolUpdateCallback<SearchRenderDetails>,
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<SearchRenderDetails>> {
-		return executeSearch(_toolCallId, params);
+		const result = await executeSearch(_toolCallId, params, _signal);
+		if (result.isError) throw new AgentToolError(result.details.error ?? "Web search failed", result);
+		return result;
 	}
 }
 
@@ -310,7 +325,9 @@ export const webSearchCustomTool: CustomTool<typeof webSearchSchema, SearchRende
 		_ctx: CustomToolContext,
 		_signal?: AbortSignal,
 	) {
-		return executeSearch(toolCallId, params);
+		const result = await executeSearch(toolCallId, params, _signal);
+		if (result.isError) throw new AgentToolError(result.details.error ?? "Web search failed", result);
+		return result;
 	},
 
 	renderCall(args: SearchToolParams, options: RenderResultOptions, theme: Theme) {

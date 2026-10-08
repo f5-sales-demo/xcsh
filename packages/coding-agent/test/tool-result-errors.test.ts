@@ -86,3 +86,48 @@ test("an extension marking success as failure preserves its complete modified re
 	expect(error).toBeInstanceOf(AgentToolError);
 	expect(error.result).toEqual({ content, details });
 });
+
+test.each([undefined, {}, { isError: false }, { isError: true }])(
+	"returned errors reach result hooks and honor explicit overrides: %j",
+	async change => {
+		let observed: any;
+		const tool: AgentTool = {
+			name: "fixture",
+			label: "Fixture",
+			description: "Fixture",
+			parameters: Type.Object({}),
+			execute: async () => ({ content, details, isError: true }),
+		};
+		const wrapper = new ExtensionToolWrapper(tool, {
+			evaluateAdvisories: async () => ({ advisories: [], diagnostics: [] }),
+			hasHandlers: (name: string) => name === "tool_result",
+			emitToolResult: async (event: any) => {
+				observed = event;
+				return change;
+			},
+		} as any);
+		const result = await wrapper.execute("returned-error", {}).then(
+			value => ({ failed: false, value }),
+			error => ({ failed: true, value: error.result }),
+		);
+		expect(observed).toMatchObject({ content, details, isError: true });
+		expect(result).toEqual({ failed: change?.isError !== false, value: { content, details } });
+	},
+);
+
+test("returned errors remain errors without result hooks", async () => {
+	const tool: AgentTool = {
+		name: "fixture",
+		label: "Fixture",
+		description: "Fixture",
+		parameters: Type.Object({}),
+		execute: async () => ({ content, details, isError: true }),
+	};
+	const wrapper = new ExtensionToolWrapper(tool, {
+		evaluateAdvisories: async () => ({ advisories: [], diagnostics: [] }),
+		hasHandlers: () => false,
+	} as any);
+	const error = await wrapper.execute("returned-error", {}).catch(error => error);
+	expect(error).toBeInstanceOf(AgentToolError);
+	expect(error.result).toEqual({ content, details });
+});

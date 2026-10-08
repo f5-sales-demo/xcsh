@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "159909645bf0b640fe36a44f3f86f43bb63ff160",
-  "fingerprint": "8313590856818f8bb6d6b2ab4da65da0046c4a13a60dbfc55782d3265d3289de",
+  "revision": "aa278eecbd560345b7571f285d77c88608b2cf01",
+  "fingerprint": "34fe7b654904606378d1df2b7d6a8a85202f81f6e1926ac004576947b94c63f7",
   "counts": {
     "total": 240,
     "components": 98,
@@ -3817,7 +3817,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "03360b9ff7b867536332ffc5b7623585b03733f449a46ecab4938c655f953ab7",
+      "sha256": "19b2f93d201c8afc37e97d2470f026fcc1b87837fbd65037da0062fa63717c27",
       "exports": [
         "PendingExtensionRequest",
         "requestRpcEditor",
@@ -3841,7 +3841,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "9721b9c8847093d9ad6c0ddced4d64de209d7b53e75102c3ff6a2ae61645102c",
+      "sha256": "219b02fa385c1e583bfb8d977f630b6c0ca70dc6b65edb13fa07adb7b64b2be5",
       "exports": [
         "RpcCommand",
         "RpcCommandType",

@@ -206,6 +206,21 @@ export class ToolChoiceQueue {
 		return label;
 	}
 
+	/** Read-only diagnostics. Never advance an iterator or invoke callbacks. */
+	snapshot(): { queuedLabels: string[]; inFlight?: { label: string; choice: ToolChoice } } {
+		return {
+			queuedLabels: [...this.inspect()],
+			...(this.#inFlight
+				? {
+						inFlight: {
+							label: this.#inFlight.directive.label,
+							choice: structuredClone(this.#inFlight.yielded),
+						},
+					}
+				: {}),
+		};
+	}
+
 	/** For tests/debug: labels of currently queued directives in order. */
 	inspect(): readonly string[] {
 		return this.#queue.map(d => d.label);

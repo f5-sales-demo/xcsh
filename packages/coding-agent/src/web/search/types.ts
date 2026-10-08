@@ -136,7 +136,7 @@ export interface AnthropicContentBlock {
 	/** Tool input (for type="server_tool_use") */
 	input?: { query: string };
 	/** Search results (for type="web_search_tool_result") */
-	content?: AnthropicSearchResult[];
+	content?: AnthropicSearchResult[] | { type: "web_search_tool_result_error"; error_code: string };
 }
 
 export interface AnthropicApiResponse {
