@@ -11,6 +11,8 @@ from collections import defaultdict
 from functools import cache
 from pathlib import Path
 
+from check_docs_quality import workflow_authority_digest
+
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY_PATH = ROOT / ".github" / "docs-quality" / "legacy-concepts.json"
 FIDELITY_PATH = ROOT / ".github" / "docs-quality" / "legacy-fidelity.json"
@@ -133,7 +135,11 @@ def authority_locator(authority: str, concept: dict) -> dict:
         "lineStart": line_number,
         "lineEnd": line_number,
         "matchedToken": matched_token,
-        "sourceDigestSha256": digest_bytes(selected.read_bytes()),
+        "sourceDigestSha256": (
+            workflow_authority_digest(selected.read_bytes())
+            if kind == "workflow"
+            else digest_bytes(selected.read_bytes())
+        ),
     }
 
 
