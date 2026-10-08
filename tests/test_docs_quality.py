@@ -15,6 +15,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.check_docs_quality import workflow_authority_digest
+
 ROOT = Path(__file__).resolve().parents[1]
 CHECKER = ROOT / "scripts" / "check_docs_quality.py"
 GIT_EXECUTABLE = shutil.which("git") or "git"
@@ -405,6 +407,28 @@ class DocsQualityCheckerTests(unittest.TestCase):
             [GIT_EXECUTABLE, "init", "-q", str(root)], check=True, env=env
         )
         self.assert_rejected(root, "immutable legacy commit is unavailable")
+
+    def test_workflow_authority_ignores_only_immutable_reusable_pins(self) -> None:
+        first = (
+            b"uses: f5-sales-demo/docs-control/.github/workflows/review.yml@"
+            + b"a" * 40
+            + b"\n"
+        )
+        second = first.replace(b"a" * 40, b"b" * 40)
+        assert workflow_authority_digest(first) == workflow_authority_digest(second)
+        for changed in (
+            first + b"permissions: write-all\n",
+            first.replace(b"review.yml", b"deploy.yml"),
+            first.replace(b"a" * 40, b"a" * 41),
+            first.replace(b"a" * 40, b"a" * 39),
+        ):
+            assert workflow_authority_digest(first) != workflow_authority_digest(
+                changed
+            )
+        action = b"uses: actions/checkout@" + b"a" * 40 + b"\n"
+        assert workflow_authority_digest(action) != workflow_authority_digest(
+            action.replace(b"a" * 40, b"b" * 40)
+        )
 
     def test_rejects_stale_fidelity_section_digest(self) -> None:
         root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")

@@ -280,6 +280,16 @@ def _check_navigation_and_links(root: Path, pages: list[Path]) -> list[str]:
     return errors
 
 
+def workflow_authority_digest(payload: bytes) -> str:
+    """Bind workflow behavior while allowing immutable reusable revision changes."""
+    normalized = re.sub(
+        rb"(uses:\s*[^\s]+\.github/workflows/[^@\s]+@)[0-9a-f]{40}(?=$|\s)",
+        rb"\1<immutable-revision>",
+        payload,
+    )
+    return hashlib.sha256(normalized).hexdigest()
+
+
 def _check_fidelity(
     root: Path, fidelity: dict, legacy: dict, evidence_entries: dict
 ) -> list[str]:
@@ -315,7 +325,7 @@ def _check_fidelity(
     ):
         errors.append("fidelity ledger must contain exactly 335 active concepts")
 
-    file_digest_cache: dict[Path, str] = {}
+    file_digest_cache: dict[tuple[Path, bool], str] = {}
     locator_owners: dict[tuple[str, str], list[dict]] = defaultdict(list)
     required = (
         "id",
@@ -460,8 +470,12 @@ def _check_fidelity(
                 errors.append(
                     f"invalid fidelity authority locator: {concept_id} {authority}"
                 )
+            authority_bytes = authority_path.read_bytes()
             actual_digest = file_digest_cache.setdefault(
-                authority_path, hashlib.sha256(authority_path.read_bytes()).hexdigest()
+                (authority_path, locator.get("kind") == "workflow"),
+                workflow_authority_digest(authority_bytes)
+                if locator.get("kind") == "workflow"
+                else hashlib.sha256(authority_bytes).hexdigest(),
             )
             if actual_digest != locator.get("sourceDigestSha256"):
                 errors.append(
