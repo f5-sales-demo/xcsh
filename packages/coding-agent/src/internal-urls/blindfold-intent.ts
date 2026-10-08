@@ -26,7 +26,9 @@ export function classifyBlindfoldIntent(text: string, previous: boolean): boolea
 			task,
 		);
 	const operation =
-		/\b(?:import(?:ing)?|prepar(?:e|ing|ation)|encrypt(?:ing|ion)?|upload(?:ing)?|rotat(?:e|ing|ion))\b/.test(task);
+		/\b(?:import(?:ing)?|prepar(?:e|ing|ation)|encrypt(?:ing|ion)?|upload(?:ing)?|rotate|rotating|rotation)\b/.test(
+			task,
+		);
 	const owned =
 		/\b(?:my|our|your|owned|existing|own)\b/.test(task) &&
 		/\b(?:certificates?|certs?|secrets?|keys?|inputs?)\b/.test(task);
