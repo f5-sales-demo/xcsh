@@ -171,7 +171,7 @@ describe("MarketplaceManager", () => {
 				},
 			});
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"003480245dfcd1cc5add4e3029b587acdaebb8d64d2a4d42b9cb494774e96209",
+				"f464c75e3a6eb5bafded55180076f4b503e1486d7845e68496959e5294fea848",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {
