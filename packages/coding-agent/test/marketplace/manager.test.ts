@@ -126,31 +126,31 @@ describe("MarketplaceManager", () => {
 			const embeddedCatalog = getBuiltinMarketplaceSnapshot().catalog;
 			expect(embeddedCatalog.name).toBe(BUILTIN_MARKETPLACE_NAME);
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "salesforce")).toMatchObject({
-				version: "2.0.1",
-				minimumRuntimeVersion: "22.4.6",
+				version: "2.0.5",
+				minimumRuntimeVersion: "23.0.3",
 			});
-			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("b7c304e7f20e8fba92ab905fcbaf7c19ef89dffe");
+			expect(BUILTIN_MARKETPLACE_PROVENANCE.commit).toBe("aa0c20efa2f154f81e93b6f8ef5ed97e87ed89ed");
 			const discontinuedPrefix = ["F5", "XC_"].join("");
 			expect(JSON.stringify(embeddedCatalog)).not.toContain(discontinuedPrefix);
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "kvm")).toMatchObject({
-				version: "3.0.4",
+				version: "3.0.5",
 				lifecycle: { pluginDependencies: ["platform"] },
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "platform")).toMatchObject({
-				version: "6.0.1",
+				version: "6.0.5",
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "github")).toMatchObject({
-				version: "3.1.1",
+				version: "3.1.5",
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "cloudstatus")).toMatchObject({
-				version: "1.7.0",
+				version: "1.7.5",
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "xorg")).toMatchObject({
 				version: "1.1.9",
 				lifecycle: { pluginDependencies: [] },
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "zoom")).toMatchObject({
-				version: "1.1.10",
+				version: "1.1.11",
 				lifecycle: { pluginDependencies: ["xorg", "herdr", "ghostty"] },
 			});
 			expect(embeddedCatalog.plugins.find(plugin => plugin.name === "herdr")).toMatchObject({
@@ -171,7 +171,7 @@ describe("MarketplaceManager", () => {
 				},
 			});
 			expect(BUILTIN_MARKETPLACE_PROVENANCE.sha256).toBe(
-				"003480245dfcd1cc5add4e3029b587acdaebb8d64d2a4d42b9cb494774e96209",
+				"f464c75e3a6eb5bafded55180076f4b503e1486d7845e68496959e5294fea848",
 			);
 			expect(JSON.parse(fs.readFileSync(path.join(root, "marketplaces.json"), "utf8")).version).toBe(2);
 		} finally {
