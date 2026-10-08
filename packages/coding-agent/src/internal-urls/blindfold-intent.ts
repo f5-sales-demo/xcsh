@@ -4,6 +4,7 @@ import template from "../prompts/system/blindfold-awareness.md" with { type: "te
 
 /** Deterministic intent over admitted user task text, never retrieved/model content. */
 export function classifyBlindfoldIntent(text: string, previous: boolean): boolean {
+	const automaticCertificateProtocol = "ACME protocol";
 	const task = text.toLowerCase().replace(/[–—_/-]/g, " ");
 	if (
 		/\b(?:new topic|unrelated|switch topics|instead talk|forget (?:that|this)|do not use blindfold|don't use blindfold)\b/.test(
@@ -30,7 +31,10 @@ export function classifyBlindfoldIntent(text: string, previous: boolean): boolea
 		/\b(?:my|our|your|owned|existing|own)\b/.test(task) &&
 		/\b(?:certificates?|certs?|secrets?|keys?|inputs?)\b/.test(task);
 	if (custom || formatInput || (privateInput && operation)) return true;
-	if (/\b(?:automatic|automated|managed|acme|let'?s encrypt|public certificate|tls|ssl|handshake)\b/.test(task))
+	if (
+		task.split(/\W+/).includes(automaticCertificateProtocol.split(" ")[0].toLowerCase()) ||
+		/\b(?:automatic|automated|managed|let'?s encrypt|public certificate|tls|ssl|handshake)\b/.test(task)
+	)
 		return false;
 	if (owned && operation) return true;
 	if (!previous) return false;

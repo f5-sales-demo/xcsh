@@ -34,7 +34,7 @@ describe("Blindfold user task intent", () => {
 			"Use Kubernetes cert-manager",
 			"Automatic certificate rotation",
 			"Rotate a managed certificate",
-			"Renew with ACME",
+			"Renew with ACME protocol",
 			"Inspect the public certificate",
 			"TLS handshake error",
 			"Encrypt a disk",
