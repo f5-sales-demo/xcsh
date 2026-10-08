@@ -10,7 +10,7 @@ import type { ExtensionFactory } from "../src/extensibility/extensions";
 import { createAgentSession } from "../src/sdk";
 import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";
-import { buildSystemPrompt } from "../src/system-prompt";
+import { buildSystemPrompt, prepareSystemPromptInputs, renderSystemPrompt } from "../src/system-prompt";
 
 const extension: ExtensionFactory = pi => {
 	pi.registerTool({
@@ -136,14 +136,21 @@ describe("progressive context loading", () => {
 	});
 
 	it("renders environment fields and a compact navigable plugin catalog", async () => {
-		const rendered = await buildSystemPrompt({
+		const options = {
 			cwd: os.tmpdir(),
 			contextFiles: [],
 			tools: new Map(),
 			toolNames: [],
 			skills: [],
-			startFolder: { kind: "plain" },
+			startFolder: { kind: "plain" as const },
+		};
+		const prepared = await prepareSystemPromptInputs(options, {
+			loadPluginSummaries: async () => ({
+				summaries: [{ id: "synthetic", name: "Synthetic plugin", description: "Deferred plugin description" }],
+				cacheStatus: "completed",
+			}),
 		});
+		const rendered = renderSystemPrompt(prepared, options);
 		expect(rendered).not.toContain("[object Object]");
 		expect(rendered).toContain("xcsh://plugin/");
 	});
