@@ -3149,6 +3149,11 @@ export class AgentSession {
 		return this.agent.state.tools.map(t => t.name);
 	}
 
+	/** Complete registry names, including dormant tools, without tool payloads. */
+	getRegisteredToolNames(): string[] {
+		return [...this.#toolRegistry.keys()];
+	}
+
 	/** Numeric-only prompt/tool/provider-call profile. Raw context is never retained. */
 	getContextProfile(): ContextProfile {
 		this.#contextProfileCollector.setPrompt(this.systemPrompt, this.agent.state.tools);

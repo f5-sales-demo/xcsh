@@ -634,6 +634,9 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 					queuedMessageCount: session.queuedMessageCount,
 					todoPhases: session.getTodoPhases(),
 					systemPrompt: session.systemPrompt,
+					registeredToolNames: session.getRegisteredToolNames(),
+					activeToolNames: session.getActiveToolNames(),
+					toolChoiceState: session.toolChoiceQueue.snapshot(),
 					dumpTools: session.agent.state.tools.map(tool => ({
 						name: tool.name,
 						description: tool.description,

@@ -182,11 +182,19 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 		}
 
 		// Execute the actual tool
-		let result: { content: any; details?: TDetails };
+		let result: { content: any; details?: TDetails; isError?: boolean };
 		let executionError: Error | undefined;
 
 		try {
 			result = await this.tool.execute(toolCallId, params, signal, onUpdate, context);
+			if (result.isError === true) {
+				const text =
+					result.content
+						.filter((block: TextContent | ImageContent): block is TextContent => block.type === "text")
+						.map((block: TextContent) => block.text)
+						.join("\n") || "Tool returned an error";
+				throw new AgentToolError(text, { content: result.content, details: result.details });
+			}
 		} catch (err) {
 			executionError = err instanceof Error ? err : new Error(String(err));
 			result =

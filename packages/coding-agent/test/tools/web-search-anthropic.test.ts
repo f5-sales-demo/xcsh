@@ -103,6 +103,20 @@ describe("searchAnthropic headers", () => {
 		});
 	}
 
+	it("reports server search errors without treating error objects as iterable results", async () => {
+		process.env.ANTHROPIC_SEARCH_API_KEY = "sk-ant-api-test";
+		using _hook = mockFetch({
+			...makeAnthropicResponse(),
+			content: [
+				{
+					type: "web_search_tool_result",
+					content: { type: "web_search_tool_result_error", error_code: "max_uses_exceeded" },
+				},
+			],
+		});
+		await expect(searchAnthropic({ query: "synthetic fixture" })).rejects.toThrow("max_uses_exceeded");
+	});
+
 	it("includes web-search beta header and sends API key in X-Api-Key mode", async () => {
 		process.env.ANTHROPIC_SEARCH_API_KEY = "sk-ant-api-test";
 		using _hook = mockFetch(makeAnthropicResponse());
