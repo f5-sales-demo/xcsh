@@ -42,8 +42,9 @@ describe("Git SOPs & Content Creator Repository Progressive Hints", () => {
 		expect(resource.content).toContain("Post-Merge Hygiene");
 	});
 
-	test("buildSystemPrompt contains Git SOPs and DevOps Engineer GitHub Mastery instructions", async () => {
+	test("explicit eager prompt contains Git SOPs and DevOps Engineer GitHub Mastery instructions", async () => {
 		const promptText = await buildSystemPrompt({
+			loadingMode: "eager",
 			tools: new Map(),
 			cwd: "/fake/demo-resources",
 			startFolder: { kind: "github", slug: "f5-sales-demo/demo-resources" },

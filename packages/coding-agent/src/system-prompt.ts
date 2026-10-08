@@ -1041,7 +1041,7 @@ export function renderSystemPrompt(
 	if ($env.NULL_PROMPT === "true") return "";
 	assertPreparedSystemPromptCwd(prepared, options.cwd ?? prepared.cwd);
 	const {
-		loadingMode = "eager",
+		loadingMode = "progressive",
 		tools,
 		repeatToolDescriptions = false,
 		toolNames: providedToolNames,

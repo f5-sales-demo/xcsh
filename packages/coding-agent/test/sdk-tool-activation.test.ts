@@ -49,7 +49,7 @@ describe("createAgentSession defaultInactive tool activation", () => {
 			cwd: tempDir,
 			agentDir: tempDir,
 			sessionManager: SessionManager.inMemory(),
-			settings: Settings.isolated(),
+			settings: Settings.isolated({ "context.loadingMode": "eager" }),
 			model: getBundledModel("openai", "gpt-4o-mini"),
 			disableExtensionDiscovery: true,
 			extensions: [toolActivationExtension],

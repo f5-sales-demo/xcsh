@@ -43,7 +43,7 @@ describe("live extension tool refresh", () => {
 		const auth = await AuthStorage.create(":memory:");
 		cleanup.push(() => auth.close());
 		const modelRegistry = new ModelRegistry(auth);
-		const settings = Settings.isolated({ "compaction.enabled": false });
+		const settings = Settings.isolated({ "compaction.enabled": false, "context.loadingMode": "eager" });
 		const oldRuntime = new ExtensionRuntime();
 		const runner = new ExtensionRunner(
 			[],
@@ -123,7 +123,7 @@ describe("live extension tool refresh", () => {
 		const session = new AgentSession({
 			agent: new Agent({ initialState: { model, systemPrompt: "fixture", tools: oldTools, messages: [] } }),
 			sessionManager: SessionManager.inMemory(),
-			settings: Settings.isolated({ "compaction.enabled": false }),
+			settings: Settings.isolated({ "compaction.enabled": false, "context.loadingMode": "eager" }),
 			modelRegistry,
 			extensionRunner: runner,
 			toolRegistry: new Map(oldTools.map(tool => [tool.name, tool])),

@@ -569,7 +569,7 @@ export const SETTINGS_SCHEMA = {
 	"context.loadingMode": {
 		type: "enum",
 		values: ["eager", "progressive"] as const,
-		default: "eager",
+		default: "progressive",
 		ui: {
 			tab: "model",
 			label: "Context Loading",

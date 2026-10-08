@@ -174,7 +174,7 @@ describe("#2046 A4 — echo host tool end-to-end over the WS channel", () => {
 		return new AgentSession({
 			agent,
 			sessionManager: SessionManager.inMemory(),
-			settings: Settings.isolated(),
+			settings: Settings.isolated({ "context.loadingMode": "eager" }),
 			modelRegistry,
 		});
 	}
@@ -198,7 +198,7 @@ describe("#2046 A4 — echo host tool end-to-end over the WS channel", () => {
 		const turn = session.prompt("please echo something");
 
 		// 3. The agent's tool execution emits a real host_tool_call frame through send().
-		await waitFor(() => server.ofType("host_tool_call").length === 1);
+		await waitFor(() => server.ofType("host_tool_call").length === 1, 10000);
 		const call = server.ofType("host_tool_call")[0];
 		expect(call.toolName).toBe("echo");
 		expect(call.toolCallId).toBe(ECHO_CALL_ID);

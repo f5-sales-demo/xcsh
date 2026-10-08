@@ -29,8 +29,8 @@ describe("progressive context loading", () => {
 	const tempDirs: string[] = [];
 	const authStorages: AuthStorage[] = [];
 
-	it("keeps eager as the default until live token and behavior gates pass", () => {
-		expect(Settings.isolated().get("context.loadingMode")).toBe("eager");
+	it("uses progressive loading by default", () => {
+		expect(Settings.isolated().get("context.loadingMode")).toBe("progressive");
 	});
 
 	afterEach(() => {
@@ -80,7 +80,7 @@ describe("progressive context loading", () => {
 			agentDir: tempDir,
 			authStorage,
 			sessionManager: SessionManager.inMemory(),
-			settings: Settings.isolated(),
+			settings: Settings.isolated({ "context.loadingMode": "eager" }),
 			model,
 			disableExtensionDiscovery: true,
 			extensions: [extension],
@@ -135,6 +135,160 @@ describe("progressive context loading", () => {
 		}
 	});
 
+	it("renders environment fields and a compact navigable plugin catalog", async () => {
+		const rendered = await buildSystemPrompt({
+			cwd: os.tmpdir(),
+			contextFiles: [],
+			tools: new Map(),
+			toolNames: [],
+			skills: [],
+			startFolder: { kind: "plain" },
+		});
+		expect(rendered).not.toContain("[object Object]");
+		expect(rendered).toContain("xcsh://plugin/");
+	});
+
+	it("uses the progressive prompt when the builder loading mode is omitted", async () => {
+		const options = {
+			cwd: os.tmpdir(),
+			contextFiles: [],
+			tools: new Map(),
+			toolNames: [],
+			skills: [],
+			startFolder: { kind: "plain" as const },
+		};
+		expect(await buildSystemPrompt(options)).toBe(
+			await buildSystemPrompt({ ...options, loadingMode: "progressive" }),
+		);
+	});
+
+	it("does not activate dormant extension tools on refresh", async () => {
+		const { session } = await create("progressive");
+		try {
+			await session.refreshExtensionTools();
+			expect(session.getActiveToolNames()).not.toContain("deferred_weather");
+			expect(session.searchDiscoverableTools("weather", 1)[0]?.tool.name).toBe("deferred_weather");
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("refreshes RPC discovery while preserving activation and removing disappeared selections", async () => {
+		const { session } = await create("progressive");
+		const tool = {
+			name: "host_weather",
+			label: "Weather",
+			description: "RPC weather forecast",
+			parameters: Type.Object({}),
+			execute: async () => ({ content: [{ type: "text" as const, text: "ok" }] }),
+		};
+		try {
+			session.getDiscoverableToolSearchIndex();
+			await session.refreshRpcHostTools([tool]);
+			expect(session.getActiveToolNames()).not.toContain(tool.name);
+			expect(session.searchDiscoverableTools("RPC weather", 1)[0]?.tool.name).toBe(tool.name);
+			await session.activateDiscoveredTools([tool.name]);
+			await session.refreshRpcHostTools([{ ...tool, description: "RPC snow forecast" }]);
+			expect(session.getActiveToolNames()).toContain(tool.name);
+			await session.refreshRpcHostTools([]);
+			expect(session.getActiveToolNames()).not.toContain(tool.name);
+			expect(session.getDiscoverableTools().map(t => t.name)).not.toContain(tool.name);
+			expect(session.sessionManager.buildSessionContext().selectedToolNames).not.toContain(tool.name);
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("keeps restricted and no-tools sessions restricted after registration refresh", async () => {
+		for (const scope of [[], ["read"]]) {
+			const { session } = await create("progressive", SessionManager.inMemory(), scope);
+			try {
+				await session.refreshExtensionTools();
+				await session.refreshRpcHostTools([
+					{
+						name: "host_extra",
+						label: "Extra",
+						description: "Extra RPC tool",
+						parameters: Type.Object({}),
+						execute: async () => ({ content: [] }),
+					},
+				]);
+				expect(session.getActiveToolNames()).toEqual(scope);
+				expect(session.getDiscoverableTools().map(t => t.name)).not.toContain("deferred_weather");
+				expect(session.getDiscoverableTools().map(t => t.name)).not.toContain("host_extra");
+			} finally {
+				await session.dispose();
+			}
+		}
+	});
+
+	it("honors disabled tools through refresh, discovery and activation", async () => {
+		const tempDir = path.join(os.tmpdir(), `xcsh-excluded-${Snowflake.next()}`);
+		tempDirs.push(tempDir);
+		fs.mkdirSync(tempDir, { recursive: true });
+		const { session } = await createAgentSession({
+			cwd: tempDir,
+			agentDir: tempDir,
+			sessionManager: SessionManager.inMemory(),
+			settings: Settings.isolated(),
+			model: getBundledModel("openai", "gpt-4o-mini"),
+			disableExtensionDiscovery: true,
+			extensions: [extension],
+			excludedToolNames: ["xcsh_blindfold", "deferred_weather"],
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableLsp: false,
+		});
+		try {
+			await session.refreshExtensionTools();
+			expect(session.searchDiscoverableTools("xcsh_blindfold", 1)).toHaveLength(0);
+			expect(await session.activateDiscoveredTools(["xcsh_blindfold", "deferred_weather"])).toEqual([]);
+			expect(session.getActiveToolNames()).not.toContain("deferred_weather");
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("activates the discovered native schema before the next model call and retains it on model changes", async () => {
+		const { session } = await create("progressive");
+		try {
+			const search = session.getToolByName("search_tool_bm25")!;
+			await search.execute("discovery", { query: "xcsh_blindfold", limit: 1 });
+			expect(session.agent.state.tools.find(tool => tool.name === "xcsh_blindfold")?.parameters).toBeDefined();
+			session.modelRegistry.authStorage.setRuntimeApiKey("openai", "synthetic-key");
+			await session.setModel(getBundledModel("openai", "gpt-4o"));
+			expect(session.getActiveToolNames()).toContain("xcsh_blindfold");
+			expect(session.getActiveToolNames()).not.toContain("deferred_weather");
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("ranks native Blindfold for custom certificate terminology without loading it", async () => {
+		const { session } = await create("progressive");
+		try {
+			for (const query of [
+				"xcsh_blindfold",
+				"BYOC",
+				"bring your own certificate",
+				"custom certificate",
+				"protected PEM",
+				"PKCS#12",
+				"certificate key pair",
+				"private-key encryption",
+				"certificate rotation",
+			]) {
+				expect(session.searchDiscoverableTools(query, 1)[0]?.tool.name).toBe("xcsh_blindfold");
+			}
+			expect(session.getActiveToolNames()).not.toContain("xcsh_blindfold");
+			expect(session.systemPrompt).not.toContain("Blindfold");
+		} finally {
+			await session.dispose();
+		}
+	});
+
 	it("keeps explicit SDK tool lists authoritative in progressive mode", async () => {
 		const { session } = await create("progressive", SessionManager.inMemory(), ["read", "deferred_weather"]);
 		try {
@@ -154,51 +308,17 @@ describe("progressive context loading", () => {
 		}
 	});
 
-	it("bounds implicit tools for Anthropic OAuth and reapplies the policy when models change", async () => {
+	it("honors explicit eager mode for OAuth and preserves the mode on model changes", async () => {
 		const anthropic = getBundledModel("anthropic", "claude-haiku-4-5");
 		const openai = getBundledModel("openai", "gpt-4o-mini");
 		const { session } = await createOAuthSession(anthropic);
-
 		try {
-			expect(session.settings.get("context.loadingMode")).toBe("eager");
-			const activeToolNames = session.getActiveToolNames();
-			expect(activeToolNames).not.toContain("request_user_input_async");
-			expect(activeToolNames).toContain("xcsh_context");
-			expect(activeToolNames).toEqual(
-				expect.arrayContaining(["read", "grep", "find", "bash", "edit", "write", "search_tool_bm25"]),
-			);
-			expect(
-				activeToolNames.every(name =>
-					[
-						"read",
-						"grep",
-						"find",
-						"bash",
-						"python",
-						"edit",
-						"write",
-						"xcsh_api",
-						"xcsh_context",
-						"search_tool_bm25",
-						"request_user_input_async",
-					].includes(name),
-				),
-			).toBe(true);
-			expect(activeToolNames).not.toContain("task");
-			expect(activeToolNames).not.toContain("deferred_weather");
-			expect(session.getDiscoverableTools().map(tool => tool.name)).toContain("deferred_weather");
-
-			await session.setModel(openai);
-			expect(session.getActiveToolNames()).toContain("task");
-			expect(session.getActiveToolNames()).not.toContain("request_user_input_async");
-			expect(session.getActiveToolNames()).toContain("deferred_weather");
-			expect(session.getActiveToolNames()).not.toContain("search_tool_bm25");
-
-			await session.setModel(anthropic);
-			expect(session.getActiveToolNames()).not.toContain("task");
-			expect(session.getActiveToolNames()).not.toContain("deferred_weather");
-			expect(session.getActiveToolNames()).toContain("search_tool_bm25");
-			expect(session.getActiveToolNames()).not.toContain("request_user_input_async");
+			for (const model of [anthropic, openai, anthropic]) {
+				await session.setModel(model);
+				expect(session.getActiveToolNames()).toContain("task");
+				expect(session.getActiveToolNames()).toContain("deferred_weather");
+				expect(session.getActiveToolNames()).not.toContain("search_tool_bm25");
+			}
 		} finally {
 			await session.dispose();
 		}
@@ -245,7 +365,7 @@ describe("progressive context loading", () => {
 			authStorage,
 			modelRegistry: modelRegistry as never,
 			sessionManager: SessionManager.inMemory(),
-			settings: Settings.isolated(),
+			settings: Settings.isolated({ "context.loadingMode": "eager" }),
 			model,
 			disableExtensionDiscovery: true,
 			extensions: [extension],
@@ -309,7 +429,7 @@ describe("progressive context loading", () => {
 		const { session } = await create("progressive");
 		try {
 			expect(session.systemPrompt).toContain("xcsh://user");
-			// Budget includes the always-active async question schema and shared policy.
+			// Preserve the original neutral-context budget; differential UAT also rejects growth.
 			expect(session.systemPrompt.length).toBeLessThanOrEqual(26_000);
 			const toolJson = JSON.stringify(
 				session.agent.state.tools.map(tool => ({

@@ -1,4 +1,5 @@
 import type { AgentTool } from "@f5-sales-demo/pi-agent-core";
+import blindfoldTerms from "../prompts/tools/xcsh-blindfold-discovery.md" with { type: "text" };
 
 export interface DiscoverableTool {
 	name: string;
@@ -79,7 +80,9 @@ export function getDiscoverableTool(tool: AgentTool): DiscoverableTool {
 	return {
 		name: tool.name,
 		label: typeof toolRecord.label === "string" ? toolRecord.label : tool.name,
-		description: typeof toolRecord.description === "string" ? toolRecord.description : "",
+		description:
+			(typeof toolRecord.description === "string" ? toolRecord.description : "") +
+			(tool.name === "xcsh_blindfold" ? `\n${blindfoldTerms.trim()}` : ""),
 		schemaKeys: getSchemaPropertyKeys(toolRecord.parameters),
 	};
 }

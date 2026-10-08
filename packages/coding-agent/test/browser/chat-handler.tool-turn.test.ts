@@ -224,7 +224,7 @@ describe("#2046 A6 — chat_done defers to the final assistant message on a tool
 		return new AgentSession({
 			agent,
 			sessionManager: SessionManager.inMemory(),
-			settings: Settings.isolated(),
+			settings: Settings.isolated({ "context.loadingMode": "eager" }),
 			modelRegistry,
 		});
 	}

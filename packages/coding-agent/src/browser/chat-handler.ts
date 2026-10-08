@@ -342,7 +342,13 @@ export class ChatHandler {
 				? officeWebSearchServerTools(this.#session.model?.api ?? "unconfigured")
 				: undefined;
 			chat.promptAt = Date.now();
-			await this.#session.prompt(prompt, { expandPromptTemplates: false, synthetic: false, images, serverTools });
+			await this.#session.prompt(prompt, {
+				expandPromptTemplates: false,
+				synthetic: false,
+				images,
+				serverTools,
+				userTaskText: req.text,
+			});
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : "unknown error";
 			this.#sendTerminal(chat, { type: "chat_error", id, reason: classifyChatErrorReason(message) });

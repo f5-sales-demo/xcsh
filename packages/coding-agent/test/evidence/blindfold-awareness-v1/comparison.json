@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "4709f16e2",
+  "model": "openai-codex/gpt-6.1-sol",
+  "effort": "medium",
+  "corpusHash": "a410f579ad7021cc8387b7c74a4738504572f90a65d13514e96707123f9a2bc1",
+  "profiles": {
+    "eager": {
+      "schemaVersion": 1,
+      "mode": "eager",
+      "corpusHash": "a410f579ad7021cc8387b7c74a4738504572f90a65d13514e96707123f9a2bc1",
+      "samples": [
+        {
+          "id": "neutral",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 78332,
+          "initialToolBytes": 117973,
+          "discoveryCalls": 0,
+          "toolCalls": [],
+          "firstInputTokens": 43290,
+          "totalInputTokens": 43290,
+          "providerCalls": 1
+        },
+        {
+          "id": "read",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 78332,
+          "initialToolBytes": 117973,
+          "discoveryCalls": 0,
+          "toolCalls": [
+            "read"
+          ],
+          "firstInputTokens": 43294,
+          "totalInputTokens": 86656,
+          "providerCalls": 2
+        },
+        {
+          "id": "certificate-question",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 78332,
+          "initialToolBytes": 117973,
+          "discoveryCalls": 0,
+          "toolCalls": [
+            "read",
+            "read",
+            "read"
+          ],
+          "firstInputTokens": 43319,
+          "totalInputTokens": 190497,
+          "providerCalls": 4
+        },
+        {
+          "id": "offline",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 78332,
+          "initialToolBytes": 117973,
+          "discoveryCalls": 0,
+          "toolCalls": [
+            "xcsh_blindfold"
+          ],
+          "firstInputTokens": 43326,
+          "totalInputTokens": 86818,
+          "providerCalls": 2
+        },
+        {
+          "id": "plugin",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 78332,
+          "initialToolBytes": 117973,
+          "discoveryCalls": 0,
+          "toolCalls": [
+            "synthetic_plugin_greeting"
+          ],
+          "firstInputTokens": 43302,
+          "totalInputTokens": 86642,
+          "providerCalls": 2
+        },
+        {
+          "id": "rpc-host",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 78332,
+          "initialToolBytes": 117973,
+          "discoveryCalls": 0,
+          "toolCalls": [
+            "synthetic_host_greeting"
+          ],
+          "firstInputTokens": 43335,
+          "totalInputTokens": 86710,
+          "providerCalls": 2
+        }
+      ]
+    },
+    "baseline": {
+      "schemaVersion": 1,
+      "mode": "progressive",
+      "corpusHash": "a410f579ad7021cc8387b7c74a4738504572f90a65d13514e96707123f9a2bc1",
+      "samples": [
+        {
+          "id": "neutral",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 26745,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 0,
+          "toolCalls": [],
+          "firstInputTokens": 16431,
+          "totalInputTokens": 16431,
+          "providerCalls": 1
+        },
+        {
+          "id": "read",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 26745,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 0,
+          "toolCalls": [
+            "read"
+          ],
+          "firstInputTokens": 16435,
+          "totalInputTokens": 32924,
+          "providerCalls": 2
+        },
+        {
+          "id": "certificate-question",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 26745,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 1,
+          "toolCalls": [
+            "read",
+            "read",
+            "read",
+            "read",
+            "search_tool_bm25",
+            "read",
+            "read"
+          ],
+          "firstInputTokens": 16460,
+          "totalInputTokens": 165483,
+          "providerCalls": 8
+        },
+        {
+          "id": "offline",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 26745,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 1,
+          "toolCalls": [
+            "search_tool_bm25",
+            "xcsh_blindfold"
+          ],
+          "firstInputTokens": 16467,
+          "totalInputTokens": 50686,
+          "providerCalls": 3
+        },
+        {
+          "id": "plugin",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 26745,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 1,
+          "toolCalls": [
+            "search_tool_bm25",
+            "synthetic_plugin_greeting"
+          ],
+          "firstInputTokens": 16443,
+          "totalInputTokens": 49588,
+          "providerCalls": 3
+        },
+        {
+          "id": "rpc-host",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 26745,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 0,
+          "toolCalls": [
+            "synthetic_host_greeting"
+          ],
+          "firstInputTokens": 16472,
+          "totalInputTokens": 32983,
+          "providerCalls": 2
+        }
+      ]
+    },
+    "candidate-final": {
+      "schemaVersion": 1,
+      "mode": "progressive",
+      "corpusHash": "a410f579ad7021cc8387b7c74a4738504572f90a65d13514e96707123f9a2bc1",
+      "samples": [
+        {
+          "id": "neutral",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 25501,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 0,
+          "toolCalls": [],
+          "firstInputTokens": 16327,
+          "totalInputTokens": 16327,
+          "providerCalls": 1
+        },
+        {
+          "id": "read",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 25501,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 0,
+          "toolCalls": [
+            "read"
+          ],
+          "firstInputTokens": 16331,
+          "totalInputTokens": 32716,
+          "providerCalls": 2
+        },
+        {
+          "id": "certificate-question",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 25501,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 0,
+          "toolCalls": [
+            "read",
+            "read"
+          ],
+          "firstInputTokens": 16495,
+          "totalInputTokens": 51882,
+          "providerCalls": 3
+        },
+        {
+          "id": "offline",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 25501,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 1,
+          "toolCalls": [
+            "search_tool_bm25",
+            "read",
+            "xcsh_blindfold"
+          ],
+          "firstInputTokens": 16502,
+          "totalInputTokens": 67852,
+          "providerCalls": 4
+        },
+        {
+          "id": "plugin",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 25501,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 1,
+          "toolCalls": [
+            "search_tool_bm25",
+            "synthetic_plugin_greeting"
+          ],
+          "firstInputTokens": 16339,
+          "totalInputTokens": 49276,
+          "providerCalls": 3
+        },
+        {
+          "id": "rpc-host",
+          "success": true,
+          "failure": false,
+          "containment": true,
+          "mutations": 0,
+          "model": "openai-codex/gpt-6.1-sol",
+          "thinking": "medium",
+          "systemPromptBytes": 25501,
+          "initialToolBytes": 45265,
+          "discoveryCalls": 1,
+          "toolCalls": [
+            "search_tool_bm25",
+            "synthetic_host_greeting"
+          ],
+          "firstInputTokens": 16337,
+          "totalInputTokens": 49264,
+          "providerCalls": 3
+        }
+      ]
+    }
+  },
+  "gates": {
+    "equivalentTaskSuccess": true,
+    "candidateFirstRequestBelowEager": true,
+    "neutralInputDoesNotGrow": true,
+    "neutralStaticDoesNotGrow": true
+  },
+  "limits": [
+    "One measured run per task and profile; model behavior is stochastic.",
+    "Plugin and RPC host tools are synthetic runtime integrations.",
+    "No live certificate mutations were performed.",
+    "Source model checks do not establish installed or physical GUI acceptance."
+  ]
+}
