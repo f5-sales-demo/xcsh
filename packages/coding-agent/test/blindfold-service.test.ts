@@ -81,6 +81,12 @@ describe("Blindfold service safety", () => {
 		expect(f.saved?.spec).toMatchObject({ custom_option: true });
 		expect(JSON.stringify(f.saved)).not.toContain("clear_secret_info");
 	});
+	test("replacement requests one certificate response format selector", async () => {
+		const f = fixture({ metadata: { name: "example-cert" }, spec: {} });
+		await f.service.run({ ...args, operation: "replace" });
+		for (const call of f.calls.filter(x => x.startsWith("GET ") && x.includes("/certificates/")))
+			expect(new URL(call.slice(4)).searchParams.getAll("response_format")).toEqual(["2"]);
+	});
 	test("uncertain write reconciles by read without retry", async () => {
 		const f = fixture(undefined, true);
 		const r = await f.service.run(args);

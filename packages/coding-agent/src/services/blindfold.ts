@@ -320,11 +320,10 @@ export class BlindfoldService {
 				const transport: HttpTransport = {
 					request: async req => {
 						try {
-							const url =
-								req.method === "GET" && /\/certificates\/[^/]+$/.test(req.url)
-									? `${req.url}?response_format=2`
-									: req.url;
-							const r = await request(req.method, url, req.body);
+							const url = new URL(req.url);
+							if (req.method === "GET" && /\/certificates\/[^/]+$/.test(url.pathname))
+								url.searchParams.set("response_format", "2");
+							const r = await request(req.method, url.toString(), req.body);
 							const body = (r.body.replace_form ?? r.body) as Record<string, unknown>;
 							return {
 								httpStatus: r.httpStatus,
