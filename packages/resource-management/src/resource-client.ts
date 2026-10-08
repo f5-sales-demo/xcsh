@@ -124,7 +124,7 @@ export class ResourceClient {
 		const getUrl = this.#buildUrl(resolved.paths.get, namespace, name);
 
 		const startMs = performance.now();
-		const existing = await this.#fetchResource(getUrl);
+		const existing = await this.#fetchComparisonResource(getUrl, resolved);
 
 		if (existing.status === 404) {
 			if (dryRun) return { status: "dry-run", action: "create" };
@@ -166,7 +166,7 @@ export class ResourceClient {
 		const name = manifest.metadata.name;
 		const getUrl = this.#buildUrl(resolved.paths.get, namespace, name);
 		const startMs = performance.now();
-		const existing = await this.#fetchResource(getUrl);
+		const existing = await this.#fetchComparisonResource(getUrl, resolved);
 
 		if (existing.error) return { status: "error", error: existing.error };
 
@@ -275,7 +275,7 @@ export class ResourceClient {
 		const name = manifest.metadata.name;
 		const url = this.#buildUrl(resolved.paths.get, namespace, name);
 
-		const existing = await this.#fetchResource(url);
+		const existing = await this.#fetchComparisonResource(url, resolved);
 		if (existing.status === 404) {
 			return { isNew: true };
 		}
@@ -367,6 +367,22 @@ export class ResourceClient {
 			metadata: { ...(rest.metadata as Record<string, unknown>), namespace },
 		};
 		return body;
+	}
+
+	async #fetchComparisonResource(
+		url: string,
+		resolved: ResolvedKind,
+	): Promise<{ status: number; body?: Record<string, unknown>; error?: ResourceError }> {
+		// The normal certificate projection omits encrypted key material. Compare
+		// against its writable form instead of treating an omitted key as a change.
+		if (resolved.kind !== "certificate") return this.#fetchResource(url);
+		const comparisonUrl = new URL(url);
+		comparisonUrl.searchParams.set("response_format", "2");
+		const result = await this.#fetchResource(comparisonUrl.toString());
+		const replaceForm = result.body?.replace_form;
+		if (replaceForm && typeof replaceForm === "object" && !Array.isArray(replaceForm))
+			return { ...result, body: replaceForm as Record<string, unknown> };
+		return result;
 	}
 
 	async #fetchResource(
