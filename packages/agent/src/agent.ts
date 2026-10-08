@@ -261,6 +261,7 @@ export class Agent {
 	#contextMessages?: AgentLoopConfig["getContextMessages"];
 	#runConversationTurn?: AgentLoopConfig["runConversationTurn"];
 	#transformContext?: (messages: AgentMessage[], signal?: AbortSignal) => Promise<AgentMessage[]>;
+	#sessionContextTransform?: (messages: AgentMessage[]) => AgentMessage[];
 	#steeringQueue: AgentMessage[] = [];
 	#steeringWaiters = new Set<() => void>();
 	#followUpQueue: AgentMessage[] = [];
@@ -570,6 +571,14 @@ export class Agent {
 		this.#runConversationTurn = scope;
 	}
 
+	/** Compose the owning session's transient context before extension transforms. */
+	setSessionContextTransform(transform: (messages: AgentMessage[]) => AgentMessage[]): () => void {
+		this.#sessionContextTransform = transform;
+		return () => {
+			if (this.#sessionContextTransform === transform) this.#sessionContextTransform = undefined;
+		};
+	}
+
 	setContextMessagesProvider(provider?: AgentLoopConfig["getContextMessages"]): () => void {
 		this.#contextMessages = provider;
 		return () => {
@@ -849,7 +858,10 @@ export class Agent {
 				preferWebsockets: this.#preferWebsockets,
 				convertToLlm: this.#convertToLlm,
 				getContextMessages: messages => this.#contextMessages?.(messages) ?? [],
-				transformContext: this.#transformContext,
+				transformContext: async (messages, signal) => {
+					const prepared = this.#sessionContextTransform?.(messages) ?? messages;
+					return this.#transformContext ? this.#transformContext(prepared, signal) : prepared;
+				},
 				// Per-turn: compose the extension hook with any server-tool injection for
 				// THIS prompt (e.g. Office "Search the web"). No-op when neither is present.
 				onPayload: composeOnPayload(

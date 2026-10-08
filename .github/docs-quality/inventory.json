@@ -3397,6 +3397,33 @@
           "purpose": "Tear down an owned demo.",
           "readerQuestion": "Tear down an owned demo?",
           "text": "Tear down an owned demo"
+        },
+        {
+          "text": "Offline encryption",
+          "purpose": "Prepare secrets and certificate manifests using supplied public material without credentials or network access.",
+          "readerQuestion": "How do I prepare certificate inputs offline?",
+          "legacyConceptIds": [],
+          "evidence": [
+            "source-authority"
+          ]
+        },
+        {
+          "text": "Native task discovery",
+          "purpose": "Locate the native tool and read task-specific documentation without loading unrelated schemas.",
+          "readerQuestion": "How do I discover native certificate preparation?",
+          "legacyConceptIds": [],
+          "evidence": [
+            "source-authority"
+          ]
+        },
+        {
+          "text": "Public references",
+          "purpose": "Identify maintained public documentation and the immutable native contract.",
+          "readerQuestion": "Where can I verify the native contract?",
+          "legacyConceptIds": [],
+          "evidence": [
+            "source-authority"
+          ]
         }
       ],
       "path": "docs/en/f5-distributed-cloud/blindfold-certificates.mdx",
@@ -3416,7 +3443,10 @@
         "packages/coding-agent/test/blindfold-producer-matrix.test.ts",
         "scripts/uat-blindfold-live.py",
         "scripts/uat-blindfold-reference.py",
-        "scripts/uat-blindfold-assistant.py"
+        "scripts/uat-blindfold-assistant.py",
+        "packages/coding-agent/src/internal-urls/blindfold-resolve.ts",
+        "packages/coding-agent/src/internal-urls/blindfold-intent.ts",
+        "packages/coding-agent/test/internal-urls/blindfold.test.ts"
       ]
     }
   ],

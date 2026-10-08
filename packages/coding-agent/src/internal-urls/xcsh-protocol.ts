@@ -51,6 +51,7 @@ import type {
 	ApiSpecValidationResourceEntry,
 	OpenAPISpec,
 } from "./api-spec-types";
+import { resolveBlindfold } from "./blindfold-resolve";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { type ChangesResolver, createChangesResolver } from "./changes-resolve";
 import { type ConsoleCatalogData, EMPTY_CONSOLE_CATALOG } from "./console-catalog-types";
@@ -532,6 +533,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 				sourcePath: "xcsh://user",
 			};
 		}
+
+		if (host === "blindfold") return resolveBlindfold(url, await this.#resolveBuildInfo());
 
 		if (host === API_SPEC_HOST) {
 			return this.#getApiSpecResolver().resolve(url);

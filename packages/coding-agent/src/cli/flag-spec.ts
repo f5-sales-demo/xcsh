@@ -82,7 +82,10 @@ export const LAUNCH_FLAGS = defineFlags({
 	"no-tools": { arity: "boolean", description: "Disable all built-in tools" },
 	"no-lsp": { arity: "boolean", description: "Disable LSP tools, formatting, and diagnostics" },
 	"no-pty": { arity: "boolean", description: "Disable PTY-based interactive bash execution" },
-	tools: { arity: "value", description: "Comma-separated list of tools to enable (default: all)" },
+	tools: {
+		arity: "value",
+		description: "Comma-separated list of tools to enable (default: progressive core; discover optional tools)",
+	},
 	thinking: {
 		arity: "value",
 		description: `Set thinking level: ${THINKING_EFFORTS.join(", ")}`,

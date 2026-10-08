@@ -49,10 +49,10 @@ describe("system prompt workspace boundary", () => {
 
 	// The filesystem scope belongs beside the F5 XC tenant/namespace scope — the two
 	// things that bound a session — not appended wherever it happened to fit.
-	it("places the block inside the Workspace section", () => {
-		const workstation = rendered.indexOf("</workstation>");
+	it("places the boundary beside the environment before task guidance", () => {
+		const workstation = rendered.indexOf("</environment>");
 		const boundary = rendered.indexOf(OPEN_TAG);
-		const nextSection = rendered.indexOf("## Resource Manifest Format");
+		const nextSection = rendered.indexOf("## On-demand context");
 		expect(workstation).toBeGreaterThan(-1);
 		expect(nextSection).toBeGreaterThan(-1);
 		expect(boundary).toBeGreaterThan(workstation);

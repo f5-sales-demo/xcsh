@@ -41,18 +41,7 @@ Compatibility public documents default to camelCase YAML. `--outfmt json|yaml` o
 retrieval requires `--name` and defaults its namespace to `default`; the explicit shared policy above is appropriate for platform TLS. Canonical `xcsh blindfold public-key` and
 `policy` retain snake_case JSON defaults, and canonical policy defaults to `shared/ves-io-allow-volterra`.
 
-Both paths accept single-document JSON/YAML with known camelCase or snake_case fields. Agreeing aliases are accepted; conflicting aliases, duplicate keys, multiple documents,
-malformed fields and mismatched tenants fail. Retrieval preserves complete public policy information; encryption uses only required normalized fields. The public-key and policy
-file flags must be supplied together. With both files, encryption runs offline without context resolution, credentials or network access.
-
-```bash
-xcsh request secrets get-public-key --key-version 7 --outfmt json > pubkey.json
-xcsh request secrets get-policy-document -n shared --name ves-io-allow-volterra --outfmt yaml > policy.yaml
-cat key.pem | xcsh blindfold encrypt --public-key pubkey.json --policy-document policy.yaml - --output-file key.location
-```
-
-Replace version `7` with an available tenant key version. `--key-version` accepts an unsigned 32-bit integer on both public-key command paths. Zero selects the server default; a positive request must return that exact version, with no fallback.
-
+Both command paths use the [native offline document contract](#offline-encryption).
 Compatibility encryption defaults to bare base64. Canonical `blindfold encrypt` defaults to `string:///…`. On either path, `--encoding base64|location` chooses explicitly, and `--output-file` stores that selected text atomically in a new mode-0600 file. Compatibility encryption accepts `--outfmt` without changing ciphertext encoding.
 
 ```bash
@@ -95,6 +84,31 @@ and encoded size. Supported keys are RSA 2048–8192 bits and EC P-256/P-384. En
 The manifest encodes the public chain in `spec.certificate_url` and places the encrypted key in `spec.private_key.blindfold_secret_info.location`. It never emits a clear-key
 alternative. Raw encryption and manifest preparation print their artifact when no output file or `--json` is selected; use an output file to keep encrypted payloads out of
 transcripts.
+
+## Offline encryption
+
+Native commands accept single-document JSON/YAML with known camelCase or snake_case fields. Agreeing aliases are accepted; conflicting aliases, duplicate keys, multiple documents,
+malformed fields and mismatched tenants fail. Retrieval preserves complete public policy information; encryption uses only required normalized fields. The public-key and policy
+file flags must be supplied together. With both files, encryption runs offline without context resolution, credentials or network access.
+
+```bash
+xcsh blindfold public-key --key-version 7 --output-file pubkey.json
+xcsh blindfold policy --policy shared/ves-io-allow-volterra --output-file policy.yaml --output yaml
+xcsh blindfold encrypt --input secret.txt --public-key pubkey.json \
+  --policy-document policy.yaml --output-file secret.location
+```
+
+Replace version `7` with an available tenant key version. `--key-version` accepts an unsigned 32-bit integer. Zero selects the server default; a positive request must return that exact version, with no fallback.
+
+For offline certificate preparation, supply the same public documents with the certificate inputs:
+
+```bash
+xcsh blindfold certificate --cert chain.pem --key server-key.pem \
+  --public-key pubkey.json --policy-document policy.yaml \
+  --name example-tls --output-file certificate.json
+```
+
+Canonical encrypted output uses `string:///`. Output artifacts require new destinations and are stored atomically with mode-0600 permissions. Keep public tenant documents and encrypted payloads in a private runtime directory. The assistant accepts file paths only; it does not read private inputs into model context.
 
 ## Use protected PEM and PKCS#12 inputs
 
@@ -160,3 +174,14 @@ xcsh delete certificate example-tls -n example-ns
 ```
 
 Verify both named resources are absent. Remove your local private keys, bundles, passphrase variables, and runtime artifacts according to your team's retention policy. Keep ownership and expiry records private for any demo you intentionally retain.
+
+## Native task discovery
+
+Progressive sessions keep optional schemas deferred. Ask about custom certificates, bringing your own certificate (BYOC), protected PEM, PKCS#12, or encrypting a private key. The assistant identifies the native capability and can discover `xcsh_blindfold` with `search_tool_bm25` using `query: "xcsh_blindfold"` and `limit: 1`. The hint itself performs no operation.
+
+Read `xcsh://blindfold/` for the task index, `xcsh://blindfold/encrypt` for public material and offline encryption, `xcsh://blindfold/certificate` for certificate preparation and rotation, and `xcsh://blindfold/verify` for readiness and failure handling. These read-only routes use the native sections of this guide. Resource configuration continues through the existing API and Terraform guidance.
+
+## Public references
+
+- [Native xcsh guide](https://f5-sales-demo.github.io/xcsh/en/f5-distributed-cloud/blindfold-certificates/)
+- [Immutable native release contract](https://github.com/f5-sales-demo/xcsh/releases/tag/v23.0.0)

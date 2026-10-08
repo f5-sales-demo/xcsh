@@ -455,7 +455,7 @@ export function getExtraHelpText(): string {
 
   For complete environment variable reference, see:
   ${chalk.dim("docs/en/configure-secure/environment-reference.mdx")}
-${chalk.bold("Available Tools (default-enabled unless noted):")}
+${chalk.bold("Available Tools (core active by default; optional tools discovered on demand):")}
   read          - Read file contents
   bash          - Execute bash commands
   edit          - Edit files with find/replace

@@ -89,8 +89,24 @@ describe("plugin CLI integration loading", () => {
 			integrations: [{ id: "salesforce", plugin: "salesforce@test-marketplace", state: "setup_required" }],
 		});
 
-		const { loadIntegrationHandles, selectSetupIntegration } = await import("../src/cli/plugin-cli");
-		const handles = await loadIntegrationHandles(tempHome, tempProject);
-		expect(selectSetupIntegration(handles, "salesforce").id).toBe("salesforce");
+		// Integration registration belongs to the process that loads the plugin. Keep
+		// this isolated-home check in its own process, just like the CLI check above.
+		const probe = Bun.spawn(
+			[
+				process.execPath,
+				"-e",
+				`const {loadIntegrationHandles,selectSetupIntegration}=await import(${JSON.stringify(new URL("../src/cli/plugin-cli.ts", import.meta.url).pathname)});const handles=await loadIntegrationHandles(process.argv[1],process.argv[2]);console.log(JSON.stringify({id:selectSetupIntegration(handles,"salesforce").id}));`,
+				tempHome,
+				tempProject,
+			],
+			{ cwd: tempProject, env: { ...process.env, HOME: tempHome }, stdout: "pipe", stderr: "pipe" },
+		);
+		const [probeCode, probeOut, probeErr] = await Promise.all([
+			probe.exited,
+			new Response(probe.stdout).text(),
+			new Response(probe.stderr).text(),
+		]);
+		expect(probeCode, probeErr).toBe(0);
+		expect(JSON.parse(probeOut)).toEqual({ id: "salesforce" });
 	});
 });

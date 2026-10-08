@@ -496,6 +496,7 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 						"remote-voice-end",
 						"plan-mode-context",
 						"collaboration-mode",
+						"blindfold-awareness",
 					].includes(m.customType)
 						? "developer"
 						: "user";

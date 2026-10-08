@@ -141,7 +141,6 @@ import {
 	ReadTool,
 	ResolveTool,
 	renderSearchToolBm25Description,
-	SearchToolBm25Tool,
 	setPreferredImageProvider,
 	setPreferredSearchProvider,
 	type Tool,
@@ -651,12 +650,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		});
 
 	const configuredContextLoadingMode = settings.get("context.loadingMode");
-	const resolveContextLoadingMode = (candidate: Model | undefined): "eager" | "progressive" =>
-		configuredContextLoadingMode === "progressive" ||
-		(options.toolNames === undefined && candidate?.provider === "anthropic" && modelRegistry.isUsingOAuth(candidate))
-			? "progressive"
-			: "eager";
-	let contextLoadingMode = resolveContextLoadingMode(options.model);
+	const contextLoadingMode = configuredContextLoadingMode;
 	logger.time("initializeWithSettings");
 	initializeWithSettings(settings);
 	if (!options.modelRegistry) {
@@ -937,7 +931,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			resolveThinkingLevelForModel(resolvedModel, thinkingLevel),
 		);
 	}
-	contextLoadingMode = resolveContextLoadingMode(model);
 	const toolSettings = new Proxy(settings, {
 		get(target, property) {
 			if (property === "get") {
@@ -1234,15 +1227,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 		// Create built-in tools (already wrapped with meta notice formatting)
 		const builtinTools = await logger.time("createAllTools", createTools, toolSession, options.toolNames);
-		const providerToolPolicyAvailable =
-			options.toolNames === undefined &&
-			configuredContextLoadingMode === "eager" &&
-			(modelRegistry.authStorage?.hasOAuth("anthropic") ?? false);
-		const injectedProviderDiscoveryTool =
-			providerToolPolicyAvailable && !builtinTools.some(tool => tool.name === "search_tool_bm25");
-		if (injectedProviderDiscoveryTool) {
-			builtinTools.push(new SearchToolBm25Tool(toolSession));
-		}
 
 		const customTools: CustomTool[] = [];
 
@@ -1425,9 +1409,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					"No models available. Use /login or set an API key environment variable. Then use /model to select a model.";
 			}
 		}
-
-		// Tool loading follows the final model after deferred selection or restoration.
-		contextLoadingMode = resolveContextLoadingMode(model);
 
 		// Discover custom commands (TypeScript slash commands)
 		const customCommandsResult: CustomCommandsLoadResult = options.disableExtensionDiscovery
@@ -1759,9 +1740,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			"search_tool_bm25",
 			"request_user_input_async",
 		];
-		const eagerRequestedActiveToolNames = requestedActiveToolNames.filter(
-			name => !(providerToolPolicyAvailable && name === "search_tool_bm25"),
-		);
+		const eagerRequestedActiveToolNames = requestedActiveToolNames;
 		const eagerToolNames = eagerRequestedActiveToolNames.filter(name => !defaultInactiveToolNames.has(name));
 		const initialRequestedActiveToolNames = options.toolNames
 			? requestedActiveToolNames
@@ -1992,6 +1971,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		session = new AgentSession({
 			taskDepth,
 			questionToolNames: options.toolNames,
+			allowedToolNames: options.toolNames,
+			excludedToolNames: options.excludedToolNames,
 			agent,
 			thinkingLevel,
 			modelResolutionSource: options.modelResolutionSource,
@@ -2007,21 +1988,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			skillWarnings,
 			skillsSettings: settings.getGroup("skills"),
 			modelRegistry,
-			resolveToolPolicyForModel: providerToolPolicyAvailable
-				? candidate => {
-						const previousLoadingMode = contextLoadingMode;
-						contextLoadingMode = resolveContextLoadingMode(candidate);
-						const progressive = contextLoadingMode === "progressive";
-						return {
-							toolNames:
-								previousLoadingMode === contextLoadingMode
-									? undefined
-									: progressive
-										? progressiveCoreToolNames.filter(name => toolRegistry.has(name))
-										: eagerToolNames,
-						};
-					}
-				: undefined,
+
 			contextProfileCollector,
 			toolRegistry,
 			transformContext,

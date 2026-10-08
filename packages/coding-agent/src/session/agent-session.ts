@@ -131,6 +131,7 @@ import {
 	type ApiCatalogPreflightResult,
 	runApiCatalogPreflight,
 } from "../internal-urls/api-catalog-preflight";
+import { BlindfoldTaskIntent } from "../internal-urls/blindfold-intent";
 import type { ProviderReleaseMetadata } from "../internal-urls/provider-release";
 import {
 	type DocumentationCitationResolver,
@@ -325,6 +326,8 @@ export interface AsyncJobSnapshot {
 export interface AgentSessionConfig {
 	taskDepth?: number;
 	questionToolNames?: string[];
+	allowedToolNames?: string[];
+	excludedToolNames?: string[];
 	agent: Agent;
 	sessionManager: SessionManager;
 	settings: Settings;
@@ -381,6 +384,8 @@ export interface AgentSessionConfig {
 
 /** Options for AgentSession.prompt() */
 export interface PromptOptions {
+	/** User-authored task text when an embedded client composes additional context. */
+	userTaskText?: string;
 	/** Whether to expand file-based prompt templates (default: true) */
 	expandPromptTemplates?: boolean;
 	/** Image attachments */
@@ -604,6 +609,9 @@ export class AgentSession {
 	readonly userInteractions = new UserInteractions();
 	#taskDepth = 0;
 	#questionToolNames?: Set<string>;
+	#allowedToolNames?: Set<string>;
+	#excludedToolNames = new Set<string>();
+	#blindfoldTaskIntent = new BlindfoldTaskIntent();
 	#herdrInteractions?: HerdrInteractionBridge;
 	readonly conversationPlans = new ConversationPlans();
 	#planMessageId = "";
@@ -756,6 +764,10 @@ export class AgentSession {
 		this.#questionToolNames = config.questionToolNames
 			? new Set(config.questionToolNames.map(name => name.toLowerCase()))
 			: undefined;
+		this.#allowedToolNames = config.allowedToolNames
+			? new Set(config.allowedToolNames.map(name => name.toLowerCase()))
+			: undefined;
+		this.#excludedToolNames = new Set(config.excludedToolNames?.map(name => name.toLowerCase()));
 		setNativeKillTree(killTree);
 
 		this.agent = config.agent;
@@ -833,6 +845,18 @@ export class AgentSession {
 		this.#terraformPreflight = config.terraformPreflight ?? runTerraformPreflight;
 		this.#baseSystemPrompt = this.agent.state.systemPrompt;
 		this.#setDiscoverableTools();
+		this.addDisposeHook(
+			this.agent.setSessionContextTransform(messages => {
+				const active = this.getActiveToolNames();
+				const available = this.getDiscoverableTools().some(tool => tool.name === "xcsh_blindfold");
+				return this.#blindfoldTaskIntent.context(
+					messages,
+					this.sessionId,
+					active.includes("xcsh_blindfold"),
+					available && (active.includes("xcsh_blindfold") || active.includes("search_tool_bm25")),
+				);
+			}),
+		);
 		this.#syncRoutingStateFromBranch();
 		this.#ttsrManager = config.ttsrManager;
 		this.#obfuscator = config.obfuscator;
@@ -3132,9 +3156,16 @@ export class AgentSession {
 		return this.#retryAttempt;
 	}
 
+	#toolAllowed(name: string): boolean {
+		return (
+			!this.#excludedToolNames.has(name.toLowerCase()) && this.#allowedToolNames?.has(name.toLowerCase()) !== false
+		);
+	}
+
 	#setDiscoverableTools(): void {
 		this.#discoverableTools = new Map(
 			collectDiscoverableTools(this.#toolRegistry.values())
+				.filter(tool => this.#toolAllowed(tool.name) && !this.#toolRegistry.get(tool.name)?.hidden)
 				.filter(tool => !["search_tool_bm25", "resolve"].includes(tool.name))
 				.map(tool => [tool.name, tool] as const),
 		);
@@ -3246,6 +3277,7 @@ export class AgentSession {
 		const tools: AgentTool[] = [];
 		const validToolNames: string[] = [];
 		for (const name of toolNames) {
+			if (!this.#toolAllowed(name)) continue;
 			if (
 				name === "request_user_input_async" &&
 				(!asyncQuestionsSupported(this.model, this.#taskDepth) || this.#questionToolNames?.has(name) === false)
@@ -3365,7 +3397,15 @@ export class AgentSession {
 			name => !previousExtensionToolNames.has(name) || this.#extensionToolNames.has(name),
 		);
 		const newlyAvailable = wrapped
-			.filter(tool => !tool.hidden && !previousActiveToolNames.includes(tool.name))
+			.filter(
+				tool =>
+					this.settings.get("context.loadingMode") === "eager" &&
+					this.#allowedToolNames === undefined &&
+					this.#toolAllowed(tool.name) &&
+					!tool.hidden &&
+					!(tool as AgentTool & { defaultInactive?: boolean }).defaultInactive &&
+					!previousActiveToolNames.includes(tool.name),
+			)
 			.map(tool => tool.name);
 		await this.#applyActiveToolsByName([...new Set([...preserved, ...newlyAvailable])]);
 	}
@@ -3401,12 +3441,20 @@ export class AgentSession {
 			this.#rpcHostToolNames.add(finalTool.name);
 		}
 
+		this.#setDiscoverableTools();
 		const activeNonRpcToolNames = previousActiveToolNames.filter(name => !previousRpcHostToolNames.has(name));
 		const preservedRpcToolNames = previousActiveToolNames.filter(
 			name => previousRpcHostToolNames.has(name) && this.#rpcHostToolNames.has(name),
 		);
 		const autoActivatedRpcToolNames = rpcTools
-			.filter(tool => !tool.hidden && !previousRpcHostToolNames.has(tool.name))
+			.filter(
+				tool =>
+					this.settings.get("context.loadingMode") === "eager" &&
+					this.#allowedToolNames === undefined &&
+					this.#toolAllowed(tool.name) &&
+					!tool.hidden &&
+					!previousRpcHostToolNames.has(tool.name),
+			)
 			.map(tool => tool.name);
 		await this.#applyActiveToolsByName(
 			Array.from(new Set([...activeNonRpcToolNames, ...preservedRpcToolNames, ...autoActivatedRpcToolNames])),
@@ -3717,7 +3765,7 @@ export class AgentSession {
 						timestamp: Date.now(),
 					}
 				: { role: "user" as const, content: userContent, attribution: promptAttribution, timestamp: Date.now() };
-			if (message.role === "user" && this.#beforeUserInputHooks.size) await this.#prepareUserInput(message);
+			if (message.role === "user") await this.#prepareUserInput(message, options?.userTaskText);
 
 			await this.#maybeRestoreRetryFallbackPrimary();
 			if (!this.#isPromptCurrent(generation)) return;
@@ -4439,7 +4487,15 @@ export class AgentSession {
 			this.#beforeUserInputHooks.delete(hook);
 		};
 	}
-	async #prepareUserInput(message: Extract<AgentMessage, { role: "user" }>): Promise<void> {
+	async #prepareUserInput(message: Extract<AgentMessage, { role: "user" }>, userTaskText?: string): Promise<void> {
+		const taskText =
+			typeof message.content === "string"
+				? message.content
+				: message.content
+						.filter(part => part.type === "text")
+						.map(part => part.text)
+						.join("\n");
+		this.#blindfoldTaskIntent.admit(message, userTaskText ?? taskText, this.sessionId);
 		const assertCurrent = this.#sessionTransitions.checkpoint();
 		const generation = this.#promptGeneration;
 		for (const hook of [...this.#beforeUserInputHooks]) {
@@ -4492,7 +4548,7 @@ export class AgentSession {
 			attribution: "user" as const,
 			timestamp: Date.now(),
 		};
-		if (this.#beforeUserInputHooks.size) await this.#prepareUserInput(message);
+		await this.#prepareUserInput(message);
 		this.#steeringMessages.push(displayText);
 		this.agent.steer(message);
 	}
@@ -4512,7 +4568,7 @@ export class AgentSession {
 			attribution: "user" as const,
 			timestamp: Date.now(),
 		};
-		if (this.#beforeUserInputHooks.size) await this.#prepareUserInput(message);
+		await this.#prepareUserInput(message);
 		this.#followUpMessages.push(displayText);
 		this.agent.followUp(message);
 	}
