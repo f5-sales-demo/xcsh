@@ -46,6 +46,7 @@ pub struct BlindfoldPrepared {
 	pub tenant: String,
 }
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Document<T> {
 	data: T,
 }
@@ -245,7 +246,7 @@ fn lp(out: &mut Vec<u8>, value: &[u8]) -> Result<()> {
 	Ok(())
 }
 fn encrypt(secret: &[u8], public: &PublicKey, policy: &Policy, max_size: u32) -> Result<String> {
-	if public.tenant != policy.tenant || public.tenant.is_empty() {
+	if public.tenant != policy.tenant || !valid_tenant(&public.tenant) {
 		return Err(fail("Public key and policy tenant mismatch"));
 	}
 	if public.key_version == 0 {
@@ -255,6 +256,15 @@ fn encrypt(secret: &[u8], public: &PublicKey, policy: &Policy, max_size: u32) ->
 		decode_block(&public.modulus_base64).map_err(|_| fail("Malformed public modulus"))?;
 	let exponent = decode_block(&public.public_exponent_base64)
 		.map_err(|_| fail("Malformed public exponent"))?;
+	if modulus.first() == Some(&0)
+		|| exponent.first() == Some(&0)
+		|| modulus.is_empty()
+		|| exponent.is_empty()
+		|| encode_block(&modulus) != public.modulus_base64
+		|| encode_block(&exponent) != public.public_exponent_base64
+	{
+		return Err(fail("Noncanonical public integer"));
+	}
 	let n = BigNum::from_slice(&modulus).map_err(|_| fail("Malformed public modulus"))?;
 	let e = BigNum::from_slice(&exponent).map_err(|_| fail("Malformed public exponent"))?;
 	if !(2048..=8192).contains(&n.num_bits())
@@ -264,6 +274,12 @@ fn encrypt(secret: &[u8], public: &PublicKey, policy: &Policy, max_size: u32) ->
 		|| e.ucmp(&n) != Ordering::Less
 	{
 		return Err(fail("Invalid tenant RSA public material"));
+	}
+	if policy.policy_id.is_empty()
+		|| !policy.policy_id.bytes().all(|b| b.is_ascii_digit())
+		|| (policy.policy_id.len() > 1 && policy.policy_id.starts_with('0'))
+	{
+		return Err(fail("Malformed policy ID"));
 	}
 	let pid = policy
 		.policy_id
@@ -320,6 +336,9 @@ fn encrypt(secret: &[u8], public: &PublicKey, policy: &Policy, max_size: u32) ->
 /// Read secret files directly into native memory and return only encrypted/public material.
 #[napi]
 pub fn blindfold_prepare(env: Env, input: BlindfoldInput) -> Result<BlindfoldPrepared> {
+	if input.public_key_json.len() > 2 * 1024 * 1024 || input.policy_json.len() > 2 * 1024 * 1024 {
+		return Err(fail("Blindfold public document exceeds 2 MiB"));
+	}
 	let public: Document<PublicKey> = serde_json::from_str(&input.public_key_json)
 		.map_err(|_| fail("Malformed tenant public key document"))?;
 	let policy: Document<Policy> = serde_json::from_str(&input.policy_json)
@@ -471,6 +490,10 @@ pub fn blindfold_encrypt_input(
 		{
 			return Err(fail("Secret encryption accepts only an input file or stdin"));
 		}
+		if input.public_key_json.len() > 2 * 1024 * 1024 || input.policy_json.len() > 2 * 1024 * 1024
+		{
+			return Err(fail("Blindfold public document exceeds 2 MiB"));
+		}
 		let public: Document<PublicKey> = serde_json::from_str(&input.public_key_json)
 			.map_err(|_| fail("Malformed tenant public key document"))?;
 		let policy: Document<Policy> = serde_json::from_str(&input.policy_json)
@@ -550,4 +573,12 @@ fn read_stdin(cancel: &crate::task::CancelToken) -> Result<Zeroizing<Vec<u8>>> {
 #[cfg(not(unix))]
 fn read_stdin(_cancel: &crate::task::CancelToken) -> Result<Zeroizing<Vec<u8>>> {
 	Err(fail("Native Blindfold stdin is supported on Unix; use an input file on this platform"))
+}
+
+fn valid_tenant(value: &str) -> bool {
+	!value.is_empty()
+		&& value.len() <= 63
+		&& value.bytes().enumerate().all(|(i, b)| {
+			b.is_ascii_lowercase() || b.is_ascii_digit() || (b == b'-' && i > 0 && i < value.len() - 1)
+		})
 }
