@@ -34,10 +34,10 @@ const scenarios = [
 	[
 		"how do I use a certificate I already have for my HTTP load balancer HTTPS",
 		"",
-		"resources/http_loadbalancer/properties/https/index.md",
+		"resources/http_loadbalancer/properties/https/tls_parameters/tls_certificates/index.md",
 	],
-	["configure HTTP load balancer", "", "documentation/resources/http_loadbalancer/index.md"],
-	["xcsh provider documentation", "provider_type=provider", "documentation/index.md"],
+	["configure HTTP load balancer", "", "resources/http_loadbalancer/properties/http/index.md"],
+	["xcsh provider documentation", "provider_type=provider", "documentation/provider/setup/index.md"],
 	[
 		"TLS invalid configuration",
 		"provider_type=resources&provider_name=http_loadbalancer&role=example",

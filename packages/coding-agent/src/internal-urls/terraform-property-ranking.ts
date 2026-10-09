@@ -15,7 +15,7 @@ export interface PropertyCandidate {
 	documentation_terms?: string[];
 }
 const stop = new Set(
-	"a an the and to of for in on with by as from at we our my your i how which what where can do does is are be been have has it this that its resource managed provider terraform field attribute property parameter configure configures configuration configuring defining define declares declare declaring specified specifies specify sets set setting outputs output generated existing list string boolean block schema using use when need".split(
+	"a an the and to of for in on with by as from at we our my your i how which what where can do does is are be been have has it this that its resource managed provider terraform field attribute property parameter configure configures configuration configuring defining define declares declare declaring specified specifies specify sets set put setting outputs output generated existing list string boolean block schema using use when need".split(
 		" ",
 	),
 );
@@ -831,6 +831,7 @@ export function rankPropertyScope(
 	const target = propertyQueryTerms(ask).filter(t => !providerTerms.has(t) || requested.has(t));
 	const requestedType = propertyRequestedType(queryText);
 	const access = requestedFieldAccess(queryText);
+	const missingWeight = Math.max(1, ...scope.weights.values());
 	return scope.rows
 		.filter(row => matchesFieldAccess(row, access))
 		.filter(row => propertyMatchesCookieOperators(queryText, row))
@@ -840,7 +841,7 @@ export function rankPropertyScope(
 		.filter(row => !requestedType || row.type == null || row.type === requestedType)
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {
-			const weight = (term: string) => scope.weights.get(term) ?? 0;
+			const weight = (term: string) => scope.weights.get(term) ?? (target.includes(term) ? missingWeight : 0);
 			const union = new Set([...row.leaf, ...row.context, ...row.descriptionTerms, ...row.aliasTerms]);
 			let coverage = 0,
 				total = 0,
@@ -947,6 +948,9 @@ export function rankPropertyScope(
 					!union.has(positive!)
 				)
 					score -= 30;
+			// A leaf-name bonus cannot compensate for concepts absent from the
+			// provider scope. Keep all ranking terms proportional to coverage.
+			if (score > 0 && total > 0) score *= coverage / total;
 			const {
 				leaf: _leaf,
 				context: _context,
