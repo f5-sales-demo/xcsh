@@ -463,6 +463,8 @@ jobs:
           dpkg-query -W libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev >/dev/null
       - run: bash scripts/ci-bun-install.sh
       - name: Install method smoke tests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run ci:test:install-methods
 
   # Invalidate already-green release PRs immediately when their recorded base
@@ -589,6 +591,8 @@ jobs:
           key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
       - name: Generate canonical documentation index
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           bun --cwd=packages/coding-agent run generate-documentation-index
           bun --cwd=packages/coding-agent run generate-terraform-documentation-index

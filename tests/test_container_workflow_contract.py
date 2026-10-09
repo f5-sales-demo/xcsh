@@ -14,6 +14,16 @@ def job_block(workflow: str, job: str, next_job: str | None) -> str:
 
 
 class ContainerWorkflowContractTests(unittest.TestCase):
+    def test_build_time_discovery_uses_ephemeral_token_mount(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        dockerfile = (ROOT / "Dockerfile.alpine").read_text(encoding="utf-8")
+        runner = (ROOT / "scripts/tdd-docker.sh").read_text(encoding="utf-8")
+        self.assertIn("--mount=type=secret,id=github_token", dockerfile)
+        self.assertIn("GH_TOKEN=", dockerfile)
+        self.assertIn("id=github_token,env=GH_TOKEN", runner)
+        self.assertIn("GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}", workflow)
+        self.assertEqual(workflow.count("github_token=${{ secrets.GITHUB_TOKEN }}"), 2)
+
     def test_native_builds_publish_digest_receipts_before_manifest_merge(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         amd64 = job_block(workflow, "publish-ghcr-amd64", "publish-ghcr-arm64")

@@ -47,6 +47,8 @@ jobs:
           cleanup: false
 
       - name: Test native Alpine container
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           bash ./scripts/tdd-docker.sh
 
@@ -129,6 +131,8 @@ jobs:
         with:
           context: .
           file: Dockerfile.alpine
+          secrets: |
+            github_token=${{ secrets.GITHUB_TOKEN }}
           target: runtime
           platforms: linux/amd64
           labels: ${{ steps.metadata.outputs.labels }}
@@ -210,6 +214,8 @@ jobs:
         with:
           context: .
           file: Dockerfile.alpine
+          secrets: |
+            github_token=${{ secrets.GITHUB_TOKEN }}
           target: runtime
           platforms: linux/arm64
           labels: ${{ steps.metadata.outputs.labels }}
