@@ -140,6 +140,9 @@ build_options=(
   --file Dockerfile.alpine
   --tag "$image"
 )
+if [[ -n "${GH_TOKEN:-}" ]]; then
+  build_options+=(--secret "id=github_token,env=GH_TOKEN")
+fi
 if [[ -n "$test_platform" ]]; then
   build_options+=(--platform "$test_platform")
 fi

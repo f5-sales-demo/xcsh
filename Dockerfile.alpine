@@ -115,7 +115,9 @@ RUN bun install --frozen-lockfile --ignore-scripts && \
     esac && \
     bun --cwd=packages/natives run build
 
-RUN bun --cwd=packages/coding-agent run build && \
+RUN --mount=type=secret,id=github_token \
+    GH_TOKEN="$(cat /run/secrets/github_token 2>/dev/null || true)" \
+    bun --cwd=packages/coding-agent run build && \
     test -x packages/coding-agent/dist/xcsh
 
 # Preserve the target architecture's glibc interpreter paths while exposing a
