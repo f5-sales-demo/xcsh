@@ -76,6 +76,17 @@ function provenance(remote: Record<string, unknown> | undefined): Record<string,
 	try {
 		const parsed = parseBlindfoldDocument(text);
 		if (!object(parsed) || parsed.version !== 1 || !object(parsed.entries)) return {};
+		for (const [id, entry] of Object.entries(parsed.entries)) {
+			if (
+				!label.test(id) ||
+				!object(entry) ||
+				!["RSA", "EC"].includes(String(entry.algorithm)) ||
+				[entry.chain, entry.spki, entry.context, entry.ciphertext].some(
+					v => typeof v !== "string" || !/^[0-9a-f]{64}$/.test(v),
+				)
+			)
+				return {};
+		}
 		return parsed.entries as Record<string, Entry>;
 	} catch {
 		return {};
@@ -310,7 +321,7 @@ export async function ensureBlindfold(
 			old = entries[source.id];
 		let oldNode: Record<string, unknown> = {};
 		try {
-			if (remote) oldNode = pointer(remote, source.pointer);
+			if (remote) oldNode = nodeByEntry(remote, old) ?? pointer(remote, source.pointer);
 		} catch {}
 		const privateKey = oldNode.private_key,
 			blind = object(privateKey) ? privateKey.blindfold_secret_info : undefined,
@@ -392,4 +403,26 @@ function remoteEncryptedLocation(node: Record<string, unknown>): unknown {
 	const key = node.private_key;
 	const encrypted = object(key) ? key.blindfold_secret_info : undefined;
 	return object(encrypted) ? encrypted.location : undefined;
+}
+
+function nodeByEntry(remote: Record<string, unknown>, entry: Entry | undefined): Record<string, unknown> | undefined {
+	if (!entry) return undefined;
+	let found: Record<string, unknown> | undefined;
+	const visit = (value: unknown) => {
+		if (Array.isArray(value)) {
+			for (const child of value) visit(child);
+		} else if (object(value)) {
+			const location = remoteEncryptedLocation(value),
+				certificate = value.certificate_url;
+			if (typeof location === "string" && hash(location) === entry.ciphertext && typeof certificate === "string") {
+				try {
+					const normalized = identity(certificate);
+					if (normalized.chain === entry.chain && normalized.spki === entry.spki) found = value;
+				} catch {}
+			}
+			for (const child of Object.values(value)) visit(child);
+		}
+	};
+	visit(remote.spec);
+	return found;
 }
