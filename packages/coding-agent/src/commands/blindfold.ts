@@ -26,7 +26,7 @@ export async function runBlindfold(argv: string[], compatibility = false): Promi
 			},
 		});
 		const report = await service.run(args, { signal: controller.signal });
-		if (args.json || args.outputFile || ["create", "replace"].includes(report.operation))
+		if (args.json || args.outputFile || ["create", "replace", "ensure"].includes(report.operation))
 			writeCliOutput(process.stdout, `${JSON.stringify(report, null, 2)}\n`);
 	} catch (error) {
 		writeCliOutput(
@@ -44,7 +44,7 @@ export default class Blindfold extends Command {
 	static args = {
 		operation: Args.string({
 			required: true,
-			description: "public-key, policy, encrypt, certificate, create, replace",
+			description: "public-key, policy, encrypt, certificate, create, replace, ensure",
 		}),
 		file: Args.string({ description: "Encryption input file or - for redirected stdin" }),
 	};

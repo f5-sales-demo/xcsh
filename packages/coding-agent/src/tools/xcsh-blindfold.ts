@@ -11,6 +11,7 @@ import type { ToolSession } from "./index";
 export const blindfoldSchema = Type.Object(
 	{
 		operation: Type.Union(BLINDFOLD_OPERATIONS.map(v => Type.Literal(v))),
+		file: Type.Optional(Type.String()),
 		input: Type.Optional(Type.String()),
 		publicKey: Type.Optional(Type.String()),
 		policyDocument: Type.Optional(Type.String()),
@@ -90,7 +91,11 @@ export class XcshBlindfoldTool implements AgentTool<typeof blindfoldSchema> {
 				throw new Error("Blindfold context changed; retry against the selected context");
 			if (
 				this.session.getPlanModeState?.()?.enabled &&
-				(args.outputFile || args.resultFile || args.operation === "create" || args.operation === "replace")
+				(args.outputFile ||
+					args.resultFile ||
+					args.operation === "create" ||
+					args.operation === "replace" ||
+					args.operation === "ensure")
 			)
 				throw new Error("Plan mode: Blindfold deployments and artifact writes are blocked");
 		};

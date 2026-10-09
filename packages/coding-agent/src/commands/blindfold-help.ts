@@ -19,13 +19,13 @@ export function showBlindfoldHelp(argv: string[], bin: string): void {
 	if (!operation || ["--help", "-h"].includes(operation)) {
 		writeCliOutput(
 			process.stdout,
-			`${bin} ${compatibility ? "request secrets" : "blindfold"} ${compatibility ? "get-public-key | get-policy-document | encrypt" : "public-key | policy | encrypt | certificate | create | replace"}\nUse an operation followed by --help. Authentication uses xcsh context.\n`,
+			`${bin} ${compatibility ? "request secrets" : "blindfold"} ${compatibility ? "get-public-key | get-policy-document | encrypt" : "public-key | policy | encrypt | certificate | create | replace | ensure"}\nUse an operation followed by --help. Authentication uses xcsh context.\n`,
 		);
 		return;
 	}
 	try {
 		if (
-			!["public-key", "policy", "encrypt", "certificate", "create", "replace"].includes(operation) ||
+			!["public-key", "policy", "encrypt", "certificate", "create", "replace", "ensure"].includes(operation) ||
 			(compatibility && !["get-public-key", "get-policy-document", "encrypt"].includes(leaf!))
 		)
 			throw new CliUsageError("Unknown Blindfold operation");

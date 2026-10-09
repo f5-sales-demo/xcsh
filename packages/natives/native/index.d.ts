@@ -344,6 +344,7 @@ export interface BlindfoldInput {
   bundle?: string
   passphraseEnv?: string
   maxEncodedSize?: number
+  inspectOnly?: boolean
 }
 
 /** Read secret files directly into native memory and return only encrypted/public material. */

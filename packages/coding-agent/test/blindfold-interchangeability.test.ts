@@ -53,9 +53,9 @@ describe("Blindfold interchangeability adapters", () => {
 		).toThrow();
 		expect(() => parseBlindfoldCli(["encrypt", "secret", "--outfile", "out"], false, false)).toThrow();
 	});
-	test("only known aliases normalize, agreeing aliases pass, conflicts and malformed fields fail", async () => {
+	test("only known aliases normalize, duplicate aliases and malformed fields fail", async () => {
 		expect(normalizeBlindfoldDocument(camel, "public-key")).toEqual(pub);
-		expect(normalizeBlindfoldDocument({ data: { ...pub.data, ...camel.data } }, "public-key")).toEqual(pub);
+		expect(() => normalizeBlindfoldDocument({ data: { ...pub.data, ...camel.data } }, "public-key")).toThrow();
 		for (const data of [
 			{ ...camel.data, key_version: 8 },
 			{ ...camel.data, keyVersion: "7" },

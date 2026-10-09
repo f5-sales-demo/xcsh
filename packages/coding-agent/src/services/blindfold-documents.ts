@@ -25,21 +25,10 @@ function canonicalize(value: unknown): unknown {
 	for (const [key, item] of Object.entries(value)) {
 		const name = aliases[key] ?? key;
 		const normalized = canonicalize(item);
-		if (entries.has(name) && !equal(entries.get(name), normalized))
-			throw new Error("Conflicting Blindfold field aliases");
+		if (entries.has(name)) throw new Error("Conflicting Blindfold field aliases");
 		entries.set(name, normalized);
 	}
 	return Object.fromEntries(entries);
-}
-function equal(a: unknown, b: unknown): boolean {
-	if (Object.is(a, b)) return true;
-	if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => equal(v, b[i]));
-	if (object(a) && object(b))
-		return (
-			Object.keys(a).length === Object.keys(b).length &&
-			Object.keys(a).every(k => Object.hasOwn(b, k) && equal(a[k], b[k]))
-		);
-	return false;
 }
 /** Preserve public information for retrieval; only explicitly known aliases change spelling. */
 export function canonicalBlindfoldDocument(value: unknown, kind: "public-key" | "policy") {

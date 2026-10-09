@@ -3,6 +3,7 @@ import { Args, CliUsageError, Flags, parseCommandArgv } from "@f5-sales-demo/pi-
 import type { BlindfoldArgs, BlindfoldOperation } from "../services/blindfold";
 
 export const blindfoldFlags = {
+	file: Flags.string({ char: "f", description: "Resource manifest with x-xcsh-blindfold version 1" }),
 	input: Flags.string({ description: "Secret filename or - for stdin" }),
 	"public-key": Flags.string({ description: "Public key JSON/YAML file; requires --policy-document (offline)" }),
 	"policy-document": Flags.string({ description: "Policy JSON/YAML file; requires --public-key (offline)" }),
@@ -25,7 +26,7 @@ export const blindfoldFlags = {
 	json: Flags.boolean({ description: "Print public JSON report" }),
 };
 const aliases = { "get-public-key": "public-key", "get-policy-document": "policy", encrypt: "encrypt" } as const;
-const supported = ["public-key", "policy", "encrypt", "certificate", "create", "replace"];
+const supported = ["public-key", "policy", "encrypt", "certificate", "create", "replace", "ensure"];
 const common = ["context-name", "output-file", "result-file", "json"];
 export function flagsForBlindfold(operation: string, compatibility = false) {
 	const names =
@@ -43,7 +44,18 @@ export function flagsForBlindfold(operation: string, compatibility = false) {
 							"encoding",
 							...(compatibility ? ["outfile", "outfmt"] : []),
 						]
-					: [...common, "cert", "key", "bundle", "name", "namespace", "policy", "passphrase-env", "dry-run"];
+					: [
+							...common,
+							...(operation === "ensure" ? ["file"] : []),
+							"cert",
+							"key",
+							"bundle",
+							"name",
+							"namespace",
+							"policy",
+							"passphrase-env",
+							"dry-run",
+						];
 	return Object.fromEntries(names.map(name => [name, blindfoldFlags[name as keyof typeof blindfoldFlags]]));
 }
 export function parseBlindfoldCli(
@@ -70,6 +82,7 @@ export function parseBlindfoldCli(
 		throw new CliUsageError("Select one secret input source");
 	const args: BlindfoldArgs & { json?: boolean } = {
 		operation: operation as BlindfoldOperation,
+		file: f.file as string | undefined,
 		compatibility,
 		encoding: f.encoding as "base64" | "location" | undefined,
 		outfile: f.outfile as string | undefined,
@@ -125,7 +138,7 @@ export function parseBlindfoldCli(
 		)
 	)
 		throw new CliUsageError("File paths must be nonempty");
-	if (["certificate", "create", "replace"].includes(operation)) {
+	if (["certificate", "create", "replace", "ensure"].includes(operation) && !args.file) {
 		if (!args.name || (args.bundle ? args.cert || args.key : !args.cert || !args.key))
 			throw new CliUsageError("Use --name and either --bundle or --cert with --key");
 	}

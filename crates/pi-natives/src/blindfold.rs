@@ -34,6 +34,7 @@ pub struct BlindfoldInput {
 	pub bundle: Option<String>,
 	pub passphrase_env: Option<String>,
 	pub max_encoded_size: Option<u32>,
+	pub inspect_only: Option<bool>,
 }
 #[napi(object)]
 pub struct BlindfoldPrepared {
@@ -334,7 +335,71 @@ pub fn blindfold_prepare(env: Env, input: BlindfoldInput) -> Result<BlindfoldPre
 			}
 			(read_file(path)?, None, None, None, None)
 		} else {
-			let (key, certs) = certificates(env, &input)?;
+			let (key, mut certs) = certificates(env, &input)?;
+			let mut matching = Vec::new();
+			for (index, cert) in certs.iter().enumerate() {
+				if cert
+					.public_key()
+					.map_err(|_| fail("Invalid certificate public key"))?
+					.public_eq(&key)
+				{
+					matching.push(index);
+				}
+			}
+			if matching.len() != 1 {
+				return Err(fail("Certificate must match exactly one leaf"));
+			}
+			certs.swap(0, matching[0]);
+			for index in 0..certs.len().saturating_sub(1) {
+				let mut issuer = None;
+				for candidate in index + 1..certs.len() {
+					let issuer_key = certs[candidate]
+						.public_key()
+						.map_err(|_| fail("Invalid chain"))?;
+					if certs[index]
+						.issuer_name()
+						.to_der()
+						.map_err(|_| fail("Invalid chain"))?
+						== certs[candidate]
+							.subject_name()
+							.to_der()
+							.map_err(|_| fail("Invalid chain"))?
+						&& certs[index]
+							.verify(&issuer_key)
+							.map_err(|_| fail("Invalid chain"))?
+					{
+						if issuer.is_some() {
+							return Err(fail("Ambiguous certificate issuer"));
+						}
+						issuer = Some(candidate);
+					}
+				}
+				certs.swap(index + 1, issuer.ok_or_else(|| fail("Invalid certificate chain"))?);
+			}
+			let mut seen = std::collections::HashSet::new();
+			for cert in &certs {
+				if !seen.insert(cert.to_der().map_err(|_| fail("Invalid certificate"))?) {
+					return Err(fail("Duplicate certificate"));
+				}
+			}
+			let last = certs.last().ok_or_else(|| fail("Empty chain"))?;
+			if last
+				.issuer_name()
+				.to_der()
+				.map_err(|_| fail("Invalid chain"))?
+				== last
+					.subject_name()
+					.to_der()
+					.map_err(|_| fail("Invalid chain"))?
+			{
+				let issuer_key = last.public_key().map_err(|_| fail("Invalid chain"))?;
+				if !last
+					.verify(&issuer_key)
+					.map_err(|_| fail("Invalid chain"))?
+				{
+					return Err(fail("Invalid root signature"));
+				}
+			}
 			let algo = validate_pair(&key, &certs)?;
 			let mut chain = Vec::new();
 			for cert in &certs {
@@ -366,8 +431,11 @@ pub fn blindfold_prepare(env: Env, input: BlindfoldInput) -> Result<BlindfoldPre
 				Some(algo.to_owned()),
 			)
 		};
-	let location =
-		encrypt(&secret, &public.data, &policy.data, input.max_encoded_size.unwrap_or(131_072))?;
+	let location = if input.inspect_only.unwrap_or(false) {
+		String::new()
+	} else {
+		encrypt(&secret, &public.data, &policy.data, input.max_encoded_size.unwrap_or(131_072))?
+	};
 	Ok(BlindfoldPrepared {
 		location,
 		certificate_url,
