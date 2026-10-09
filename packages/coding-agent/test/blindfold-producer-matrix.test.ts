@@ -79,7 +79,8 @@ test("every producer, spelling and format recovers independently through native 
 			const camel = parseBlindfoldDocument(serializeBlindfoldDocument(snake, "json", true)) as {
 				data: Record<string, unknown>;
 			};
-			return [material, snake, camel, { data: { ...snake.data, ...camel.data } }];
+			expect(() => normalizeBlindfoldDocument({ data: { ...snake.data, ...camel.data } }, kind)).toThrow();
+			return [material, snake, camel];
 		};
 		for (const publicMaterial of producers(pub, "public-key"))
 			for (const policyMaterial of producers(policy, "policy"))
