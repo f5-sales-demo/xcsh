@@ -816,7 +816,7 @@ export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
 }
 export function rankPropertyScope(
 	queryText: string,
-	scope: ReturnType<typeof preparePropertyScope>,
+	scope: ReturnType<typeof preparePropertyScope> & { knownTerms?: ReadonlySet<string> },
 	candidates?: ReadonlySet<string>,
 ) {
 	const providerTerms = new Set(propertyTerms(scope.rows[0]?.provider_name ?? ""));
@@ -832,6 +832,7 @@ export function rankPropertyScope(
 	const requestedType = propertyRequestedType(queryText);
 	const access = requestedFieldAccess(queryText);
 	const missingWeight = Math.max(1, ...scope.weights.values());
+	const missingConcepts = new Set(target.filter(term => scope.knownTerms?.has(term) && !scope.weights.has(term)));
 	return scope.rows
 		.filter(row => matchesFieldAccess(row, access))
 		.filter(row => propertyMatchesCookieOperators(queryText, row))
@@ -841,7 +842,9 @@ export function rankPropertyScope(
 		.filter(row => !requestedType || row.type == null || row.type === requestedType)
 		.filter(row => !candidates || candidates.has(`${row.path}#${row.anchor}`))
 		.map(row => {
-			const weight = (term: string) => scope.weights.get(term) ?? (target.includes(term) ? missingWeight : 0);
+			const documentationTerms = new Set(row.documentation_terms ?? []);
+			const weight = (term: string) =>
+				scope.weights.get(term) ?? (missingConcepts.has(term) && !documentationTerms.has(term) ? missingWeight : 0);
 			const union = new Set([...row.leaf, ...row.context, ...row.descriptionTerms, ...row.aliasTerms]);
 			let coverage = 0,
 				total = 0,
@@ -950,7 +953,7 @@ export function rankPropertyScope(
 					score -= 30;
 			// A leaf-name bonus cannot compensate for concepts absent from the
 			// provider scope. Keep all ranking terms proportional to coverage.
-			if (score > 0 && total > 0) score *= coverage / total;
+			if (score > 0 && total > 0 && missingConcepts.size) score *= coverage / total;
 			const {
 				leaf: _leaf,
 				context: _context,

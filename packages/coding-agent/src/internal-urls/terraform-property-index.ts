@@ -270,6 +270,13 @@ export function searchPropertyIndex(
 	if (propertyInvalidExcludedScope(query)) return [];
 	const terms = propertyQueryTerms(query);
 	if (!terms.length) return [];
+	const knownTerms = new Set(
+		(
+			db
+				.prepare(`SELECT DISTINCT term FROM property_scope_terms WHERE term IN (${terms.map(() => "?").join(",")})`)
+				.all(...terms) as { term: string }[]
+		).map(row => row.term),
+	);
 	const clauses = ["property_search MATCH ?"];
 	const args: string[] = [terms.map(term => `"${term}"`).join(" OR ")];
 	if (scope.schemaPaths?.length) {
@@ -399,7 +406,13 @@ export function searchPropertyIndex(
 				aliasTerms: JSON.parse(alias_terms) as string[],
 			}),
 		);
-		ranked.push(...rankPropertyScope(query, { rows, weights: new Map(weights.map(row => [row.term, row.weight])) }));
+		ranked.push(
+			...rankPropertyScope(query, {
+				rows,
+				weights: new Map(weights.map(row => [row.term, row.weight])),
+				knownTerms,
+			}),
+		);
 	}
 	return ranked.sort(
 		(a, b) =>

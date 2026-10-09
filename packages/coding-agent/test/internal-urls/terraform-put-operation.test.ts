@@ -22,6 +22,10 @@ test("provider scopes missing requested concepts cannot claim complete coverage"
 			aliasTerms: [],
 		},
 	];
-	const ranked = rankPropertyScope("where do I put login success rules", { rows, weights: new Map([["rule", 2]]) });
+	const ranked = rankPropertyScope("where do I put login success rules", {
+		rows,
+		weights: new Map([["rule", 2]]),
+		knownTerms: new Set(["rule", "login", "success"]),
+	});
 	expect(ranked[0]!.coverage).toBeLessThan(0.5);
 });
