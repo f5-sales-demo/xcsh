@@ -96,7 +96,9 @@ with tempfile.NamedTemporaryFile(suffix=".sqlite") as tmp:
         general[f"{source}/{route}"] = general[f"{target_source}/{target}"]
     db.close()
 manifest = json.loads((root / "sources/content/manifest.json").read_text())
-if len(general) != len(manifest["documents"]) + len(manifest.get("enrichment", {}).get("aliases", [])):
+if len(general) != len(manifest["documents"]) + len(
+    manifest.get("enrichment", {}).get("aliases", [])
+):
     GENERAL_COUNT_ERROR = "general document count mismatch"
     raise SystemExit(GENERAL_COUNT_ERROR)
 for row in manifest["documents"]:
