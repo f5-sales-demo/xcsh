@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import { BUILD_INFO } from "./internal-urls/build-info.generated";
 import { parseInternalUrl } from "./internal-urls/parse";
 import { PUBLIC_CITATION_SOURCES } from "./internal-urls/public-citation-destinations.generated";
-import { InternalDocsProtocolHandler } from "./internal-urls/xcsh-protocol";
 
 export function validateCorpusMeasurementRequests(input: unknown): string[] {
 	if (!Array.isArray(input) || !input.length || input.length > 10000 || input.some(uri => typeof uri !== "string"))
@@ -48,6 +47,7 @@ export async function measureCorpusRequests(input: unknown, read: (uri: string) 
 export async function runCorpusMeasurement(file: string): Promise<string> {
 	const input = await readFile(file);
 	if (input.length > 4 * 1024 * 1024) throw new Error("Corpus measurement requests exceed 4 MiB");
+	const { InternalDocsProtocolHandler } = await import("./internal-urls/xcsh-protocol");
 	const handler = new InternalDocsProtocolHandler();
 	const results = await measureCorpusRequests(JSON.parse(input.toString("utf8")), uri =>
 		handler.resolve(parseInternalUrl(uri)),
