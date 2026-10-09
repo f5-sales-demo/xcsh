@@ -60,6 +60,7 @@ describe("npm binary bootstrap", () => {
 				XCSH_SMOKE_TEST_QMD: "1",
 				XCSH_MEASURE_TERRAFORM_REQUESTS: "/test/requests.json",
 				XCSH_MEASURE_DOCUMENTATION_REQUESTS: "/test/general.json",
+				XCSH_MEASURE_CORPUS_REQUESTS: "/test/all.json",
 				XCSH_SMOKE_TEST_SPECS: "1",
 				XCSH_SMOKE_TEST_VERTEX_AUTH: "1",
 			}),
