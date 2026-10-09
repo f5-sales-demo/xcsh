@@ -1,0 +1,13 @@
+{"sequence":1,"event":"api-catalog-rank","category":"dns-dns-zone-clone-from-dns-domain","outcome":"rank-1"}
+{"sequence":2,"event":"documentation-search","resource":"xcsh://documentation/?search=configure%20web%20application%20firewall&source=docs-cloud-f5-com&limit=1","title":"Create Web Application Firewall","source":"docs-cloud-f5-com"}
+{"sequence":3,"event":"documentation-read","resource":"xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/how-to/app-security/application-firewall/index.md","title":"Create Web Application Firewall","source":"docs-cloud-f5-com"}
+{"sequence":4,"event":"documentation-marketing-search","resource":"xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1","title":"F5 Distributed Cloud Client-Side Defense","source":"www-f5-com"}
+{"sequence":5,"event":"documentation-marketing-read","resource":"xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md","title":"F5 Distributed Cloud Client-Side Defense","source":"www-f5-com"}
+{"sequence":6,"event":"documentation-search","resource":"xcsh://documentation/?search=set%20up%20DNS%20load%20balancer&source=docs-cloud-f5-com&limit=1","title":"Set Up DNS Load Balancer","source":"docs-cloud-f5-com"}
+{"sequence":7,"event":"documentation-read","resource":"xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md","title":"Set Up DNS Load Balancer","source":"docs-cloud-f5-com"}
+{"sequence":8,"event":"documentation-follow-up-read","resource":"xcsh://documentation/docs-cloud-f5-com/dns-management/how-to/configure-dns-load-balancer/index.md","title":"Set Up DNS Load Balancer","source":"docs-cloud-f5-com"}
+{"sequence":9,"event":"documentation-missing","resource":"xcsh://documentation/?search=zzzxxyyqqqv","outcome":"no-match-no-fetch"}
+{"sequence":10,"event":"documentation-tools-disabled","outcome":"Pinned offline documentation is unavailable because this session has no read tool; the answer cannot be verified."}
+{"sequence":11,"event":"documentation-svg-convert","resource":"xcsh://documentation/docs-cloud-f5-com/administration/assets/9b018ba3f71b1f3a7068267cb30fefe9362cfa13e8fd90e1f14e6c67fbfe480c.svg","source":"docs-cloud-f5-com","outcome":"public-media-link"}
+{"sequence":12,"event":"sqlite-open","outcome":"ok"}
+XCSH_QMD_SMOKE_OK

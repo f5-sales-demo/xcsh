@@ -20,7 +20,7 @@ const EXPECTED_EVENTS = [
 ] as const;
 const EXPECTED_RESOURCES = [
 	"xcsh://documentation/?search=configure%20web%20application%20firewall&source=docs-cloud-f5-com&limit=1",
-	"xcsh://documentation/docs-cloud-f5-com/docs/how-to/app-security/web-app-firewall/index.md",
+	"xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/how-to/app-security/application-firewall/index.md",
 	"xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1",
 	"xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
 	"xcsh://documentation/?search=set%20up%20DNS%20load%20balancer&source=docs-cloud-f5-com&limit=1",
