@@ -7,7 +7,6 @@ import {
 	blindfoldPrepare,
 } from "@f5-sales-demo/pi-natives";
 import type { HttpTransport, ResourceManifest } from "@f5-sales-demo/pi-resource-management";
-
 import {
 	canonicalBlindfoldDocument,
 	normalizeBlindfoldDocument,
@@ -15,11 +14,21 @@ import {
 	readBlindfoldResponse,
 	serializeBlindfoldDocument,
 } from "./blindfold-documents";
+import { ensureBlindfold } from "./blindfold-ensure";
 
-export const BLINDFOLD_OPERATIONS = ["public-key", "policy", "encrypt", "certificate", "create", "replace"] as const;
+export const BLINDFOLD_OPERATIONS = [
+	"public-key",
+	"policy",
+	"encrypt",
+	"certificate",
+	"create",
+	"replace",
+	"ensure",
+] as const;
 export type BlindfoldOperation = (typeof BLINDFOLD_OPERATIONS)[number];
 export interface BlindfoldArgs {
 	operation: BlindfoldOperation;
+	file?: string;
 	compatibility?: boolean;
 	encoding?: "base64" | "location";
 	outfile?: string;
@@ -41,7 +50,7 @@ export interface BlindfoldArgs {
 	dryRun?: "client";
 }
 export interface BlindfoldReport {
-	status: "material-retrieved" | "prepared" | "dry-run" | "accepted";
+	status: "material-retrieved" | "prepared" | "dry-run" | "accepted" | "unchanged";
 	operation: BlindfoldOperation;
 	materialSource?: "retrieved" | "supplied";
 	target: { apiUrl?: string; tenant: string; namespace?: string; name?: string; contextName?: string };
@@ -57,7 +66,7 @@ export interface BlindfoldRuntime {
 	planMode?: boolean;
 	guard?: () => void;
 }
-interface Options {
+export interface BlindfoldOptions {
 	emit?: (content: string) => void;
 	env: Readonly<Record<string, string | undefined>>;
 	cwd?: string;
@@ -109,11 +118,12 @@ export async function writeBlindfoldArtifact(
 }
 /** Holds encrypted material locally; callers receive only the public report. */
 export class BlindfoldService {
-	readonly #options: Options;
-	constructor(options: Options) {
+	readonly #options: BlindfoldOptions;
+	constructor(options: BlindfoldOptions) {
 		this.#options = options;
 	}
 	async run(args: BlindfoldArgs, runtime: BlindfoldRuntime = {}): Promise<BlindfoldReport> {
+		if (args.operation === "ensure") return ensureBlindfold(this.#options, args, runtime);
 		const guard = () => {
 			if (runtime.signal?.aborted) throw new Error("Blindfold operation cancelled");
 			runtime.guard?.();

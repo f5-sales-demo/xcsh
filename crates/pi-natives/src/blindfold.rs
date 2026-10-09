@@ -34,6 +34,7 @@ pub struct BlindfoldInput {
 	pub bundle: Option<String>,
 	pub passphrase_env: Option<String>,
 	pub max_encoded_size: Option<u32>,
+	pub inspect_only: Option<bool>,
 }
 #[napi(object)]
 pub struct BlindfoldPrepared {
@@ -45,6 +46,7 @@ pub struct BlindfoldPrepared {
 	pub tenant: String,
 }
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Document<T> {
 	data: T,
 }
@@ -244,7 +246,7 @@ fn lp(out: &mut Vec<u8>, value: &[u8]) -> Result<()> {
 	Ok(())
 }
 fn encrypt(secret: &[u8], public: &PublicKey, policy: &Policy, max_size: u32) -> Result<String> {
-	if public.tenant != policy.tenant || public.tenant.is_empty() {
+	if public.tenant != policy.tenant || !valid_tenant(&public.tenant) {
 		return Err(fail("Public key and policy tenant mismatch"));
 	}
 	if public.key_version == 0 {
@@ -254,6 +256,15 @@ fn encrypt(secret: &[u8], public: &PublicKey, policy: &Policy, max_size: u32) ->
 		decode_block(&public.modulus_base64).map_err(|_| fail("Malformed public modulus"))?;
 	let exponent = decode_block(&public.public_exponent_base64)
 		.map_err(|_| fail("Malformed public exponent"))?;
+	if modulus.first() == Some(&0)
+		|| exponent.first() == Some(&0)
+		|| modulus.is_empty()
+		|| exponent.is_empty()
+		|| encode_block(&modulus) != public.modulus_base64
+		|| encode_block(&exponent) != public.public_exponent_base64
+	{
+		return Err(fail("Noncanonical public integer"));
+	}
 	let n = BigNum::from_slice(&modulus).map_err(|_| fail("Malformed public modulus"))?;
 	let e = BigNum::from_slice(&exponent).map_err(|_| fail("Malformed public exponent"))?;
 	if !(2048..=8192).contains(&n.num_bits())
@@ -263,6 +274,12 @@ fn encrypt(secret: &[u8], public: &PublicKey, policy: &Policy, max_size: u32) ->
 		|| e.ucmp(&n) != Ordering::Less
 	{
 		return Err(fail("Invalid tenant RSA public material"));
+	}
+	if policy.policy_id.is_empty()
+		|| !policy.policy_id.bytes().all(|b| b.is_ascii_digit())
+		|| (policy.policy_id.len() > 1 && policy.policy_id.starts_with('0'))
+	{
+		return Err(fail("Malformed policy ID"));
 	}
 	let pid = policy
 		.policy_id
@@ -319,6 +336,9 @@ fn encrypt(secret: &[u8], public: &PublicKey, policy: &Policy, max_size: u32) ->
 /// Read secret files directly into native memory and return only encrypted/public material.
 #[napi]
 pub fn blindfold_prepare(env: Env, input: BlindfoldInput) -> Result<BlindfoldPrepared> {
+	if input.public_key_json.len() > 2 * 1024 * 1024 || input.policy_json.len() > 2 * 1024 * 1024 {
+		return Err(fail("Blindfold public document exceeds 2 MiB"));
+	}
 	let public: Document<PublicKey> = serde_json::from_str(&input.public_key_json)
 		.map_err(|_| fail("Malformed tenant public key document"))?;
 	let policy: Document<Policy> = serde_json::from_str(&input.policy_json)
@@ -334,7 +354,71 @@ pub fn blindfold_prepare(env: Env, input: BlindfoldInput) -> Result<BlindfoldPre
 			}
 			(read_file(path)?, None, None, None, None)
 		} else {
-			let (key, certs) = certificates(env, &input)?;
+			let (key, mut certs) = certificates(env, &input)?;
+			let mut matching = Vec::new();
+			for (index, cert) in certs.iter().enumerate() {
+				if cert
+					.public_key()
+					.map_err(|_| fail("Invalid certificate public key"))?
+					.public_eq(&key)
+				{
+					matching.push(index);
+				}
+			}
+			if matching.len() != 1 {
+				return Err(fail("Certificate must match exactly one leaf"));
+			}
+			certs.swap(0, matching[0]);
+			for index in 0..certs.len().saturating_sub(1) {
+				let mut issuer = None;
+				for candidate in index + 1..certs.len() {
+					let issuer_key = certs[candidate]
+						.public_key()
+						.map_err(|_| fail("Invalid chain"))?;
+					if certs[index]
+						.issuer_name()
+						.to_der()
+						.map_err(|_| fail("Invalid chain"))?
+						== certs[candidate]
+							.subject_name()
+							.to_der()
+							.map_err(|_| fail("Invalid chain"))?
+						&& certs[index]
+							.verify(&issuer_key)
+							.map_err(|_| fail("Invalid chain"))?
+					{
+						if issuer.is_some() {
+							return Err(fail("Ambiguous certificate issuer"));
+						}
+						issuer = Some(candidate);
+					}
+				}
+				certs.swap(index + 1, issuer.ok_or_else(|| fail("Invalid certificate chain"))?);
+			}
+			let mut seen = std::collections::HashSet::new();
+			for cert in &certs {
+				if !seen.insert(cert.to_der().map_err(|_| fail("Invalid certificate"))?) {
+					return Err(fail("Duplicate certificate"));
+				}
+			}
+			let last = certs.last().ok_or_else(|| fail("Empty chain"))?;
+			if last
+				.issuer_name()
+				.to_der()
+				.map_err(|_| fail("Invalid chain"))?
+				== last
+					.subject_name()
+					.to_der()
+					.map_err(|_| fail("Invalid chain"))?
+			{
+				let issuer_key = last.public_key().map_err(|_| fail("Invalid chain"))?;
+				if !last
+					.verify(&issuer_key)
+					.map_err(|_| fail("Invalid chain"))?
+				{
+					return Err(fail("Invalid root signature"));
+				}
+			}
 			let algo = validate_pair(&key, &certs)?;
 			let mut chain = Vec::new();
 			for cert in &certs {
@@ -362,12 +446,15 @@ pub fn blindfold_prepare(env: Env, input: BlindfoldInput) -> Result<BlindfoldPre
 				),
 				Some(format!("string:///{}", encode_block(&chain))),
 				Some(fingerprint),
-				Some(certs[0].not_after().to_string()),
+				Some(certificate_expiration(&certs[0])?),
 				Some(algo.to_owned()),
 			)
 		};
-	let location =
-		encrypt(&secret, &public.data, &policy.data, input.max_encoded_size.unwrap_or(131_072))?;
+	let location = if input.inspect_only.unwrap_or(false) {
+		String::new()
+	} else {
+		encrypt(&secret, &public.data, &policy.data, input.max_encoded_size.unwrap_or(131_072))?
+	};
 	Ok(BlindfoldPrepared {
 		location,
 		certificate_url,
@@ -402,6 +489,10 @@ pub fn blindfold_encrypt_input(
 			|| input.passphrase_env.is_some()
 		{
 			return Err(fail("Secret encryption accepts only an input file or stdin"));
+		}
+		if input.public_key_json.len() > 2 * 1024 * 1024 || input.policy_json.len() > 2 * 1024 * 1024
+		{
+			return Err(fail("Blindfold public document exceeds 2 MiB"));
 		}
 		let public: Document<PublicKey> = serde_json::from_str(&input.public_key_json)
 			.map_err(|_| fail("Malformed tenant public key document"))?;
@@ -482,4 +573,32 @@ fn read_stdin(cancel: &crate::task::CancelToken) -> Result<Zeroizing<Vec<u8>>> {
 #[cfg(not(unix))]
 fn read_stdin(_cancel: &crate::task::CancelToken) -> Result<Zeroizing<Vec<u8>>> {
 	Err(fail("Native Blindfold stdin is supported on Unix; use an input file on this platform"))
+}
+
+fn valid_tenant(value: &str) -> bool {
+	!value.is_empty()
+		&& value.len() <= 63
+		&& value.bytes().enumerate().all(|(i, b)| {
+			b.is_ascii_lowercase() || b.is_ascii_digit() || (b == b'-' && i > 0 && i < value.len() - 1)
+		})
+}
+
+fn certificate_expiration(cert: &X509) -> Result<String> {
+	// OpenSSL prints an invariant ASN.1 UTC time; normalize the public metadata to RFC3339.
+	let text = cert.not_after().to_string();
+	let parts: Vec<&str> = text.split_whitespace().collect();
+	if parts.len() != 5 || parts[4] != "GMT" {
+		return Err(fail("Invalid certificate expiration"));
+	}
+	let months =
+		["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+	let month = months
+		.iter()
+		.position(|m| *m == parts[0])
+		.ok_or_else(|| fail("Invalid certificate expiration"))?
+		+ 1;
+	let day = parts[1]
+		.parse::<u32>()
+		.map_err(|_| fail("Invalid certificate expiration"))?;
+	Ok(format!("{}-{month:02}-{day:02}T{}Z", parts[3], parts[2]))
 }

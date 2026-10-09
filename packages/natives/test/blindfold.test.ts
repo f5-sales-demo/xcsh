@@ -219,7 +219,7 @@ describe("native certificate inputs", () => {
 					cert: fixture("rsa.pem"),
 					key: fixture("ec-key.pem"),
 				}),
-			).toThrow("does not match");
+			).toThrow("match");
 			expect(() =>
 				blindfoldPrepare({ publicKeyJson: pub, policyJson: policy, cert: file, key: fixture("ec-key.pem") }),
 			).toThrow();

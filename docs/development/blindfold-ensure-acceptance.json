@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "source": {
+    "provider": "6254f14fbced03306e73d468a12ff14a112acee7",
+    "xcsh": "ca82baec682ba3dade47a306f3b9bb7bdfee2726",
+    "contract": "9a25608eaa8c4c679ff3e052b0434cc659fe896d"
+  },
+  "artifacts": {
+    "linux_prototype_sha256": "710d1c5951aff6e5465375392ab79e64a7be6b77c5d070502594311a395f5c33",
+    "linux_final_sha256": "b74d6af71a6f70241c24fbeb6a44686f7e80a16d6e02f16b7cb3b7d8b2681806",
+    "macos_arm64_prototype_sha256": "03c00ad99c1e5ff3cd29e8a1b034ee43e312180337d0e39467b953a3d72cae75",
+    "xcsh_linux_native_sha256": "34ce879f6d0dee904c421d24edcfb527df77edfaea93c0446b587c365fbf1a71"
+  },
+  "qualified": {
+    "go_independent_recovery": true,
+    "pinned_reference_recovery": true,
+    "randomization_tamper_integer_limits": true,
+    "native_pem_protected_pkcs8_modern_p12": true,
+    "schema_nodes": 25,
+    "resource_types": 14,
+    "repeat_regeneration": true,
+    "linux_live_terraform_init_apply_empty": true,
+    "macos_live_terraform_init_apply_empty": true,
+    "write_only_ephemeral": true,
+    "material_version_update": true,
+    "metadata_update": true,
+    "renewal": true,
+    "saved_plan_file_change_rejected": true,
+    "import_converged": true,
+    "retained_ciphertext_drift_repair": true,
+    "concurrency_conflict": true,
+    "two_way_sequential_handoff": true,
+    "manifest_inline_ensure_unchanged": true,
+    "inline_apply_empty": true,
+    "strict_trust_hostname_fingerprint_https": true,
+    "renewal_propagation": true,
+    "plaintext_scans": true,
+    "cleanup_named_inline_and_macos": true
+  },
+  "unqualified": [
+    "all remaining inline configuration surfaces live",
+    "encryption key/policy mutation live",
+    "complete list insertion/reordering live",
+    "installed xcsh macOS candidate",
+    "published immutable release artifacts",
+    "contract runner deployment awaits AWS SSO",
+    "final protected PR delivery"
+  ],
+  "live_receipts": {
+    "served_fingerprints": [
+      "3a92bc245aa7560ed983e98e89734464f88eb7f977e5768b49959e7ae4087bcf",
+      "5bc56aa6b9367239c9fd8562770e1cb0fe547e195096b4b1bdd3db5bd8a3c59e",
+      "16a9d52520f93c6fe0bbecc5ac028b0688ea2e416f6b0526e137b26bf533a384"
+    ],
+    "http_status": 200,
+    "cleanup_http_status": 404
+  }
+}
