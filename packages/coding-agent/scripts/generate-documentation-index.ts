@@ -12,6 +12,7 @@ import {
 	verifyDocumentationRelease,
 	verifyPrebuiltDocumentationAssets,
 } from "../src/internal-urls/documentation-snapshot";
+import { assertSourceRecord, requireFreshCorpusSources } from "./corpus-sources";
 
 const repoRoot = path.join(import.meta.dir, "../../..");
 const pinPath = path.join(repoRoot, "tools", "documentation-release.json");
@@ -122,6 +123,8 @@ async function generate(): Promise<void> {
 
 	const rawPin = JSON.parse(await readFile(pinPath, "utf8"));
 	const pin = parseDocumentationReleasePin(rawPin);
+	const sources = await requireFreshCorpusSources();
+	assertSourceRecord(sources.general, pin);
 	if (process.argv.includes("--use-existing")) {
 		if (process.argv.includes("--update-pin") || argument("--input-dir")) {
 			throw new Error("--use-existing cannot be combined with --update-pin or --input-dir");
@@ -135,6 +138,12 @@ async function generate(): Promise<void> {
 	try {
 		if (!supplied) await downloadRelease(downloadRoot, pin.source_repository, pin.release_tag);
 		const snapshot = await verifyDocumentationRelease(downloadRoot, pin);
+		if (
+			snapshot.enrichmentArtifactSha256 &&
+			snapshot.enrichmentArtifactSha256 !==
+				sources.general.enrichment?.assets["enrichment-decisions.json.gz"]?.sha256
+		)
+			throw new Error("enrichment decision artifact disagrees with published identity");
 		const firstRoot = await mkdtemp(path.join(os.tmpdir(), "xcsh-documentation-build-a-"));
 		const secondRoot = await mkdtemp(path.join(os.tmpdir(), "xcsh-documentation-build-b-"));
 		try {

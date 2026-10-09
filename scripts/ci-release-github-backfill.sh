@@ -169,6 +169,7 @@ done
 LC_ALL=C sort -o "$work/expected-assets" "$work/expected-assets"
 diff -u "$work/expected-assets" "$work/actual-assets"
 
+bun packages/coding-agent/scripts/check-corpus-freshness.ts
 gh release edit "$tag" --repo "$repository" --draft=false
 gh api "repos/${repository}/releases/${release_id}" |
   jq -e --arg tag "$tag" --argjson count "${#expected_assets[@]}" '.tag_name == $tag and .draft == false and .prerelease == false and .immutable == true and (.assets | length) == $count' \

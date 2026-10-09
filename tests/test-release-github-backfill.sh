@@ -320,6 +320,15 @@ fi
 EOF
 chmod +x "$fake_bin/gh"
 
+cat >"$fake_bin/bun" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+[[ "$*" == "packages/coding-agent/scripts/check-corpus-freshness.ts" ]] || exit 64
+printf 'freshness-check\n' >>"${FAKE_GH_STATE:?}/events"
+if [ "${FAKE_GH_SCENARIO:-}" = freshness-advanced ]; then exit 1; fi
+EOF
+chmod +x "$fake_bin/bun"
+
 run_uploader_case() {
   local case_name=$1
   local scenario=$2
@@ -358,6 +367,13 @@ test "$(grep -c '^upload-end' "$behavior_root/default-concurrency/events")" -eq 
 inventory_line=$(grep -n '^inventory-read$' "$behavior_root/default-concurrency/events" | head -1 | cut -d: -f1)
 publish_line=$(grep -n '^publish$' "$behavior_root/default-concurrency/events" | cut -d: -f1)
 test "$inventory_line" -lt "$publish_line" || fail "release was published before final inventory verification"
+
+freshness_line=$(grep -n '^freshness-check$' "$behavior_root/default-concurrency/events" | cut -d: -f1)
+test "$inventory_line" -lt "$freshness_line" && test "$freshness_line" -lt "$publish_line" || fail "freshness must be checked immediately before publication"
+if run_uploader_case freshness-advanced freshness-advanced 4 0; then
+  fail "advanced corpus source unexpectedly published"
+fi
+test ! -f "$behavior_root/freshness-advanced/published" || fail "freshness failure did not preserve the draft"
 
 run_uploader_case explicit-concurrency success 2 2 || fail "explicit-concurrency upload failed"
 test "$(<"$behavior_root/explicit-concurrency/maximum")" -eq 2 || fail "explicit upload concurrency was not honored"

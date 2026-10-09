@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { parseInternalUrl } from "../../src/internal-urls/parse";
 import { createRegistryResolver } from "../../src/internal-urls/registry-resolve";
+import { EMBEDDED_PROVIDER_VERSION } from "../../src/internal-urls/terraform-provider-pin.generated";
 
 const servers: Bun.Server<unknown>[] = [];
 
@@ -156,7 +157,7 @@ describe("xcsh latest Registry view", () => {
 		expect(latest.contentType).toBe("application/json");
 		const metadata = JSON.parse(latest.content);
 		expect(metadata.latestVersion).toBe("15.10.0");
-		expect(metadata.embeddedDocumentationVersion).toBe("15.2.0");
+		expect(metadata.embeddedDocumentationVersion).toBe(EMBEDDED_PROVIDER_VERSION);
 		expect(metadata.freshness).toBe("fresh");
 		await resolver.resolve(target);
 		expect(calls).toBe(1);

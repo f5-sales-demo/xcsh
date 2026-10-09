@@ -90,9 +90,13 @@ with tempfile.NamedTemporaryFile(suffix=".sqlite") as tmp:
             "SELECT source,stable_path,title,original_url FROM documentation_documents"
         )
     }
+    for source, route, target_source, target in db.execute(
+        "SELECT source,stable_path,target_source,target_stable_path FROM documentation_routes"
+    ):
+        general[f"{source}/{route}"] = general[f"{target_source}/{target}"]
     db.close()
 manifest = json.loads((root / "sources/content/manifest.json").read_text())
-if len(general) != len(manifest["documents"]):
+if len(general) != len(manifest["documents"]) + len(manifest.get("enrichment", {}).get("aliases", [])):
     GENERAL_COUNT_ERROR = "general document count mismatch"
     raise SystemExit(GENERAL_COUNT_ERROR)
 for row in manifest["documents"]:
@@ -110,7 +114,7 @@ def norm(api_path: str) -> str:
     )
 
 
-api_zip = root / "sources/api/f5xc-api-specs-v12.0.0.zip"
+api_zip = root / ("sources/api/f5xc-api-specs-" + receipts["api"]["tag"] + ".zip")
 ARCHIVE_DIGEST = hashlib.sha256(api_zip.read_bytes()).hexdigest()
 if receipts["api"]["assets"][api_zip.name]["sha256"] != ARCHIVE_DIGEST:
     ARCHIVE_DIGEST_ERROR = (
@@ -213,7 +217,7 @@ source = {
     },
     "api": {
         "version": receipts["api"]["tag"],
-        "digest": receipts["api"]["assets"]["f5xc-api-specs-v12.0.0.zip"]["sha256"],
+        "digest": receipts["api"]["assets"][api_zip.name]["sha256"],
     },
 }
 target = (

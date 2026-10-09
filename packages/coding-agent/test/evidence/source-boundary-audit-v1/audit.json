@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "4709f16e2342040fe84915ad46595a99efa07ac5",
+  "revision": "d02b4c9f23bb3308d5e067c5842dc53e54d73a57",
   "fingerprint": "afc8dd789e0bf66db44f65a92211b32788c360fd53141edbc8cbd75310f1b620",
   "counts": {
     "total": 240,
@@ -6170,6 +6170,7 @@
         "packages/coding-agent/test/core/chunk-tree.test.ts",
         "packages/coding-agent/test/core/hashline.test.ts",
         "packages/coding-agent/test/core/python-kernel-display.test.ts",
+        "packages/coding-agent/test/corpus-freshness.test.ts",
         "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
         "packages/coding-agent/test/herdr/interaction-bridge.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
@@ -6181,8 +6182,7 @@
         "packages/coding-agent/test/internal-urls/blindfold.test.ts",
         "packages/coding-agent/test/internal-urls/changes-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/console-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/documentation-metadata.test.ts",
-        "packages/coding-agent/test/internal-urls/documentation-repository.test.ts"
+        "packages/coding-agent/test/internal-urls/documentation-metadata.test.ts"
       ],
       "classification": "packages/tui/src/components/markdown.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

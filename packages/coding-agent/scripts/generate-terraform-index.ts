@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { gzipSync } from "node:zlib";
+import { requireFreshCorpusSources } from "./corpus-sources";
 
 const OUTPUT_FILE = path.join(import.meta.dir, "..", "src", "internal-urls", "terraform-index.generated.ts");
 
@@ -148,7 +149,17 @@ export function generateTypeScript(
 }
 
 async function main(): Promise<void> {
-	const loaded = await loadTerraformIndex();
+	const sources = await requireFreshCorpusSources();
+	if (
+		(process.env.TERRAFORM_PROVIDER_TAG && process.env.TERRAFORM_PROVIDER_TAG !== sources.provider.tag) ||
+		(process.env.TERRAFORM_PROVIDER_COMMIT && process.env.TERRAFORM_PROVIDER_COMMIT !== sources.provider.commit)
+	)
+		throw new Error("stale explicit Terraform input");
+	const loaded = await loadTerraformIndex({
+		...process.env,
+		TERRAFORM_PROVIDER_TAG: sources.provider.tag,
+		TERRAFORM_PROVIDER_COMMIT: sources.provider.commit,
+	});
 	const output = generateTypeScript(loaded.data, loaded.providerTag, loaded.providerCommit);
 	await fs.writeFile(OUTPUT_FILE, output, "utf-8");
 	await Bun.$`bunx biome format --write --files-max-size=10000000 ${OUTPUT_FILE}`.quiet();

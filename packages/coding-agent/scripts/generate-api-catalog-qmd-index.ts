@@ -12,11 +12,16 @@ import {
 	fingerprintApiCatalogDiscoveryCorpus,
 } from "../src/internal-urls/api-catalog-discovery";
 import { API_CATALOG_DATA, API_CATALOG_INDEX } from "../src/internal-urls/api-catalog-index.generated";
+import { assertSourceRecord, requireFreshCorpusSources } from "./corpus-sources";
 
 const specPin = JSON.parse(await readFile(path.join(import.meta.dir, "../../../tools/spec-release.json"), "utf8")) as {
 	version: string;
 	target_commit: string;
+	release_tag: string;
+	assets: Record<string, string>;
 };
+const sources = await requireFreshCorpusSources();
+assertSourceRecord(sources.api, specPin);
 if (specPin.version !== API_CATALOG_INDEX.version || !/^[a-f0-9]{40}$/.test(specPin.target_commit))
 	throw new Error("API catalog discovery source disagrees with reviewed release pin");
 const sourceSha = specPin.target_commit;

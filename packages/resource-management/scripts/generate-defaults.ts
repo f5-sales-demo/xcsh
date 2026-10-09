@@ -23,6 +23,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { type ApiSpecReleaseIdentity, releaseIdentityFromEnvironment } from "../../../scripts/api-spec-delivery";
+import { requireFreshCorpusSources } from "../../coding-agent/scripts/corpus-sources";
 
 const REPO = "f5-sales-demo/api-specs-enriched";
 const ARTIFACT_NAME = "minimal-export-defaults.json";
@@ -198,8 +199,18 @@ export const DEFAULTS_METADATA: Record<string, KindDefaultsMetadata> = ${body};
 }
 
 async function main(): Promise<void> {
-	const releaseIdentity = releaseIdentityFromEnvironment(process.env);
-	const loaded = await loadArtifactText(process.env);
+	const sources = await requireFreshCorpusSources();
+	const explicit = releaseIdentityFromEnvironment(process.env);
+	if (explicit && explicit.releaseTag !== sources.api.tag) throw new Error("stale explicit API defaults input");
+	if (process.env.API_SPECS_DEFAULTS_FILE)
+		throw new Error("local API defaults input is not a verified published artifact");
+	const releaseIdentity = { releaseTag: sources.api.tag, version: sources.api.tag.slice(1) };
+	const loaded = await loadArtifactText({
+		...process.env,
+		API_SPECS_TAG: releaseIdentity.releaseTag,
+		API_SPECS_VERSION: releaseIdentity.version,
+		API_SPECS_DEFAULTS_SHA256: sources.api.assets[ARTIFACT_NAME]!.sha256,
+	});
 
 	let table: Record<string, KindDefaultsMetadata> = {};
 	let version = "unknown";

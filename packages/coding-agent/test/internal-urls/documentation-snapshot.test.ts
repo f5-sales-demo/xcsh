@@ -315,6 +315,60 @@ describe("offline documentation release", () => {
 		if (root) await rm(root, { recursive: true, force: true });
 	});
 
+	it("accepts verified enrichment and stores canonical aliases in the index", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const alias = {
+			path: "content/docs-cloud-f5-com/old/index.md",
+			target: "content/docs-cloud-f5-com/protect-applications/index.md",
+			url: "https://docs.cloud.f5.com/docs-v2/old",
+		};
+		const { pin } = await fixture(root, value => {
+			value.enrichment = { artifact_sha256: "a".repeat(64), aliases: [alias] };
+		});
+		const snapshot = await verifyDocumentationRelease(root, pin);
+		expect(snapshot.aliases).toEqual([alias]);
+		const output = path.join(root, "index.sqlite");
+		await buildDocumentationIndex(snapshot, output);
+		const db = new Database(output, { readonly: true });
+		try {
+			expect(
+				db.query("SELECT source, stable_path, target_source, target_stable_path FROM documentation_routes").all(),
+			).toEqual([
+				{
+					source: "docs-cloud-f5-com",
+					stable_path: "old",
+					target_source: "docs-cloud-f5-com",
+					target_stable_path: "protect-applications",
+				},
+			]);
+		} finally {
+			db.close();
+		}
+	});
+	it.each(["unsafe", "duplicate", "collision", "dangling", "chain", "digest"])(
+		"rejects invalid enrichment %s",
+		async kind => {
+			root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+			const alias = {
+				path: "content/docs-cloud-f5-com/old/index.md",
+				target: "content/docs-cloud-f5-com/protect-applications/index.md",
+				url: "https://docs.cloud.f5.com/docs-v2/old",
+			};
+			const aliases = [alias];
+			if (kind === "unsafe") alias.path = "content/docs-cloud-f5-com/../old/index.md";
+			if (kind === "duplicate") aliases.push({ ...alias });
+			if (kind === "collision") alias.path = alias.target;
+			if (kind === "dangling") alias.target = "content/docs-cloud-f5-com/missing/index.md";
+			if (kind === "chain") {
+				aliases.push({ ...alias, path: "content/docs-cloud-f5-com/older/index.md", target: alias.path });
+			}
+			const { pin } = await fixture(root, value => {
+				value.enrichment = { artifact_sha256: kind === "digest" ? "invalid" : "a".repeat(64), aliases };
+			});
+			await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow("enrichment");
+		},
+	);
+
 	it.each([
 		"../escape",
 		"/absolute",
