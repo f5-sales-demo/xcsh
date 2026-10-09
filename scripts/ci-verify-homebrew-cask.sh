@@ -106,7 +106,7 @@ assert trace[0].get("category") == "dns-dns-zone-clone-from-dns-domain", trace[0
 assert trace[0].get("outcome") == "rank-1", trace[0]
 expected_resources = [
     "xcsh://documentation/?search=configure%20web%20application%20firewall&source=docs-cloud-f5-com&limit=1",
-    "xcsh://documentation/docs-cloud-f5-com/docs/how-to/app-security/web-app-firewall/index.md",
+    "xcsh://documentation/docs-cloud-f5-com/web-app-and-api-protection/how-to/app-security/application-firewall/index.md",
     "xcsh://documentation/?search=what%20is%20client%20side%20defense&source=www-f5-com&limit=1",
     "xcsh://documentation/www-f5-com/products/distributed-cloud-services/client-side-defense/index.md",
     "xcsh://documentation/?search=set%20up%20DNS%20load%20balancer&source=docs-cloud-f5-com&limit=1",
