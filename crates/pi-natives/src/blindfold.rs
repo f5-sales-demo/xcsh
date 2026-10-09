@@ -446,7 +446,7 @@ pub fn blindfold_prepare(env: Env, input: BlindfoldInput) -> Result<BlindfoldPre
 				),
 				Some(format!("string:///{}", encode_block(&chain))),
 				Some(fingerprint),
-				Some(certs[0].not_after().to_string()),
+				Some(certificate_expiration(&certs[0])?),
 				Some(algo.to_owned()),
 			)
 		};
@@ -581,4 +581,24 @@ fn valid_tenant(value: &str) -> bool {
 		&& value.bytes().enumerate().all(|(i, b)| {
 			b.is_ascii_lowercase() || b.is_ascii_digit() || (b == b'-' && i > 0 && i < value.len() - 1)
 		})
+}
+
+fn certificate_expiration(cert: &X509) -> Result<String> {
+	// OpenSSL prints an invariant ASN.1 UTC time; normalize the public metadata to RFC3339.
+	let text = cert.not_after().to_string();
+	let parts: Vec<&str> = text.split_whitespace().collect();
+	if parts.len() != 5 || parts[4] != "GMT" {
+		return Err(fail("Invalid certificate expiration"));
+	}
+	let months =
+		["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+	let month = months
+		.iter()
+		.position(|m| *m == parts[0])
+		.ok_or_else(|| fail("Invalid certificate expiration"))?
+		+ 1;
+	let day = parts[1]
+		.parse::<u32>()
+		.map_err(|_| fail("Invalid certificate expiration"))?;
+	Ok(format!("{}-{month:02}-{day:02}T{}Z", parts[3], parts[2]))
 }
