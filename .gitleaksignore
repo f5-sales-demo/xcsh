@@ -1,3 +1,6 @@
+# Immutable public synthetic Blindfold contract fixture; checksum is validated by the consumer.
+packages/coding-agent/src/services/blindfold-contract/blindfold-contract-v1.txt:private-key:1
+/github/workspace/packages/coding-agent/src/services/blindfold-contract/blindfold-contract-v1.txt:private-key:1
 # Synthetic, non-live native parsing fixtures; see packages/natives/test/fixtures/BLINDFOLD.md.
 packages/natives/test/fixtures/blindfold-synthetic.json:private-key:3
 /github/workspace/packages/natives/test/fixtures/blindfold-synthetic.json:private-key:3
