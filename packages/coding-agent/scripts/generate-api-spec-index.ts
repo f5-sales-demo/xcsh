@@ -3,7 +3,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { $ } from "bun";
+import { unzipSync } from "fflate";
 import {
 	type ApiSpecReleaseIdentity,
 	releaseIdentityFromEnvironment,
@@ -18,7 +18,7 @@ import {
 	normalizeApiPath,
 	type OpenApiDocumentLike,
 } from "./api-catalog-integrity";
-import { isLocalSpecsCurrent } from "./api-specs-version";
+import { requireFreshCorpusSources } from "./corpus-sources";
 import {
 	sanitizeAcmePlaceholders,
 	sanitizeAzureSubscriptionIds,
@@ -118,19 +118,27 @@ interface RawIndex {
 const REPO = "f5-sales-demo/api-specs-enriched";
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-spec-index.generated.ts");
 const catalogOutputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-catalog-index.generated.ts");
-const releaseIdentity = releaseIdentityFromEnvironment(process.env);
+const corpusSources = await requireFreshCorpusSources();
+const explicitIdentity = releaseIdentityFromEnvironment(process.env);
+if (explicitIdentity && explicitIdentity.releaseTag !== corpusSources.api.tag)
+	throw new Error("stale explicit API build input");
+if (process.env.API_SPECS_DIR) throw new Error("local API_SPECS_DIR is not a verified published corpus input");
+const releaseIdentity = { releaseTag: corpusSources.api.tag, version: corpusSources.api.tag.slice(1) };
 
 function requiredSha256(value: string | undefined, field: string): string {
 	if (!value || !/^[0-9a-f]{64}$/.test(value)) throw new Error(`${field} must be a lowercase SHA-256 digest`);
 	return value;
 }
 
-const expectedBundleSha256 = releaseIdentity
-	? requiredSha256(process.env.API_SPECS_BUNDLE_SHA256, "API_SPECS_BUNDLE_SHA256")
-	: undefined;
-const expectedCatalogSha256 = releaseIdentity
-	? requiredSha256(process.env.API_SPECS_CATALOG_SHA256, "API_SPECS_CATALOG_SHA256")
-	: undefined;
+const expectedBundleSha256 = corpusSources.api.assets[`f5xc-api-specs-${releaseIdentity.releaseTag}.zip`]!.sha256;
+const expectedCatalogSha256 = corpusSources.api.assets["api-catalog.json"]!.sha256;
+for (const [field, digest] of [
+	["API_SPECS_BUNDLE_SHA256", expectedBundleSha256],
+	["API_SPECS_CATALOG_SHA256", expectedCatalogSha256],
+]) {
+	if (process.env[field!] && requiredSha256(process.env[field!], field!) !== digest)
+		throw new Error("stale explicit API asset digest");
+}
 
 /** Domains reserved for documentation by RFC 2606 / RFC 6761. */
 const RESERVED_EMAIL_DOMAINS = new Set(["example.com", "example.net", "example.org"]);
@@ -177,25 +185,8 @@ async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response
 	throw lastError ?? new Error(`Failed to fetch ${url} after ${MAX_RETRIES} retries`);
 }
 
-function githubHeaders(): Record<string, string> {
-	const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
-	const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-	if (token) headers.Authorization = `Bearer ${token}`;
-	return headers;
-}
-
 async function resolveLatestTag(): Promise<string> {
-	const response = await fetchWithRetry(`https://api.github.com/repos/${REPO}/releases/latest`, {
-		headers: githubHeaders(),
-	});
-	if (!response.ok) {
-		throw new Error(`Failed to fetch latest release from ${REPO}: ${response.status} ${response.statusText}`);
-	}
-	const data = (await response.json()) as { tag_name?: string };
-	if (!data.tag_name) {
-		throw new Error(`Latest release from ${REPO} has no tag_name`);
-	}
-	return data.tag_name;
+	return corpusSources.api.tag;
 }
 
 async function downloadFromRelease(exactTag?: string, expectedSha256?: string): Promise<string> {
@@ -211,21 +202,39 @@ async function downloadFromRelease(exactTag?: string, expectedSha256?: string): 
 		throw new Error(`Failed to download release: ${response.status} ${response.statusText}`);
 	}
 
-	const zipPath = path.join(tmpDir, zipName);
 	const buffer = Buffer.from(await response.arrayBuffer());
-	if (expectedSha256 && new Bun.CryptoHasher("sha256").update(buffer).digest("hex") !== expectedSha256) {
-		throw new Error(`Downloaded ${zipName} differs from its immutable publication receipt`);
-	}
-	fs.writeFileSync(zipPath, buffer);
-
+	if (
+		buffer.length > 64 * 1024 * 1024 ||
+		new Bun.CryptoHasher("sha256").update(buffer).digest("hex") !== expectedSha256
+	)
+		throw new Error("API archive digest or size mismatch");
 	const extractDir = path.join(tmpDir, "extracted");
 	fs.mkdirSync(extractDir, { recursive: true });
-	const result = await $`unzip -q ${zipPath} -d ${extractDir}`.nothrow();
-	if (result.exitCode !== 0) {
-		throw new Error(
-			`Failed to extract ${zipPath}: unzip exited with code ${result.exitCode}.\n` +
-				"Ensure 'unzip' is installed: apt install unzip / brew install unzip",
-		);
+	const names = new Set<string>();
+	let expanded = 0;
+	const entries = unzipSync(buffer, {
+		filter: member => {
+			const name = member.name;
+			expanded += member.originalSize;
+			if (
+				!name ||
+				name.startsWith("/") ||
+				/[\\%]/.test(name) ||
+				name.split("/").some(p => !p || p === "." || p === "..") ||
+				names.has(name) ||
+				member.originalSize > 64 * 1024 * 1024 ||
+				expanded > 512 * 1024 * 1024 ||
+				names.size >= 1000
+			)
+				throw new Error("unsafe, duplicate, or oversized API archive member");
+			names.add(name);
+			return true;
+		},
+	});
+	for (const [name, bytes] of Object.entries(entries)) {
+		const destination = path.join(extractDir, name);
+		fs.mkdirSync(path.dirname(destination), { recursive: true });
+		fs.writeFileSync(destination, bytes);
 	}
 
 	const domainsDir = path.join(extractDir, "domains");
@@ -238,49 +247,8 @@ async function downloadFromRelease(exactTag?: string, expectedSha256?: string): 
 	return extractDir;
 }
 
-function readLocalSpecsVersion(specsDir: string): string | undefined {
-	try {
-		const index = JSON.parse(fs.readFileSync(path.join(specsDir, "index.json"), "utf-8")) as { version?: string };
-		return index.version;
-	} catch {
-		return undefined;
-	}
-}
-
-async function findSpecsDir(identity: ApiSpecReleaseIdentity | undefined): Promise<string> {
-	if (identity) {
-		return downloadFromRelease(identity.releaseTag, expectedBundleSha256);
-	}
-
-	const envDir = process.env.API_SPECS_DIR;
-	if (envDir && fs.existsSync(envDir)) {
-		// Explicit override — the caller is responsible for its freshness.
-		return envDir;
-	}
-
-	const localCheckout = path.resolve(import.meta.dir, "../../../../api-specs-enriched/docs/specifications/api");
-	if (fs.existsSync(localCheckout)) {
-		// Only build from the local checkout when it matches the latest release, so a
-		// stale checkout cannot silently pin the build to old specs. If GitHub is
-		// unreachable (offline dev), fall back to the local checkout with a warning.
-		try {
-			const latestTag = await resolveLatestTag();
-			const localVersion = readLocalSpecsVersion(localCheckout);
-			if (isLocalSpecsCurrent(localVersion, latestTag)) {
-				return localCheckout;
-			}
-			console.warn(
-				`Local api-specs-enriched checkout is stale (local ${localVersion ?? "unknown"} != latest ${latestTag}); building against the latest release instead.`,
-			);
-		} catch (err) {
-			console.warn(
-				`Could not verify the latest api-specs version (${err instanceof Error ? err.message : err}); using the local checkout.`,
-			);
-			return localCheckout;
-		}
-	}
-
-	return downloadFromRelease();
+async function findSpecsDir(_identity: ApiSpecReleaseIdentity | undefined): Promise<string> {
+	return downloadFromRelease(corpusSources.api.tag, expectedBundleSha256);
 }
 
 async function downloadJsonReleaseAsset(

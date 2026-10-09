@@ -220,6 +220,13 @@ describe("embedded documentation repository", () => {
 			archiveSha256: sha256(archive),
 			documents,
 			assets: snapshotAssets,
+			aliases: [
+				{
+					path: "content/docs-cloud-f5-com/old/index.md",
+					target: "content/docs-cloud-f5-com/protect-applications/index.md",
+					url: "https://docs.cloud.f5.com/docs-v2/old",
+				},
+			],
 		};
 		const index = await buildDocumentationIndex(snapshot, rawIndexPath);
 		const compressedIndex = gzipSync(await readFile(rawIndexPath), { level: 9 });
@@ -243,6 +250,34 @@ describe("embedded documentation repository", () => {
 
 	afterAll(async () => {
 		await rm(root, { recursive: true, force: true });
+	});
+
+	it("resolves aliases to canonical text, headings and existing media only", async () => {
+		const repository = createEmbeddedDocumentationRepository(assets, { cacheRoot });
+		const canonical = await repository.readDocument("docs-cloud-f5-com", "protect-applications");
+		expect(await repository.readDocument("docs-cloud-f5-com", "old")).toEqual(canonical);
+		expect((await repository.readDocument("docs-cloud-f5-com", "old", "protect-applications"))?.originalUrl).toBe(
+			canonical?.originalUrl,
+		);
+		expect(await repository.readDocument("docs-cloud-f5-com", "old", "removed-heading")).toBeNull();
+		expect(await repository.readAsset("docs-cloud-f5-com", "old", "removed.png")).toBeNull();
+		const { Database } = await import("bun:sqlite");
+		const db = new Database(rawIndexPath, { readonly: true });
+		try {
+			const row = db
+				.query(
+					"SELECT filename FROM documentation_assets WHERE source = 'docs-cloud-f5-com' AND stable_path = 'protect-applications' LIMIT 1",
+				)
+				.get() as { filename: string };
+			expect(await repository.readAsset("docs-cloud-f5-com", "old", row.filename)).toEqual(
+				await repository.readAsset("docs-cloud-f5-com", "protect-applications", row.filename),
+			);
+		} finally {
+			db.close();
+		}
+		expect((await repository.search("corpusmarker", "docs-cloud-f5-com", 5)).map(r => r.stablePath)).not.toContain(
+			"old",
+		);
 	});
 
 	it("searches all three collections with authoritative source filtering and exact reads", async () => {

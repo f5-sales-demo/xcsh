@@ -20,7 +20,7 @@ export const DOCUMENTATION_TOOLS_DISABLED_MESSAGE =
 
 const EXPECTED_CATEGORY = "dns-dns-zone-clone-from-dns-domain";
 const WAF_QUERY = "configure web application firewall";
-const WAF_PATH = "docs/how-to/app-security/web-app-firewall";
+const WAF_PATH = "web-app-and-api-protection/how-to/app-security/application-firewall";
 const WAF_TITLE = "Create Web Application Firewall";
 const MARKETING_QUERY = "what is client side defense";
 const MARKETING_PATH = "products/distributed-cloud-services/client-side-defense";

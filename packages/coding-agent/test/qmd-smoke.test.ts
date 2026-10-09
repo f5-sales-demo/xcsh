@@ -42,7 +42,7 @@ describe("QMD compiled-binary smoke", () => {
 							title: "Create Web Application Firewall",
 							source: "docs-cloud-f5-com",
 							originalUrl: "https://example.invalid/waf",
-							stablePath: "docs/how-to/app-security/web-app-firewall",
+							stablePath: "web-app-and-api-protection/how-to/app-security/application-firewall",
 							snippet: "WAF",
 							score: 9,
 						},
@@ -83,7 +83,7 @@ describe("QMD compiled-binary smoke", () => {
 					};
 				}
 				if (source !== "docs-cloud-f5-com") return null;
-				if (stablePath === "docs/how-to/app-security/web-app-firewall") {
+				if (stablePath === "web-app-and-api-protection/how-to/app-security/application-firewall") {
 					return {
 						markdown: "# Create Web Application Firewall",
 						title: "Create Web Application Firewall",

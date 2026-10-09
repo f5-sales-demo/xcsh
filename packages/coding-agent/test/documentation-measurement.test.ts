@@ -28,7 +28,7 @@ test("general measurement checks five identical full responses and anchored foll
 	).rejects.toThrow("Non-deterministic");
 });
 
-test("current port query selects the earliest section when platform BM25 scores round to a tie", async () => {
+test("current port query selects the retained technical ports section", async () => {
 	const { EMBEDDED_DOCUMENTATION_ASSETS } = await import("../src/internal-urls/documentation-assets.generated");
 	if (!EMBEDDED_DOCUMENTATION_ASSETS) return;
 	const { createEmbeddedDocumentationRepository } = await import("../src/internal-urls/documentation-repository");
@@ -43,7 +43,7 @@ test("current port query selects the earliest section when platform BM25 scores 
 			"my-f5-com",
 			5,
 		);
-		expect(results.find(result => result.stablePath === "K000147971")?.anchor).toBe("resolutionanswer");
+		expect(results.find(result => result.stablePath === "K000147971")?.anchor).toBe("ports-used");
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}

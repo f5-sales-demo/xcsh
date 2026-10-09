@@ -345,12 +345,10 @@ describe("provider publication evidence gate", () => {
 describe("exact API spec generator contract", () => {
 	it("bypasses local sources and requires exact-version bundle, catalog, and validation data", async () => {
 		const source = await Bun.file(generatorPath).text();
-		const exactSource = source.indexOf(
-			"if (identity) {\n\t\treturn downloadFromRelease(identity.releaseTag, expectedBundleSha256);",
-		);
-		const localOverride = source.indexOf("const envDir = process.env.API_SPECS_DIR");
-		expect(exactSource).toBeGreaterThan(-1);
-		expect(localOverride).toBeGreaterThan(exactSource);
+		expect(source).toContain("const corpusSources = await requireFreshCorpusSources();");
+		expect(source).toContain("return downloadFromRelease(corpusSources.api.tag, expectedBundleSha256);");
+		expect(source).toContain("local API_SPECS_DIR is not a verified published corpus input");
+		expect(source).not.toContain("using the local checkout");
 		expect(source).toContain(
 			'downloadJsonReleaseAsset(identity.releaseTag, "api-catalog.json", true, expectedCatalogSha256)',
 		);

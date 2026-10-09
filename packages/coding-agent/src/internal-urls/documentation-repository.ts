@@ -243,7 +243,7 @@ function verifyDatabase(database: Database, assets: EmbeddedDocumentationAssets)
 		asset_count: String(assets.assetCount),
 		document_count: String(assets.documentCount),
 		fingerprint: assets.fingerprint,
-		index_schema: "3",
+		index_schema: "4",
 		release_tag: assets.releaseTag,
 		source_commit: assets.sourceCommit,
 	};
@@ -486,6 +486,16 @@ export function createEmbeddedDocumentationRepository(
 		},
 		readDocument: async (source, stablePath, anchor): Promise<DocumentationDocument | null> => {
 			const current = await state();
+			const route = current.database
+				.query(
+					"SELECT target_source, target_stable_path FROM documentation_routes WHERE source = ? AND stable_path = ?",
+				)
+				.get(source, stablePath) as { target_source: DocumentationSource; target_stable_path: string } | null;
+			if (route) {
+				source = route.target_source;
+				stablePath = route.target_stable_path;
+			}
+
 			const row = current.database
 				.query(
 					"SELECT title, original_url, markdown, lifecycle, replacement_url FROM documentation_documents WHERE source = ? AND stable_path = ?",
@@ -516,6 +526,16 @@ export function createEmbeddedDocumentationRepository(
 		},
 		readAsset: async (source, stablePath, filename): Promise<DocumentationAsset | null> => {
 			const current = await state();
+			const route = current.database
+				.query(
+					"SELECT target_source, target_stable_path FROM documentation_routes WHERE source = ? AND stable_path = ?",
+				)
+				.get(source, stablePath) as { target_source: DocumentationSource; target_stable_path: string } | null;
+			if (route) {
+				source = route.target_source;
+				stablePath = route.target_stable_path;
+			}
+
 			const row = current.database
 				.query(
 					"SELECT source, stable_path, filename, archive_path, mime_type, sha256, size_bytes FROM documentation_assets WHERE source = ? AND stable_path = ? AND filename = ?",

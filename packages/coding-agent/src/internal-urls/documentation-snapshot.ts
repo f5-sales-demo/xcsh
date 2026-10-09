@@ -41,7 +41,7 @@ const COMMIT = /^[a-f0-9]{40}$/;
 const RELEASE_TAG = /^content-[0-9]{8}T[0-9]{6}Z$/;
 const TIMESTAMP = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/;
 const FIXED_TIME = "2000-01-01T00:00:00.000Z";
-const DOCUMENTATION_INDEX_SCHEMA_VERSION = 3;
+const DOCUMENTATION_INDEX_SCHEMA_VERSION = 4;
 const MANIFEST_KEYS = [
 	"asset_count",
 	"assets",
@@ -142,7 +142,15 @@ export interface VerifiedDocumentationAsset {
 	readonly sizeBytes: number;
 }
 
+export interface DocumentationRouteAlias {
+	readonly path: string;
+	readonly target: string;
+	readonly url: string;
+}
+
 export interface VerifiedDocumentationSnapshot {
+	readonly aliases?: readonly DocumentationRouteAlias[];
+	readonly enrichmentArtifactSha256?: string;
 	readonly archivePath: string;
 	readonly releaseTag: string;
 	readonly sourceCommit: string;
@@ -623,7 +631,11 @@ export async function verifyDocumentationRelease(
 	}
 
 	const manifest = parseJson(manifestEntry.data, "documentation manifest");
-	exactKeys(manifest, MANIFEST_KEYS, "documentation manifest");
+	exactKeys(
+		manifest,
+		[...MANIFEST_KEYS, ...(Object.hasOwn(manifest, "enrichment") ? ["enrichment"] : [])],
+		"documentation manifest",
+	);
 	if (manifest.schema_version !== 2) throw new Error("documentation manifest schema version is invalid");
 	string(manifest.tool_version, "documentation manifest tool version");
 	validateTimestamp(manifest.started_at, "documentation manifest started_at");
@@ -775,8 +787,60 @@ export async function verifyDocumentationRelease(
 	if (JSON.stringify([...seen].sort()) !== JSON.stringify(contentNames))
 		throw new Error("documentation manifest content member set mismatch");
 
+	const aliases: DocumentationRouteAlias[] = [];
+	let enrichmentArtifactSha256: string | undefined;
+	if (Object.hasOwn(manifest, "enrichment")) {
+		const enrichment = object(manifest.enrichment, "enrichment");
+		exactKeys(enrichment, ["artifact_sha256", "aliases"], "enrichment");
+		enrichmentArtifactSha256 = string(enrichment.artifact_sha256, "enrichment artifact digest");
+		if (!SHA256.test(enrichmentArtifactSha256) || !Array.isArray(enrichment.aliases))
+			throw new Error("invalid enrichment digest or aliases");
+		const canonicalPaths = new Set(documents.map(d => d.archivePath));
+		const aliasPaths = new Set<string>();
+		for (const value of enrichment.aliases) {
+			const alias = object(value, "enrichment alias");
+			exactKeys(alias, ["path", "target", "url"], "enrichment alias");
+			const route = {
+				path: string(alias.path, "enrichment alias path"),
+				target: string(alias.target, "enrichment alias target"),
+				url: string(alias.url, "enrichment alias URL"),
+			};
+			try {
+				validateMemberName(route.path);
+				validateMemberName(route.target);
+			} catch (error) {
+				throw new Error("unsafe enrichment alias path", { cause: error });
+			}
+			if (
+				!route.path.endsWith("/index.md") ||
+				!route.target.endsWith("/index.md") ||
+				canonicalPaths.has(route.path) ||
+				aliasPaths.has(route.path) ||
+				!canonicalPaths.has(route.target)
+			)
+				throw new Error("conflicting, dangling, or chained enrichment alias");
+			const source = route.path.split("/")[1] as DocumentationSource;
+			if (
+				!/^content\/[a-z0-9-]+\/(?:[A-Za-z0-9_~.-]+\/)*index\.md$/.test(route.path) ||
+				!/^content\/[a-z0-9-]+\/(?:[A-Za-z0-9_~.-]+\/)*index\.md$/.test(route.target)
+			)
+				throw new Error("unsafe enrichment alias route");
+			if (
+				source === "docs-cloud-f5-com" &&
+				route.url !== `${SOURCE_ROOT_URLS[source]}/${stableDocumentPath(route.path, source)}`
+			)
+				throw new Error("enrichment alias URL does not match its route");
+			validateCorpusUrl(route.url, source, "enrichment alias URL");
+			aliasPaths.add(route.path);
+			aliases.push(route);
+		}
+		aliases.sort((a, b) => a.path.localeCompare(b.path));
+	}
+
 	return {
 		archivePath,
+		aliases,
+		enrichmentArtifactSha256,
 		releaseTag: pin.release_tag,
 		sourceCommit: pin.source_commit,
 		archiveSha256: pin.assets["html-to-markdown-content.tar.gz"].sha256,
@@ -790,6 +854,8 @@ function fingerprint(snapshot: VerifiedDocumentationSnapshot): string {
 		JSON.stringify({
 			archiveSha256: snapshot.archiveSha256,
 			indexSchema: DOCUMENTATION_INDEX_SCHEMA_VERSION,
+			aliases: snapshot.aliases ?? [],
+			enrichmentArtifactSha256: snapshot.enrichmentArtifactSha256 ?? null,
 			releaseTag: snapshot.releaseTag,
 			sourceCommit: snapshot.sourceCommit,
 			qmdVersion: "2.8.3",
@@ -829,6 +895,24 @@ function canonicalizeDatabase(
 			key TEXT PRIMARY KEY NOT NULL,
 			value TEXT NOT NULL
 		)`);
+		db.exec(`CREATE TABLE documentation_routes (
+			source TEXT NOT NULL, stable_path TEXT NOT NULL,
+			target_source TEXT NOT NULL, target_stable_path TEXT NOT NULL,
+			original_url TEXT NOT NULL, PRIMARY KEY (source, stable_path)
+		)`);
+		const insertRoute = db.query("INSERT INTO documentation_routes VALUES (?, ?, ?, ?, ?)");
+		for (const alias of snapshot.aliases ?? []) {
+			const source = alias.path.split("/")[1] as DocumentationSource;
+			const targetSource = alias.target.split("/")[1] as DocumentationSource;
+			insertRoute.run(
+				source,
+				stableDocumentPath(alias.path, source),
+				targetSource,
+				stableDocumentPath(alias.target, targetSource),
+				alias.url,
+			);
+		}
+
 		db.exec(`CREATE TABLE documentation_documents (
 			source TEXT NOT NULL,
 			stable_path TEXT NOT NULL,
