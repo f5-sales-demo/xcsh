@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "4eed59a4bb53763919cb1cceb88be10caf544152",
+  "revision": "7c3128e3788f2f7b5d29028e40f75360e082fd49",
   "fingerprint": "afc8dd789e0bf66db44f65a92211b32788c360fd53141edbc8cbd75310f1b620",
   "counts": {
     "total": 240,
@@ -4989,6 +4989,7 @@
         "packages/coding-agent/test/auth-storage-rotation.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
         "packages/coding-agent/test/bench-routing-matrix.test.ts",
+        "packages/coding-agent/test/blindfold-ensure.test.ts",
         "packages/coding-agent/test/blindfold-interchangeability.test.ts",
         "packages/coding-agent/test/blindfold-offline.test.ts",
         "packages/coding-agent/test/blindfold-process.test.ts",
@@ -5002,8 +5003,7 @@
         "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction-provider-boundary.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/context-cli.test.ts",
-        "packages/coding-agent/test/context-completion.test.ts"
+        "packages/coding-agent/test/context-cli.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/fetch.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
