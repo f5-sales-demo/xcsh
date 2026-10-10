@@ -23,6 +23,9 @@ async function fixture() {
 	auth.setRuntimeApiKey("openai-codex", "fixture-key");
 	auth.setRuntimeApiKey("openai", "fixture-key");
 	const registry = new ModelRegistry(auth, `${dir}/models.yml`);
+	// Persistence is local; catalog discovery is covered by its own suites.
+	const refresh = spyOn(registry, "refresh").mockResolvedValue(undefined);
+	cleanup.push(() => refresh.mockRestore());
 	registry.registerProvider("openai-codex", {
 		baseUrl: "https://fixture.example/v1",
 		api: "openai-completions",
@@ -59,6 +62,7 @@ async function fixture() {
 			disableExtensionDiscovery: true,
 			extensions: [],
 			skills: [],
+			rules: [],
 			contextFiles: [],
 			promptTemplates: [],
 			slashCommands: [],

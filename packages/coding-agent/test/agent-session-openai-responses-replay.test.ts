@@ -12,6 +12,7 @@ import type {
 } from "@f5-sales-demo/pi-ai/types";
 import { createOpenAIResponsesHistoryPayload } from "@f5-sales-demo/pi-ai/utils";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
+import { ModelRegistry } from "../src/config/model-registry";
 import type { AgentSession } from "../src/session/agent-session";
 import type { AuthStorage } from "../src/session/auth-storage";
 import { type SessionEntry, SessionManager, type SessionMessageEntry } from "../src/session/session-manager";
@@ -183,21 +184,26 @@ async function createSessionHarness(
 	if (!model) {
 		throw new Error(`Expected bundled test model ${provider}/${modelId}`);
 	}
+	const registry = new ModelRegistry(authStorage, path.join(tempDir, "models.yml"));
+	const refresh = vi.spyOn(registry, "refresh").mockResolvedValue(undefined);
 
 	const { session } = await createAgentSession({
 		cwd: tempDir,
 		agentDir: tempDir,
 		authStorage,
+		modelRegistry: registry,
 		sessionManager,
 		model,
 		settings: Settings.isolated(),
 		disableExtensionDiscovery: true,
 		skills: [],
+		rules: [],
 		contextFiles: [],
 		promptTemplates: [],
 		slashCommands: [],
 		enableLsp: false,
 	});
+	session.addDisposeHook(() => refresh.mockRestore());
 
 	return { session, authStorage };
 }
