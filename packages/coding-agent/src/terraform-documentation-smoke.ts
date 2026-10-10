@@ -3,6 +3,7 @@ import path from "node:path";
 import { TerraformDocumentationRepository } from "./internal-urls/terraform-documentation";
 import { EMBEDDED_TERRAFORM_DOCUMENTATION } from "./internal-urls/terraform-documentation-assets.generated";
 import type { InternalUrl } from "./internal-urls/types";
+import { assertTerraformPortSection } from "./terraform-port-smoke";
 
 export async function runTerraformDocumentationSmoke(): Promise<string> {
 	if (!EMBEDDED_TERRAFORM_DOCUMENTATION) throw new Error("Terraform smoke requires embedded assets");
@@ -41,8 +42,7 @@ export async function runTerraformDocumentationSmoke(): Promise<string> {
 	const section = await read(
 		"xcsh://terraform-documentation/documentation/resources/http_loadbalancer/properties/https/index.md#schema-https--port",
 	);
-	if (!section.includes("### port") || !section.includes("Validators"))
-		throw new Error("Terraform explicit-anchor smoke failed");
+	assertTerraformPortSection(section);
 	trace.push({ event: "terraform-explicit-anchor", outcome: "complete-property" });
 	const database = await repository.database();
 	const leaf =
