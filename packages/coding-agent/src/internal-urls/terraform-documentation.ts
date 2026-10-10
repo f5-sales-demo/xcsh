@@ -2066,7 +2066,7 @@ export class TerraformDocumentationRepository {
 					db
 						.query(`SELECT 1 FROM terraform_aliases WHERE ${aliasClauses.join(" AND ")} LIMIT 1`)
 						.get(...aliasValues);
-				if (!genericConfigure || (ranked.length > 0 && !aliasNavigation)) {
+				if (!genericConfigure || (ranked.some(row => row.score > 0) && !aliasNavigation)) {
 					if (ranked[0]?.anchor === "section" && !propertyRequestsBlock(search)) {
 						const record = db
 							.query("SELECT metadata FROM terraform_documents WHERE path=?")
