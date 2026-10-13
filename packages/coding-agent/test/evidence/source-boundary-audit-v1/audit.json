@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "7c3128e3788f2f7b5d29028e40f75360e082fd49",
-  "fingerprint": "afc8dd789e0bf66db44f65a92211b32788c360fd53141edbc8cbd75310f1b620",
+  "revision": "7ed7f9644fa8b9f7747a4c654f853a8c4efb273e",
+  "fingerprint": "596d95b38119837e948e98899b807992598b75f41704a987c4ccedfee41f3645",
   "counts": {
     "total": 240,
     "components": 98,
@@ -5606,7 +5606,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "70dc45b1f501ce4937d4e82bd2df629d9628ddb6903db066bad3ba4348007f9a",
+      "sha256": "b67a1ea6154122be0e9d1b604d367d7047ee3b0bd9de07f8caf5e2e7d737c5e2",
       "exports": [
         "xcshApiToolRenderer"
       ],
