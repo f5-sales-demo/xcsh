@@ -14,7 +14,9 @@ import type {
 	ApiCatalogIndex,
 	ApiCatalogOperation,
 } from "./api-catalog-types";
+import { API_SPEC_DATA } from "./api-spec-index.generated";
 import type { ApiSpecDomainResource, ApiSpecIndex } from "./api-spec-types";
+import { formatImmutableGroups, mutationContract } from "./immutable-selection";
 import { formatMapConstraints, type MapConstraints } from "./map-constraints";
 import { PUBLIC_CITATION_SOURCES } from "./public-citation-destinations.generated";
 import { citationLine, publicCitationForApiOperation, publicCitationForInternalUri } from "./public-citations";
@@ -432,6 +434,8 @@ function renderCatalogDetail(cat: ApiCatalogCategory, options?: { compact?: bool
 			}
 		}
 
+		const contract = mutationContract(API_SPEC_DATA, "PUT", normalizeApiPath(op.path));
+		if (contract) sections.push("", formatImmutableGroups(contract.groups), "");
 		// OneOf Groups — combined recommendations + available variants
 		const hasRecs = op.oneOfRecommendations && Object.keys(op.oneOfRecommendations).length > 0;
 		const hasVariants = op.oneOfVariants && Object.keys(op.oneOfVariants).length > 0;

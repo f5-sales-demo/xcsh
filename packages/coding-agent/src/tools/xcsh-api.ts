@@ -6,12 +6,14 @@ import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import { prompt } from "@f5-sales-demo/pi-utils";
 import { validateXcshApiCredentials } from "@f5-sales-demo/pi-utils/xcsh-auth";
 import { type Static, Type } from "@sinclair/typebox";
+import { mutationContract, objectValue } from "../internal-urls/immutable-selection";
 import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text" };
 import { SecretObfuscator } from "../secrets";
 import { type ContextEnv, createContextEnv } from "../services/context-env";
 import { currentContextExecution } from "../services/context-execution";
 import type { ToolSession } from ".";
 import { humanizeResourceType } from "./render-utils";
+import { checkImmutableMutation } from "./xcsh-api-replacement";
 
 // Namespace filtering driven by x-f5xc-namespace-profile from enriched API specs.
 
@@ -61,6 +63,16 @@ function loadAllowedNamespaceTypes(domain?: string): ReadonlySet<NamespaceType> 
 }
 
 const xcshApiSchema = Type.Object({
+	onImmutableSelectionChange: Type.Optional(
+		Type.Literal("recreate", {
+			description: "Recreate immutable conversion; downtime and UID/VIP changes.",
+		}),
+	),
+	replacementId: Type.Optional(
+		Type.String({
+			description: "Resume this cutover.",
+		}),
+	),
 	contextName: Type.Optional(
 		Type.String({
 			description:
@@ -101,6 +113,8 @@ const xcshApiSchema = Type.Object({
 type XcshApiParams = Static<typeof xcshApiSchema>;
 
 export interface XcshApiToolDetails {
+	replacementId?: string;
+	replacementStage?: string;
 	status: number;
 	url: string;
 	method: string;
@@ -1062,6 +1076,44 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		}
 
 		const startMs = performance.now();
+		if (params.method === "PUT") {
+			try {
+				const { API_SPEC_DATA } = require("../internal-urls/api-spec-index.generated") as {
+					API_SPEC_DATA: Readonly<Record<string, unknown>>;
+				};
+				const contract = mutationContract(API_SPEC_DATA, params.method, resolvedPath);
+				if (contract) {
+					const expectedContext = this.#contextEnv.getContextName();
+					const guarded = await checkImmutableMutation({
+						contract,
+						apiBase,
+						contextName: expectedContext,
+						resourcePath: resolvedPath,
+						payload: objectValue(JSON.parse(resolvedPayload ?? "null")),
+						recreate: params.onImmutableSelectionChange === "recreate",
+						replacementId: params.replacementId,
+						headers,
+						signal,
+						stateDir: process.env.XCSH_REPLACEMENT_STATE_DIR,
+						contextMatches: () => {
+							const [base, token] = this.#resolveCredentials();
+							return (
+								base === apiBase && token === apiToken && this.#contextEnv.getContextName() === expectedContext
+							);
+						},
+					});
+					if (guarded) return guarded;
+				} else if (params.replacementId || params.onImmutableSelectionChange)
+					return this.#errorResult("No immutable selection contract matches this request; no mutation was sent.");
+			} catch {
+				return this.#errorResult(
+					"Immutable mutation preflight failed. Check payload selections and embedded schema; no PUT was sent.",
+				);
+			}
+		} else if (params.replacementId || params.onImmutableSelectionChange)
+			return this.#errorResult(
+				"Immutable replacement options require the original PUT resource path; no mutation was sent.",
+			);
 		try {
 			let response = await fetch(url, init);
 
@@ -1116,6 +1168,15 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 			const guidance = this.#statusGuidance(response.status);
 			if (guidance) {
+				if (
+					params.method === "PUT" &&
+					/(?:Https|Http).*?(?:HttpsAutoCert|cannot.*(?:change|replace)|type)/i.test(bodyText)
+				) {
+					return this.#errorResult(
+						`${statusLine}\n\n${bodyText}\n\nPossible immutable selection rejection. Read the schema contract and request recreation only for an explicit conversion; this error does not authorize DELETE.`,
+						detail,
+					);
+				}
 				let errorCodePrefix = "";
 				const codeLabel = parsedBody ? XCSH_ERROR_CODES[parsedBody.code as number] : undefined;
 				if (codeLabel) {

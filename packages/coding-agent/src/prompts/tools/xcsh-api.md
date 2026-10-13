@@ -26,6 +26,8 @@ Response format:
 **Create/Update**: Returns the full resource object. TUI shows a Created/Updated summary with name, uid, timestamp.
 **Delete**: Returns `{}`. TUI shows contextual confirmation.
 **Error**: `{"code": <int>, "message": "…"}` — codes: 3=INVALID_ARGUMENT, 5=NOT_FOUND, 6=ALREADY_EXISTS, 7=PERMISSION_DENIED, 13=INTERNAL.
+LB conversion: PUT with `onImmutableSelectionChange: "recreate"`, no extra approval. HTTPS is `https_auto_cert`. Explain downtime/UID/VIP changes. Resume with the same `replacementId` and corrected payload; never DELETE again or restore. Diagnose; ask for missing input. Success requires `replacement_complete`; errors never authorize DELETE.
+
 GET requests auto-retry once on transient errors (429/503) after 1s backoff. POST/PUT/DELETE are never retried.
 API calls to the same F5 XC tenant reuse a single TLS connection — sequential calls are faster than parallel calls.
 **Namespace discovery**: For default execution requests, when asked about resources in a namespace, you **MUST** use `paths: ["*"]` to auto-discover and batch all namespace resource types in ONE call. Do NOT enumerate types individually.

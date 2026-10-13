@@ -35,6 +35,17 @@ function namedStep(steps: WorkflowStep[], name: string): WorkflowStep {
 }
 
 describe("API spec dispatch workflow contract", () => {
+	it("refreshes verified corpus prerequisites after provider receipt validation and before generating", async () => {
+		const steps = await workflowSteps();
+		const names = steps.map(s => s.name);
+		const refresh = namedStep(steps, "Refresh verified corpus prerequisites");
+		expect(names.indexOf(refresh.name)).toBeGreaterThan(names.indexOf("Resolve exact published provider release"));
+		expect(names.indexOf(refresh.name)).toBeLessThan(names.indexOf("Generate exact API spec and catalog indexes"));
+		expect(refresh.env?.EXPECTED_SPEC_TAG).toContain("steps.delivery.outputs.release_tag");
+		expect(refresh.env?.EXPECTED_PROVIDER_TAG).toContain("steps.provider_release.outputs.provider_tag");
+		expect(refresh.run).toContain("--update-pin");
+	});
+
 	it("accepts canonical upstream delivery and exact pending replay triggers", async () => {
 		const document = parseYaml(await Bun.file(workflowPath).text()) as WorkflowDocument;
 		expect(document.on.repository_dispatch?.types).toEqual(["enriched-specs-updated"]);

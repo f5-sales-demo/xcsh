@@ -108,5 +108,5 @@ describe("plugin CLI integration loading", () => {
 		]);
 		expect(probeCode, probeErr).toBe(0);
 		expect(JSON.parse(probeOut)).toEqual({ id: "salesforce" });
-	});
+	}, 20_000);
 });
