@@ -358,11 +358,27 @@ export const xcshApiToolRenderer = {
 			const errorIcon = uiTheme.styledSymbol("status.error", "error");
 
 			if (isError) {
+				if (details?.replacementId)
+					resultLines.push(
+						uiTheme.fg(
+							"warning",
+							`Replacement ${details.replacementId}: ${details.replacementStage ?? "pending"}. Resume this ID; do not DELETE again.`,
+						),
+					);
 				const apiMessage =
 					parsed && typeof parsed.message === "string" ? stripProtobufPrefix(parsed.message) : undefined;
 				const errorLabel = apiMessage ?? (status > 0 ? `Request failed (${status})` : "Request failed");
 				resultLines.push(`${errorIcon} ${uiTheme.fg("warning", errorLabel)}`);
 				if (guidance) resultLines.push(`  ${uiTheme.fg("dim", `Try: ${guidance}`)}`);
+			} else if (details?.replacementStage === "complete" && parsed) {
+				resultLines.push(`${infoIcon} Recreated ${details.resourceLabel ?? resourceName}`);
+				resultLines.push(
+					uiTheme.fg(
+						"dim",
+						`Verified type ${String(parsed.targetSelections)} and new UID ${String(parsed.newUid)}`,
+					),
+				);
+				resultLines.push(uiTheme.fg("warning", "Cutover caused downtime; the VIP may have changed."));
 			} else if (details?.mutationVerb && details?.resourceLabel) {
 				resultLines.push(`${infoIcon} ${details.mutationVerb} ${details.resourceLabel}`);
 			} else if (method === "GET" && parsed) {

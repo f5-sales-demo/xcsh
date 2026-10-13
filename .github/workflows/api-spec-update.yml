@@ -82,7 +82,7 @@ jobs:
             export DELIVERY_PENDING_FILE="$BRANCH_PENDING"
             bun scripts/api-spec-delivery.ts verify-pending
 
-            ALLOWED_PATHS='^(packages/coding-agent/src/internal-urls/(api-spec-index|api-catalog-index|terraform-index)\.generated\.ts|packages/resource-management/src/defaults-metadata\.generated\.ts|tools/(spec-delivery-pending|spec-release)\.json)$'
+            ALLOWED_PATHS='^(packages/coding-agent/src/internal-urls/(api-spec-index|api-catalog-index|api-catalog-qmd-index|terraform-index|terraform-provider-pin)\.generated\.ts|packages/resource-management/src/defaults-metadata\.generated\.ts|tools/(spec-delivery-pending|spec-release|corpus-sources|terraform-documentation-release)\.json)$'
             UNEXPECTED_PATHS=$(git diff --name-only "origin/main...origin/$BRANCH" | grep -Ev "$ALLOWED_PATHS" || true)
             if [ -n "$UNEXPECTED_PATHS" ]; then
               echo "::error::Existing delivery branch contains unexpected paths"
@@ -329,6 +329,17 @@ jobs:
         if: steps.main_delivery.outputs.applied != 'true'
         run: bash scripts/ci-bun-install.sh
 
+      - name: Refresh verified corpus prerequisites
+        if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          EXPECTED_SPEC_TAG: ${{ steps.delivery.outputs.release_tag }}
+          EXPECTED_PROVIDER_TAG: ${{ steps.provider_release.outputs.provider_tag }}
+        run: |
+          bun packages/coding-agent/scripts/refresh-corpus-sources.ts
+          bun packages/coding-agent/scripts/generate-terraform-documentation-index.ts --update-pin
+          bun packages/coding-agent/scripts/generate-terraform-documentation-index.ts --reset
+
       - name: Remove stale generated files
         if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
         run: |
@@ -403,6 +414,7 @@ jobs:
           git add -f packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts
           git add -f packages/coding-agent/src/internal-urls/terraform-index.generated.ts
           git add -f packages/resource-management/src/defaults-metadata.generated.ts
+          git add tools/corpus-sources.json tools/terraform-documentation-release.json packages/coding-agent/src/internal-urls/terraform-provider-pin.generated.ts
           git add tools/spec-release.json
           git add tools/spec-delivery-pending.json
           if git diff --cached --quiet; then

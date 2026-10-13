@@ -1,0 +1,19 @@
+{
+	"delivery_id": "b9e56c2b11f6837e8bfcac7421a7f3fe0c2cea1d163796515d31199576bf836c",
+	"generated": {
+		"packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts": "2ad35b8243f915992a30b9602ee69c2e133978d1bc6566eff99fa54cdbf3a857",
+		"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts": "e0f7d92fdb0769da6adbb674837d7995097f1d04b3ff213d47f4ee720c142e3a",
+		"packages/coding-agent/src/internal-urls/api-spec-index.generated.ts": "923fbda51724fe4d8f3fb7a0769cd61b3fba7fbc2c33efa375235db79ba57dc8",
+		"packages/coding-agent/src/internal-urls/terraform-index.generated.ts": "5dfec44bcbe4c2a3896aa424d875fb2bb7dac06edb9a3f5617f7aea57281397a",
+		"packages/resource-management/src/defaults-metadata.generated.ts": "bc2b37fbc4e8ff1a409bca285199d06833b467ffb7b70591fb046ae72c79e5ec"
+	},
+	"provider": {
+		"commit": "38a395d4d8acef51a51e0d701f4a84a25229d830",
+		"tag": "v15.8.0"
+	},
+	"release_tag": "v12.0.6",
+	"spec_release_sha256": "1b4bb328f5043b6c41656a09eff7d1d2dd9dbdb6ed3ce84f1d8e90e577d81363",
+	"target_commit": "06989705b3a435748dea253b9277f572cadb19c4",
+	"trigger_source": "f5-sales-demo/api-specs-enriched",
+	"version": "12.0.6"
+}

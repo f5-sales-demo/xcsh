@@ -7,6 +7,39 @@ function stripAnsi(str: string): string {
 }
 
 describe("xcshApiToolRenderer.renderResult", () => {
+	it("explains verified recreation and pending repair without a false update", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		for (const pending of [false, true]) {
+			const result: any = {
+				content: [
+					{
+						type: "text",
+						text: JSON.stringify({
+							message: pending ? "Cutover incomplete" : "Verified cutover",
+							targetSelections: ["https_auto_cert"],
+							newUid: "new-uid",
+						}),
+					},
+				],
+				isError: pending,
+				details: {
+					status: pending ? 409 : 200,
+					url: "https://example.test/api/config/namespaces/lab/http_loadbalancers/demo",
+					method: "POST",
+					requestId: "test",
+					replacementId: "replacement-1",
+					replacementStage: pending ? "verifying" : "complete",
+					resourceLabel: "load balancer demo",
+				},
+			};
+			const component = xcshApiToolRenderer.renderResult(result, { expanded: false, isPartial: false }, theme!);
+			const text = stripAnsi(component.render(160).join("\n"));
+			expect(text).not.toContain("Updated");
+			expect(text).toContain(pending ? "do not DELETE again" : "Recreated");
+			expect(text).toContain(pending ? "Replacement" : "downtime");
+		}
+	});
+
 	it("renders validation errors cleanly when details is undefined", async () => {
 		const theme = await getThemeByName("xcsh-dark");
 		const result = {

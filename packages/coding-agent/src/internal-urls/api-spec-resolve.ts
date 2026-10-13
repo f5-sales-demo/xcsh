@@ -9,6 +9,7 @@ import type {
 	OpenAPIPathOperation,
 	OpenAPISpec,
 } from "./api-spec-types";
+import { formatImmutableGroups, immutableGroups } from "./immutable-selection";
 import { formatMapConstraints, type MapConstraints } from "./map-constraints";
 import { PUBLIC_CITATION_SOURCES } from "./public-citation-destinations.generated";
 import { citationLine, publicCitationForInternalUri } from "./public-citations";
@@ -1098,7 +1099,12 @@ function renderSchemaAsTable(
 	const required = (resolved.required as string[]) ?? [];
 	const rows: string[] = [];
 
-	const oneOfStr = renderOneOfGroups(resolved, schemaRecommended);
+	const oneOfStr = [
+		renderOneOfGroups(resolved, schemaRecommended),
+		formatImmutableGroups(immutableGroups(resolved, spec, prefix ? prefix.split(".") : [])),
+	]
+		.filter(Boolean)
+		.join("\n");
 	if (depth === 0) {
 		if (oneOfStr) rows.push(oneOfStr);
 		rows.push("| Field | Type | Required | Default | Constraints | Example | Description |");
