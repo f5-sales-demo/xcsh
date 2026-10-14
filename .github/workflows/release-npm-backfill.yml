@@ -14,6 +14,12 @@ on:
         required: true
         type: string
 
+      promote_latest:
+        description: "Recover canonical npm latest only for the latest immutable release"
+        required: false
+        default: false
+        type: boolean
+
 permissions:
   actions: read # Required to inspect the source run and download its artifacts.
   contents: read # Required to check out the controller and immutable tag.
@@ -115,6 +121,21 @@ jobs:
             echo "LATEST_BEFORE=${latest}"
           } >> "$GITHUB_ENV"
 
+      - name: Select qualified prebuilt corpus preparation
+        run: |
+          if jq -e '.scripts.prepack | endswith(" && bun scripts/generate-terraform-documentation-index.ts")' .release-source/packages/coding-agent/package.json > /dev/null; then
+            echo "USE_PREBUILT_TERRAFORM=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Download exact qualified Terraform index
+        if: env.USE_PREBUILT_TERRAFORM == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run_id }}
+          name: terraform-documentation-index-${{ env.TAG_SHA }}
+          path: .release-source/packages/coding-agent/src/internal-urls/.documentation-generated/terraform
+
       - name: Install immutable release dependencies
         run: bash scripts/ci-bun-install.sh .release-source
 
@@ -150,7 +171,9 @@ jobs:
           set -euo pipefail
           test -n "$NODE_AUTH_TOKEN"
           printf '%s\n' "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
-          bun scripts/ci-release-publish.ts --tag backfill
+          flags=()
+          if [[ "${USE_PREBUILT_TERRAFORM:-}" == "true" ]]; then flags+=(--use-prebuilt-terraform-index); fi
+          bun scripts/ci-release-publish.ts --tag backfill "${flags[@]}"
 
       - name: Verify every package and preserve latest
         env:
@@ -198,3 +221,13 @@ jobs:
           test "$(npm view "@f5-sales-demo/xcsh@${VERSION}" version)" = "$VERSION"
           test "$(npm view @f5-sales-demo/xcsh dist-tags.backfill)" = "$VERSION"
           test "$(npm view @f5-sales-demo/xcsh dist-tags.latest)" = "$LATEST_BEFORE"
+
+      - name: Recover canonical latest for the latest immutable release
+        if: inputs.promote_latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          XCSH_RELEASE_SOURCE_ROOT: ${{ github.workspace }}/.release-source
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)" = "$TAG"
+          bun -e 'import { finalizeNpmPublication } from "./scripts/ci-release-publish.ts"; await finalizeNpmPublication([{name:"@f5-sales-demo/xcsh",version:Bun.env.VERSION!}]);'

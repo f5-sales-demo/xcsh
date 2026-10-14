@@ -345,3 +345,57 @@ describe("release npm backfill workflow contract", () => {
 		expect(workflow).toContain("@f5-sales-demo/xcsh@");
 	});
 });
+
+describe("qualified prebuilt corpus publication", () => {
+	it("retains all package preparation except mutable corpus generation", async () => {
+		const { remainingPinnedPrepack } = await import("../../../../scripts/prepare-prebuilt-npm-index");
+		expect(
+			remainingPinnedPrepack(
+				"bun prepare-a && bun prepare-b && bun scripts/generate-terraform-documentation-index.ts",
+			),
+		).toBe("bun prepare-a && bun prepare-b");
+		expect(() => remainingPinnedPrepack("bun unknown")).toThrow();
+	});
+	it("verifies compressed and uncompressed bytes before staging and restores source", async () => {
+		const { preparePrebuiltNpmIndex } = await import("../../../../scripts/prepare-prebuilt-npm-index");
+		const { gzipSync } = await import("node:zlib");
+		const { createHash } = await import("node:crypto");
+		const dir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-pinned-index-"));
+		try {
+			const internal = path.join(dir, "packages/coding-agent/src/internal-urls");
+			const generated = path.join(internal, ".documentation-generated/terraform");
+			await fs.mkdir(generated, { recursive: true });
+			await fs.mkdir(path.join(dir, "tools"));
+			const bytes = Buffer.from("synthetic qualified index");
+			const compressed = gzipSync(bytes);
+			const hash = (value: Buffer) => createHash("sha256").update(value).digest("hex");
+			const pin = {
+				provider_version: "v1.0.0",
+				index: {
+					sha256: hash(bytes),
+					size_bytes: bytes.length,
+					gzip_sha256: hash(compressed),
+					gzip_size_bytes: compressed.length,
+				},
+			};
+			await fs.writeFile(path.join(dir, "tools/terraform-documentation-release.json"), JSON.stringify(pin));
+			const loader = path.join(internal, "terraform-documentation-assets.generated.ts");
+			await fs.writeFile(loader, "original loader");
+			const asset = path.join(generated, "terraform-documentation.sqlite.gz");
+			await fs.writeFile(asset, compressed);
+			const restore = preparePrebuiltNpmIndex(dir);
+			expect(await fs.readFile(loader, "utf8")).toContain(hash(bytes));
+			restore();
+			expect(await fs.readFile(loader, "utf8")).toBe("original loader");
+			const invalidPin = { ...pin, index: { ...pin.index, sha256: "0".repeat(64) } };
+			await fs.writeFile(path.join(dir, "tools/terraform-documentation-release.json"), JSON.stringify(invalidPin));
+			expect(() => preparePrebuiltNpmIndex(dir)).toThrow("SQLite");
+			await fs.writeFile(path.join(dir, "tools/terraform-documentation-release.json"), JSON.stringify(pin));
+			await fs.writeFile(asset, "tampered");
+			expect(() => preparePrebuiltNpmIndex(dir)).toThrow();
+			expect(await fs.readFile(loader, "utf8")).toBe("original loader");
+		} finally {
+			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
+});
