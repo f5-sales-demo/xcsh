@@ -109,8 +109,8 @@ describe("exact-tag signed release recovery", () => {
 
 	it("requires successful trusted recovery and exact receipt before backfill", async () => {
 		const text = await fs.readFile(path.join(root, ".github/workflows/release-github-backfill.yml"), "utf8");
-		expect(text).toContain('.path == ".github/workflows/ci.yml"');
-		expect(text).toContain('.conclusion == "success"');
+		expect(text).toContain("release-recovery-binding.ts verify-run");
+		expect(text).toContain("recovery-jobs.json");
 		expect(text.indexOf("Verify exact recovery source and bytes")).toBeLessThan(
 			text.indexOf("Build deterministic archives twice"),
 		);

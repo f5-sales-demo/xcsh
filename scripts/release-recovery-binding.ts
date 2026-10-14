@@ -42,6 +42,39 @@ export function validateRecoveryBinding(
 		throw new Error("Invalid recovery artifact membership or digest");
 	return b;
 }
+
+export function validateRecoveryRun(run: unknown, jobs: unknown): string {
+	const record = run as {
+		id: number;
+		event: string;
+		head_branch: string;
+		path: string;
+		status: string;
+		head_sha: string;
+	};
+	if (
+		!record ||
+		!Number.isSafeInteger(record.id) ||
+		record.id < 1 ||
+		record.event !== "workflow_dispatch" ||
+		record.head_branch !== "main" ||
+		record.path !== ".github/workflows/ci.yml" ||
+		record.status !== "completed" ||
+		!/^[a-f0-9]{40}$/.test(record.head_sha)
+	)
+		throw new Error("Invalid completed recovery controller run");
+	const rows = (jobs as { jobs?: Array<{ name: string; run_id: number; status: string; conclusion: string }> })?.jobs;
+	if (!Array.isArray(rows)) throw new Error("Missing recovery job evidence");
+	const signed = rows.filter(job => job.name === "Build and sign macOS (x64)");
+	if (
+		signed.length !== 1 ||
+		signed[0]!.run_id !== record.id ||
+		signed[0]!.status !== "completed" ||
+		signed[0]!.conclusion !== "success"
+	)
+		throw new Error("Recovery signing job is not verified successful");
+	return record.head_sha;
+}
 async function fileDigests(root: string): Promise<Record<string, string>> {
 	const files: Record<string, string> = {};
 	for (const name of names) {
@@ -61,21 +94,28 @@ export async function verifyRecoveryFiles(binding: RecoveryBinding, root: string
 if (import.meta.main) {
 	const [command, root, file] = process.argv.slice(2);
 	if (!root || !file) throw new Error("Expected command, artifact directory, and receipt file");
-	const expected = {
-		tag: process.env.SOURCE_REF ?? process.env.TAG ?? "",
-		sourceSha: process.env.SOURCE_SHA ?? "",
-		sourceRunId: process.env.SOURCE_RUN_ID ?? "",
-		controllerSha: process.env.CONTROLLER_SHA ?? "",
-	};
-	if (command === "create") {
-		if (JSON.stringify((await readdir(root)).sort()) !== JSON.stringify(names))
-			throw new Error("Unexpected files in recovery artifact directory");
-		const b = validateRecoveryBinding(
-			{ version: 1, arch: "x64", ...expected, files: await fileDigests(root) },
-			expected,
+
+	if (command === "verify-run") {
+		console.log(
+			validateRecoveryRun(JSON.parse(await readFile(root, "utf8")), JSON.parse(await readFile(file, "utf8"))),
 		);
-		await writeFile(file, `${JSON.stringify(b, null, 2)}\n`);
-	} else if (command === "verify") {
-		await verifyRecoveryFiles(validateRecoveryBinding(JSON.parse(await readFile(file, "utf8")), expected), root);
-	} else throw new Error("Unknown recovery receipt command");
+	} else {
+		const expected = {
+			tag: process.env.SOURCE_REF ?? process.env.TAG ?? "",
+			sourceSha: process.env.SOURCE_SHA ?? "",
+			sourceRunId: process.env.SOURCE_RUN_ID ?? "",
+			controllerSha: process.env.CONTROLLER_SHA ?? "",
+		};
+		if (command === "create") {
+			if (JSON.stringify((await readdir(root)).sort()) !== JSON.stringify(names))
+				throw new Error("Unexpected files in recovery artifact directory");
+			const b = validateRecoveryBinding(
+				{ version: 1, arch: "x64", ...expected, files: await fileDigests(root) },
+				expected,
+			);
+			await writeFile(file, `${JSON.stringify(b, null, 2)}\n`);
+		} else if (command === "verify") {
+			await verifyRecoveryFiles(validateRecoveryBinding(JSON.parse(await readFile(file, "utf8")), expected), root);
+		} else throw new Error("Unknown recovery receipt command");
+	}
 }
