@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "revision": "7ed7f9644fa8b9f7747a4c654f853a8c4efb273e",
-  "fingerprint": "596d95b38119837e948e98899b807992598b75f41704a987c4ccedfee41f3645",
+  "revision": "d1c2165f805da93388585344d3a487b091525b11",
+  "fingerprint": "9dd046fecbe0eaa6d113b341f4287da75ef69b7a1b564b7f27674936abbefe72",
   "counts": {
-    "total": 240,
-    "components": 98,
+    "total": 243,
+    "components": 101,
     "integrations": 142
   },
   "audits": [
@@ -395,6 +395,7 @@
         "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts",
         "packages/coding-agent/test/mermaid-renderer.test.ts",
         "packages/coding-agent/test/pending-glyph-sweep.test.ts",
+        "packages/coding-agent/test/plugin-presentation.test.ts",
         "packages/coding-agent/test/registered-tool-renderer.test.ts",
         "packages/coding-agent/test/session/active-model.test.ts",
         "packages/coding-agent/test/task/render-yield-shape.test.ts",
@@ -402,8 +403,7 @@
         "packages/coding-agent/test/tools/compile-graph.test.ts",
         "packages/coding-agent/test/tools/edit-renderer.test.ts",
         "packages/coding-agent/test/tools/fetch-kagi-toggle.test.ts",
-        "packages/coding-agent/test/tools/inspect-image-renderer.test.ts",
-        "packages/coding-agent/test/tools/inspect-image.test.ts"
+        "packages/coding-agent/test/tools/inspect-image-renderer.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/renderer.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -412,7 +412,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "d91d0db685d4c5b1cd86981e7b5789f6676d25ccde8fd5ca4211b01d3711371a",
+      "sha256": "9be09189bc0113a8566a85d176e1e44e9e8f7b6f8d324c6081e51a33c401a253",
       "exports": [
         "CustomTool",
         "CustomToolAPI",
@@ -490,10 +490,10 @@
         "packages/coding-agent/test/interactive-mode-finish-pending.test.ts",
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
         "packages/coding-agent/test/marketplace-extension-manifest-fallback.test.ts",
+        "packages/coding-agent/test/marketplace-presentation.test.ts",
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
-        "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
-        "packages/coding-agent/test/person-extension-contract.test.ts"
+        "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/loader.ts is individually classified as public-extension-contract in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -547,7 +547,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "8f75a4e43da72ae74f01c176d1dc889a967775e5b0fe35971bb473e2b0b69eae",
+      "sha256": "fc28e75c6eff1dfda70913603b6e56dac2d4ea8917560bf38f82910fc789a975",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -849,7 +849,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "b56ced906243b41317254c004a9d4b948626563275b2aa99784f777a6eae24b2",
+      "sha256": "1945010d44e674c8ec4ffaa5dff3b7036458d361333e2759582a63c742e54734",
       "exports": [
         "Container",
         "ExtensionEditorComponent",
@@ -1366,6 +1366,7 @@
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/component-boundary-contract.test.ts",
+        "packages/coding-agent/test/marketplace-presentation.test.ts",
         "packages/coding-agent/test/remote-control/background-command-storage.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/custom-message.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -1955,6 +1956,25 @@
       "classification": "packages/coding-agent/src/modes/components/plan-preview.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
+      "source": "packages/coding-agent/src/modes/components/plugin-lifecycle.ts",
+      "kind": "component",
+      "ownership": "read-only-renderer",
+      "domain": "settings",
+      "sha256": "3a2e529628a0ee40ee6f4d4620346d146db9f12e43460b59facd69a11e3d6923",
+      "exports": [
+        "PluginLifecycleText"
+      ],
+      "interactionSignals": [
+        "render"
+      ],
+      "persistenceSignals": [],
+      "directTests": [
+        "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts",
+        "packages/coding-agent/test/slash-command-parity-ledger.test.ts"
+      ],
+      "classification": "packages/coding-agent/src/modes/components/plugin-lifecycle.ts is individually classified as read-only-renderer in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
       "source": "packages/coding-agent/src/modes/components/plugin-settings-drafts.ts",
       "kind": "component",
       "ownership": "read-only-renderer",
@@ -2005,6 +2025,29 @@
         "packages/coding-agent/test/settings-editors.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/plugin-settings.ts is individually classified as caller-owned-draft in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
+      "source": "packages/coding-agent/src/modes/components/plugin-view.ts",
+      "kind": "component",
+      "ownership": "read-only-renderer",
+      "domain": "settings",
+      "sha256": "18a66e7bd55f06cec01b5786de8f143e05f22ab88ab5df3d5f10186b0e92eebb",
+      "exports": [
+        "PluginViewComponent",
+        "PresentationResult",
+        "dataSections",
+        "fallbackResultView",
+        "guardedComponent"
+      ],
+      "interactionSignals": [
+        "render"
+      ],
+      "persistenceSignals": [],
+      "directTests": [
+        "packages/coding-agent/test/marketplace-presentation.test.ts",
+        "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts"
+      ],
+      "classification": "packages/coding-agent/src/modes/components/plugin-view.ts is individually classified as read-only-renderer in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/modes/components/plugins/index.ts",
@@ -2889,7 +2932,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "f11419a10528e599b0483d56c8933d68543355bac2d78af29a1f7d4cd81df80f",
+      "sha256": "1f2118e7d9483e8509fc5d7787da11d24681a455c18f9207777b296dc50d86f9",
       "exports": [
         "ToolExecutionComponent",
         "ToolExecutionHandle",
@@ -2903,7 +2946,9 @@
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
+        "packages/coding-agent/test/marketplace-presentation.test.ts",
         "packages/coding-agent/test/pending-glyph-sweep.test.ts",
+        "packages/coding-agent/test/plugin-presentation.test.ts",
         "packages/coding-agent/test/session/messages-repair.test.ts",
         "packages/coding-agent/test/tools/vim.test.ts"
       ],
@@ -3684,7 +3729,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "ee7e90db57ae7a9fa2cfd56317f787f4d0d3a9e7b3e917fb3f7d9c1898aac947",
+      "sha256": "2bb240c9581749e79e18f241f8a3cb73e149b1f3ac876245df1f6e948e074a14",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -4131,7 +4176,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "fd6b08cee6eba4dec486805f236230ae9c7a612bf2e83a3e2d9310fad1b60474",
+      "sha256": "15a2837c393790c03aebdee25ef6f058666b47bec3e7b8b9e6eacf5cb11e1859",
       "exports": [
         "CompactionQueuedMessage",
         "InteractiveModeContext",
@@ -4322,7 +4367,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "5045e9a0df09d8b6fda1b5c23daacd9ee73096ac0194d642b10ebd651e1740b1",
+      "sha256": "d01293d29bf184bd6d92ae6422fdb77bdce63b9b31e8c31f231841d30c727cbe",
       "exports": [
         "UiHelpers"
       ],
@@ -4509,7 +4554,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "46fd5a5575fc90faea2c33e0e3bbd1571c80931282264e0122696d11bcb911c3",
+      "sha256": "879f4115fb88601ec5157fa837c57aa10258a03aa7ac782742561ee072ca933f",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -6133,10 +6178,10 @@
         "packages/coding-agent/test/interactive-mode-finish-pending.test.ts",
         "packages/coding-agent/test/loader-bundled-extensions.test.ts",
         "packages/coding-agent/test/marketplace-extension-manifest-fallback.test.ts",
+        "packages/coding-agent/test/marketplace-presentation.test.ts",
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
-        "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts",
-        "packages/coding-agent/test/person-extension-contract.test.ts"
+        "packages/coding-agent/test/modes/controllers/selector-controller-plugin.test.ts"
       ],
       "classification": "packages/tui/src/components/loader.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6145,7 +6190,7 @@
       "kind": "component",
       "ownership": "shared-rendering-primitive",
       "domain": "shared-components",
-      "sha256": "33dbb10595d1bf4ae3d5779f1dbd5b8a4b3bb8ace2e579ac4856b644fe2a8ff2",
+      "sha256": "b1e24b5101ffe6a7602fa64586977c353909773bd1bc363802e94da618e40dd2",
       "exports": [
         "DefaultTextStyle",
         "Markdown",
@@ -6282,6 +6327,42 @@
         "packages/tui/test/tab-bar.test.ts"
       ],
       "classification": "packages/tui/src/components/tab-bar.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
+      "source": "packages/tui/src/components/table.ts",
+      "kind": "component",
+      "ownership": "shared-rendering-primitive",
+      "domain": "shared-components",
+      "sha256": "6f3e3659247405488d29961e20a6b17c6db737cfadd74b6e400561074c9ebd8e",
+      "exports": [
+        "TableTheme",
+        "renderTable"
+      ],
+      "interactionSignals": [],
+      "persistenceSignals": [],
+      "directTests": [
+        "packages/coding-agent/test/acp-agent.test.ts",
+        "packages/coding-agent/test/acp-event-mapper.test.ts",
+        "packages/coding-agent/test/agent-dashboard.test.ts",
+        "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
+        "packages/coding-agent/test/archive-install.test.ts",
+        "packages/coding-agent/test/args.test.ts",
+        "packages/coding-agent/test/autoresearch-state.test.ts",
+        "packages/coding-agent/test/autoresearch-tools.test.ts",
+        "packages/coding-agent/test/bash-execution-sixel.test.ts",
+        "packages/coding-agent/test/blindfold-tool.test.ts",
+        "packages/coding-agent/test/browser/dom-context.test.ts",
+        "packages/coding-agent/test/browser/dt-context.test.ts",
+        "packages/coding-agent/test/browser/host-profiles.test.ts",
+        "packages/coding-agent/test/browser/stealth-bundle.test.ts",
+        "packages/coding-agent/test/browser/user-agent-override.test.ts",
+        "packages/coding-agent/test/chrome-cli.test.ts",
+        "packages/coding-agent/test/cli/flag-spec.test.ts",
+        "packages/coding-agent/test/compaction.test.ts",
+        "packages/coding-agent/test/context-completion.test.ts",
+        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
+      ],
+      "classification": "packages/tui/src/components/table.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/tui/src/components/text.ts",
@@ -6447,7 +6528,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "b3fc6dea10e8c9a12a6fc29ec1ff7a84a1159cfb5aa44e315d1ee46ad045aa5b",
+      "sha256": "7f07f3daad64ccfcbd5df8cea8b6da02c7fdd0f2aac6868049ae300b5d8440ad",
       "exports": [
         "ChordDispatcher",
         "HorizontalSplit",
@@ -6721,6 +6802,7 @@
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
         "packages/coding-agent/test/plugin-dashboard-interactions.test.ts",
+        "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts",
         "packages/coding-agent/test/provider-selector-layout.test.ts",
         "packages/coding-agent/test/request-user-input-polish.test.ts",
         "packages/coding-agent/test/sanitize-error-message.test.ts",
@@ -6730,6 +6812,7 @@
         "packages/tui/test/editor.test.ts",
         "packages/tui/test/keys.test.ts",
         "packages/tui/test/latex.test.ts",
+        "packages/tui/test/plugin-table.test.ts",
         "packages/tui/test/select-list.test.ts"
       ],
       "classification": "packages/tui/src/symbols.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."

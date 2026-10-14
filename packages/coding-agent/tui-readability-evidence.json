@@ -391,16 +391,6 @@
       "d212e2ae",
       "23216764"
     ],
-    "packages/coding-agent/src/modes/components/tool-execution.ts": [
-      "f11419a1",
-      "0528e599",
-      "b0483d56",
-      "c8933d68",
-      "543355ba",
-      "c2d78af2",
-      "9a1f7d4c",
-      "d81df80f"
-    ],
     "packages/coding-agent/src/modes/components/transcript-notice.ts": [
       "93ef3925",
       "a1035b83",
@@ -452,14 +442,14 @@
       "15ff8c9e"
     ],
     "packages/coding-agent/src/modes/utils/ui-helpers.ts": [
-      "5045e9a0",
-      "df09d8b6",
-      "fda1b5c2",
-      "3daacd9e",
-      "e73096ac",
-      "0194d642",
-      "b10ebd65",
-      "1e1740b1"
+      "d01293d2",
+      "9bf184bd",
+      "6d92ae64",
+      "22fdb77b",
+      "dce63b9b",
+      "31e8c31f",
+      "231841d3",
+      "0c727cbe"
     ],
     "packages/coding-agent/src/task/render.ts": [
       "f395a34f",
@@ -662,14 +652,14 @@
       "9de4321d"
     ],
     "packages/tui/src/components/markdown.ts": [
-      "33dbb105",
-      "95d1bf4a",
-      "e3d5779f",
-      "1dbd5b8a",
-      "4b3bb8ac",
-      "e2e579ac",
-      "4856b644",
-      "fe2a8ff2"
+      "b1e24b51",
+      "01ffe6a7",
+      "602fa645",
+      "86977c35",
+      "3909773b",
+      "d1bc3638",
+      "02e94da6",
+      "18e40dd2"
     ],
     "packages/tui/src/components/select-list.ts": [
       "344ef4a0",
@@ -1902,12 +1892,6 @@
       "entry": "selector-surfaces"
     },
     {
-      "file": "packages/coding-agent/src/modes/components/tool-execution.ts",
-      "line": 778,
-      "sink": "truncateToWidth",
-      "entry": "selector-surfaces"
-    },
-    {
       "file": "packages/coding-agent/src/modes/components/transcript-notice.ts",
       "line": 22,
       "sink": "selectorTranscriptFrame",
@@ -2059,13 +2043,13 @@
     },
     {
       "file": "packages/coding-agent/src/modes/utils/ui-helpers.ts",
-      "line": 644,
+      "line": 655,
       "sink": "TruncatedText",
       "entry": "coding-agent-previews"
     },
     {
       "file": "packages/coding-agent/src/modes/utils/ui-helpers.ts",
-      "line": 648,
+      "line": 659,
       "sink": "TruncatedText",
       "entry": "coding-agent-previews"
     },
@@ -2665,7 +2649,7 @@
     },
     {
       "file": "packages/tui/src/components/markdown.ts",
-      "line": 680,
+      "line": 690,
       "sink": "truncateToWidth",
       "entry": "tui-core-compact"
     },

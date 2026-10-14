@@ -36,7 +36,9 @@ describe("/plugin setup", () => {
 		} as unknown as InteractiveModeContext;
 
 		expect(await executeBuiltinSlashCommand("/plugin doctor kvm", { ctx, handleBackgroundCommand() {} })).toBe(true);
-		expect(showError).toHaveBeenCalledWith("Plugin health checks are CLI-only; run xcsh plugin doctor.");
+		expect(showError).toHaveBeenCalledWith("Plugin health checks are CLI-only; run xcsh plugin doctor.", {
+			plugin: true,
+		});
 		expect(showStatus).not.toHaveBeenCalled();
 	});
 
@@ -90,7 +92,7 @@ describe("/plugin setup", () => {
 		expect(verifyAfterSetup).toHaveBeenCalledWith(plan);
 		expect(children).toEqual([]);
 		expect(setFocus).not.toHaveBeenCalled();
-		expect(showStatus).toHaveBeenCalledWith("platform: ready (setup is not required)");
+		expect(showStatus).toHaveBeenCalledWith("platform: ready (setup is not required)", { plugin: true });
 	});
 
 	it("opens the native context wizard for a guided Platform setup without a no-op review", async () => {

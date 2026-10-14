@@ -14,6 +14,7 @@ import {
 	visibleWidth,
 	wrapTextWithAnsi,
 } from "../utils";
+import { renderTable } from "./table";
 
 interface LatexToken extends Tokens.Generic {
 	type: "latex" | "latexBlock";
@@ -236,6 +237,8 @@ export interface MarkdownMediaOptions {
 }
 
 export interface MarkdownOptions {
+	/** Complete data-row preview; omitted means show every row. */
+	tablePreviewRows?: number;
 	/** Render supported LaTeX expressions as Unicode text (default: true). */
 	renderLatex?: boolean;
 	/** Number of spaces used to indent fenced code content (default: 2). */
@@ -303,7 +306,12 @@ interface InlineStyleContext {
 
 type ListToken = Token & { items: Array<{ tokens?: Token[] }>; ordered: boolean; start?: number };
 type TableCellToken = { tokens?: Token[] };
-type TableToken = Token & { header: TableCellToken[]; rows: TableCellToken[][]; raw?: string };
+type TableToken = Token & {
+	header: TableCellToken[];
+	rows: TableCellToken[][];
+	raw?: string;
+	align?: ("left" | "right" | "center" | null)[];
+};
 
 function isImageToken(token: Token): token is Tokens.Image {
 	return (
@@ -366,6 +374,7 @@ export class Markdown implements Component {
 	#codeBlockIndent: number;
 	#mediaOptions?: MarkdownMediaOptions;
 	#renderLatex: boolean;
+	#tablePreviewRows?: number;
 	#linkBasePath?: string;
 	#mediaCache = new Map<
 		string,
@@ -419,6 +428,7 @@ export class Markdown implements Component {
 		this.#mediaOptions = options.mediaOptions;
 		this.#renderLatex = options.renderLatex !== false;
 		this.#linkBasePath = options.linkBasePath;
+		this.#tablePreviewRows = options.tablePreviewRows;
 	}
 
 	setText(text: string): void {
@@ -1068,210 +1078,25 @@ export class Markdown implements Component {
 		return lines;
 	}
 
-	/**
-	 * Get the visible width of the longest word in a string.
-	 */
-	#getLongestWordWidth(text: string, maxWidth?: number): number {
-		const words = text.split(/\s+/).filter(word => word.length > 0);
-		let longest = 0;
-		for (const word of words) {
-			longest = Math.max(longest, visibleWidth(word));
-		}
-		if (maxWidth === undefined) {
-			return longest;
-		}
-		return Math.min(longest, maxWidth);
-	}
-
-	/**
-	 * Wrap a table cell to fit into a column.
-	 *
-	 * Delegates to wrapTextWithAnsi() so ANSI codes + long tokens are handled
-	 * consistently with the rest of the renderer.
-	 */
-	#wrapCellText(text: string, maxWidth: number): string[] {
-		return wrapTextWithAnsi(text, Math.max(1, maxWidth));
-	}
-
-	/**
-	 * Render a table with width-aware cell wrapping.
-	 * Cells that don't fit are wrapped to multiple lines.
-	 */
+	/** Shared layout for Markdown and structured plugin tables. */
 	#renderTable(
 		token: TableToken,
 		availableWidth: number,
 		nextTokenType?: string,
 		styleContext?: InlineStyleContext,
 	): string[] {
-		const lines: string[] = [];
-		const numCols = token.header.length;
-
-		if (numCols === 0) {
-			return lines;
-		}
-
-		// Calculate border overhead: "│ " + (n-1) * " │ " + " │"
-		// = 2 + (n-1) * 3 + 2 = 3n + 1
-		const borderOverhead = 3 * numCols + 1;
-		const availableForCells = availableWidth - borderOverhead;
-		if (availableForCells < numCols) {
-			// Too narrow to render a stable table. Fall back to raw markdown.
-			const fallbackLines = token.raw ? wrapTextWithAnsi(token.raw, availableWidth) : [];
-			if (nextTokenType && nextTokenType !== "space") {
-				fallbackLines.push("");
-			}
-			return fallbackLines;
-		}
-
-		const maxUnbrokenWordWidth = 30;
-
-		// Calculate natural column widths (what each column needs without constraints)
-		const naturalWidths: number[] = [];
-		const minWordWidths: number[] = [];
-		for (let i = 0; i < numCols; i++) {
-			const headerText = this.#renderInlineTokens(token.header[i].tokens || [], styleContext);
-			naturalWidths[i] = visibleWidth(headerText);
-			minWordWidths[i] = Math.max(1, this.#getLongestWordWidth(headerText, maxUnbrokenWordWidth));
-		}
-		for (const row of token.rows) {
-			for (let i = 0; i < row.length; i++) {
-				const cellText = this.#renderInlineTokens(row[i].tokens || [], styleContext);
-				naturalWidths[i] = Math.max(naturalWidths[i] || 0, visibleWidth(cellText));
-				minWordWidths[i] = Math.max(
-					minWordWidths[i] || 1,
-					this.#getLongestWordWidth(cellText, maxUnbrokenWordWidth),
-				);
-			}
-		}
-
-		let minColumnWidths = minWordWidths;
-		let minCellsWidth = minColumnWidths.reduce((a, b) => a + b, 0);
-
-		if (minCellsWidth > availableForCells) {
-			minColumnWidths = new Array(numCols).fill(1);
-			const remaining = availableForCells - numCols;
-
-			if (remaining > 0) {
-				const totalWeight = minWordWidths.reduce((total, width) => total + Math.max(0, width - 1), 0);
-				const growth = minWordWidths.map(width => {
-					const weight = Math.max(0, width - 1);
-					return totalWeight > 0 ? Math.floor((weight / totalWeight) * remaining) : 0;
-				});
-
-				for (let i = 0; i < numCols; i++) {
-					minColumnWidths[i] += growth[i] ?? 0;
-				}
-
-				const allocated = growth.reduce((total, width) => total + width, 0);
-				let leftover = remaining - allocated;
-				for (let i = 0; leftover > 0 && i < numCols; i++) {
-					minColumnWidths[i]++;
-					leftover--;
-				}
-			}
-
-			minCellsWidth = minColumnWidths.reduce((a, b) => a + b, 0);
-		}
-
-		// Calculate column widths that fit within available width
-		const totalNaturalWidth = naturalWidths.reduce((a, b) => a + b, 0) + borderOverhead;
-		let columnWidths: number[];
-
-		if (totalNaturalWidth <= availableWidth) {
-			// Everything fits naturally
-			columnWidths = naturalWidths.map((width, index) => Math.max(width, minColumnWidths[index]));
-		} else {
-			// Need to shrink columns to fit
-			const totalGrowPotential = naturalWidths.reduce((total, width, index) => {
-				return total + Math.max(0, width - minColumnWidths[index]);
-			}, 0);
-			const extraWidth = Math.max(0, availableForCells - minCellsWidth);
-			columnWidths = minColumnWidths.map((minWidth, index) => {
-				const naturalWidth = naturalWidths[index];
-				const minWidthDelta = Math.max(0, naturalWidth - minWidth);
-				let grow = 0;
-				if (totalGrowPotential > 0) {
-					grow = Math.floor((minWidthDelta / totalGrowPotential) * extraWidth);
-				}
-				return minWidth + grow;
-			});
-
-			// Adjust for rounding errors - distribute remaining space
-			const allocated = columnWidths.reduce((a, b) => a + b, 0);
-			let remaining = availableForCells - allocated;
-			while (remaining > 0) {
-				let grew = false;
-				for (let i = 0; i < numCols && remaining > 0; i++) {
-					if (columnWidths[i] < naturalWidths[i]) {
-						columnWidths[i]++;
-						remaining--;
-						grew = true;
-					}
-				}
-				if (!grew) {
-					break;
-				}
-			}
-		}
-
-		const t = this.#theme.symbols.table;
-		const h = t.horizontal;
-		const v = t.vertical;
-
-		// Render top border
-		const topBorderCells = columnWidths.map(w => h.repeat(w));
-		lines.push(`${t.topLeft}${h}${topBorderCells.join(`${h}${t.teeDown}${h}`)}${h}${t.topRight}`);
-
-		// Render header with wrapping
-		const headerCellLines: string[][] = token.header.map((cell, i) => {
-			const text = this.#renderInlineTokens(cell.tokens || [], styleContext);
-			return this.#wrapCellText(text, columnWidths[i]);
-		});
-		const headerLineCount = Math.max(...headerCellLines.map(c => c.length));
-
-		for (let lineIdx = 0; lineIdx < headerLineCount; lineIdx++) {
-			const rowParts = headerCellLines.map((cellLines, colIdx) => {
-				const text = cellLines[lineIdx] || "";
-				const padded = text + padding(Math.max(0, columnWidths[colIdx] - visibleWidth(text)));
-				return this.#theme.bold(padded);
-			});
-			lines.push(`${v} ${rowParts.join(` ${v} `)} ${v}`);
-		}
-
-		// Render separator
-		const separatorCells = columnWidths.map(w => h.repeat(w));
-		const separatorLine = `${t.teeRight}${h}${separatorCells.join(`${h}${t.cross}${h}`)}${h}${t.teeLeft}`;
-		lines.push(separatorLine);
-
-		// Render rows with wrapping
-		for (let rowIndex = 0; rowIndex < token.rows.length; rowIndex++) {
-			const row = token.rows[rowIndex];
-			const rowCellLines: string[][] = row.map((cell, i) => {
-				const text = this.#renderInlineTokens(cell.tokens || [], styleContext);
-				return this.#wrapCellText(text, columnWidths[i]);
-			});
-			const rowLineCount = Math.max(...rowCellLines.map(c => c.length));
-
-			for (let lineIdx = 0; lineIdx < rowLineCount; lineIdx++) {
-				const rowParts = rowCellLines.map((cellLines, colIdx) => {
-					const text = cellLines[lineIdx] || "";
-					return text + padding(Math.max(0, columnWidths[colIdx] - visibleWidth(text)));
-				});
-				lines.push(`${v} ${rowParts.join(` ${v} `)} ${v}`);
-			}
-
-			if (rowIndex < token.rows.length - 1) {
-				lines.push(separatorLine);
-			}
-		}
-
-		// Render bottom border
-		const bottomBorderCells = columnWidths.map(w => h.repeat(w));
-		lines.push(`${t.bottomLeft}${h}${bottomBorderCells.join(`${h}${t.teeUp}${h}`)}${h}${t.bottomRight}`);
-
-		if (nextTokenType && nextTokenType !== "space") {
-			lines.push(""); // Add spacing after table
-		}
+		const lines = renderTable(
+			token.header.map(cell => this.#renderInlineTokens(cell.tokens || [], styleContext)),
+			(this.#tablePreviewRows === undefined ? token.rows : token.rows.slice(0, this.#tablePreviewRows)).map(row =>
+				row.map(cell => this.#renderInlineTokens(cell.tokens || [], styleContext)),
+			),
+			availableWidth,
+			{ symbols: this.#theme.symbols.table, bold: text => this.#theme.bold(text) },
+			token.align,
+		);
+		if (this.#tablePreviewRows !== undefined && token.rows.length > this.#tablePreviewRows)
+			lines.push(...wrapTextWithAnsi(`${token.rows.length - this.#tablePreviewRows} more rows`, availableWidth));
+		if (nextTokenType && nextTokenType !== "space") lines.push("");
 		return lines;
 	}
 }
