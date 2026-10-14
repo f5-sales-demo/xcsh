@@ -2,8 +2,8 @@
   "synthetic": true,
   "sourceHashes": {
     "packages/coding-agent/src/modes/components/plugin-lifecycle.ts": "3a2e529628a0ee40ee6f4d4620346d146db9f12e43460b59facd69a11e3d6923",
-    "packages/coding-agent/src/modes/components/plugin-view.ts": "70f491b7e33f89a6a1258b9424dd21ec5bc763cee1bad5e9a74b3f320dd6b808",
-    "packages/coding-agent/src/modes/components/tool-execution.ts": "2a73dc662ff672b230fc8739be38da6d4ca42b4d0110268a90d1ded9846a3c96",
+    "packages/coding-agent/src/modes/components/plugin-view.ts": "18a66e7bd55f06cec01b5786de8f143e05f22ab88ab5df3d5f10186b0e92eebb",
+    "packages/coding-agent/src/modes/components/tool-execution.ts": "1f2118e7d9483e8509fc5d7787da11d24681a455c18f9207777b296dc50d86f9",
     "packages/tui/src/components/table.ts": "6f3e3659247405488d29961e20a6b17c6db737cfadd74b6e400561074c9ebd8e",
     "packages/tui/src/components/markdown.ts": "b1e24b5101ffe6a7602fa64586977c353909773bd1bc363802e94da618e40dd2"
   },

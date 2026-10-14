@@ -169,3 +169,34 @@ test("explicit component takes precedence over a presentation descriptor", async
 	expect(plain(c.render(76))).toContain("explicit output");
 	expect(plain(c.render(76))).not.toContain("descriptor output");
 });
+
+test("unsupported descriptor data cannot mutate the original result", async () => {
+	const c = await component({
+		presentation: {
+			result: (result: { content: { text: string }[] }) => {
+				result.content[0].text = "mutated";
+				return undefined;
+			},
+		},
+	});
+	const result = { content: [{ type: "text", text: "original payload" }], details: { operation() {} } };
+	c.updateResult(result);
+	expect(plain(c.render(76))).toContain("original payload");
+	expect(result.content[0].text).toBe("original payload");
+});
+test("expanded fallback retains nested empty fields and empty output is labeled", async () => {
+	const c = await component();
+	c.updateResult({ content: [{ type: "text", text: '{"metadata":{}}' }] });
+	c.setExpanded(true);
+	expect(plain(c.render(76))).toContain("metadata");
+	expect(plain(c.render(76))).toContain("{}");
+	c.updateResult({ content: [{ type: "text", text: "" }] });
+	expect(plain(c.render(76))).toContain("(no output)");
+});
+
+test("metadata-only progress remains visible in a collapsed result", async () => {
+	const c = await component();
+	c.updateResult({ content: [], details: { progress: 0, done: false } }, true);
+	expect(plain(c.render(76))).toContain("progress");
+	expect(plain(c.render(76))).toContain("false");
+});

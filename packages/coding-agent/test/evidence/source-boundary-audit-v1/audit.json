@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "a2923657946baf4d0fb125f7bef0e20c5404542d",
-  "fingerprint": "c2856a4218f880a14e25bf3e30434dc525aa26da36ab839e7ee2d9737888a461",
+  "revision": "d1c2165f805da93388585344d3a487b091525b11",
+  "fingerprint": "9dd046fecbe0eaa6d113b341f4287da75ef69b7a1b564b7f27674936abbefe72",
   "counts": {
     "total": 243,
     "components": 101,
@@ -2031,7 +2031,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "70f491b7e33f89a6a1258b9424dd21ec5bc763cee1bad5e9a74b3f320dd6b808",
+      "sha256": "18a66e7bd55f06cec01b5786de8f143e05f22ab88ab5df3d5f10186b0e92eebb",
       "exports": [
         "PluginViewComponent",
         "PresentationResult",
@@ -2932,7 +2932,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "2a73dc662ff672b230fc8739be38da6d4ca42b4d0110268a90d1ded9846a3c96",
+      "sha256": "1f2118e7d9483e8509fc5d7787da11d24681a455c18f9207777b296dc50d86f9",
       "exports": [
         "ToolExecutionComponent",
         "ToolExecutionHandle",
@@ -6802,6 +6802,7 @@
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
         "packages/coding-agent/test/plugin-dashboard-interactions.test.ts",
+        "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts",
         "packages/coding-agent/test/provider-selector-layout.test.ts",
         "packages/coding-agent/test/request-user-input-polish.test.ts",
         "packages/coding-agent/test/sanitize-error-message.test.ts",

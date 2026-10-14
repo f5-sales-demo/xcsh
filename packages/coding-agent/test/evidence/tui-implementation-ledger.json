@@ -12031,7 +12031,7 @@
       "visualVerdicts": [
         "packages/coding-agent/test/evidence/plugin-presentation-v1/acceptance.md - 48 synthetic component renders; live read-only Salesforce zero and error checks"
       ],
-      "fingerprint": "70f491b7e33f89a6a1258b9424dd21ec5bc763cee1bad5e9a74b3f320dd6b808",
+      "fingerprint": "18a66e7bd55f06cec01b5786de8f143e05f22ab88ab5df3d5f10186b0e92eebb",
       "notes": [
         "Task-specific rendering evidence; no inference of release or installed acceptance from source discovery."
       ]

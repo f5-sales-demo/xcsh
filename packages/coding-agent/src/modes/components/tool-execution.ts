@@ -672,7 +672,11 @@ export class ToolExecutionComponent extends Container {
 			? guardedComponent(
 					() =>
 						new PluginViewComponent(
-							() => descriptor.call!(cloneToolArgs(args), this.#renderState),
+							() =>
+								descriptor.call!(structuredClone(args), {
+									expanded: this.#expanded,
+									isPartial: this.#isPartial,
+								}),
 							this.#expanded,
 							false,
 							fallback,
@@ -694,7 +698,12 @@ export class ToolExecutionComponent extends Container {
 			? guardedComponent(
 					() =>
 						new PluginViewComponent(
-							() => descriptor.result!(cloneToolArgs(result), this.#renderState, cloneToolArgs(this.#args)),
+							() =>
+								descriptor.result!(
+									structuredClone(result),
+									{ expanded: this.#expanded, isPartial: this.#isPartial },
+									structuredClone(this.#args),
+								),
 							this.#expanded,
 							Boolean(result.isError),
 							fallback,

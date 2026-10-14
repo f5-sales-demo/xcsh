@@ -2,7 +2,7 @@ import { beforeAll, expect, test } from "bun:test";
 import { visibleWidth } from "@f5-sales-demo/pi-tui";
 import { PluginLifecycleText } from "../src/modes/components/plugin-lifecycle";
 import { PluginViewComponent } from "../src/modes/components/plugin-view";
-import { initTheme } from "../src/modes/theme/theme";
+import { getSymbolTheme, initTheme } from "../src/modes/theme/theme";
 
 beforeAll(async () => {
 	await initTheme();
@@ -36,4 +36,29 @@ test("PluginView preserves empty and falsy fields with complete expanded source"
 	expect(lines.join("\n")).toContain("null");
 	expect(lines.join("\n")).toContain("0 rows");
 	expect(lines.every(line => visibleWidth(line) <= 40)).toBe(true);
+});
+
+test("structured tables distinguish string identifiers from numeric values", () => {
+	const component = new PluginViewComponent(
+		() => ({
+			sections: [
+				{
+					kind: "table",
+					columns: [
+						{ key: "id", label: "Identifier" },
+						{ key: "amount", label: "Amount" },
+					],
+					rows: [{ id: "00123", amount: 1e21 }],
+				},
+			],
+		}),
+		true,
+	);
+	const line = component.render(120).find(line => line.includes("00123"))!;
+	const cells = line
+		.replace(/\x1b\[[0-9;]*m/g, "")
+		.split(getSymbolTheme().table.vertical)
+		.slice(1, -1);
+	expect(cells[0]).toMatch(/^ 00123/);
+	expect(cells[1]).toMatch(/1e\+21 $/);
 });

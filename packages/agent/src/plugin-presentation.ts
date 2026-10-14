@@ -16,8 +16,8 @@ export interface PluginView {
 	sections?: readonly PluginSection[];
 }
 export interface PluginPresentationOptions {
-	expanded: boolean;
-	isPartial: boolean;
+	readonly expanded: boolean;
+	readonly isPartial: boolean;
 }
 export interface PluginPresentation<TArgs = unknown, TResult = unknown> {
 	call?: (args: TArgs, options: PluginPresentationOptions) => PluginView | undefined;

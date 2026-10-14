@@ -5,13 +5,13 @@ import { renderStructuredRow } from "../../tui/tree-list";
 import { getMarkdownTheme, getSymbolTheme, theme } from "../theme/theme";
 
 export interface PresentationResult {
-	content: readonly { type: string; text?: string }[];
+	content: readonly { type: string; text?: string; mimeType?: string }[];
 	details?: unknown;
 	isError?: boolean;
 }
 
 function valueText(value: unknown): string {
-	if (typeof value === "string") return value;
+	if (typeof value === "string") return value || '""';
 	if (value === undefined) return "undefined";
 	try {
 		return JSON.stringify(value, null, 2) ?? String(value);
@@ -22,6 +22,11 @@ function valueText(value: unknown): string {
 
 /** Flatten records into labeled sections without depth, scalar or row truncation. */
 export function dataSections(data: unknown, title?: string): PluginSection[] {
+	if (
+		data instanceof Date ||
+		(data && typeof data === "object" && !Array.isArray(data) && Object.keys(data).length === 0)
+	)
+		return [{ kind: "code", title, text: valueText(data) }];
 	if (Array.isArray(data) && data.every(item => item !== null && typeof item === "object" && !Array.isArray(item))) {
 		const keys = [...new Set(data.flatMap(item => Object.keys(item)))];
 		if (keys.length) return [{ kind: "table", title, columns: keys.map(key => ({ key })), rows: data }];
@@ -41,7 +46,7 @@ export function dataSections(data: unknown, title?: string): PluginSection[] {
 
 export function fallbackResultView(result: PresentationResult): PluginView {
 	const sections = result.content
-		.filter(block => block.type === "text" && block.text !== undefined)
+		.filter(block => block.type === "text" && Boolean(block.text?.trim()))
 		.flatMap(block => {
 			try {
 				return dataSections(JSON.parse(block.text!));
@@ -49,7 +54,16 @@ export function fallbackResultView(result: PresentationResult): PluginView {
 				return [{ kind: "markdown" as const, text: block.text! }];
 			}
 		});
-	if (sections.length === 0) sections.push({ kind: "markdown", text: "(no output)" });
+	if (sections.length === 0) {
+		const media = result.content.filter(block => block.type !== "text");
+		if (media.length)
+			sections.push({
+				kind: "code",
+				text: media.map(block => `${block.type} result${block.mimeType ? ` (${block.mimeType})` : ""}`).join("\n"),
+			});
+		else if (result.details !== undefined) sections.push(...dataSections(result.details, "Details"));
+		else sections.push({ kind: "markdown", text: "(no output)" });
+	}
 	return { sections };
 }
 
@@ -119,7 +133,14 @@ export class PluginViewComponent implements Component {
 						rows.map(row => section.columns.map(c => valueText(row[c.key]))),
 						width,
 						{ symbols: getSymbolTheme().table, bold: text => theme.bold(text) },
-						section.columns.map(c => c.align ?? null),
+						section.columns.map(
+							c =>
+								c.align ??
+								(section.rows.some(row => typeof row[c.key] === "number") &&
+								section.rows.every(row => row[c.key] == null || typeof row[c.key] === "number")
+									? "right"
+									: "left"),
+						),
 					),
 				);
 				if (rows.length < section.rows.length)
