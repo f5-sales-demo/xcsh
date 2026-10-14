@@ -1,4 +1,7 @@
 {
+	"version": "12.0.6",
+	"release_tag": "v12.0.6",
+	"target_commit": "06989705b3a435748dea253b9277f572cadb19c4",
 	"assets": {
 		"api-catalog.json": "sha256:6ec4ce95e77f663b70c88fee0e37ab57989270602752ab9e55e06ac48fc5bcd8",
 		"concurrency_contracts.json": "sha256:cf9eb09a541ce1f616a9b2ab449a86ff90ce1b17245d8f4ff4e8d84458b63a16",
@@ -13,8 +16,5 @@
 		"smsv2-evidence-receipt.json": "sha256:e9bd60f46acd2a003010cbf20d0581af364cce0486f8a7eefc9eb85562ab0bff",
 		"upstream-contract-changes.json": "sha256:c6d514290f7e0f41b82e770ed1696bdc3c291bed084a4bc9d0fef8cc121ce86d",
 		"upstream-contract-removals.json": "sha256:b6cd2176549645ca0247270cb781028e4dd4ddae019ec694e469f2ef11015f22"
-	},
-	"release_tag": "v12.0.6",
-	"target_commit": "06989705b3a435748dea253b9277f572cadb19c4",
-	"version": "12.0.6"
+	}
 }

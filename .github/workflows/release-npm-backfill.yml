@@ -229,5 +229,5 @@ jobs:
           XCSH_RELEASE_SOURCE_ROOT: ${{ github.workspace }}/.release-source
         run: |
           set -euo pipefail
-          test "$(gh api repos/$GITHUB_REPOSITORY/releases/latest --jq .tag_name)" = "$TAG"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)" = "$TAG"
           bun -e 'import { finalizeNpmPublication } from "./scripts/ci-release-publish.ts"; await finalizeNpmPublication([{name:"@f5-sales-demo/xcsh",version:Bun.env.VERSION!}]);'
