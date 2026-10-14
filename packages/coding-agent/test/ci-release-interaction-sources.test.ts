@@ -45,9 +45,24 @@ test("unexpected private UI imports fail before altering any source", async () =
 	}
 });
 
-test("the QMD runtime import is declared as a production dependency", async () => {
-	const pkg = await Bun.file(new URL("../package.json", import.meta.url)).json();
-	expect(pkg.dependencies["@tobilu/qmd"]).toBeString();
+test("published documentation modules import without the build-only QMD package", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-headless-documentation-"));
+	try {
+		for (const module of ["documentation-repository", "terraform-documentation"]) {
+			const entry = new URL(`../src/internal-urls/${module}.ts`, import.meta.url).pathname;
+			const built = await Bun.build({ entrypoints: [entry], target: "bun", external: ["@tobilu/qmd"] });
+			expect(built.success).toBe(true);
+			const artifact = join(root, `${module}.js`);
+			await Bun.write(artifact, built.outputs[0]!);
+			const imported = Bun.spawnSync(
+				[process.execPath, "--no-install", "--eval", `await import(${JSON.stringify(artifact)})`],
+				{ cwd: root },
+			);
+			expect(imported.exitCode, imported.stderr.toString()).toBe(0);
+		}
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
 });
 
 test("the npm file envelope retains the ignored Terraform index", async () => {

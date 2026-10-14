@@ -5,7 +5,6 @@ import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
-import { createStore } from "@tobilu/qmd";
 import type {
 	DocumentationAsset,
 	DocumentationDocument,
@@ -52,8 +51,6 @@ export interface EmbeddedDocumentationRepository extends DocumentationRepository
 	prime(): Promise<void>;
 }
 
-type QmdStore = Awaited<ReturnType<typeof createStore>>;
-
 interface MaterializedSnapshot {
 	readonly archivePath?: string;
 	readonly indexPath: string;
@@ -61,7 +58,6 @@ interface MaterializedSnapshot {
 
 interface RepositoryState extends MaterializedSnapshot {
 	readonly database: Database;
-	readonly store: QmdStore;
 }
 
 interface DocumentRow {
@@ -424,8 +420,7 @@ export function createEmbeddedDocumentationRepository(
 				const database = new Database(materialized.indexPath, { readonly: true });
 				try {
 					verifyDatabase(database, assets);
-					const store = await createStore({ dbPath: materialized.indexPath, readonly: true });
-					return { ...materialized, database, store };
+					return { ...materialized, database };
 				} catch (error) {
 					database.close();
 					throw error;

@@ -5,7 +5,6 @@ import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "
 import os from "node:os";
 import path from "node:path";
 import { createGunzip, gunzipSync } from "node:zlib";
-import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import {
@@ -1115,6 +1114,7 @@ export async function buildDocumentationIndex(
 	snapshot: VerifiedDocumentationSnapshot,
 	outputPath: string,
 ): Promise<DocumentationIndexResult> {
+	const { createStore } = await import("@tobilu/qmd");
 	const stagingRoot = await mkdtemp(path.join(os.tmpdir(), "xcsh-documentation-index-"));
 	const documentsRoot = path.join(stagingRoot, "content");
 	const databasePath = path.join(stagingRoot, "documentation.sqlite");
