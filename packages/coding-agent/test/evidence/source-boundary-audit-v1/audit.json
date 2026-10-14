@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "53c45578567d5c4d90f6e751e32411cb899147a7",
-  "fingerprint": "9dd046fecbe0eaa6d113b341f4287da75ef69b7a1b564b7f27674936abbefe72",
+  "revision": "1cd345b3c7cba49d74382f925c6416a30fce6833",
+  "fingerprint": "15fb2187e196c71ec1aa722ef868b51def16a589d9ced90c0969671494275b2c",
   "counts": {
     "total": 243,
     "components": 101,
@@ -2932,7 +2932,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "1f2118e7d9483e8509fc5d7787da11d24681a455c18f9207777b296dc50d86f9",
+      "sha256": "6d8ae0e589000ce9dec39eaedc1d1c6f5b903c7a21cff4900b4e98b701debb3a",
       "exports": [
         "ToolExecutionComponent",
         "ToolExecutionHandle",
@@ -5661,6 +5661,7 @@
       ],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/plugin-presentation.test.ts",
         "packages/coding-agent/test/tools/xcsh-api-renderer.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/xcsh-api-renderer.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
