@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "44ddc5e33ac2f46a9ad91a8dc296d2d1c998a799",
-  "fingerprint": "81eb508330073a01f02ec2724ad2d3f4ec7c59452ad2495a125b1d2d5e19e473",
+  "revision": "a2923657946baf4d0fb125f7bef0e20c5404542d",
+  "fingerprint": "c2856a4218f880a14e25bf3e30434dc525aa26da36ab839e7ee2d9737888a461",
   "counts": {
     "total": 243,
     "components": 101,
@@ -2031,7 +2031,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "933feca7d663190fc8aff04cb6b45a7e31a6ad62614dc493e3de27fd796ad7c3",
+      "sha256": "70f491b7e33f89a6a1258b9424dd21ec5bc763cee1bad5e9a74b3f320dd6b808",
       "exports": [
         "PluginViewComponent",
         "PresentationResult",

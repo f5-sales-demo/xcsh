@@ -82,6 +82,7 @@ describe("registered plugin presentation", () => {
 	for (const renderResult of [
 		() => undefined,
 		() => new Text("", 0, 0),
+		() => ({ render: (width: number) => [`\x1b[48;5;236m${" ".repeat(width)}\x1b[0m`], invalidate() {} }),
 		() => {
 			throw new Error("fixture");
 		},

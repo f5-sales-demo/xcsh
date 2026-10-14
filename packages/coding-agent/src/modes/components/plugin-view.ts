@@ -1,4 +1,5 @@
 import type { PluginSection, PluginView } from "@f5-sales-demo/pi-agent-core";
+import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { type Component, Markdown, renderTable, visibleWidth, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
 import { renderStructuredRow } from "../../tui/tree-list";
 import { getMarkdownTheme, getSymbolTheme, theme } from "../theme/theme";
@@ -62,7 +63,7 @@ export function guardedComponent(factory: () => Component | undefined, fallback:
 			try {
 				const component = factory();
 				const lines = component?.render(width);
-				if (lines?.some(line => visibleWidth(line.trim()) > 0)) return lines;
+				if (lines?.some(line => visibleWidth(sanitizeText(line).trim()) > 0)) return lines;
 			} catch {
 				/* Output must survive renderer failures. */
 			}
