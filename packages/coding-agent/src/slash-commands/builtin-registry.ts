@@ -27,6 +27,7 @@ import {
 	describeSetupPlan,
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
+	formatSetupCommand,
 } from "../integrations/setup";
 import type { IntegrationHandle, IntegrationSetupPlan } from "../integrations/types";
 import { BorderedLoader } from "../modes/components/bordered-loader";
@@ -1203,6 +1204,8 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		],
 		allowArgs: true,
 		handle: async (command, runtime) => {
+			const pluginStatus = (message: string) => runtime.ctx.showStatus(message, { plugin: true });
+			const pluginError = (message: string) => runtime.ctx.showError(message, { plugin: true });
 			runtime.ctx.editor.setText("");
 			const args = command.args.trim().split(/\s+/);
 			const sub = args[0] || "";
@@ -1219,7 +1222,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				try {
 					runtime.ctx.showPluginDashboard("discover");
 				} catch (err) {
-					runtime.ctx.showStatus(t("commands.plugin.error", { message: String(err) }));
+					pluginStatus(t("commands.plugin.error", { message: String(err) }));
 				}
 				return;
 			}
@@ -1235,7 +1238,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				try {
 					runtime.ctx.showPluginDashboard("installed");
 				} catch (err) {
-					runtime.ctx.showStatus(t("commands.plugin.error", { message: String(err) }));
+					pluginStatus(t("commands.plugin.error", { message: String(err) }));
 				}
 				return;
 			}
@@ -1262,7 +1265,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					refresh?: Awaited<ReturnType<typeof mgr.refreshMarketplaces>>,
 				) => {
 					const warning = refresh ? formatMarketplaceRefreshWarning(refresh) : undefined;
-					runtime.ctx.showStatus(warning ? `${warning}\n\n${message}` : message);
+					pluginStatus(warning ? `${warning}\n\n${message}` : message);
 				};
 				switch (sub) {
 					// ── Marketplace management (/plugin marketplace add|remove|update|list) ──
@@ -1273,7 +1276,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						switch (mktSub) {
 							case "add": {
 								if (!mktRest) {
-									runtime.ctx.showStatus(t("commands.plugin.marketplace.addUsage"));
+									pluginStatus(t("commands.plugin.marketplace.addUsage"));
 									return;
 								}
 								const prepared = await prepareMarketplaceAddition(mgr, mktRest);
@@ -1285,19 +1288,17 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									},
 									execute: target => executeMarketplaceAddition(mgr, target),
 								});
-								if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+								if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 								else if (outcome === "succeeded")
-									runtime.ctx.showStatus(
-										t("commands.plugin.marketplace.added", { name: prepared.target.name }),
-									);
+									pluginStatus(t("commands.plugin.marketplace.added", { name: prepared.target.name }));
 								else if (outcome === "unresolved")
-									runtime.ctx.showError("Marketplace addition remains unresolved; retry from a fresh review.");
+									pluginError("Marketplace addition remains unresolved; retry from a fresh review.");
 								break;
 							}
 							case "remove":
 							case "rm": {
 								if (!mktRest) {
-									runtime.ctx.showStatus(t("commands.plugin.marketplace.removeUsage"));
+									pluginStatus(t("commands.plugin.marketplace.removeUsage"));
 									return;
 								}
 								const prepared = await prepareMarketplaceRemoval(mgr, mktRest);
@@ -1309,17 +1310,17 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									},
 									execute: target => mgr.removeMarketplace(target.name),
 								});
-								if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+								if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 								else if (outcome === "succeeded")
-									runtime.ctx.showStatus(t("commands.plugin.marketplace.removed", { name: mktRest }));
+									pluginStatus(t("commands.plugin.marketplace.removed", { name: mktRest }));
 								else if (outcome === "unresolved")
-									runtime.ctx.showError("Marketplace removal remains unresolved; retry from a fresh review.");
+									pluginError("Marketplace removal remains unresolved; retry from a fresh review.");
 								break;
 							}
 							case "update": {
 								if (mktRest) {
 									await mgr.updateMarketplace(mktRest);
-									runtime.ctx.showStatus(t("commands.plugin.marketplace.updated", { name: mktRest }));
+									pluginStatus(t("commands.plugin.marketplace.updated", { name: mktRest }));
 								} else {
 									const refresh = await mgr.refreshMarketplaces();
 									showPluginStatus(
@@ -1334,13 +1335,13 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							case "enable":
 							case "disable": {
 								if (!mktRest) {
-									runtime.ctx.showStatus(`Usage: /plugin marketplace ${mktSub} <name>`);
+									pluginStatus(`Usage: /plugin marketplace ${mktSub} <name>`);
 									return;
 								}
 								const enabled = mktSub === "enable";
 								const prepared = await prepareMarketplaceEnabled(mgr, mktRest, enabled);
 								if (!prepared) {
-									runtime.ctx.showStatus(`Marketplace ${mktRest} is already ${mktSub}d.`);
+									pluginStatus(`Marketplace ${mktRest} is already ${mktSub}d.`);
 									break;
 								}
 								const outcome = await runReviewedAction(runtime.ctx, `marketplace ${mktSub}`, {
@@ -1354,25 +1355,23 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 										await mgr.setMarketplaceEnabled(target.name, target.enabled);
 									},
 								});
-								if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+								if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 								else if (outcome === "succeeded")
-									runtime.ctx.showStatus(`Marketplace ${mktRest} ${enabled ? "enabled" : "disabled"}.`);
+									pluginStatus(`Marketplace ${mktRest} ${enabled ? "enabled" : "disabled"}.`);
 								else if (outcome === "unresolved")
-									runtime.ctx.showError(
-										`Marketplace ${mktSub} remains unresolved; retry from a fresh review.`,
-									);
+									pluginError(`Marketplace ${mktSub} remains unresolved; retry from a fresh review.`);
 								break;
 							}
 							default: {
 								const marketplaces = await mgr.listMarketplaces();
 								if (marketplaces.length === 0) {
-									runtime.ctx.showStatus(t("commands.plugin.marketplace.noneConfiguredGetStarted"));
+									pluginStatus(t("commands.plugin.marketplace.noneConfiguredGetStarted"));
 								} else {
 									const lines = marketplaces.map(
 										m =>
 											`  ${m.name}  ${m.enabled ? "enabled" : "disabled"}  ${m.builtIn ? "built-in" : "custom"}  ${m.sourceUri}`,
 									);
-									runtime.ctx.showStatus(
+									pluginStatus(
 										`Marketplaces:\n${lines.join("\n")}\n\n${t("commands.plugin.marketplace.listHint")}`,
 									);
 								}
@@ -1384,7 +1383,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					// ── Legacy shorthand: /marketplace add|remove|update → /plugin marketplace ──
 					case "add": {
 						if (!rest) {
-							runtime.ctx.showStatus(t("commands.plugin.marketplace.addUsage"));
+							pluginStatus(t("commands.plugin.marketplace.addUsage"));
 							return;
 						}
 						const prepared = await prepareMarketplaceAddition(mgr, rest);
@@ -1396,17 +1395,17 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							},
 							execute: target => executeMarketplaceAddition(mgr, target),
 						});
-						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+						if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 						else if (outcome === "succeeded")
-							runtime.ctx.showStatus(t("commands.plugin.marketplace.added", { name: prepared.target.name }));
+							pluginStatus(t("commands.plugin.marketplace.added", { name: prepared.target.name }));
 						else if (outcome === "unresolved")
-							runtime.ctx.showError("Marketplace addition remains unresolved; retry from a fresh review.");
+							pluginError("Marketplace addition remains unresolved; retry from a fresh review.");
 						break;
 					}
 					case "remove":
 					case "rm": {
 						if (!rest) {
-							runtime.ctx.showStatus(t("commands.plugin.marketplace.removeUsage"));
+							pluginStatus(t("commands.plugin.marketplace.removeUsage"));
 							return;
 						}
 						const prepared = await prepareMarketplaceRemoval(mgr, rest);
@@ -1418,17 +1417,17 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							},
 							execute: target => mgr.removeMarketplace(target.name),
 						});
-						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+						if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 						else if (outcome === "succeeded")
-							runtime.ctx.showStatus(t("commands.plugin.marketplace.removed", { name: rest }));
+							pluginStatus(t("commands.plugin.marketplace.removed", { name: rest }));
 						else if (outcome === "unresolved")
-							runtime.ctx.showError("Marketplace removal remains unresolved; retry from a fresh review.");
+							pluginError("Marketplace removal remains unresolved; retry from a fresh review.");
 						break;
 					}
 					case "update": {
 						if (rest) {
 							await mgr.updateMarketplace(rest);
-							runtime.ctx.showStatus(t("commands.plugin.marketplace.updated", { name: rest }));
+							pluginStatus(t("commands.plugin.marketplace.updated", { name: rest }));
 						} else {
 							const refresh = await mgr.refreshMarketplaces();
 							showPluginStatus(
@@ -1464,7 +1463,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					case "install": {
 						const parsed = parseMarketplaceInstallArgs(rest);
 						if ("error" in parsed) {
-							runtime.ctx.showStatus(parsed.error);
+							pluginStatus(parsed.error);
 							return;
 						}
 						const preview = parsed.installSpec.includes("@") ? undefined : await mgr.previewMarketplacePlugins();
@@ -1473,7 +1472,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							preview?.plugins.map(({ marketplace, plugin }) => ({ marketplace, name: plugin.name })) ?? [],
 						);
 						if ("error" in resolved) {
-							runtime.ctx.showStatus(resolved.error);
+							pluginStatus(resolved.error);
 							return;
 						}
 						const { name, marketplace } = resolved;
@@ -1486,7 +1485,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							},
 							execute: target => executePluginInstall(mgr, target),
 						});
-						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+						if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 						else if (outcome === "succeeded") {
 							await runtime.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true });
 							const handles = runtime.ctx.session?.extensionRunner?.getAllRegisteredIntegrations() ?? [];
@@ -1514,7 +1513,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								showPluginStatus(nextAction ? `${installed}\nnext: ${nextAction}` : installed);
 							}
 						} else if (outcome === "unresolved")
-							runtime.ctx.showError("Plugin installation remains unresolved; retry from a fresh review.");
+							pluginError("Plugin installation remains unresolved; retry from a fresh review.");
 						break;
 					}
 					// ── Uninstall ──
@@ -1524,7 +1523,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							"Usage: /plugin uninstall [--scope user|project] <name[@marketplace]>",
 						);
 						if ("error" in uninstArgs) {
-							runtime.ctx.showStatus(uninstArgs.error);
+							pluginStatus(uninstArgs.error);
 							return;
 						}
 						const prepared = await preparePluginRemoval(mgr, uninstArgs.pluginId, uninstArgs.scope);
@@ -1536,16 +1535,16 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							},
 							execute: target => mgr.uninstallPlugin(target.pluginId, target.scope),
 						});
-						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+						if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 						else if (outcome === "succeeded") {
 							await runtime.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true });
-							runtime.ctx.showStatus(
+							pluginStatus(
 								t("commands.plugin.uninstalled", {
 									pluginId: uninstArgs.pluginId,
 								}),
 							);
 						} else if (outcome === "unresolved")
-							runtime.ctx.showError("Plugin removal remains unresolved; retry from a fresh review.");
+							pluginError("Plugin removal remains unresolved; retry from a fresh review.");
 						break;
 					}
 					// ── Enable / Disable ──
@@ -1556,13 +1555,13 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							`Usage: /plugin ${sub} [--scope user|project] <name@marketplace>`,
 						);
 						if ("error" in parsed) {
-							runtime.ctx.showStatus(parsed.error);
+							pluginStatus(parsed.error);
 							return;
 						}
 						const isEnable = sub === "enable";
 						const prepared = await preparePluginEnabled(mgr, parsed.pluginId, parsed.scope, isEnable);
 						if (!prepared) {
-							runtime.ctx.showStatus(
+							pluginStatus(
 								`Nothing changed. Plugin ${parsed.pluginId} is already ${isEnable ? "enabled" : "disabled"}.`,
 							);
 							break;
@@ -1575,16 +1574,16 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							},
 							execute: target => mgr.setPluginEnabled(target.pluginId, isEnable, target.scope),
 						});
-						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+						if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 						else if (outcome === "succeeded") {
 							await runtime.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true });
-							runtime.ctx.showStatus(
+							pluginStatus(
 								isEnable
 									? t("commands.plugin.enabled", { pluginId: parsed.pluginId })
 									: t("commands.plugin.disabled", { pluginId: parsed.pluginId }),
 							);
 						} else if (outcome === "unresolved")
-							runtime.ctx.showError(`Plugin ${sub} remains unresolved; retry from a fresh review.`);
+							pluginError(`Plugin ${sub} remains unresolved; retry from a fresh review.`);
 						break;
 					}
 					// ── Upgrade ──
@@ -1595,12 +1594,12 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								"Usage: /plugin upgrade [--scope user|project] <name@marketplace>",
 							);
 							if ("error" in upArgs) {
-								runtime.ctx.showStatus(upArgs.error);
+								pluginStatus(upArgs.error);
 								return;
 							}
 							const prepared = await preparePluginUpgrade(mgr, upArgs.pluginId, upArgs.scope);
 							if (!prepared) {
-								runtime.ctx.showStatus(`Nothing changed. Plugin ${upArgs.pluginId} is already up to date.`);
+								pluginStatus(`Nothing changed. Plugin ${upArgs.pluginId} is already up to date.`);
 								break;
 							}
 							const outcome = await runReviewedAction(runtime.ctx, "plugin upgrade", {
@@ -1611,7 +1610,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								},
 								execute: target => executePluginUpgrade(mgr, target),
 							});
-							if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+							if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 							else if (outcome === "succeeded") {
 								await runtime.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true });
 								showPluginStatus(
@@ -1621,7 +1620,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									}),
 								);
 							} else if (outcome === "unresolved")
-								runtime.ctx.showError("Plugin upgrade remains unresolved; retry from a fresh review.");
+								pluginError("Plugin upgrade remains unresolved; retry from a fresh review.");
 						} else {
 							const prepared = await preparePluginUpgradeAll(mgr);
 							if (!prepared) {
@@ -1639,9 +1638,9 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									result = await executePluginUpgradeAll(mgr, target);
 								},
 							});
-							if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+							if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 							else if (outcome === "unresolved")
-								runtime.ctx.showError("Plugin upgrades remain unresolved; retry from a fresh review.");
+								pluginError("Plugin upgrades remain unresolved; retry from a fresh review.");
 							else if (outcome === "succeeded" && result) {
 								await runtime.ctx.refreshSlashCommandState(undefined, { reloadExtensions: true });
 								const lines = result.completed.map(
@@ -1651,7 +1650,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									const failures = result.failed.map(
 										failure => `  ${failure.pluginId} [${failure.scope}]: ${failure.error}`,
 									);
-									runtime.ctx.showStatus(
+									pluginStatus(
 										`${result.completed.length} plugin scope(s) upgraded; ${result.failed.length} unresolved. Re-run /plugin upgrade to review only unresolved operations.\n${[
 											...lines,
 											...failures,
@@ -1689,9 +1688,9 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							}
 						}
 						if (lines.length === 0) {
-							runtime.ctx.showStatus(t("commands.plugin.noneInstalled"));
+							pluginStatus(t("commands.plugin.noneInstalled"));
 						} else {
-							runtime.ctx.showStatus(lines.join("\n"));
+							pluginStatus(lines.join("\n"));
 						}
 						break;
 					}
@@ -1705,7 +1704,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						const catalogContent = await readOptionalTextFile(catalogPath);
 						if (catalogContent !== undefined) {
 							const catalog = parseMarketplaceCatalog(catalogContent, catalogPath);
-							runtime.ctx.showStatus(
+							pluginStatus(
 								t("commands.plugin.validate.marketplaceValid", {
 									name: catalog.name,
 									count: catalog.plugins.length,
@@ -1714,11 +1713,11 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						} else {
 							const pluginContent = await readOptionalTextFile(pluginPath);
 							if (pluginContent === undefined) {
-								runtime.ctx.showStatus(t("commands.plugin.validate.notFound", { path: targetPath }));
+								pluginStatus(t("commands.plugin.validate.notFound", { path: targetPath }));
 								break;
 							}
 							const manifest = JSON.parse(pluginContent);
-							runtime.ctx.showStatus(
+							pluginStatus(
 								t("commands.plugin.validate.pluginValid", {
 									name: manifest.name ?? path.basename(targetPath),
 								}),
@@ -1729,7 +1728,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					// ── Setup (reviewed authentication/readiness plan) ──
 					case "setup": {
 						if (!rest) {
-							runtime.ctx.showStatus("Usage: /plugin setup <plugin>");
+							pluginStatus("Usage: /plugin setup <plugin>");
 							break;
 						}
 						const matches = (runtime.ctx.session.extensionRunner?.getAllRegisteredIntegrations() ?? []).filter(
@@ -1738,7 +1737,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								handle.setupPlan !== undefined,
 						);
 						if (matches.length !== 1) {
-							runtime.ctx.showError(
+							pluginError(
 								matches.length
 									? `Plugin ${rest} registers multiple setup plans; use an integration id.`
 									: `No setup plan is registered for ${rest}.`,
@@ -1748,7 +1747,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						const handle = matches[0] as IntegrationHandle<unknown>;
 						let plan = handle.setupPlan;
 						if (!plan) {
-							runtime.ctx.showError(`Integration ${handle.id} does not declare setup.`);
+							pluginError(`Integration ${handle.id} does not declare setup.`);
 							break;
 						}
 						const current = await handle.get();
@@ -1780,7 +1779,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							changes: plan.steps.map((step, index) => ({
 								field: `${index + 1}. ${step.kind}`,
 								before: "not run",
-								after: `${JSON.stringify(step.archive ?? step.argv)} (timeout ${step.timeoutMs}ms)`,
+								after: `${step.archive ? JSON.stringify(step.archive, null, 2) : formatSetupCommand(step.argv)} (timeout ${step.timeoutMs}ms)`,
 							})),
 							consequence: describeSetupPlan(handle),
 						};
@@ -1796,9 +1795,9 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								await personProfileService.reconcileFromCollectors(undefined, 0);
 							},
 						});
-						if (outcome === "busy") runtime.ctx.showStatus("Another reviewed action is already open.");
+						if (outcome === "busy") pluginStatus("Another reviewed action is already open.");
 						else if (outcome === "unresolved")
-							runtime.ctx.showError(`Plugin setup for ${rest} remains unresolved; retry from a fresh review.`);
+							pluginError(`Plugin setup for ${rest} remains unresolved; retry from a fresh review.`);
 						else if (outcome === "succeeded" && result) {
 							showPluginStatus(
 								`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}`,
@@ -1807,21 +1806,21 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						break;
 					}
 					case "doctor": {
-						runtime.ctx.showError("Plugin health checks are CLI-only; run xcsh plugin doctor.");
+						pluginError("Plugin health checks are CLI-only; run xcsh plugin doctor.");
 						break;
 					}
 					// ── Help ──
 					case "help": {
-						runtime.ctx.showStatus(t("commands.plugin.help"));
+						pluginStatus(t("commands.plugin.help"));
 						break;
 					}
 					default: {
 						const marketplaces = await mgr.listMarketplaces();
 						if (marketplaces.length === 0) {
-							runtime.ctx.showStatus(t("commands.plugin.marketplace.noneConfiguredBrowse"));
+							pluginStatus(t("commands.plugin.marketplace.noneConfiguredBrowse"));
 						} else {
 							const lines = marketplaces.map(m => `  ${m.name}  ${m.sourceUri}`);
-							runtime.ctx.showStatus(
+							pluginStatus(
 								`Marketplaces:\n${lines.join("\n")}\n\n${t("commands.plugin.marketplace.listHintAll")}`,
 							);
 						}
@@ -1830,7 +1829,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				}
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
-				runtime.ctx.showError(t("commands.plugin.error", { message: msg }));
+				pluginError(t("commands.plugin.error", { message: msg }));
 			}
 		},
 	},

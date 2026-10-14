@@ -1,4 +1,4 @@
-import type { AgentTool } from "@f5-sales-demo/pi-agent-core";
+import type { AgentTool, PluginPresentation } from "@f5-sales-demo/pi-agent-core";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import {
 	Box,
@@ -15,28 +15,17 @@ import {
 } from "@f5-sales-demo/pi-tui";
 import { getProjectDir, logger } from "@f5-sales-demo/pi-utils";
 import { computeEditDiff, computeHashlineDiff, computePatchDiff, type DiffError, type DiffResult } from "../../edit";
-import type { Theme } from "../../modes/theme/theme";
 import { theme } from "../../modes/theme/theme";
 import { BASH_DEFAULT_PREVIEW_LINES } from "../../tools/bash";
-import {
-	formatArgsInline,
-	JSON_TREE_MAX_DEPTH_COLLAPSED,
-	JSON_TREE_MAX_DEPTH_EXPANDED,
-	JSON_TREE_MAX_LINES_COLLAPSED,
-	JSON_TREE_MAX_LINES_EXPANDED,
-	JSON_TREE_SCALAR_LEN_COLLAPSED,
-	JSON_TREE_SCALAR_LEN_EXPANDED,
-	renderJsonTreeLines,
-	stripInternalArgs,
-} from "../../tools/json-tree";
+import { stripInternalArgs } from "../../tools/json-tree";
 import { PYTHON_DEFAULT_PREVIEW_LINES } from "../../tools/python";
-import { formatExpandHint, replaceTabs, resolveImageOptions, truncateToWidth } from "../../tools/render-utils";
+import { formatExpandHint, replaceTabs, resolveImageOptions } from "../../tools/render-utils";
 import { toolRenderers } from "../../tools/renderers";
 import { renderStatusLine } from "../../tui";
-import { renderStructuredRow, renderStructuredTreeLine } from "../../tui/tree-list";
 import { convertToPng } from "../../utils/image-convert";
 import { sanitizeWithImagePassthrough } from "../../utils/image-passthrough";
 import { renderDiff } from "./diff";
+import { dataSections, fallbackResultView, guardedComponent, PluginViewComponent } from "./plugin-view";
 
 function ensureInvalidate(component: unknown): Component {
 	const c = component as { render: Component["render"]; invalidate?: () => void };
@@ -148,7 +137,7 @@ export class ToolExecutionComponent extends Container {
 
 		// Use Box for custom tools or built-in tools that have renderers
 		const hasRenderer = toolName in toolRenderers;
-		const hasCustomRenderer = !!(tool?.renderCall || tool?.renderResult);
+		const hasCustomRenderer = !!(tool?.renderCall || tool?.renderResult || tool?.presentation);
 		if (hasCustomRenderer || hasRenderer) {
 			this.addChild(this.#contentBox);
 		} else {
@@ -385,72 +374,44 @@ export class ToolExecutionComponent extends Container {
 		this.#renderState.isPartial = this.#isPartial;
 		this.#renderState.spinnerFrame = this.#spinnerFrame;
 
-		// Check for custom tool rendering
-		if (this.#tool && (this.#tool.renderCall || this.#tool.renderResult)) {
+		// Explicit components, data-only presentation, then shared themed fallback.
+		if (this.#tool && (this.#tool.renderCall || this.#tool.renderResult || this.#tool.presentation)) {
 			const tool = this.#tool;
-			const mergeCallAndResult = Boolean((tool as { mergeCallAndResult?: boolean }).mergeCallAndResult);
-			// Custom tools use Box for flexible component rendering
+			const merged = Boolean((tool as { mergeCallAndResult?: boolean }).mergeCallAndResult);
 			const inline = Boolean((tool as { inline?: boolean }).inline);
 			this.#contentBox.setBgFn(inline ? undefined : bgFn);
-			// Content sits flush with the gutter (no extra left indent) regardless
-			// of painted bg; bg-painted tools fill full width on both sides.
 			this.#contentBox.setPaddingX(0);
 			this.#contentBox.clear();
-
-			// Render call component
-			const shouldRenderCall = !this.#result || !mergeCallAndResult;
-			if (shouldRenderCall && tool.renderCall) {
-				try {
-					const callComponent = tool.renderCall(this.#getCallArgsForRender(), this.#renderState, theme);
-					if (callComponent) {
-						this.#contentBox.addChild(ensureInvalidate(callComponent));
-					}
-				} catch (err) {
-					logger.warn("Tool renderer failed", { tool: this.#toolName, error: String(err) });
-					// Fall back to default on error
-					this.#contentBox.addChild(new Text(theme.fg("toolTitle", theme.bold(this.#toolLabel)), 0, 0));
-				}
-			} else {
-				// No custom renderCall, show tool name
-				this.#contentBox.addChild(new Text(theme.fg("toolTitle", theme.bold(this.#toolLabel)), 0, 0));
+			if (!this.#result || !merged) {
+				const fallback = this.#callView();
+				this.#contentBox.addChild(
+					tool.renderCall
+						? guardedComponent(
+								() =>
+									ensureInvalidate(tool.renderCall!(this.#getCallArgsForRender(), this.#renderState, theme)),
+								fallback,
+							)
+						: fallback,
+				);
 			}
-
-			// Render result component if we have a result
-			if (this.#result && tool.renderResult) {
-				try {
-					const renderResult = tool.renderResult as (
-						result: { content: Array<{ type: string; text?: string }>; details?: unknown; isError?: boolean },
-						options: { expanded: boolean; isPartial: boolean; spinnerFrame?: number },
-						theme: Theme,
-						args?: unknown,
-					) => Component;
-					const resultComponent = renderResult(
-						{
-							content: this.#result.content as any,
-							details: this.#result.details,
-							isError: this.#result.isError,
-						},
-						this.#renderState,
-						theme,
-						this.#args,
-					);
-					if (resultComponent) {
-						this.#contentBox.addChild(ensureInvalidate(resultComponent));
-					}
-				} catch (err) {
-					logger.warn("Tool renderer failed", { tool: this.#toolName, error: String(err) });
-					// Fall back to showing raw output on error
-					const output = this.#getTextOutput();
-					if (output) {
-						this.#contentBox.addChild(new Text(theme.fg("toolOutput", replaceTabs(output)), 0, 0));
-					}
-				}
-			} else if (this.#result) {
-				// Has result but no custom renderResult
-				const output = this.#getTextOutput();
-				if (output) {
-					this.#contentBox.addChild(new Text(theme.fg("toolOutput", replaceTabs(output)), 0, 0));
-				}
+			if (this.#result) {
+				const fallback = this.#resultView();
+				this.#contentBox.addChild(
+					tool.renderResult
+						? guardedComponent(
+								() =>
+									ensureInvalidate(
+										(tool.renderResult as (...args: any[]) => Component)(
+											this.#result,
+											this.#renderState,
+											theme,
+											this.#args,
+										),
+									),
+								fallback,
+							)
+						: fallback,
+				);
 			}
 		} else if (this.#toolName in toolRenderers) {
 			// Built-in tools with renderers
@@ -694,97 +655,80 @@ export class ToolExecutionComponent extends Container {
 		return output;
 	}
 
-	/**
-	 * Format a generic tool execution (fallback for tools without custom renderers).
-	 * @param width Available content width (from GutterBlock), used for truncation.
-	 */
-	#formatToolExecution(width = 80): string {
-		const lines: string[] = [];
-		const contentWidth = Math.max(1, width - 2); // Text has one cell of padding on each side.
-		const icon = this.#isPartial ? "pending" : undefined;
-		lines.push(renderStatusLine({ icon, title: this.#toolLabel }, theme));
+	#callView(): Component {
+		const args =
+			!this.#expanded && this.#args && typeof this.#args === "object" && !Array.isArray(this.#args)
+				? stripInternalArgs(this.#args)
+				: this.#args;
+		const fallback = new PluginViewComponent(
+			() => ({
+				summary: renderStatusLine({ icon: this.#isPartial ? "pending" : undefined, title: this.#toolLabel }, theme),
+				sections: dataSections(args, this.#expanded ? "Args" : undefined),
+			}),
+			this.#expanded,
+		);
+		const descriptor = this.#tool?.presentation as PluginPresentation | undefined;
+		return descriptor?.call
+			? guardedComponent(
+					() =>
+						new PluginViewComponent(
+							() => descriptor.call!(cloneToolArgs(args), this.#renderState),
+							this.#expanded,
+							false,
+							fallback,
+						),
+					fallback,
+				)
+			: fallback;
+	}
 
-		const argsObject = this.#args && typeof this.#args === "object" ? (this.#args as Record<string, unknown>) : null;
-		if (!this.#expanded && argsObject && Object.keys(argsObject).length > 0) {
-			const preview = formatArgsInline(argsObject, Math.max(20, width - 10));
-			if (preview) {
-				lines.push(
-					...renderStructuredRow(
-						theme.fg("dim", preview),
-						` ${theme.fg("dim", theme.tree.last)} `,
-						"    ",
-						contentWidth,
-					),
-				);
-			}
-		}
-
-		if (this.#expanded && this.#args !== undefined) {
-			lines.push("");
-			lines.push(theme.fg("dim", "Args"));
-			const tree = renderJsonTreeLines(
-				this.#args && typeof this.#args === "object" && !Array.isArray(this.#args)
-					? stripInternalArgs(this.#args as Record<string, unknown>)
-					: this.#args,
-				theme,
-				JSON_TREE_MAX_DEPTH_EXPANDED,
-				JSON_TREE_MAX_LINES_EXPANDED,
-				JSON_TREE_SCALAR_LEN_EXPANDED,
-			);
-			lines.push(...tree.lines.flatMap(line => renderStructuredTreeLine(line, contentWidth)));
-			if (tree.truncated) {
-				lines.push(theme.fg("dim", "…"));
-			}
-			lines.push("");
-		}
-
-		if (!this.#result) {
-			return lines.join("\n");
-		}
-
-		const textContent = this.#getTextOutput().trimEnd();
-		if (!textContent) {
-			lines.push(theme.fg("dim", "(no output)"));
-			return lines.join("\n");
-		}
-
-		if (textContent.startsWith("{") || textContent.startsWith("[")) {
-			try {
-				const parsed = JSON.parse(textContent);
-				const maxDepth = this.#expanded ? JSON_TREE_MAX_DEPTH_EXPANDED : JSON_TREE_MAX_DEPTH_COLLAPSED;
-				const maxLines = this.#expanded ? JSON_TREE_MAX_LINES_EXPANDED : JSON_TREE_MAX_LINES_COLLAPSED;
-				const maxScalarLen = this.#expanded ? JSON_TREE_SCALAR_LEN_EXPANDED : JSON_TREE_SCALAR_LEN_COLLAPSED;
-				const tree = renderJsonTreeLines(parsed, theme, maxDepth, maxLines, maxScalarLen);
-
-				if (tree.lines.length > 0) {
-					lines.push(...tree.lines.flatMap(line => renderStructuredTreeLine(line, contentWidth)));
-					if (!this.#expanded) {
-						lines.push(formatExpandHint(theme, this.#expanded, true));
-					} else if (tree.truncated) {
-						lines.push(theme.fg("dim", "…"));
-					}
-					return lines.join("\n");
+	#resultView(): Component {
+		const result = this.#result!;
+		const fallback = new PluginViewComponent(
+			() => fallbackResultView(result),
+			this.#expanded,
+			Boolean(result.isError),
+		);
+		const descriptor = this.#tool?.presentation as PluginPresentation | undefined;
+		const presented = descriptor?.result
+			? guardedComponent(
+					() =>
+						new PluginViewComponent(
+							() => descriptor.result!(cloneToolArgs(result), this.#renderState, cloneToolArgs(this.#args)),
+							this.#expanded,
+							Boolean(result.isError),
+							fallback,
+						),
+					fallback,
+				)
+			: fallback;
+		return {
+			invalidate: () => presented.invalidate(),
+			render: width => {
+				const lines = presented.render(width);
+				// Retain every source field, argument, error and advisory for transcript inspection.
+				if (descriptor?.result && this.#expanded) {
+					lines.push(...fallback.render(width));
 				}
-			} catch {
-				// Fall through to raw output
-			}
-		}
+				if (this.#expanded && result.details !== undefined) {
+					lines.push(
+						...new PluginViewComponent(
+							() => ({ sections: dataSections(result.details, "Details") }),
+							true,
+						).render(width),
+					);
+				}
+				if (!this.#expanded) lines.push(formatExpandHint(theme, false, true));
+				return lines;
+			},
+		};
+	}
 
-		const outputLines = textContent.split("\n");
-		const maxOutputLines = this.#expanded ? 12 : 4;
-		const displayLines = outputLines.slice(0, maxOutputLines);
-
-		for (const line of displayLines) {
-			lines.push(theme.fg("toolOutput", truncateToWidth(replaceTabs(line), width)));
-		}
-
-		if (outputLines.length > maxOutputLines) {
-			const remaining = outputLines.length - maxOutputLines;
-			lines.push(`${theme.fg("dim", `… ${remaining} more lines`)} ${formatExpandHint(theme, this.#expanded, true)}`);
-		} else if (!this.#expanded) {
-			lines.push(formatExpandHint(theme, this.#expanded, true));
-		}
-
+	/** Shared fallback is measured after the Text component's padding is removed. */
+	#formatToolExecution(width = 80): string {
+		const contentWidth = Math.max(1, width - 2);
+		const lines = this.#callView().render(contentWidth);
+		if (this.#result) lines.push(...this.#resultView().render(contentWidth));
 		return lines.join("\n");
 	}
 }

@@ -11866,6 +11866,45 @@
     },
     {
       "surface": {
+        "id": "source:packages/coding-agent/src/modes/components/plugin-lifecycle.ts",
+        "source": "packages/coding-agent/src/modes/components/plugin-lifecycle.ts",
+        "kind": "component"
+      },
+      "status": "verified",
+      "adapter": "Shared data-only plugin presentation and width-aware layout",
+      "reviewPolicy": "Rendering is read-only; lifecycle execution retains the existing reviewed-action boundary",
+      "states": [
+        "pending",
+        "success",
+        "error",
+        "empty",
+        "partial",
+        "collapsed",
+        "expanded",
+        "resized",
+        "theme-switched"
+      ],
+      "tests": [
+        "packages/coding-agent/test/plugin-presentation.test.ts",
+        "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts",
+        "packages/tui/test/plugin-table.test.ts"
+      ],
+      "persistence": [
+        "Registered results and arguments are preserved; descriptor callbacks receive copies"
+      ],
+      "captures": [
+        "packages/coding-agent/test/evidence/plugin-presentation-v1/captures.json"
+      ],
+      "visualVerdicts": [
+        "packages/coding-agent/test/evidence/plugin-presentation-v1/acceptance.md - 48 synthetic component renders; live read-only Salesforce zero and error checks"
+      ],
+      "fingerprint": "3a2e529628a0ee40ee6f4d4620346d146db9f12e43460b59facd69a11e3d6923",
+      "notes": [
+        "Task-specific rendering evidence; no inference of release or installed acceptance from source discovery."
+      ]
+    },
+    {
+      "surface": {
         "id": "source:packages/coding-agent/src/modes/components/plugin-settings-drafts.ts",
         "source": "packages/coding-agent/src/modes/components/plugin-settings-drafts.ts",
         "kind": "component"
@@ -11956,6 +11995,45 @@
       "notes": [
         "Full complete-candidate acceptance remains pending.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+      ]
+    },
+    {
+      "surface": {
+        "id": "source:packages/coding-agent/src/modes/components/plugin-view.ts",
+        "source": "packages/coding-agent/src/modes/components/plugin-view.ts",
+        "kind": "component"
+      },
+      "status": "verified",
+      "adapter": "Shared data-only plugin presentation and width-aware layout",
+      "reviewPolicy": "Rendering is read-only; lifecycle execution retains the existing reviewed-action boundary",
+      "states": [
+        "pending",
+        "success",
+        "error",
+        "empty",
+        "partial",
+        "collapsed",
+        "expanded",
+        "resized",
+        "theme-switched"
+      ],
+      "tests": [
+        "packages/coding-agent/test/plugin-presentation.test.ts",
+        "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts",
+        "packages/tui/test/plugin-table.test.ts"
+      ],
+      "persistence": [
+        "Registered results and arguments are preserved; descriptor callbacks receive copies"
+      ],
+      "captures": [
+        "packages/coding-agent/test/evidence/plugin-presentation-v1/captures.json"
+      ],
+      "visualVerdicts": [
+        "packages/coding-agent/test/evidence/plugin-presentation-v1/acceptance.md - 48 synthetic component renders; live read-only Salesforce zero and error checks"
+      ],
+      "fingerprint": "933feca7d663190fc8aff04cb6b45a7e31a6ad62614dc493e3de27fd796ad7c3",
+      "notes": [
+        "Task-specific rendering evidence; no inference of release or installed acceptance from source discovery."
       ]
     },
     {
@@ -19659,6 +19737,45 @@
         "Individually classified from current source SHA-256 e9e76f678ba3f8402972db6ac3e17d05a4360a0547324c6373bdd40f490648e7.",
         "Ownership: shared-rendering-primitive; domain: shared-components; direct tests: 2.",
         "Final current-source actual-terminal evidence is fingerprint-pinned at ca9c5c03475c256d54a3d5b0edd0e06b78802dc7b56dd777652299df0fb2a98b; all applicable 16-variant matrices and direct visual reviews pass."
+      ]
+    },
+    {
+      "surface": {
+        "id": "source:packages/tui/src/components/table.ts",
+        "source": "packages/tui/src/components/table.ts",
+        "kind": "component"
+      },
+      "status": "verified",
+      "adapter": "Shared data-only plugin presentation and width-aware layout",
+      "reviewPolicy": "Rendering is read-only; lifecycle execution retains the existing reviewed-action boundary",
+      "states": [
+        "pending",
+        "success",
+        "error",
+        "empty",
+        "partial",
+        "collapsed",
+        "expanded",
+        "resized",
+        "theme-switched"
+      ],
+      "tests": [
+        "packages/coding-agent/test/plugin-presentation.test.ts",
+        "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts",
+        "packages/tui/test/plugin-table.test.ts"
+      ],
+      "persistence": [
+        "Registered results and arguments are preserved; descriptor callbacks receive copies"
+      ],
+      "captures": [
+        "packages/coding-agent/test/evidence/plugin-presentation-v1/captures.json"
+      ],
+      "visualVerdicts": [
+        "packages/coding-agent/test/evidence/plugin-presentation-v1/acceptance.md - 48 synthetic component renders; live read-only Salesforce zero and error checks"
+      ],
+      "fingerprint": "6f3e3659247405488d29961e20a6b17c6db737cfadd74b6e400561074c9ebd8e",
+      "notes": [
+        "Task-specific rendering evidence; no inference of release or installed acceptance from source discovery."
       ]
     },
     {

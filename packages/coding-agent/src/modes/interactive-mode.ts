@@ -975,11 +975,11 @@ export class InteractiveMode implements InteractiveModeContext {
 	}
 
 	// UI helpers
-	showStatus(message: string, options?: { dim?: boolean }): void {
+	showStatus(message: string, options?: { dim?: boolean; plugin?: boolean }): void {
 		this.#uiHelpers.showStatus(message, options);
 	}
 
-	showError(message: string): void {
+	showError(message: string, options?: { plugin?: boolean }): void {
 		this.#pendingSubmittedInput = undefined;
 		this.optimisticUserMessageSignature = undefined;
 		this.#pendingWorkingMessage = undefined;
@@ -988,7 +988,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.loadingAnimation = undefined;
 			this.statusContainer.clear();
 		}
-		this.#uiHelpers.showError(message);
+		this.#uiHelpers.showError(message, options);
 	}
 
 	showWarning(message: string): void {

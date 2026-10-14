@@ -342,6 +342,9 @@ export interface ToolDefinition<TParams extends TSchema = TSchema, TDetails = un
 	/** Called on session lifecycle events - use to reconstruct state or cleanup resources */
 	onSession?: (event: ToolSessionEvent, ctx: ExtensionContext) => void | Promise<void>;
 
+	/** Optional data-only presentation; plugins need no runtime renderer imports. */
+	presentation?: import("@f5-sales-demo/pi-agent-core").PluginPresentation<Static<TParams>, AgentToolResult<TDetails>>;
+
 	/** Custom rendering for tool call display */
 	renderCall?: (args: Static<TParams>, options: ToolRenderResultOptions, theme: Theme) => Component;
 
