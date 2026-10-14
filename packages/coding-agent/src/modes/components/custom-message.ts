@@ -4,6 +4,7 @@ import { Box, Container, Markdown, Spacer, Text } from "@f5-sales-demo/pi-tui";
 import type { MessageRenderer } from "../../extensibility/extensions/types";
 import { getMarkdownTheme, theme } from "../../modes/theme/theme";
 import type { CustomMessage } from "../../session/messages";
+import { guardedComponent, PluginViewComponent } from "./plugin-view";
 
 /**
  * Component that renders a custom message entry from extensions.
@@ -70,6 +71,26 @@ export class CustomMessageComponent extends Container {
 		const label = theme.fg("customMessageLabel", theme.bold(`[${this.message.customType}]`));
 		this.#box.addChild(new Text(label, 0, 0));
 		this.#box.addChild(new Spacer(1));
+
+		if (this.message.presentation) {
+			this.#box.addChild(
+				guardedComponent(
+					() => new PluginViewComponent(() => this.message.presentation, this.#expanded),
+					new Markdown(
+						typeof this.message.content === "string"
+							? this.message.content
+							: this.message.content
+									.filter((c): c is TextContent => c.type === "text")
+									.map(c => c.text)
+									.join("\n"),
+						0,
+						0,
+						getMarkdownTheme(),
+					),
+				),
+			);
+			return;
+		}
 
 		// Extract text content
 		let text: string;

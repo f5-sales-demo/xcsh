@@ -961,7 +961,7 @@ export interface ToolResultEventResult {
 }
 
 export interface BeforeAgentStartEventResult {
-	message?: Pick<CustomMessage, "customType" | "content" | "display" | "details" | "attribution">;
+	message?: Pick<CustomMessage, "customType" | "content" | "display" | "details" | "attribution" | "presentation">;
 	/** Replace the system prompt for this turn. If multiple extensions return this, they are chained. */
 	systemPrompt?: string;
 }
@@ -1040,6 +1040,9 @@ export interface ExtensionAPI {
 
 	/** Injected @sinclair/typebox module for defining tool parameters */
 	typebox: typeof import("@sinclair/typebox");
+
+	/** Shared data-only view builders; xcsh owns layout and theme. */
+	readonly presentation: import("../presentation").PresentationAPI;
 
 	/** Injected pi-coding-agent exports for accessing SDK utilities */
 	pi: typeof piCodingAgent;
@@ -1189,7 +1192,10 @@ export interface ExtensionAPI {
 	 * an internal continuation that consumes the message on the next turn.
 	 */
 	sendMessage<T = unknown>(
-		message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution">,
+		message: Pick<
+			CustomMessage<T>,
+			"customType" | "content" | "display" | "details" | "attribution" | "presentation"
+		>,
 		options?: { triggerTurn?: boolean; deliverAs?: "steer" | "followUp" | "nextTurn" },
 	): void;
 
@@ -1371,7 +1377,7 @@ export interface ExtensionShortcut {
 type HandlerFn = (...args: unknown[]) => Promise<unknown>;
 
 export type SendMessageHandler = <T = unknown>(
-	message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution">,
+	message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution" | "presentation">,
 	/**
 	 * `deliverAs: "nextTurn"` queues hidden custom context for the next turn.
 	 * When paired with `triggerTurn: true` during prompt teardown, the session schedules

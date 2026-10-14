@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "1cd345b3c7cba49d74382f925c6416a30fce6833",
-  "fingerprint": "15fb2187e196c71ec1aa722ef868b51def16a589d9ced90c0969671494275b2c",
+  "revision": "1dd4454456c22e67a845bc80bd5bd41ab913fdad",
+  "fingerprint": "662a21e4958673df8a3fee0b6495edbbef5dd6be91954245cdd4f0df0e108efa",
   "counts": {
     "total": 243,
     "components": 101,
@@ -460,7 +460,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "a37d919fced63f9bf395e80d77a3953de35ca809eea697f82f02e9af370c52f6",
+      "sha256": "92406c80d3c38ae065dd2b04db31dbed5a668ba8f8f81da372774319ef9919d0",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
@@ -547,7 +547,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "fc28e75c6eff1dfda70913603b6e56dac2d4ea8917560bf38f82910fc789a975",
+      "sha256": "589f318d613778f440b3838838ca880647ca47f073c559975cba0d1aab4d5826",
       "exports": [
         "AgentEndEvent",
         "AgentStartEvent",
@@ -849,7 +849,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "1945010d44e674c8ec4ffaa5dff3b7036458d361333e2759582a63c742e54734",
+      "sha256": "999dc4710aaac3a737052ce7358aff208eec62e1b5d28bf40c06ccd844cdf635",
       "exports": [
         "Container",
         "ExtensionEditorComponent",
@@ -866,10 +866,14 @@
         "getAgentDir",
         "host",
         "logger",
+        "presentation",
         "settings",
         "software",
         "type FileSlashCommand",
         "type HostInfo",
+        "type PresentationAPI",
+        "type PresentationColumn",
+        "type PresentationProfile",
         "type SoftwareRecipe",
         "type SoftwareResolution"
       ],
@@ -1358,7 +1362,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "0d3e6ca7a24d44b023b165dc6532f9a4bbaa16aa4f86c8225dd7ca11fff4f168",
+      "sha256": "710030f97fea56b4ab68fa34b6f0aee687f5f664a5a5361753ef6632a8fb6982",
       "exports": [
         "CustomMessageComponent"
       ],
@@ -1367,6 +1371,7 @@
       "directTests": [
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/marketplace-presentation.test.ts",
+        "packages/coding-agent/test/presentation-helpers.test.ts",
         "packages/coding-agent/test/remote-control/background-command-storage.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/custom-message.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -2031,10 +2036,9 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "18a66e7bd55f06cec01b5786de8f143e05f22ab88ab5df3d5f10186b0e92eebb",
+      "sha256": "0f3e6c5326da5ccea50a58f7390a78bafc322786a6c9714b1b7e7c2dad9974f4",
       "exports": [
         "PluginViewComponent",
-        "PresentationResult",
         "dataSections",
         "fallbackResultView",
         "guardedComponent"
@@ -2949,6 +2953,7 @@
         "packages/coding-agent/test/marketplace-presentation.test.ts",
         "packages/coding-agent/test/pending-glyph-sweep.test.ts",
         "packages/coding-agent/test/plugin-presentation.test.ts",
+        "packages/coding-agent/test/presentation-helpers.test.ts",
         "packages/coding-agent/test/session/messages-repair.test.ts",
         "packages/coding-agent/test/tools/vim.test.ts"
       ],
@@ -4454,7 +4459,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "a3c47382f622c10ff4de68631e90d086b24e98904745d71683dd40f9dd9cbc9b",
+      "sha256": "1354be674f8dc0c062d9f439f10000dc19e6a7c03005ce1bbe3849c8d6e02bcd",
       "exports": [
         "AssistantCheckpointEntry",
         "AutomaticTitleState",
