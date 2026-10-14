@@ -4,7 +4,6 @@ import { createReadStream } from "node:fs";
 import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createGunzip, gunzipSync } from "node:zlib";
-import { createStore } from "@tobilu/qmd";
 import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
@@ -519,6 +518,7 @@ export async function buildTerraformIndex(
 	pin: TerraformPin,
 	output: string,
 ): Promise<void> {
+	const { createStore } = await import("@tobilu/qmd");
 	await rm(output, { force: true });
 	const store = await createStore({
 		dbPath: output,

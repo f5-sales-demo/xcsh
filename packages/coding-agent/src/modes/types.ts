@@ -134,8 +134,8 @@ export interface InteractiveModeContext {
 	beginBackgroundCompletionTracking(): void;
 
 	// UI helpers
-	showStatus(message: string, options?: { dim?: boolean }): void;
-	showError(message: string): void;
+	showStatus(message: string, options?: { dim?: boolean; plugin?: boolean }): void;
+	showError(message: string, options?: { plugin?: boolean }): void;
 	showWarning(message: string): void;
 	/** Instant, local check for whether a usable LLM provider is configured (no network). */
 	hasActiveLlmProvider(): boolean;

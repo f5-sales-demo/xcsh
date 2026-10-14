@@ -3,6 +3,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { $ } from "bun";
+import { preparePublishedInteractionSources } from "./prepare-published-interactions";
+import { preparePrebuiltNpmIndex, remainingPinnedPrepack } from "./prepare-prebuilt-npm-index";
 
 export interface PublishPackage {
 	dir: string;
@@ -12,6 +14,7 @@ export interface PackageJson {
 	name?: string;
 	private?: boolean;
 	version?: string;
+	scripts?: Record<string, string>;
 	dependencies?: Record<string, string>;
 	devDependencies?: Record<string, string>;
 	peerDependencies?: Record<string, string>;
@@ -32,8 +35,9 @@ function readOption(args: string[], name: string): string | undefined {
 	return value;
 }
 
-export function npmPublishArgs(distTag?: string): string[] {
+export function npmPublishArgs(distTag?: string, ignoreScripts: boolean = false): string[] {
 	const args = ["npm", "publish", "--access", "public", "--provenance"];
+	if (ignoreScripts) args.push("--ignore-scripts");
 	if (distTag === undefined) return args;
 	if (distTag === "latest") throw new Error("An explicit latest dist-tag is not allowed for release backfills");
 	if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(distTag)) {
@@ -45,6 +49,8 @@ export function npmPublishArgs(distTag?: string): string[] {
 const repoRoot = resolveReleaseSourceRoot(process.env.XCSH_RELEASE_SOURCE_ROOT);
 const isDryRun = process.argv.includes("--dry-run");
 const publishTag = readOption(process.argv.slice(2), "--tag");
+const prebuiltTerraform = process.argv.includes("--use-prebuilt-terraform-index");
+if (prebuiltTerraform && publishTag === undefined) throw new Error("Prebuilt publication requires an explicit backfill dist-tag");
 // Validate once before touching any package or registry.
 npmPublishArgs(publishTag);
 
@@ -330,11 +336,26 @@ async function publishPackage(pkg: PublishPackage): Promise<PublishedPackage | n
 	const restore = resolvePublishDependencies(pkgJsonPath);
 	if (restore) console.log(`  Prepared publish dependencies for ${packageName}`);
 
+	let restoreSources: (() => void) | undefined;
+	let restoreIndex: (() => void) | undefined;
+	let ignoreScripts = false;
 	try {
+		if (publishedName === "@f5-sales-demo/xcsh") {
+			restoreSources = preparePublishedInteractionSources(
+				path.join(repoRoot, pkg.dir),
+				path.join(repoRoot, "packages/chat-ui/src/interactions"),
+			);
+		}
+		if (publishedName === "@f5-sales-demo/xcsh" && prebuiltTerraform) {
+			const command = remainingPinnedPrepack(packageJson.scripts?.prepack ?? "");
+			restoreIndex = preparePrebuiltNpmIndex(repoRoot);
+			await $`bash -c ${command}`.cwd(path.join(repoRoot, pkg.dir));
+			ignoreScripts = true;
+		}
 		await publishWithRetry(publishedName, publishedVersion, {
 			lookupExisting: () => lookupRegistryVersion(publishedName, publishedVersion),
 			publish: async () => {
-				const publishArgs = npmPublishArgs(publishTag);
+				const publishArgs = npmPublishArgs(publishTag, ignoreScripts);
 				const result = await $`${publishArgs}`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
 				const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
 				return { exitCode: result.exitCode, output };
@@ -342,7 +363,11 @@ async function publishPackage(pkg: PublishPackage): Promise<PublishedPackage | n
 			waitForVisibility: () => waitForRegistryVisibility(publishedName, publishedVersion),
 		});
 	} finally {
-		restore?.();
+		try {
+			try { restoreIndex?.(); } finally { restoreSources?.(); }
+		} finally {
+			restore?.();
+		}
 	}
 	return { name: publishedName, version: publishedVersion };
 }

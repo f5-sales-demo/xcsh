@@ -58,6 +58,11 @@ export function describeInstallSetupOutcome(
 	return `${summary}\nnext: ${nextAction}`;
 }
 
+/** Display exact argv as a copyable POSIX command; execution still uses the original array. */
+export function formatSetupCommand(argv: readonly string[]): string {
+	return argv.map(arg => (/^[A-Za-z0-9_@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replaceAll("'", "'\\''")}'`)).join(" ");
+}
+
 export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
 	const plan = handle.setupPlan;
 	if (!plan) return `${handle.name}: no setup is declared.`;
@@ -74,10 +79,11 @@ export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {
 		lines.push(
 			"Commands:",
 			...plan.steps.map(
-				step => `  ${step.kind}: ${JSON.stringify(step.archive ?? step.argv)} (timeout ${step.timeoutMs}ms)`,
+				step =>
+					`  ${step.kind}: ${step.archive ? JSON.stringify(step.archive, null, 2) : formatSetupCommand(step.argv)} (timeout ${step.timeoutMs}ms)`,
 			),
 			"Verification:",
-			...plan.verification.map(step => `  ${JSON.stringify(step.argv)} (timeout ${step.timeoutMs}ms)`),
+			...plan.verification.map(step => `  ${formatSetupCommand(step.argv)} (timeout ${step.timeoutMs}ms)`),
 		);
 	}
 	return lines.join("\n");

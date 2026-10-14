@@ -338,7 +338,7 @@ describe("IntegrationRegistry", () => {
 		expect(seen).toEqual([["gh", "auth", "login"]]);
 		expect(result.value).toBe(1);
 		expect(probes).toBe(1);
-		expect(describeSetupPlan(handle)).toContain('["gh","auth","login"]');
+		expect(describeSetupPlan(handle)).toContain("gh auth login");
 		expect(describeSetupPlan(handle)).toContain("GH_HOST");
 	});
 

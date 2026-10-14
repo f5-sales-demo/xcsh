@@ -17,6 +17,7 @@ import {
 	GutterBlock,
 } from "../../modes/components/gutter-block";
 import { MediaMessageComponent } from "../../modes/components/media-message";
+import { PluginLifecycleText } from "../../modes/components/plugin-lifecycle";
 import { PythonExecutionComponent } from "../../modes/components/python-execution";
 import {
 	parseAsyncInputReply,
@@ -63,7 +64,7 @@ export class UiHelpers {
 	 * If multiple status messages are emitted back-to-back (without anything else being added to the chat),
 	 * we update the previous status line instead of appending new ones to avoid log spam.
 	 */
-	showStatus(message: string, options?: { dim?: boolean }): void {
+	showStatus(message: string, options?: { dim?: boolean; plugin?: boolean }): void {
 		if (this.ctx.isBackgrounded) {
 			return;
 		}
@@ -73,14 +74,20 @@ export class UiHelpers {
 		// User-facing results must remain legible; only explicitly secondary diagnostics are dimmed.
 		const rendered = theme.fg(options?.dim ? "dim" : "text", message);
 
-		if (last && secondLast && last === this.ctx.lastStatusText && secondLast === this.ctx.lastStatusSpacer) {
+		if (
+			last &&
+			secondLast &&
+			last === this.ctx.lastStatusText &&
+			secondLast === this.ctx.lastStatusSpacer &&
+			Boolean(options?.plugin) === last instanceof PluginLifecycleText
+		) {
 			this.ctx.lastStatusText.setText(rendered);
 			this.ctx.ui.requestRender();
 			return;
 		}
 
 		const spacer = new Spacer(1);
-		const text = new Text(rendered, 1, 0);
+		const text = options?.plugin ? new PluginLifecycleText(message) : new Text(rendered, 1, 0);
 		this.ctx.chatContainer.addChild(spacer);
 		this.ctx.chatContainer.addChild(text);
 		this.ctx.lastStatusSpacer = spacer;
@@ -592,13 +599,17 @@ export class UiHelpers {
 		this.ctx.ui.requestRender();
 	}
 
-	showError(errorMessage: string): void {
+	showError(errorMessage: string, options?: { plugin?: boolean }): void {
 		if (this.ctx.isBackgrounded) {
 			process.stderr.write(`Error: ${errorMessage}\n`);
 			return;
 		}
 		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new Text(theme.fg("error", `Error: ${errorMessage}`), 1, 0));
+		this.ctx.chatContainer.addChild(
+			options?.plugin
+				? new PluginLifecycleText(errorMessage, "error")
+				: new Text(theme.fg("error", `Error: ${errorMessage}`), 1, 0),
+		);
 		this.ctx.ui.requestRender();
 	}
 

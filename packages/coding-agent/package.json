@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "@f5-sales-demo/xcsh",
-	"version": "23.3.4",
+	"version": "23.4.1",
 	"description": "Coding agent CLI with read, bash, edit, write tools and session management",
 	"homepage": "https://github.com/f5-sales-demo/xcsh",
 	"author": "Can Boluk",
@@ -61,7 +61,7 @@
 		"generate-terraform-index": "bun scripts/generate-terraform-index.ts",
 		"generate-console-catalog": "bun scripts/generate-console-catalog.ts",
 		"generate-console-field-metadata": "bun scripts/generate-console-field-metadata.ts",
-		"prepack": "bun scripts/generate-docs-index.ts && bun scripts/generate-api-spec-index.ts && bun scripts/generate-api-catalog-qmd-index.ts && bun scripts/generate-build-info.ts && bun scripts/generate-console-catalog.ts && bun scripts/generate-console-field-metadata.ts",
+		"prepack": "bun scripts/generate-docs-index.ts && bun scripts/generate-api-spec-index.ts && bun scripts/generate-api-catalog-qmd-index.ts && bun scripts/generate-build-info.ts && bun scripts/generate-console-catalog.ts && bun scripts/generate-console-field-metadata.ts && bun scripts/generate-terraform-documentation-index.ts",
 		"generate-template": "bun scripts/generate-template.ts",
 		"check-workflow-field-coverage": "bun scripts/check-workflow-field-coverage.ts",
 		"generate-terraform-documentation-index": "bun scripts/generate-terraform-documentation-index.ts"
@@ -94,9 +94,9 @@
 	"devDependencies": {
 		"@types/bun": "1.4.2",
 		"@types/tar-stream": "3.1.4",
-		"@tobilu/qmd": "2.8.3",
 		"@xterm/addon-unicode11": "0.9.0",
-		"handlebars": "^4.7"
+		"handlebars": "^4.7",
+		"@tobilu/qmd": "2.8.3"
 	},
 	"engines": {
 		"bun": ">=1.4.2"
@@ -105,7 +105,8 @@
 		"bin",
 		"src",
 		"README.md",
-		"CHANGELOG.md"
+		"CHANGELOG.md",
+		"src/internal-urls/.documentation-generated/terraform/terraform-documentation.sqlite.gz"
 	],
 	"exports": {
 		".": {
