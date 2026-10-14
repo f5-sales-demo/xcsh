@@ -13,6 +13,14 @@ on:
         description: "Qualify all native release platforms without publishing"
         type: boolean
         default: false
+      macos_recovery_tag:
+        description: "Optional exact missing stable tag to rebuild and sign from original artifacts"
+        type: string
+        default: ""
+      macos_recovery_run_id:
+        description: "Original tag push run for exact-tag macOS recovery"
+        type: string
+        default: ""
       skip_npm:
         description: "Skip npm publish"
         type: boolean
@@ -25,7 +33,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ inputs.macos_recovery_tag && format('{0}-macos-recovery-{1}', github.workflow, inputs.macos_recovery_tag) || format('{0}-{1}', github.workflow, github.ref) }}
   # Never auto-cancel a tag run. The publishing chain (build-release ->
   # create-release -> publish-npm / update-homebrew -> install verification) lives in this workflow and
   # inherits this group, so a cancel between publish-npm and update-homebrew
@@ -39,7 +47,7 @@ concurrency:
   #
   # main and PR branches keep cancelling: those collisions are frequent but cost
   # only latency, and a superseded auto-release is picked up by the next run.
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') && !inputs.macos_recovery_tag }}
 
 jobs:
   image-runtime:
@@ -472,7 +480,7 @@ jobs:
   invalidate-stale-release-prs:
     environment: release
     name: Invalidate stale release pull requests
-    if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
+    if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:') && !inputs.macos_recovery_tag
     runs-on: xcsh-socketless
     timeout-minutes: 5
     permissions: {}
@@ -494,7 +502,7 @@ jobs:
   auto-release:
     environment: release
     name: Prepare automatic release
-    if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
+    if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:') && !inputs.macos_recovery_tag
     needs: [check, native, test, install_methods]
     runs-on: xcsh-socketless
     permissions: {}
@@ -724,12 +732,17 @@ jobs:
           path: packages/coding-agent/binaries/*
           if-no-files-found: error
 
-  # Build macOS binaries natively on matching architecture, then sign and notarize
+  # Signing and exact-tag recovery share the approved macOS runner route.
   build-sign-macos:
     environment: release
     name: Build and sign macOS (${{ matrix.arch }})
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_native_matrix)
-    needs: [check, native, test, install_methods, prepare-documentation-index]
+    needs:
+      - check
+      - native
+      - test
+      - install_methods
+      - prepare-documentation-index
     strategy:
       fail-fast: false
       matrix:
@@ -742,18 +755,47 @@ jobs:
     env:
       RELEASE_ARCH: ${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
+          ref: ${{ inputs.macos_recovery_tag || github.sha }}
+        name: Checkout exact release source
+      - name: Checkout trusted signing controller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.workflow_sha }}
+          path: .controller
+      - name: Verify source and canonical artifact identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.macos_recovery_run_id || github.run_id }}
+          SOURCE_REF: ${{ inputs.macos_recovery_tag || github.sha }}
+          RECOVERY: ${{ inputs.macos_recovery_tag != '' }}
+        run: |-
+          set -euo pipefail
+          source_sha=$(git rev-parse 'HEAD^{commit}')
+          if [ "$RECOVERY" = true ]; then
+            [[ "$SOURCE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+            [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$RUNNER_TEMP/source-run.json"
+            jq -e --arg tag "$SOURCE_REF" --arg sha "$source_sha" '.event == "push" and .head_branch == $tag and .head_sha == $sha and .path == ".github/workflows/ci.yml"' "$RUNNER_TEMP/source-run.json" >/dev/null
+            gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/attempts/1/jobs?per_page=100" --slurp | jq '{jobs:[.[].jobs[]]}' > "$RUNNER_TEMP/source-jobs.json"
+            jq -e -f .controller/scripts/ci-release-source-jobs.jq "$RUNNER_TEMP/source-jobs.json" >/dev/null
+          else
+            test "$SOURCE_REF" = "$GITHUB_SHA"
+            test "$SOURCE_RUN_ID" = "$GITHUB_RUN_ID"
+          fi
+          printf 'SOURCE_SHA=%s\n' "$source_sha" >> "$GITHUB_ENV"
       - name: Setup Bun 1.4.2
         uses: ./.github/actions/setup-bun
         id: setup-bun
         continue-on-error: true
         with:
           no-cache: true
-          bun-version: "1.4.2"
+          bun-version: 1.4.2
       - name: Retry Bun setup on failure
         if: (runner.environment != 'self-hosted' || runner.os != 'Linux') && steps.setup-bun.outcome == 'failure'
         shell: bash
@@ -795,7 +837,7 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - name: Cache bun dependencies
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/.bun/install/cache
           key: bun-1.4.2-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
@@ -804,27 +846,27 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: "true"
       - name: Download canonical documentation index
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          name: documentation-index-${{ github.sha }}
+          name: documentation-index-${{ env.SOURCE_SHA }}
           path: packages/coding-agent/src/internal-urls/.documentation-generated
+          run-id: ${{ inputs.macos_recovery_run_id || github.run_id }}
+          github-token: ${{ github.token }}
       - name: Download canonical Terraform documentation index
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          name: terraform-documentation-index-${{ github.sha }}
+          name: terraform-documentation-index-${{ env.SOURCE_SHA }}
           path: packages/coding-agent/src/internal-urls/.documentation-generated/terraform
+          run-id: ${{ inputs.macos_recovery_run_id || github.run_id }}
+          github-token: ${{ github.token }}
       - name: Download macOS native addons
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: pi-natives-darwin-${{ matrix.arch }}*
           path: packages/natives/native
           merge-multiple: true
-      # Sign + notarize the native addon BEFORE it is embedded into the compiled
-      # binary. xcsh extracts the embedded .node to ~/.xcsh/natives/<ver>/ at
-      # runtime; that extracted copy is a byte-for-byte image of what we embed, so
-      # it only carries a notarized signature if the embedded .node was signed +
-      # notarized here. Without this, managed/MDM Macs block the dlopen with
-      # "pi_natives… could not verify it is free of malware".
+          run-id: ${{ inputs.macos_recovery_run_id || github.run_id }}
+          github-token: ${{ github.token }}
       - name: Import Code Signing Certificate
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -835,6 +877,7 @@ jobs:
           KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
           echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
 
           echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
@@ -882,7 +925,6 @@ jobs:
             exit 1
           fi
           echo "INSTALLER_SIGNING_IDENTITY=$INSTALLER_SIGNING_IDENTITY" >> "$GITHUB_ENV"
-
       - name: Sign and notarize native addons
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -921,15 +963,11 @@ jobs:
             --wait --output-format json)
           echo "$NOTARY_OUTPUT"
           jq -e '.status == "Accepted"' <<<"$NOTARY_OUTPUT" >/dev/null
-
-      # Hard gate before embedding: exact team, runtime, timestamp, no entitlements,
-      # strict signature verification, and an accepted notarization assessment.
       - name: Verify native addons are signed + notarized
         run: bun run ci:release:verify-native-signing
-
       - name: Build macOS binary
         env:
-          XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
+          XCSH_BUILD_BRANCH: main
           XCSH_DOCUMENTATION_INDEX_MODE: prebuilt
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           XCSH_VERTEX_OAUTH_CLIENT_ID: ${{ secrets.XCSH_VERTEX_OAUTH_CLIENT_ID }}
@@ -937,9 +975,6 @@ jobs:
         run: bun scripts/ci-release-build-binaries.ts --platform darwin --arch "$RELEASE_ARCH"
       - name: Stage macOS native addons for release
         run: cp packages/natives/native/*.node packages/coding-agent/binaries/
-
-      # Cert already imported above (before the build, so the native addon could be
-      # signed + notarized prior to embedding). Reuse that keychain here.
       - name: Sign macOS Binary
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -973,7 +1008,6 @@ jobs:
             echo "::error::Binary not found: $BINARY_PATH"
             exit 1
           fi
-
       - name: Notarize macOS Binary
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -1025,7 +1059,6 @@ jobs:
           fi
 
           echo "All checks passed for ${RELEASE_ARCH}"
-
       - name: Capture immutable macOS payload provenance
         run: |
           set -euo pipefail
@@ -1044,7 +1077,6 @@ jobs:
             --manifest "packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.provenance.json" \
             --root packages/coding-agent/binaries \
             --layout release
-
       - name: Build, sign, notarize, and staple macOS package
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -1086,8 +1118,7 @@ jobs:
             echo "::error::Package notarization was not accepted after 3 attempts"
             exit 1
           fi
-          xcrun stapler staple "$pkg"
-          xcrun stapler validate "$pkg"
+          bash .controller/scripts/ci-staple-macos-pkg.sh "$pkg"
           pkgutil --check-signature "$pkg" | grep -q "Developer ID Installer"
           spctl --assess --verbose=4 --type install "$pkg"
           expanded="$RUNNER_TEMP/xcsh-pkg-expanded-${RELEASE_ARCH}"
@@ -1096,18 +1127,33 @@ jobs:
             --manifest "packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.provenance.json" \
             --root "$expanded/Payload" \
             --layout pkg
-
       - name: Verify signed macOS sandbox check in a direct-home live profile
         env:
           XCSH_TEST_SANDBOX_CHECK_BINARY: ${{ github.workspace }}/packages/coding-agent/binaries/xcsh-darwin-${{ matrix.arch }}
         run: bun test packages/coding-agent/test/sandbox-check.test.ts
-
+      - name: Record recovery artifact binding
+        if: inputs.macos_recovery_tag != '' && matrix.arch == 'x64'
+        env:
+          SOURCE_REF: ${{ inputs.macos_recovery_tag || github.sha }}
+          SOURCE_RUN_ID: ${{ inputs.macos_recovery_run_id || github.run_id }}
+          CONTROLLER_SHA: ${{ github.workflow_sha }}
+        run: bun .controller/scripts/release-recovery-binding.ts create packages/coding-agent/binaries "$RUNNER_TEMP/recovery-binding.json"
+      - name: Upload recovery source receipt
+        if: inputs.macos_recovery_tag != '' && matrix.arch == 'x64'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: macos-recovery-source-${{ matrix.arch }}
+          path: ${{ runner.temp }}/recovery-binding.json
+          if-no-files-found: error
       - name: Upload signed macOS binary
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-binaries-macos-${{ matrix.arch }}-signed
           path: packages/coding-agent/binaries/*
           if-no-files-found: error
+    permissions:
+      actions: read
+      contents: read
 
   # Collect all artifacts and create the GitHub Release
   create-release:

@@ -91,8 +91,8 @@ jobs:
               exit 1
             }
 
-          attempt=$(echo "$run" | jq -r .run_attempt)
-          jobs=$(gh api "repos/${REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/attempts/${attempt}/jobs?per_page=100")
+          # Signing-only retries do not repeat the original native/test prerequisites.
+          jobs=$(gh api "repos/${REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/attempts/1/jobs?per_page=100")
           jq -e -f scripts/ci-release-source-jobs.jq <<<"$jobs" >/dev/null || {
             echo "::error::Source run lacks green check, test, installation, or native-build prerequisites"
             exit 1
