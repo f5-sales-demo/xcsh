@@ -617,16 +617,13 @@ class RenderedNavigationTests(unittest.TestCase):
         )
 
     def test_accepts_same_child_labels_in_separate_groups(self) -> None:
-        assert (
-            self.check(
-                {
-                    "a/index.mdx": "title: Alpha\nsidebar:\n  order: 10",
-                    "b/index.mdx": "title: Beta\nsidebar:\n  order: 20",
-                    "a/page.mdx": "title: Child",
-                    "b/page.mdx": "title: Child",
-                }
-            )
-            == []
+        assert not self.check(
+            {
+                "a/index.mdx": "title: Alpha\nsidebar:\n  order: 10",
+                "b/index.mdx": "title: Beta\nsidebar:\n  order: 20",
+                "a/page.mdx": "title: Child",
+                "b/page.mdx": "title: Child",
+            }
         )
 
 
