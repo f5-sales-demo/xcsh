@@ -16,9 +16,9 @@ trap 'rm -rf "$work"' EXIT
 retry_ticket() {
   local operation=$1 attempt exit_code wait_seconds
   wait_seconds=$delay
-  for ((attempt=1; attempt<=attempts; attempt++)); do
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
     exit_code=0
-    xcrun stapler "$operation" "$2" > "$work/output" 2>&1 || exit_code=$?
+    xcrun stapler "$operation" "$2" >"$work/output" 2>&1 || exit_code=$?
     cat "$work/output"
     if [ "$exit_code" -eq 0 ]; then
       return 0
