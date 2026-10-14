@@ -24,6 +24,13 @@ const receipt = () => ({
 	),
 });
 describe("exact-tag signed release recovery", () => {
+	it("isolates non-cancellable exact-tag recovery from main CI pushes", async () => {
+		const ci = parse(await fs.readFile(path.join(root, ".github/workflows/ci.yml"), "utf8"));
+		expect(ci.concurrency.group).toContain("macos-recovery-{1}");
+		expect(ci.concurrency.group).toContain("inputs.macos_recovery_tag");
+		expect(ci.concurrency["cancel-in-progress"]).toContain("!inputs.macos_recovery_tag");
+	});
+
 	it("writes an exact source SHA and rejects mismatched normal-build identity", async () => {
 		const ci = parse(await fs.readFile(path.join(root, ".github/workflows/ci.yml"), "utf8"));
 		const step = ci.jobs["build-sign-macos"].steps.find(
