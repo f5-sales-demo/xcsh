@@ -648,8 +648,7 @@ describe("macOS pkg release contract", () => {
 		expect(job).toContain("Developer ID Installer");
 		expect(job).toContain("ci-release-macos-pkg.ts");
 		expect(job).toContain('xcrun notarytool submit "$pkg"');
-		expect(job).toContain('xcrun stapler staple "$pkg"');
-		expect(job).toContain('xcrun stapler validate "$pkg"');
+		expect(job).toContain('bash .controller/scripts/ci-staple-macos-pkg.sh "$pkg"');
 		expect(job).toContain('spctl --assess --verbose=4 --type install "$pkg"');
 	});
 
