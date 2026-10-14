@@ -42,7 +42,7 @@ describe("build-time corpus freshness", () => {
 		expect(result.general.acceptance).toBe("verified-bytes-mutable");
 	});
 	it("fails closed when discovery is unavailable", async () => {
-		await expect(resolveCorpusSources(discovery({}))).rejects.toThrow("discovery");
+		await expect(resolveCorpusSources(discovery({}), async () => {})).rejects.toThrow("discovery");
 	});
 	it("rejects the highest provider without matching published documentation", async () => {
 		await expect(
@@ -79,4 +79,20 @@ describe("build-time corpus freshness", () => {
 			),
 		).rejects.toThrow("asset");
 	});
+});
+
+it("retries a transient discovery response without dropping release inventory", async () => {
+	const delegate = discovery(inventories);
+	let attempts = 0;
+	const result = await resolveCorpusSources(
+		async url => {
+			if (url.includes("html-to-markdown/releases") && attempts++ === 0)
+				return new Response("temporary", { status: 500 });
+			return delegate(url);
+		},
+		async () => {},
+	);
+	expect(attempts).toBe(2);
+	expect(result.general.tag).toBe("content-20261009T041100Z");
+	expect(result.api.tag).toBe("v12.0.4");
 });

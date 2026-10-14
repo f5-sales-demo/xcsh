@@ -12,6 +12,8 @@
 
 ### Added
 
+- Added data-only plugin presentation descriptors, shared wrapped tables for tool and Markdown output, complete expanded fallback results, and themed plugin lifecycle messages with readable setup commands ([#4871](https://github.com/f5-sales-demo/xcsh/issues/4871)).
+
 - Added shared host-aware software setup with live management probes, reviewed package-manager routes, checksum-verified per-user archives, and asynchronous CLI/TUI setup preparation ([#4598](https://github.com/f5-sales-demo/xcsh/issues/4598)).
 
 - Refreshed generated internal LiteLLM configuration with seven current GPT-6/Claude models,

@@ -2,6 +2,7 @@
 export * from "./agent";
 // Loop functions
 export * from "./agent-loop";
+export type * from "./plugin-presentation";
 // Proxy utilities
 export * from "./proxy";
 // Thinking selectors

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fetchTerraformSnapshot } from "./terraform-snapshot-download";
 
 export interface CorpusSource {
 	enrichment?: CorpusSource;
@@ -35,12 +36,15 @@ function compareVersions(a: Release, b: Release): number {
 	for (let i = 0; i < 3; i++) if (left[i] !== right[i]) return left[i]! - right[i]!;
 	return 0;
 }
-export async function resolveCorpusSources(request: Fetch = fetch): Promise<CorpusSources> {
+export async function resolveCorpusSources(
+	request: Fetch = fetch,
+	pause: (ms: number) => Promise<void> = ms => Bun.sleep(ms),
+): Promise<CorpusSources> {
 	const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
 	const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
 	if (token) headers.Authorization = `Bearer ${token}`;
 	async function json(url: string): Promise<unknown> {
-		const response = await request(url, { headers });
+		const response = await fetchTerraformSnapshot(url, { headers }, { fetch: request, sleep: pause });
 		if (!response.ok) throw new Error(`corpus discovery failed: ${url}: HTTP ${response.status}`);
 		return response.json();
 	}

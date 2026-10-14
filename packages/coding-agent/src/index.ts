@@ -3,6 +3,12 @@ import { HookEditorComponent, HookInputComponent, HookSelectorComponent } from "
 
 // Core session management
 
+export type {
+	PluginPresentation,
+	PluginPresentationOptions,
+	PluginSection,
+	PluginView,
+} from "@f5-sales-demo/pi-agent-core";
 // TypeBox helper for string enums (convenience for custom tools)
 // Re-export from pi-ai which uses the correct enum-based schema format
 export { StringEnum } from "@f5-sales-demo/pi-ai";

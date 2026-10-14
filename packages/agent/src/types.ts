@@ -274,6 +274,12 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
 	lenientArgValidation?: boolean;
 	execute: AgentToolExecFn<TParameters, TDetails, TTheme>;
 
+	/** Optional data-only view; the host owns layout and theme. */
+	presentation?: import("./plugin-presentation").PluginPresentation<
+		Static<TParameters>,
+		AgentToolResult<TDetails, TParameters>
+	>;
+
 	/** Optional custom rendering for tool call display (returns UI component) */
 	renderCall?: (args: Static<TParameters>, options: RenderResultOptions, theme: TTheme) => unknown;
 
