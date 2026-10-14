@@ -225,6 +225,7 @@ jobs:
       - name: Recover canonical latest for the latest immutable release
         if: inputs.promote_latest
         env:
+          TAG: ${{ inputs.tag }}
           GH_TOKEN: ${{ github.token }}
           XCSH_RELEASE_SOURCE_ROOT: ${{ github.workspace }}/.release-source
         run: |
