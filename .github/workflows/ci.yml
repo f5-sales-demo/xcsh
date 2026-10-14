@@ -480,7 +480,7 @@ jobs:
   invalidate-stale-release-prs:
     environment: release
     name: Invalidate stale release pull requests
-    if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
+    if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:') && !inputs.macos_recovery_tag
     runs-on: xcsh-socketless
     timeout-minutes: 5
     permissions: {}
@@ -502,7 +502,7 @@ jobs:
   auto-release:
     environment: release
     name: Prepare automatic release
-    if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
+    if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:') && !inputs.macos_recovery_tag
     needs: [check, native, test, install_methods]
     runs-on: xcsh-socketless
     permissions: {}

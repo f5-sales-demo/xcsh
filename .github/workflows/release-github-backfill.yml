@@ -112,8 +112,9 @@ jobs:
           set -euo pipefail
           [[ "$RECOVERY_RUN_ID" =~ ^[0-9]+$ ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN_ID" > "$RUNNER_TEMP/recovery-run.json"
-          jq -e '.event == "workflow_dispatch" and .head_branch == "main" and .path == ".github/workflows/ci.yml" and .conclusion == "success"' "$RUNNER_TEMP/recovery-run.json" >/dev/null
-          jq -r '"RECOVERY_CONTROLLER_SHA=" + .head_sha' "$RUNNER_TEMP/recovery-run.json" >> "$GITHUB_ENV"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN_ID/jobs?per_page=100" --slurp | jq '{jobs:[.[].jobs[]]}' > "$RUNNER_TEMP/recovery-jobs.json"
+          controller_sha=$(bun scripts/release-recovery-binding.ts verify-run "$RUNNER_TEMP/recovery-run.json" "$RUNNER_TEMP/recovery-jobs.json")
+          printf 'RECOVERY_CONTROLLER_SHA=%s\n' "$controller_sha" >> "$GITHUB_ENV"
 
       - name: Download recovered signed Intel artifacts
         if: inputs.recovery_run_id != ''
