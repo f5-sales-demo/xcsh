@@ -11,7 +11,7 @@ beforeEach(async () => {
 afterEach(async () => {
 	await fs.rm(root, { recursive: true, force: true });
 });
-async function run(mode: string) {
+async function run(mode: string, overrides: Record<string, string> = {}) {
 	const pkg = path.join(root, "package with spaces.pkg");
 	await fs.writeFile(pkg, "fixture");
 	const fake = path.join(root, "xcrun");
@@ -24,7 +24,8 @@ count_file="$TEST_ROOT/$2.count"
 count=0; test ! -f "$count_file" || count=$(cat "$count_file")
 count=$((count+1)); echo "$count" > "$count_file"
 if [ "$MODE" = permanent ]; then echo 'Invalid package signature'; exit 65; fi
-if [ "$MODE" = exhausted ] || { [ "$MODE" = transient ] && [ "$count" -lt 3 ]; }; then echo 'NSURLErrorDomain Code=-1005: The network connection was lost. CloudKit'; exit 68; fi
+if [ "$MODE" = permanent68 ]; then echo 'Invalid package signature'; exit 68; fi
+if [ "$MODE" = exhausted ] || { [ "$MODE" = validate-exhausted ] && [ "$2" = validate ]; } || { [ "$MODE" = transient ] && [ "$count" -lt 3 ]; }; then echo 'NSURLErrorDomain Code=-1005: The network connection was lost. CloudKit'; exit 68; fi
 exit 0
 `,
 		{ mode: 0o700 },
@@ -37,6 +38,7 @@ exit 0
 			MODE: mode,
 			XCSH_STAPLER_INITIAL_DELAY_SECONDS: "0",
 			XCSH_STAPLER_MAX_ATTEMPTS: "3",
+			...overrides,
 		},
 		stdout: "pipe",
 		stderr: "pipe",
@@ -74,9 +76,29 @@ describe("bounded macOS ticket delivery", () => {
 		expect(r.calls).toHaveLength(1);
 	});
 	it("rejects unsafe retry settings before contacting Apple", async () => {
-		process.env.XCSH_STAPLER_MAX_ATTEMPTS = "0";
-		const child = Bun.spawn(["bash", script, "missing.pkg"], { stdout: "pipe", stderr: "pipe" });
-		expect(await child.exited).not.toBe(0);
-		delete process.env.XCSH_STAPLER_MAX_ATTEMPTS;
+		const cases: Record<string, string>[] = [
+			{ XCSH_STAPLER_MAX_ATTEMPTS: "0" },
+			{ XCSH_STAPLER_MAX_ATTEMPTS: "9" },
+			{ XCSH_STAPLER_INITIAL_DELAY_SECONDS: "-1" },
+			{ XCSH_STAPLER_INITIAL_DELAY_SECONDS: "61" },
+		];
+		for (const overrides of cases) {
+			const result = await run("transient", overrides);
+			expect(result.code).toBe(2);
+			expect(result.calls).toHaveLength(0);
+		}
+	});
+	it("does not mistake a permanent Error 68 for a network failure", async () => {
+		const result = await run("permanent68");
+		expect(result.code).toBe(68);
+		expect(result.calls).toHaveLength(1);
+	});
+	it("bounds validation retries after one successful staple", async () => {
+		const result = await run("validate-exhausted");
+		expect(result.code).toBe(68);
+		expect(result.calls).toEqual([
+			`stapler|staple|${result.pkg}`,
+			...Array(3).fill(`stapler|validate|${result.pkg}`),
+		]);
 	});
 });
