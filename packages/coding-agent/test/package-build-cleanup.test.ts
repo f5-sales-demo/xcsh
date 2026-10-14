@@ -61,8 +61,11 @@ describe("release binary build", () => {
 		for (const job of [linuxWindows, macos]) {
 			expect(job).toContain("prepare-documentation-index");
 			expect(job).toContain("actions/download-artifact@");
-			// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
-			expect(job).toContain("name: documentation-index-${{ github.sha }}");
+			expect(job).toContain(
+				job === linuxWindows
+					? "name: documentation-index-" + "$" + "{{ github.sha }}"
+					: "name: documentation-index-" + "$" + "{{ env.SOURCE_SHA }}",
+			);
 			expect(job).toContain("XCSH_DOCUMENTATION_INDEX_MODE: prebuilt");
 		}
 		expect(releaseScript).toContain('Bun.env.XCSH_DOCUMENTATION_INDEX_MODE === "prebuilt"');
