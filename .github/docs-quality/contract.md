@@ -91,7 +91,12 @@ and reuse of one block for unrelated concepts without an explicit shared-coverag
 
 ## Keep navigation and generated corpora usable
 
-Displayed sidebar labels must be at most 24 characters and unique among siblings. Page titles may
+Displayed sidebar labels must be at most 24 characters and unique among rendered siblings.
+Directory groups use their index title, while the index link is the localized Overview. Nested
+indexes must omit `sidebar.label`. Section index titles and numeric `sidebar.order` values must
+be unique among sibling groups; section titles must also fit the 24-character label limit.
+Ordinary pages use `sidebar.label`, falling back to their title, and must not collide with
+the Overview landing link or another visible item in the same rendered group. Page titles may
 remain longer and descriptive. Every internal link and fragment must resolve, generated heading IDs
 must not collide, and every selector in `docs/llms-config.json` must resolve to authored content.
 Removing an English route requires updating all links and LLM selectors; do not leave a compatibility

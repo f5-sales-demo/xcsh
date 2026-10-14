@@ -206,25 +206,69 @@ def _check_navigation_and_links(root: Path, pages: list[Path]) -> list[str]:
     routes = {_page_route(page, root): page for page in pages}
     labels: dict[Path, dict[str, str]] = defaultdict(dict)
     anchors: dict[Path, set[str]] = {}
+    section_titles: dict[Path, dict[str, str]] = defaultdict(dict)
+    section_orders: dict[Path, dict[float, str]] = defaultdict(dict)
     for page in pages:
         text = page.read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1] if text.startswith("---") else ""
-        match = re.search(
-            r'^\s{2}label:\s*["\']?([^"\'\n]+)', frontmatter, re.MULTILINE
+        title_match = re.search(r"^title:\s*(.+)$", frontmatter, re.MULTILINE)
+        title = title_match.group(1).strip().strip("\"'") if title_match else page.stem
+        sidebar_match = re.search(
+            r"^sidebar:\s*\n((?:[ \t]+[^\n]*\n?)*)", frontmatter, re.MULTILINE
         )
-        if match:
-            label = match.group(1).strip()
-            if len(label) > MAX_SIDEBAR_LABEL_LENGTH:
+        sidebar = sidebar_match.group(1) if sidebar_match else ""
+        label_match = re.search(r"^  label:\s*(.*)$", sidebar, re.MULTILINE)
+        label = label_match.group(1).strip().strip("\"'") if label_match else title
+        hidden = bool(re.search(r"^  hidden:\s*true\s*$", sidebar, re.MULTILINE))
+        relative = page.relative_to(root).as_posix()
+        is_index = page.stem == "index"
+        is_section = is_index and page.parent != root / "docs" / "en"
+        if is_section:
+            if label_match:
+                errors.append(f"nested index must omit sidebar.label: {relative}")
+            if len(title) > MAX_SIDEBAR_LABEL_LENGTH:
                 errors.append(
-                    f"sidebar label exceeds 24 characters: {page.relative_to(root)} {label}"
+                    f"section title exceeds 24 characters: {relative} {title}"
                 )
-            sibling = labels[page.parent]
-            folded = label.casefold()
-            if folded in sibling:
+            siblings = section_titles[page.parent.parent]
+            folded = title.casefold()
+            if folded in siblings:
                 errors.append(
-                    f"sibling sidebar label collision: {page.relative_to(root)} and {sibling[folded]} {label}"
+                    f"section title collision: {relative} and {siblings[folded]} {title}"
                 )
-            sibling[folded] = page.relative_to(root).as_posix()
+            siblings[folded] = relative
+            order_match = re.search(
+                r"^  order:\s*(-?\d+(?:\.\d+)?)\s*$", sidebar, re.MULTILINE
+            )
+            if not order_match:
+                errors.append(
+                    f"section index requires numeric sidebar.order: {relative}"
+                )
+            else:
+                order = float(order_match.group(1))
+                orders = section_orders[page.parent.parent]
+                if order in orders:
+                    errors.append(
+                        f"section order collision: {relative} and {orders[order]} {order:g}"
+                    )
+                orders[order] = relative
+        if not hidden:
+            if is_section:
+                rendered = [(page.parent.parent, title), (page.parent, "Overview")]
+            else:
+                rendered = [(page.parent, label)]
+            for parent, rendered_label in rendered:
+                if not is_section and len(rendered_label) > MAX_SIDEBAR_LABEL_LENGTH:
+                    errors.append(
+                        f"sidebar label exceeds 24 characters: {relative} {rendered_label}"
+                    )
+                sibling = labels[parent]
+                folded = rendered_label.casefold()
+                if folded in sibling:
+                    errors.append(
+                        f"sibling sidebar label collision: {relative} and {sibling[folded]} {rendered_label}"
+                    )
+                sibling[folded] = relative
         text_anchors = {_slug(heading) for heading in _headings(text)}
         heading_slugs = [_slug(heading) for heading in _headings(text)]
         for duplicate in sorted(

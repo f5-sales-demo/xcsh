@@ -15,7 +15,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.check_docs_quality import workflow_authority_digest
+from scripts.check_docs_quality import (
+    _check_navigation_and_links,
+    workflow_authority_digest,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECKER = ROOT / "scripts" / "check_docs_quality.py"
@@ -541,6 +544,90 @@ class DocsQualityCheckerTests(unittest.TestCase):
         llms = root / "docs" / "llms-config.json"
         llms.write_text(json.dumps({"promote": ["missing/**"]}), encoding="utf-8")
         self.assert_rejected(root, "orphaned LLM selector")
+
+
+class RenderedNavigationTests(unittest.TestCase):
+    def check(self, files: dict[str, str]) -> list[str]:
+        with tempfile.TemporaryDirectory(prefix="rendered-navigation-") as directory:
+            root = Path(directory)
+            pages = []
+            for name, metadata in files.items():
+                page = root / "docs" / "en" / name
+                page.parent.mkdir(parents=True, exist_ok=True)
+                page.write_text(f"---\n{metadata}\n---\nContent.\n", encoding="utf-8")
+                pages.append(page)
+            return _check_navigation_and_links(root, pages)
+
+    def test_rejects_duplicate_group_titles(self) -> None:
+        errors = self.check(
+            {
+                "a/index.mdx": "title: Group\nsidebar:\n  order: 10",
+                "b/index.mdx": "title: Group\nsidebar:\n  order: 20",
+            }
+        )
+        assert any("section title collision" in error for error in errors), errors
+
+    def test_rejects_duplicate_group_orders(self) -> None:
+        errors = self.check(
+            {
+                "a/index.mdx": "title: Alpha\nsidebar:\n  order: 10",
+                "b/index.mdx": "title: Beta\nsidebar:\n  order: 10",
+            }
+        )
+        assert any("section order collision" in error for error in errors), errors
+
+    def test_rejects_long_group_title(self) -> None:
+        errors = self.check(
+            {
+                "a/index.mdx": "title: This directory title is much too long\nsidebar:\n  order: 10"
+            }
+        )
+        assert any(
+            "section title exceeds 24 characters" in error for error in errors
+        ), errors
+
+    def test_rejects_exact_five_overview_regression(self) -> None:
+        errors = self.check(
+            {
+                f"{name}/index.mdx": f"title: {name}\nsidebar:\n  label: Overview\n  order: 0"
+                for name in (
+                    "Getting started",
+                    "Use xcsh",
+                    "F5 Distributed Cloud",
+                    "Configure and secure",
+                    "Automate and extend",
+                )
+            }
+        )
+        assert (
+            sum("nested index must omit sidebar.label" in error for error in errors)
+            == 5
+        ), errors
+        assert sum("section order collision" in error for error in errors) == 4, errors
+
+    def test_rejects_landing_label_and_fallback_page_collision(self) -> None:
+        errors = self.check(
+            {
+                "a/index.mdx": "title: Alpha\nsidebar:\n  order: 10",
+                "a/page.mdx": "title: Overview",
+            }
+        )
+        assert any("sibling sidebar label collision" in error for error in errors), (
+            errors
+        )
+
+    def test_accepts_same_child_labels_in_separate_groups(self) -> None:
+        assert (
+            self.check(
+                {
+                    "a/index.mdx": "title: Alpha\nsidebar:\n  order: 10",
+                    "b/index.mdx": "title: Beta\nsidebar:\n  order: 20",
+                    "a/page.mdx": "title: Child",
+                    "b/page.mdx": "title: Child",
+                }
+            )
+            == []
+        )
 
 
 if __name__ == "__main__":
