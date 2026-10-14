@@ -3,6 +3,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { $ } from "bun";
+import { preparePublishedInteractionSources } from "./prepare-published-interactions";
 
 export interface PublishPackage {
 	dir: string;
@@ -330,7 +331,14 @@ async function publishPackage(pkg: PublishPackage): Promise<PublishedPackage | n
 	const restore = resolvePublishDependencies(pkgJsonPath);
 	if (restore) console.log(`  Prepared publish dependencies for ${packageName}`);
 
+	let restoreSources: (() => void) | undefined;
 	try {
+		if (publishedName === "@f5-sales-demo/xcsh") {
+			restoreSources = preparePublishedInteractionSources(
+				path.join(repoRoot, pkg.dir),
+				path.join(repoRoot, "packages/chat-ui/src/interactions"),
+			);
+		}
 		await publishWithRetry(publishedName, publishedVersion, {
 			lookupExisting: () => lookupRegistryVersion(publishedName, publishedVersion),
 			publish: async () => {
@@ -342,7 +350,11 @@ async function publishPackage(pkg: PublishPackage): Promise<PublishedPackage | n
 			waitForVisibility: () => waitForRegistryVisibility(publishedName, publishedVersion),
 		});
 	} finally {
-		restore?.();
+		try {
+			restoreSources?.();
+		} finally {
+			restore?.();
+		}
 	}
 	return { name: publishedName, version: publishedVersion };
 }
