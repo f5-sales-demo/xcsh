@@ -8,7 +8,11 @@ export function remainingPinnedPrepack(command: string): string {
   if (!command.endsWith(suffix)) throw new Error("Unrecognized immutable-source prepack contract");
   const remaining = command.slice(0,-suffix.length);
   if (!remaining.trim()) throw new Error("Missing package preparation before corpus generation");
-  return remaining;
+  const corpusSteps = new Set([
+    "bun scripts/generate-api-spec-index.ts",
+    "bun scripts/generate-api-catalog-qmd-index.ts",
+  ]);
+  return remaining.split(" && ").filter(step => !corpusSteps.has(step)).join(" && ");
 }
 
 /** Use only the original run's artifact; changing latest sources cannot replace its reviewed bytes. */

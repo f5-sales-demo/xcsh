@@ -399,3 +399,12 @@ describe("qualified prebuilt corpus publication", () => {
 		}
 	});
 });
+
+it("keeps the immutable tag's API snapshots during pinned publication", async () => {
+	const { remainingPinnedPrepack } = await import("../../../../scripts/prepare-prebuilt-npm-index");
+	const preparation =
+		"bun scripts/generate-docs-index.ts && bun scripts/generate-api-spec-index.ts && bun scripts/generate-api-catalog-qmd-index.ts && bun scripts/generate-build-info.ts && bun scripts/generate-console-catalog.ts && bun scripts/generate-terraform-documentation-index.ts";
+	expect(remainingPinnedPrepack(preparation)).toBe(
+		"bun scripts/generate-docs-index.ts && bun scripts/generate-build-info.ts && bun scripts/generate-console-catalog.ts",
+	);
+});
