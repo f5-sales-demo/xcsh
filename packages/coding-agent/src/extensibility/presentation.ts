@@ -240,6 +240,30 @@ export interface BoundPresentation<TArgs, TResult> {
 	call(args: TArgs, options: PluginPresentationOptions): PluginView;
 	result(result: TResult, options: PluginPresentationOptions, args: TArgs): PluginView;
 }
+/** Preserve class methods and accessors, including their original private-field receiver. */
+function copyTool<T extends object>(tool: T): T {
+	const copy = Object.create(Object.getPrototypeOf(tool)) as T;
+	const seen = new Set<PropertyKey>();
+	for (
+		let source: object | null = tool;
+		source && source !== Object.prototype;
+		source = Object.getPrototypeOf(source)
+	) {
+		for (const key of Reflect.ownKeys(source)) {
+			if (key === "constructor" || key === "presentation" || seen.has(key)) continue;
+			seen.add(key);
+			const descriptor = Object.getOwnPropertyDescriptor(source, key)!;
+			Object.defineProperty(copy, key, {
+				...descriptor,
+				...(typeof descriptor.value === "function" ? { value: descriptor.value.bind(tool) } : {}),
+				...(descriptor.get ? { get: descriptor.get.bind(tool) } : {}),
+				...(descriptor.set ? { set: descriptor.set.bind(tool) } : {}),
+				configurable: true,
+			});
+		}
+	}
+	return copy;
+}
 function withPresentation<
 	T extends { name: string; label?: string },
 	TArgs = unknown,
@@ -255,8 +279,7 @@ function withPresentation<
 			? (profileDescriptor(configured as PresentationProfile, tool) as PluginPresentation<TArgs, TResult>)
 			: (configured as PluginPresentation<TArgs, TResult> | undefined);
 	const fallbackCall = (args: TArgs): PluginView => ({ summary: tool.label ?? tool.name, sections: data(args) });
-	return {
-		...tool,
+	return Object.assign(copyTool(tool), {
 		presentation: {
 			call(args: TArgs, options: PluginPresentationOptions) {
 				try {
@@ -286,7 +309,7 @@ function withPresentation<
 				};
 			},
 		},
-	};
+	});
 }
 /** One runtime-owned implementation, injected into every extension without renderer imports. */
 export const presentation = Object.freeze({

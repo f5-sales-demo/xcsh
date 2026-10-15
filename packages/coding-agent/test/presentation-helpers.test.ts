@@ -257,3 +257,17 @@ test("declarative profiles preserve structured warning reasons", () => {
 	);
 	expect(view.warnings?.join(" ")).toContain("synthetic telemetry unavailable");
 });
+
+test("wrapping a class tool preserves prototype execution and private state", async () => {
+	class ClassTool {
+		name = "class_tool";
+		#value = "synthetic private execution";
+		async execute() {
+			return { content: [{ type: "text", text: this.#value }] };
+		}
+	}
+	const original = Object.freeze(new ClassTool());
+	const wrapped = presentation.withPresentation(original);
+	expect(await wrapped.execute()).toEqual(await original.execute());
+	expect("presentation" in original).toBe(false);
+});
