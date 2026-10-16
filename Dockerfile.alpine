@@ -180,7 +180,7 @@ ARG XCSH_BUILD_COMMIT=""
 ARG XCSH_BUILD_TAG=""
 COPY scripts/container/build-trust.sh /opt/build-trust.sh
 # hadolint ignore=DL3018
-RUN apk add --no-cache bash ca-certificates curl git github-cli jq ripgrep openssh-client chromium nss-tools \
+RUN apk add --no-cache bash ca-certificates coreutils-env curl git github-cli jq ripgrep openssh-client chromium nss-tools \
     python3 py3-pip unzip xz libstdc++ && python3 -m venv /opt/cloud-cli
 COPY --from=builder /opt/glibc-root/ /
 COPY scripts/container/download-tools.sh /tmp/download-tools.sh
