@@ -116,6 +116,10 @@
 		"./browser/chat-protocol": {
 			"types": "./src/browser/chat-protocol.ts",
 			"import": "./src/browser/chat-protocol.ts"
+		},
+		"./presentation": {
+			"types": "./src/extensibility/presentation.ts",
+			"import": "./src/extensibility/presentation.ts"
 		}
 	}
 }
