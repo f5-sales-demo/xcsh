@@ -129,12 +129,26 @@ jobs:
 
       - name: Download exact qualified Terraform index
         if: env.USE_PREBUILT_TERRAFORM == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          github-token: ${{ github.token }}
-          run-id: ${{ inputs.source_run_id }}
-          name: terraform-documentation-index-${{ env.TAG_SHA }}
-          path: .release-source/packages/coding-agent/src/internal-urls/.documentation-generated/terraform
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          index_dir=.release-source/packages/coding-agent/src/internal-urls/.documentation-generated/terraform
+          if gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "terraform-documentation-index-${TAG_SHA}" --dir "$index_dir"; then
+            exit 0
+          fi
+          # Short-lived CI artifacts can expire; recover identical bytes from the immutable release.
+          recovery=$(mktemp -d)
+          trap 'rm -rf "$recovery"' EXIT
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir "$recovery" \
+            --pattern xcsh-linux-x64 --pattern xcsh-linux-x64.provenance.json
+          bun scripts/recover-prebuilt-npm-index.ts \
+            "$recovery/xcsh-linux-x64" "$recovery/xcsh-linux-x64.provenance.json" \
+            .release-source/tools/terraform-documentation-release.json "$TAG_SHA" "$VERSION" "$SOURCE_RUN_ID" \
+            "$index_dir/terraform-documentation.sqlite.gz"
 
       - name: Install immutable release dependencies
         run: bash scripts/ci-bun-install.sh .release-source
