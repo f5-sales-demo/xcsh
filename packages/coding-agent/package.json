@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "@f5-sales-demo/xcsh",
-	"version": "23.5.0",
+	"version": "23.5.1",
 	"description": "Coding agent CLI with read, bash, edit, write tools and session management",
 	"homepage": "https://github.com/f5-sales-demo/xcsh",
 	"author": "Can Boluk",
@@ -116,6 +116,10 @@
 		"./browser/chat-protocol": {
 			"types": "./src/browser/chat-protocol.ts",
 			"import": "./src/browser/chat-protocol.ts"
+		},
+		"./presentation": {
+			"types": "./src/extensibility/presentation.ts",
+			"import": "./src/extensibility/presentation.ts"
 		}
 	}
 }
