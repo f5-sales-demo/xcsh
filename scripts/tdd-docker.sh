@@ -222,7 +222,7 @@ grep -Fq 'packages/natives/native/*.node' .dockerignore
 
 echo "[5/5] Run credential-free UAT inside the built image."
 docker run "${runtime_options[@]}" --entrypoint bash \
-  --volume "$PWD:/workspace:ro" --workdir /workspace \
+  --volume "$PWD/scripts:/workspace/scripts:ro" --workdir /workspace \
   "$image" ./scripts/uat-all.sh
 
 echo "PASS: Marketplace container test suite completed."
