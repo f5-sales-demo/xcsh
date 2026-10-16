@@ -106,7 +106,9 @@ def evaluate(
     """Require matched successful tool results and the selected provider API."""
     if not all(isinstance(event, dict) for event in events):
         return {"passed": False, "category": "invalid_events"}
-    provider, model = selector.split("/", 1)
+    provider, separator, model = selector.partition("/")
+    if not separator or not provider or not model:
+        return {"passed": False, "category": "invalid_selector"}
     model = model.split(":", 1)[0]
     calls = {
         event["toolCallId"]: event
@@ -125,13 +127,17 @@ def evaluate(
         event["message"]
         for event in events
         if event.get("type") == "message_end"
-        and event.get("message", {}).get("role") == "assistant"
+        and isinstance(event.get("message"), dict)
+        and event["message"].get("role") == "assistant"
     ]
     final = assistants[-1] if assistants else {}
+    content = final.get("content", [])
+    if not isinstance(content, list) or not all(
+        isinstance(item, dict) for item in content
+    ):
+        return {"passed": False, "category": "invalid_events"}
     text = "".join(
-        item.get("text", "")
-        for item in final.get("content", [])
-        if item.get("type") == "text"
+        item.get("text", "") for item in content if item.get("type") == "text"
     ).strip()
     route = {
         "provider": final.get("provider"),

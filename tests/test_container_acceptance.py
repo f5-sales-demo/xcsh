@@ -37,6 +37,18 @@ class AcceptanceTests(unittest.TestCase):
             "passed"
         ]
 
+    def test_invalid_selector_and_flat_content_are_rejected(self):
+        assert not acceptance.evaluate([], "unqualified", "MARKER")["passed"]
+        events = [
+            {
+                "type": "message_end",
+                "message": {"role": "assistant", "content": "MARKER"},
+            }
+        ]
+        assert not acceptance.evaluate(events, "litellm/gpt-6.1-sol:medium", "MARKER")[
+            "passed"
+        ]
+
     def test_live_marker_from_a_shell_echo_is_rejected(self):
         events = [
             {
