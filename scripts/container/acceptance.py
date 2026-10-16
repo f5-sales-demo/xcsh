@@ -1,0 +1,351 @@
+"""Execute synthesized prompts and record outcomes without service data or credentials."""
+
+import argparse
+import hashlib
+import json
+import os
+import platform
+import re
+import subprocess
+import tempfile
+import time
+from pathlib import Path
+
+MINIMUM_RUNS = 3
+PERSISTENT_CELLS = 2
+
+MODELS = ("litellm/gpt-6.1-sol:medium", "anthropic/claude-sonnet-5")
+LOCAL_PROMPT = """Use actual tools to complete these checks in /workspace. Use bash to run rg -c 'needle' fixture.txt and jq '[.[] | .amount] | add' amounts.json; the results must be 2 and 42. Use the edit tool to change status.txt from pending to complete. Use the persistent python tool in two separate calls: first set container_acceptance_value = 40, then print(container_acceptance_value + 2), which must be 42. Use the browser tool (puppeteer) to navigate to data:text/html,<title>XCSH_BROWSER_42</title><p>Browser fixture result 42</p> and read the title or page content. Do not substitute bash or HTTP retrieval for the browser tool. Only after all checks succeed, write acceptance-result.json with {"rg":2,"jq":42,"python":42,"browser":"XCSH_BROWSER_42","edited":true} and reply exactly LOCAL_ACCEPTANCE_OK. If a tool fails, report that failure without claiming success."""
+LIVE = {
+    "github": (
+        "Use bash with the bundled gh CLI to retrieve authenticated user identity and repository metadata: gh api user, then gh api repos/f5-sales-demo/xcsh, including its default branch. Execute the tool; verify the repository full name equals f5-sales-demo/xcsh. Reply exactly LIVE_GITHUB_OK only on successful authorized retrieval.",
+        "LIVE_GITHUB_OK",
+    ),
+    "gitlab": (
+        "Use the bundled GitLab tools or glab CLI to retrieve the authenticated user and one project from the active GitLab host. Retrieve project metadata and verify access. Reply exactly LIVE_GITLAB_OK only if both identity and project retrieval succeed.",
+        "LIVE_GITLAB_OK",
+    ),
+    "aws": (
+        "Use bash with AWS CLI v2: aws sts get-caller-identity --output json, then aws ec2 describe-vpcs --max-results 5 --output json in the configured region and profile. Do not modify any resources. Reply exactly LIVE_AWS_OK only if identity and inventory retrieval both succeed.",
+        "LIVE_AWS_OK",
+    ),
+    "azure": (
+        "Use bash with az CLI: az account show --output json, then az graph query --subscriptions \"$AZURE_SUBSCRIPTION_ID\" -q 'Resources | project type | take 5' --output json. Preserve the configured subscription. Do not change account selection or resources. Reply exactly LIVE_AZURE_OK only if identity and resource retrieval both succeed.",
+        "LIVE_AZURE_OK",
+    ),
+    "salesforce": (
+        "Use bash with sf CLI to retrieve active org identity and Organization metadata (SELECT Id, Name, OrganizationType FROM Organization LIMIT 1). Do not retrieve account or contact records. Reply exactly LIVE_SALESFORCE_OK only if both operations succeed.",
+        "LIVE_SALESFORCE_OK",
+    ),
+    "gcloud": (
+        "Use bash with gcloud CLI to verify the active account and retrieve metadata for the configured Google Cloud project. Identity alone does not pass. Reply exactly LIVE_GCLOUD_OK only if project retrieval is authorized and succeeds.",
+        "LIVE_GCLOUD_OK",
+    ),
+    "f5": (
+        "Read the F5 API catalog to verify the namespace inventory GET endpoint, then use bash with curl and the configured XCSH_API_URL/XCSH_API_TOKEN to retrieve namespace inventory. Preserve the existing API base prefix and never print the token. Do not create or modify resources. Reply exactly LIVE_F5_OK only if actual authorized tenant inventory is retrieved.",
+        "LIVE_F5_OK",
+    ),
+    "firecrawl": (
+        "Use the Firecrawl integration or bash/curl to POST the configured Firecrawl service endpoint to retrieve https://example.com. Verify the response contains Example Domain. Do not substitute direct HTTP retrieval for Firecrawl. Reply exactly LIVE_FIRECRAWL_OK only if the Firecrawl tool result succeeds.",
+        "LIVE_FIRECRAWL_OK",
+    ),
+}
+
+
+def live_evidence(calls: dict, results: list[dict], service: str) -> bool:
+    """Require a service operation and returned inventory fields, not an echoed marker."""
+    aliases = {
+        "github": ("github", "gh"),
+        "gitlab": ("gitlab", "glab"),
+        "aws": ("aws",),
+        "azure": ("azure", "az"),
+        "salesforce": ("salesforce", "sf"),
+        "gcloud": ("gcloud",),
+        "f5": ("f5", "xcsh", "api"),
+        "firecrawl": ("firecrawl",),
+    }
+    selected = []
+    for result in results:
+        call = calls[result["toolCallId"]]
+        name = call.get("toolName", "").lower()
+        arguments = json.dumps(call.get("args", {})).lower()
+        native = name not in {"read", "grep", "search_tool_bm25"} and any(
+            alias in name for alias in aliases[service]
+        )
+        cli = name == "bash" and any(
+            re.search(r"\b" + alias + r"\s", arguments) for alias in aliases[service]
+        )
+        if service == "firecrawl" and name == "bash":
+            cli = "firecrawl" in arguments or "3002" in arguments
+        if native or cli:
+            selected.append(result.get("result", {}))
+    payload = json.dumps(selected).lower()
+    required = {
+        "github": (("f5-sales-demo/xcsh",), ("default_branch", "defaultbranchref")),
+        "gitlab": (("path_with_namespace", "pathwithnamespace"),),
+        "aws": (("arn", "account"), ("vpcs",)),
+        "azure": (("tenantid", "tenant_id"), ("data", "totalrecords")),
+        "salesforce": (("organizationtype",),),
+        "gcloud": (("projectnumber", "project_number"),),
+        "f5": (("namespace",),),
+        "firecrawl": (("example domain",),),
+    }
+    return bool(selected) and all(
+        any(field in payload for field in group) for group in required[service]
+    )
+
+
+def evaluate(
+    events: list[dict],
+    selector: str,
+    marker: str,
+    *,
+    local: bool = False,
+    service: str | None = None,
+) -> dict:
+    """Require matched successful tool results and the selected provider API."""
+    if not all(isinstance(event, dict) for event in events):
+        return {"passed": False, "category": "invalid_events"}
+    provider, model = selector.split("/", 1)
+    model = model.split(":", 1)[0]
+    calls = {
+        event["toolCallId"]: event
+        for event in events
+        if event.get("type") == "tool_execution_start"
+        and isinstance(event.get("toolCallId"), str)
+    }
+    results = [
+        event
+        for event in events
+        if event.get("type") == "tool_execution_end"
+        and event.get("toolCallId") in calls
+    ]
+    successful = [event for event in results if not event.get("isError")]
+    assistants = [
+        event["message"]
+        for event in events
+        if event.get("type") == "message_end"
+        and event.get("message", {}).get("role") == "assistant"
+    ]
+    final = assistants[-1] if assistants else {}
+    text = "".join(
+        item.get("text", "")
+        for item in final.get("content", [])
+        if item.get("type") == "text"
+    ).strip()
+    route = {
+        "provider": final.get("provider"),
+        "model": final.get("model"),
+        "api": final.get("api"),
+    }
+    expected_api = "openai-responses" if provider == "litellm" else "anthropic-messages"
+    passed = (
+        route["api"] == expected_api
+        and bool(successful)
+        and len(successful) == len(results) == len(calls)
+        and route["provider"] == provider
+        and route["model"] == model
+        and text == marker
+    )
+    if local:
+        names = [event.get("toolName") for event in successful]
+        passed = (
+            passed
+            and "bash" in names
+            and "edit" in names
+            and names.count("python") >= PERSISTENT_CELLS
+            and any(name in names for name in ("browser", "puppeteer"))
+        )
+    if service and service != "local":
+        passed = passed and live_evidence(calls, successful, service)
+    return {
+        "passed": passed,
+        "resolved": route,
+        "toolCalls": len(calls),
+        "successfulToolResults": len(successful),
+        "category": "passed" if passed else "tool_route_or_result_failure",
+    }
+
+
+def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
+    """Run the complete matrix in a dedicated workspace and write private outcomes."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--expected-version", required=True)
+    parser.add_argument("--runs", type=int, default=3)
+    parser.add_argument("--model", action="append")
+    parser.add_argument("--report", required=True)
+    parser.add_argument("--live", action="store_true")
+    parser.add_argument(
+        "--candidate",
+        action="store_true",
+        help="Allow an unpublished local image, frozen to its inspected ID",
+    )
+    parser.add_argument("--timeout", type=int, default=240)
+    opts = parser.parse_args(arguments)
+    if opts.runs < MINIMUM_RUNS:
+        msg = "Full acceptance requires at least three consecutive runs per model"
+        raise ValueError(msg)
+    for selector in opts.model or MODELS:
+        provider, separator, model = selector.partition("/")
+        if not separator or not provider or not model:
+            msg = "Acceptance --model requires PROVIDER/MODEL"
+            raise ValueError(msg)
+    image = argv[-1]
+    if not opts.candidate and not re.search(r"@sha256:[a-f0-9]{64}$", image):
+        msg = "Published acceptance requires an immutable image digest; use --candidate for local builds"
+        raise ValueError(msg)
+    base = argv[: argv.index("run")]
+    inspected = subprocess.run(  # noqa: S603 - fixed image inspection through the validated launcher.
+        [*base, "image", "inspect", image, "--format", "json"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    identity = json.loads(inspected.stdout)[0]
+    expected_arch = "arm64" if platform.machine() in {"arm64", "aarch64"} else "amd64"
+    if identity.get("Architecture") != expected_arch:
+        msg = "Candidate image does not match the native host architecture"
+        raise ValueError(msg)
+    if not opts.candidate and not any(
+        value.endswith("@" + image.split("@")[-1])
+        for value in (identity.get("RepoDigests") or [])
+    ):
+        msg = "Pulled image does not match the selected immutable digest"
+        raise ValueError(msg)
+    argv = [*argv[:-1], identity["Id"]]
+    os.umask(0o077)
+    root = Path(workspace)
+    if any(root.iterdir()):
+        msg = "Acceptance requires an empty dedicated workspace; select --workspace DIR"
+        raise ValueError(msg)
+    samples = []
+    private = Path(tempfile.mkdtemp(prefix="xcsh-container-acceptance-"))
+    report = {
+        "schemaVersion": 1,
+        "passed": False,
+        "candidateVersion": opts.expected_version,
+        "imageId": identity["Id"],
+        "architecture": identity["Architecture"],
+        "samples": samples,
+    }
+    try:
+        started = time.monotonic()
+        runtime = subprocess.run(  # noqa: S603 - launcher constructs a rootless Podman argv; no shell.
+            [*argv, "container-test"],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=opts.timeout,
+        )
+        (private / "runtime.stdout").write_text(runtime.stdout)
+        (private / "runtime.stderr").write_text(runtime.stderr)
+        report["runtimePassed"] = (
+            runtime.returncode == 0
+            and ("xcsh/" + opts.expected_version) in runtime.stdout.splitlines()
+        )
+        report["startupSeconds"] = round(time.monotonic() - started, 3)
+        if not report["runtimePassed"]:
+            return False
+        for selector in opts.model or MODELS:
+            for repeat in range(1, opts.runs + 1):
+                # Refuse to overwrite the user's files; fixtures must be a selected dedicated workspace.
+                for name, value in {
+                    "fixture.txt": "needle\nhaystack\nneedle\n",
+                    "amounts.json": '[{"amount":19},{"amount":23}]\n',
+                    "status.txt": "pending\n",
+                }.items():
+                    (root / name).write_text(value)
+                (root / "acceptance-result.json").unlink(missing_ok=True)
+                prompts = [("local", LOCAL_PROMPT, "LOCAL_ACCEPTANCE_OK")]
+                if opts.live:
+                    prompts += [
+                        (service, prompt, marker)
+                        for service, (prompt, marker) in LIVE.items()
+                    ]
+                for service, prompt, marker in prompts:
+                    started = time.monotonic()
+                    command = [
+                        *argv,
+                        "--mode",
+                        "json",
+                        "--no-session",
+                        "--no-memories",
+                        "--no-title",
+                        "--no-lsp",
+                        "--model",
+                        selector,
+                        prompt,
+                    ]
+                    try:
+                        result = subprocess.run(  # noqa: S603 - same validated launcher argv and fixed fixture prompts.
+                            command,
+                            capture_output=True,
+                            check=False,
+                            text=True,
+                            timeout=opts.timeout,
+                        )
+                        name = f"{selector.split('/')[0]}-{repeat}-{service}"
+                        (private / (name + ".events")).write_text(result.stdout)
+                        (private / (name + ".stderr")).write_text(result.stderr)
+                        events = [
+                            json.loads(line)
+                            for line in result.stdout.splitlines()
+                            if line.strip()
+                        ]
+                        sample = evaluate(
+                            events,
+                            selector,
+                            marker,
+                            local=service == "local",
+                            service=service,
+                        )
+                        sample["passed"] = sample["passed"] and result.returncode == 0
+                        if service == "local":
+                            artifact = root / "acceptance-result.json"
+                            correct = (
+                                artifact.exists()
+                                and json.loads(artifact.read_text())
+                                == {
+                                    "rg": 2,
+                                    "jq": 42,
+                                    "python": 42,
+                                    "browser": "XCSH_BROWSER_42",
+                                    "edited": True,
+                                }
+                                and (root / "status.txt").read_text().strip()
+                                == "complete"
+                            )
+                            sample["passed"] = sample["passed"] and correct
+                            if artifact.exists():
+                                sample["artifactSha256"] = hashlib.sha256(
+                                    artifact.read_bytes()
+                                ).hexdigest()
+                    except (subprocess.TimeoutExpired, json.JSONDecodeError):
+                        sample = {
+                            "passed": False,
+                            "category": "timeout_or_invalid_events",
+                        }
+                    sample.update(
+                        service=service,
+                        selector=selector,
+                        run=repeat,
+                        seconds=round(time.monotonic() - started, 3),
+                    )
+                    samples.append(sample)
+                    print(
+                        service,
+                        selector,
+                        repeat,
+                        "PASS" if sample["passed"] else "UNFINISHED",
+                        flush=True,
+                    )
+        # Full-service acceptance cannot pass when --live was omitted.
+        report["passed"] = (
+            opts.live and bool(samples) and all(sample["passed"] for sample in samples)
+        )
+        report["localPassed"] = bool(samples) and all(
+            sample["passed"] for sample in samples if sample["service"] == "local"
+        )
+        return report["passed"]
+    finally:
+        Path(opts.report).write_text(json.dumps(report, indent=2) + "\n")

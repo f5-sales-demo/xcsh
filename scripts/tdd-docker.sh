@@ -38,11 +38,9 @@ runtime_options=(
   --rm
   --read-only
   --tmpfs "/tmp:rw,nosuid,nodev,size=1g,mode=1777"
-  --tmpfs "/home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=0700,uid=1000,gid=1000"
-  --tmpfs "/home/xcsh/.sf:rw,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000"
-  --tmpfs "/home/xcsh/.sfdx:rw,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000"
-  --env AZURE_CONFIG_DIR=/tmp/xcsh-azure
-  --env CLOUDSDK_CONFIG=/tmp/xcsh-gcloud
+  --tmpfs "/home/xcsh:rw,exec,nosuid,nodev,size=512m,mode=0700,uid=1000,gid=1000"
+  --cap-drop all
+  --security-opt=no-new-privileges
 )
 if [[ -n "$test_platform" ]]; then
   runtime_options+=(--platform "$test_platform")
@@ -133,11 +131,11 @@ docker info >/dev/null 2>&1 || {
   exit 1
 }
 
-echo "[1/5] Build the Alpine runtime without suppressing failures."
+echo "[1/5] Build the marketplace runtime without suppressing failures."
 build_options=(
   --load
   --target runtime
-  --file Dockerfile.alpine
+  --file "${XCSH_CONTAINERFILE:-Dockerfile.debian}"
   --tag "$image"
 )
 if [[ -n "${GH_TOKEN:-}" ]]; then
@@ -154,6 +152,7 @@ if [[ -n "$expected_machine" ]]; then
 fi
 docker run "${runtime_options[@]}" "$image" --version >/dev/null
 docker run "${runtime_options[@]}" "$image" --help >/dev/null
+docker run "${runtime_options[@]}" --network none "$image" container-test
 test "$(docker run "${runtime_options[@]}" --entrypoint id "$image" -u)" = "1000"
 test "$(docker run "${runtime_options[@]}" --entrypoint id "$image" -g)" = "1000"
 test "$(docker run "${runtime_options[@]}" --entrypoint whoami "$image")" = "xcsh"
@@ -165,7 +164,10 @@ docker run "${runtime_options[@]}" --entrypoint bash "$image" -c \
    gh --version >/dev/null
    sf --version >/dev/null
    bun --version >/dev/null
-   zig version >/dev/null
+   glab --version >/dev/null
+   rg --version >/dev/null
+   terraform version >/dev/null
+   chromium --version >/dev/null
    jq --version >/dev/null'
 
 echo "[3/5] Verify the runtime excludes build and credential material."
@@ -223,4 +225,4 @@ docker run "${runtime_options[@]}" --entrypoint bash \
   --volume "$PWD:/workspace:ro" --workdir /workspace \
   "$image" ./scripts/uat-all.sh
 
-echo "PASS: Alpine container test suite completed."
+echo "PASS: Marketplace container test suite completed."

@@ -1121,7 +1121,10 @@ export function resolveCliModel(options: {
 			thinkingSeparator !== -1 && parseThinkingLevel(pattern.slice(thinkingSeparator + 1))
 				? pattern.slice(0, thinkingSeparator)
 				: pattern;
-		if (resolveProviderModelReference(provider, exactModelId, allModels)) {
+		if (
+			!resolveProviderModelReference(provider, exactModelId, availableModels) &&
+			resolveProviderModelReference(provider, exactModelId, allModels)
+		) {
 			return {
 				model: undefined,
 				selector: undefined,
