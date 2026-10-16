@@ -1,10 +1,9 @@
-Executes bash command in shell session for terminal operations like git, bun, cargo, python.
+Run shell commands such as git, bun, cargo, or Python.
 
 <instruction>
 - You **MUST** use `cwd` parameter to set working directory instead of `cd dir && …`
-- Every call starts in the session working directory, or in `cwd` when provided. A `cd` affects only
-  that call and does not relocate later tool calls.
-- Always provide a `description` parameter: a short, human-readable summary of what the command does (e.g. "Install dependencies", "Run test suite"). This is displayed in compact mode and during execution.
+- Every call uses the session directory or `cwd`; `cd` affects only that call.
+- Always provide a short `description` of the command; it appears during execution.
 - Prefer `env: { NAME: "…" }` for multiline, quote-heavy, or untrusted values instead of inlining them into shell syntax; reference them from the command as `$NAME`
 - Quote variable expansions like `"$NAME"` to preserve exact content and avoid shell parsing bugs
 - PTY mode is opt-in: set `pty: true` only when command expects a real terminal (for example `sudo`, `ssh` where you need input from the user); default is `false`
@@ -44,9 +43,8 @@ Returns the output, and an exit code from command execution.
 
 <critical>
 For ordinary file operations, you **MUST** use specialized tools instead of bash.
-When the user explicitly requests exercising or verifying a named CLI executable, such as `rg`,
-use bash for that check and report its actual exit status and output. This exception does not
-permit replacing specialized tools for incidental file work.
+For explicit named-CLI verification (e.g. `rg`), use bash and report output and exit status.
+This exception applies only to the requested CLI check.
 
 |Instead of (WRONG)|Use (CORRECT)|
 |---|---|

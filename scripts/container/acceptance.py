@@ -18,7 +18,7 @@ MODELS = ("litellm/gpt-6.1-sol:medium", "anthropic/claude-sonnet-5")
 LOCAL_PROMPT = """Use actual tools to complete these checks in /workspace. Use bash to run rg -c 'needle' fixture.txt and jq '[.[] | .amount] | add' amounts.json; the results must be 2 and 42. Use the edit tool to change status.txt from pending to complete. Use the persistent python tool in two separate calls: first set container_acceptance_value = 40, then print(container_acceptance_value + 2), which must be 42. Use the browser tool (puppeteer) to navigate to data:text/html,<title>XCSH_BROWSER_42</title><p>Browser fixture result 42</p> and read the title or page content. Do not substitute bash or HTTP retrieval for the browser tool. Only after all checks succeed, write acceptance-result.json with {"rg":2,"jq":42,"python":42,"browser":"XCSH_BROWSER_42","edited":true} and reply exactly LOCAL_ACCEPTANCE_OK. If a tool fails, report that failure without claiming success."""
 LIVE = {
     "github": (
-        "Use bash with the bundled gh CLI to retrieve authenticated user identity and repository metadata: gh api user, then gh api repos/f5-sales-demo/xcsh, including its default branch. Execute the tool; verify the repository full name equals f5-sales-demo/xcsh. Reply exactly LIVE_GITHUB_OK only on successful authorized retrieval.",
+        "Use bash with the bundled gh CLI to retrieve authenticated user identity and repository metadata. Run exactly gh api user, then gh api repos/f5-sales-demo/xcsh, without adding CLI flags. Inspect the returned JSON and verify full_name equals f5-sales-demo/xcsh and default_branch is present. Reply exactly LIVE_GITHUB_OK only on successful authorized retrieval.",
         "LIVE_GITHUB_OK",
     ),
     "gitlab": (
@@ -50,6 +50,17 @@ LIVE = {
         "LIVE_FIRECRAWL_OK",
     ),
 }
+
+
+def live_prompt(service: str) -> str:
+    """Request fresh execution and an unambiguous final result for each sample."""
+    prompt, marker = LIVE[service]
+    return (
+        prompt + "\n\nThis is a new acceptance sample: execute the tools now; previous "
+        "results do not count. After all requested operations succeed, your final "
+        f"answer must be exactly {marker}, with no explanation or formatting. "
+        "On failure, describe the failure instead of emitting the success marker."
+    )
 
 
 def live_evidence(calls: dict, results: list[dict], service: str) -> bool:
@@ -294,8 +305,8 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
                 prompts = [("local", LOCAL_PROMPT, "LOCAL_ACCEPTANCE_OK")]
                 if opts.live:
                     prompts += [
-                        (service, prompt, marker)
-                        for service, (prompt, marker) in LIVE.items()
+                        (service, live_prompt(service), marker)
+                        for service, (_prompt, marker) in LIVE.items()
                         if service not in deferred
                     ]
                 for service, prompt, marker in prompts:

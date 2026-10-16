@@ -202,7 +202,12 @@ test("Docker consumers use the container pool and every trust gate is socketless
 	for (const workflow of workflows) {
 		for (const [jobId, job] of Object.entries(workflow.document.jobs ?? {})) {
 			const location = `${workflow.path}:${jobId}`;
-			if (location === ".github/workflows/container.yml:publish-ghcr-arm64") {
+			if (
+				[
+					".github/workflows/container.yml:publish-ghcr-arm64",
+					".github/workflows/container.yml:container-build-arm64",
+				].includes(location)
+			) {
 				dockerConsumers.push(location);
 				expect(job["runs-on"], location).toBe("ubuntu-24.04-arm");
 				continue;
@@ -226,6 +231,7 @@ test("Docker consumers use the container pool and every trust gate is socketless
 	]);
 	expect(dockerConsumers).toContain(".github/workflows/ci.yml:verify-npm-debian");
 	expect(dockerConsumers).toContain(".github/workflows/container.yml:container-build");
+	expect(dockerConsumers).toContain(".github/workflows/container.yml:container-build-arm64");
 	expect(dockerConsumers).toContain(".github/workflows/container.yml:publish-ghcr-amd64");
 	expect(dockerConsumers).toContain(".github/workflows/container.yml:publish-ghcr-arm64");
 	expect(dockerConsumers).toContain(".github/workflows/container.yml:publish-ghcr");
