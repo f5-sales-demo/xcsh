@@ -32,6 +32,12 @@ export * from "./extensibility/custom-tools";
 export type * from "./extensibility/extensions";
 // Extension types and utilities
 export * from "./extensibility/extensions";
+export {
+	type PresentationAPI,
+	type PresentationColumn,
+	type PresentationProfile,
+	presentation,
+} from "./extensibility/presentation";
 // Skills
 export * from "./extensibility/skills";
 // Slash commands

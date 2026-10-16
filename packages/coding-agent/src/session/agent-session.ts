@@ -1736,6 +1736,7 @@ export class AgentSession {
 					event.message.details,
 					event.message.attribution ?? "agent",
 					event.message.timestamp,
+					"presentation" in event.message ? event.message.presentation : undefined,
 				);
 				if (event.message.role === "custom" && event.message.customType === "ttsr-injection") {
 					this.#markTtsrInjected(this.#extractTtsrRuleNames(event.message.details));
@@ -3616,6 +3617,7 @@ export class AgentSession {
 				content: message.content,
 				display: message.display,
 				details: message.details,
+				presentation: message.presentation,
 			},
 			options ? { deliverAs: options.deliverAs } : undefined,
 		);
@@ -3794,7 +3796,10 @@ export class AgentSession {
 	}
 
 	async promptCustomMessage<T = unknown>(
-		message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution">,
+		message: Pick<
+			CustomMessage<T>,
+			"customType" | "content" | "display" | "details" | "attribution" | "presentation"
+		>,
 		options?: Pick<PromptOptions, "streamingBehavior" | "toolChoice" | "signal">,
 	): Promise<void> {
 		const generation = this.#promptGeneration;
@@ -3825,6 +3830,7 @@ export class AgentSession {
 			content: clonedContent,
 			display: message.display,
 			details: message.details,
+			presentation: message.presentation,
 			attribution: message.attribution ?? "agent",
 			timestamp: Date.now(),
 		};
@@ -4284,6 +4290,7 @@ export class AgentSession {
 							content: msg.content,
 							display: msg.display,
 							details: msg.details,
+							presentation: msg.presentation,
 							attribution: msg.attribution ?? promptAttribution ?? (message.role === "user" ? "user" : "agent"),
 							timestamp: Date.now(),
 						});
@@ -4691,7 +4698,10 @@ export class AgentSession {
 	 * - Not streaming + no trigger: appends to state/session, no turn
 	 */
 	async sendCustomMessage<T = unknown>(
-		message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution">,
+		message: Pick<
+			CustomMessage<T>,
+			"customType" | "content" | "display" | "details" | "attribution" | "presentation"
+		>,
 		options?: { triggerTurn?: boolean; deliverAs?: "steer" | "followUp" | "nextTurn"; signal?: AbortSignal },
 	): Promise<void> {
 		const generation = this.#promptGeneration;
@@ -4706,6 +4716,7 @@ export class AgentSession {
 			content: clonedContent,
 			display: message.display,
 			details: message.details,
+			presentation: message.presentation,
 			attribution: message.attribution ?? "agent",
 			timestamp: Date.now(),
 		};
@@ -4762,6 +4773,8 @@ export class AgentSession {
 				message.display,
 				message.details,
 				message.attribution ?? "agent",
+				undefined,
+				message.presentation,
 			);
 			return;
 		}
@@ -4805,6 +4818,8 @@ export class AgentSession {
 			message.display,
 			message.details,
 			message.attribution ?? "agent",
+			undefined,
+			message.presentation,
 		);
 	}
 

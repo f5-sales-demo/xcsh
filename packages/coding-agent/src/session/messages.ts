@@ -80,6 +80,8 @@ export interface PythonExecutionMessage {
  * Message type for extension-injected messages via sendMessage().
  */
 export interface CustomMessage<T = unknown> {
+	/** Optional UI-only enrichment; content remains the model-facing payload. */
+	presentation?: import("@f5-sales-demo/pi-agent-core").PluginView;
 	role: "custom";
 	customType: string;
 	content: string | (TextContent | ImageContent)[];
@@ -253,6 +255,7 @@ export function createCustomMessage(
 	details: unknown | undefined,
 	timestamp: string,
 	attribution?: MessageAttribution,
+	presentation?: import("@f5-sales-demo/pi-agent-core").PluginView,
 ): CustomMessage {
 	return {
 		role: "custom",
@@ -261,6 +264,7 @@ export function createCustomMessage(
 		display,
 		details,
 		attribution,
+		presentation,
 		timestamp: new Date(timestamp).getTime(),
 	};
 }

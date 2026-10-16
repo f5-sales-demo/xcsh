@@ -5,7 +5,8 @@ import { ExtensionRuntime, loadExtensionFromFactory } from "../src/extensibility
 import type { ExtensionRunner } from "../src/extensibility/extensions/runner";
 import { wrapRegisteredTool } from "../src/extensibility/extensions/wrapper";
 import { ToolExecutionComponent } from "../src/modes/components/tool-execution";
-import { initTheme, setTheme } from "../src/modes/theme/theme";
+import { initTheme, setTheme, theme } from "../src/modes/theme/theme";
+import { xcshApiToolRenderer } from "../src/tools/xcsh-api-renderer";
 import { EventBus } from "../src/utils/event-bus";
 
 beforeAll(async () => {
@@ -199,4 +200,69 @@ test("metadata-only progress remains visible in a collapsed result", async () =>
 	c.updateResult({ content: [], details: { progress: 0, done: false } }, true);
 	expect(plain(c.render(76))).toContain("progress");
 	expect(plain(c.render(76))).toContain("false");
+});
+
+test("registered descriptors and fallback share XC-API thin themed frames and status headers", async () => {
+	for (const themeName of ["xcsh-dark", "xcsh-light"]) {
+		for (const preset of ["unicode", "ascii", "nerd"] as const) {
+			await initTheme(false, preset);
+			await setTheme(themeName);
+			const api = xcshApiToolRenderer.renderResult(
+				{
+					content: [{ type: "text", text: '200 OK\n\n{"metadata":{"name":"example"}}' }],
+					details: {
+						method: "GET",
+						status: 200,
+						url: "https://example.com/api/config/namespaces/example/http_loadbalancers/example",
+						requestId: "synthetic",
+					},
+				},
+				{ expanded: false, isPartial: false },
+				theme,
+			);
+			for (const descriptor of [
+				undefined,
+				{
+					result: () => ({
+						summary: "total = 0",
+						sections: [
+							{
+								kind: "table",
+								columns: [{ key: "name" }, { key: "total" }],
+								rows: [{ name: "界👩‍💻\nexample", total: 0 }],
+							},
+						],
+					}),
+				},
+			]) {
+				const c = await component(descriptor ? { presentation: descriptor } : {});
+				c.updateResult({ content: [{ type: "text", text: '{"total":0,"done":true}' }] });
+				for (const width of [40, 76, 120, 153]) {
+					const apiLines = api.render(width);
+					const lines = c.render(width);
+					const prefix = theme.fg("border", `${theme.boxSharp.topLeft}${theme.boxSharp.horizontal.repeat(3)}`);
+					expect(apiLines.join("\n")).toContain(prefix);
+					expect(lines.join("\n")).toContain(prefix);
+					expect(lines.join("\n")).toContain(theme.fg("contentAccent", "Fixture plugin"));
+					expect(lines.every(line => visibleWidth(line) <= width)).toBe(true);
+					expect(plain(lines)).toContain(descriptor ? "total = 0" : "total");
+					c.setExpanded(true);
+					expect(c.render(width).every(line => visibleWidth(line) <= width)).toBe(true);
+					c.setExpanded(false);
+				}
+				c.updateResult(
+					{ content: [{ type: "text", text: "Streaming progress: 0 completed" }], details: { done: false } },
+					true,
+				);
+				expect(plain(c.render(40))).toContain("running");
+				c.updateResult({
+					content: [{ type: "text", text: "Complete corrective guidance\n".repeat(300) + "FINAL_ERROR_DETAIL" }],
+					isError: true,
+				});
+				c.setExpanded(true);
+				expect(plain(c.render(40))).toContain("FINAL_ERROR_DETAIL");
+				expect(plain(c.render(40))).toContain("failed");
+			}
+		}
+	}
 });

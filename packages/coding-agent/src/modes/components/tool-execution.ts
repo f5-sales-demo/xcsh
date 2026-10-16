@@ -21,7 +21,7 @@ import { stripInternalArgs } from "../../tools/json-tree";
 import { PYTHON_DEFAULT_PREVIEW_LINES } from "../../tools/python";
 import { formatExpandHint, replaceTabs, resolveImageOptions } from "../../tools/render-utils";
 import { toolRenderers } from "../../tools/renderers";
-import { renderStatusLine } from "../../tui";
+import { F5_TOOL_BORDER_COLOR, renderOutputBlock, renderStatusLine } from "../../tui";
 import { convertToPng } from "../../utils/image-convert";
 import { sanitizeWithImagePassthrough } from "../../utils/image-passthrough";
 import { renderDiff } from "./diff";
@@ -375,7 +375,16 @@ export class ToolExecutionComponent extends Container {
 		this.#renderState.spinnerFrame = this.#spinnerFrame;
 
 		// Explicit components, data-only presentation, then shared themed fallback.
-		if (this.#tool && (this.#tool.renderCall || this.#tool.renderResult || this.#tool.presentation)) {
+		if (this.#tool?.presentation && !this.#tool.renderCall && !this.#tool.renderResult) {
+			// Data-only marketplace tools use the same thin frame and status chrome as XC-API.
+			this.#contentBox.setBgFn(undefined);
+			this.#contentBox.setPaddingX(0);
+			this.#contentBox.clear();
+			this.#contentBox.addChild({
+				render: width => this.#framedPluginView(width),
+				invalidate() {},
+			});
+		} else if (this.#tool && (this.#tool.renderCall || this.#tool.renderResult || this.#tool.presentation)) {
 			const tool = this.#tool;
 			const merged = Boolean((tool as { mergeCallAndResult?: boolean }).mergeCallAndResult);
 			const inline = Boolean((tool as { inline?: boolean }).inline);
@@ -733,11 +742,46 @@ export class ToolExecutionComponent extends Container {
 		};
 	}
 
+	/** Render tables at the frame's inner width so borders never wrap a preformatted row. */
+	#framedPluginView(width: number): string[] {
+		const innerWidth = Math.max(1, width - 3);
+		const pending = !this.#result || this.#isPartial;
+		const isError = Boolean(this.#result?.isError);
+		const sections: Array<{ label?: string; lines: string[] }> = [];
+		if (!this.#result || this.#expanded) {
+			const callLines = this.#callView().render(innerWidth);
+			// The shared header already carries the tool label. Keep domain summaries in the body.
+			if (!this.#tool?.presentation?.call || Bun.stripANSI(callLines[0] ?? "").trim() === this.#toolLabel)
+				callLines.shift();
+			if (callLines.length)
+				sections.push({ label: this.#result ? theme.fg("toolTitle", "Arguments") : undefined, lines: callLines });
+		}
+		if (this.#result) sections.push({ lines: this.#resultView().render(innerWidth) });
+		return renderOutputBlock(
+			{
+				header: renderStatusLine(
+					{
+						title: this.#toolLabel,
+						icon: pending ? "pending" : undefined,
+						spinnerFrame: this.#spinnerFrame,
+						badge: {
+							label: pending ? "running" : isError ? "failed" : "complete",
+							color: pending ? "dim" : isError ? "error" : "success",
+						},
+					},
+					theme,
+				),
+				state: pending ? "pending" : isError ? "error" : "success",
+				sections,
+				width,
+				borderColor: isError ? undefined : F5_TOOL_BORDER_COLOR,
+			},
+			theme,
+		);
+	}
+
 	/** Shared fallback is measured after the Text component's padding is removed. */
 	#formatToolExecution(width = 80): string {
-		const contentWidth = Math.max(1, width - 2);
-		const lines = this.#callView().render(contentWidth);
-		if (this.#result) lines.push(...this.#resultView().render(contentWidth));
-		return lines.join("\n");
+		return this.#framedPluginView(Math.max(1, width - 2)).join("\n");
 	}
 }

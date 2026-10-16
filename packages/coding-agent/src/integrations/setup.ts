@@ -1,3 +1,4 @@
+import { presentation } from "../extensibility/presentation";
 import { installArchive } from "../host/archive";
 import { host } from "../host/host";
 import type { IntegrationHandle, IntegrationSetupPlan, IntegrationSetupStep, IntegrationSnapshot } from "./types";
@@ -60,7 +61,7 @@ export function describeInstallSetupOutcome(
 
 /** Display exact argv as a copyable POSIX command; execution still uses the original array. */
 export function formatSetupCommand(argv: readonly string[]): string {
-	return argv.map(arg => (/^[A-Za-z0-9_@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replaceAll("'", "'\\''")}'`)).join(" ");
+	return presentation.command(argv).text;
 }
 
 export function describeSetupPlan(handle: IntegrationHandle<unknown>): string {

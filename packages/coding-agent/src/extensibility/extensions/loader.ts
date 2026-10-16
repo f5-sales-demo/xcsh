@@ -30,6 +30,7 @@ import type { CustomMessage } from "../../session/messages";
 import { EventBus } from "../../utils/event-bus";
 import { getAllPluginExtensionPaths } from "../plugins/loader";
 import { assertRuntimeRequirement } from "../plugins/marketplace/runtime";
+import { presentation } from "../presentation";
 import { resolvePath } from "../utils";
 import herdrReporter from "./bundled/herdr-reporter";
 import herdrTerminal from "./bundled/herdr-terminal";
@@ -127,6 +128,7 @@ export class ExtensionRuntime implements IExtensionRuntime {
 class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 	readonly logger = logger;
 	readonly typebox = TypeBox;
+	readonly presentation = presentation;
 	readonly flagValues = new Map<string, boolean | string>();
 	readonly pendingProviderRegistrations: Array<{
 		name: string;

@@ -1,14 +1,12 @@
-import type { PluginSection, PluginView } from "@f5-sales-demo/pi-agent-core";
+import type { PluginView } from "@f5-sales-demo/pi-agent-core";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { type Component, Markdown, renderTable, visibleWidth, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
+import { presentation } from "../../extensibility/presentation";
 import { renderStructuredRow } from "../../tui/tree-list";
 import { getMarkdownTheme, getSymbolTheme, theme } from "../theme/theme";
 
-export interface PresentationResult {
-	content: readonly { type: string; text?: string; mimeType?: string }[];
-	details?: unknown;
-	isError?: boolean;
-}
+export { resultView as fallbackResultView } from "../../extensibility/presentation";
+export const dataSections = presentation.data;
 
 function valueText(value: unknown): string {
 	if (typeof value === "string") return value || '""';
@@ -18,53 +16,6 @@ function valueText(value: unknown): string {
 	} catch {
 		return String(value);
 	}
-}
-
-/** Flatten records into labeled sections without depth, scalar or row truncation. */
-export function dataSections(data: unknown, title?: string): PluginSection[] {
-	if (
-		data instanceof Date ||
-		(data && typeof data === "object" && !Array.isArray(data) && Object.keys(data).length === 0)
-	)
-		return [{ kind: "code", title, text: valueText(data) }];
-	if (Array.isArray(data) && data.every(item => item !== null && typeof item === "object" && !Array.isArray(item))) {
-		const keys = [...new Set(data.flatMap(item => Object.keys(item)))];
-		if (keys.length) return [{ kind: "table", title, columns: keys.map(key => ({ key })), rows: data }];
-	}
-	if (data !== null && typeof data === "object" && !Array.isArray(data)) {
-		const fields: Record<string, unknown> = {};
-		const children: PluginSection[] = [];
-		for (const [key, value] of Object.entries(data)) {
-			if (value !== null && typeof value === "object")
-				children.push(...dataSections(value, title ? `${title}.${key}` : key));
-			else fields[key] = value;
-		}
-		return [...(Object.keys(fields).length ? [{ kind: "fields" as const, title, values: fields }] : []), ...children];
-	}
-	return [{ kind: "code", title, text: valueText(data) }];
-}
-
-export function fallbackResultView(result: PresentationResult): PluginView {
-	const sections = result.content
-		.filter(block => block.type === "text" && Boolean(block.text?.trim()))
-		.flatMap(block => {
-			try {
-				return dataSections(JSON.parse(block.text!));
-			} catch {
-				return [{ kind: "markdown" as const, text: block.text! }];
-			}
-		});
-	if (sections.length === 0) {
-		const media = result.content.filter(block => block.type !== "text");
-		if (media.length)
-			sections.push({
-				kind: "code",
-				text: media.map(block => `${block.type} result${block.mimeType ? ` (${block.mimeType})` : ""}`).join("\n"),
-			});
-		else if (result.details !== undefined) sections.push(...dataSections(result.details, "Details"));
-		else sections.push({ kind: "markdown", text: "(no output)" });
-	}
-	return { sections };
 }
 
 /** A render-time guard also catches components that fail after their callback returned. */

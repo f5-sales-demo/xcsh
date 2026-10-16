@@ -31,3 +31,36 @@ Collapsed tables show three complete data rows and the remaining-row count. Supp
 and warnings in the summary or fields so they remain visible. Expanded views retain every source
 result and detail field. Tables wrap cells or reflow wide records into labeled fields as the
 terminal narrows. Errors retain their complete guidance, and theme changes use the same data.
+
+## Reusable helpers
+
+Every extension receives the same frozen `pi.presentation` API. It returns data descriptors,
+never renderer components, and requires no runtime imports in plugins:
+
+```typescript
+const tool = pi.presentation.withPresentation(definition, {
+  command: "example-cli",
+  scopeKeys: ["project", "region", "limit"],
+  collections: ["instances", "items"],
+  labels: { id: "Instance ID", status: "Status" },
+  scopeNote: "Counts cover returned records in the selected scope.",
+});
+pi.registerTool(tool);
+```
+
+Profiles reuse the runtime's nested data conversion, returned collection counts, scope display,
+labels, completeness warnings, and safe fallback. Supply a callback descriptor for domain-specific
+aggregates, schema filtering, or currency separation. A missing, failed, or empty callback retains
+execution evidence. Summary-only callbacks retain default data sections.
+
+`fields(values, title)`, `table(rows, columns, title)`, and `data(value, title)` handle structured
+values. Ordered table columns accept labels, alignment, and optional `Intl.NumberFormatOptions`
+in `numberFormat`; formatting changes display copies only. Monetary units must remain explicit.
+`command(argv, title)` displays shell-quoted arguments without executing them. Lifecycle setup
+reviews use this same helper and retain timeouts and verification commands.
+
+Custom messages may provide a UI-only `presentation` view built with these helpers. It survives
+session reconstruction and remains separate from model-facing `content`. Unavailable integration
+state is evidence of unavailability, not a verified zero. Streaming and explicitly partial data
+retain warnings in collapsed and expanded views. Content-only plugins and advisory messages use
+the same themed Markdown and lifecycle primitives without needing a tool adapter.
