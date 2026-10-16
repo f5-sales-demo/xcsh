@@ -20,7 +20,7 @@ jobs:
   docs:
     uses: f5-sales-demo/docs-control/.github/workflows/github-pages-deploy.yml@5fd67d18c6384addd302d8a93a9dec0a5ff04da0
     with:
-      builder-image: ghcr.io/f5-sales-demo/docs-builder@sha256:65f10cf99357341e469ba4abbfa20779fb8d7277e45489dc42237b115716ca44
+      builder-image: ghcr.io/f5-sales-demo/docs-builder@sha256:8fcc5e4171f6b4cb44133e44619aaca352d168b5a34e0c95a5715041d721bcda
       shared-mode: consume
       content-ref: ${{ github.sha }}
       socketless_runner_label: xcsh-socketless
