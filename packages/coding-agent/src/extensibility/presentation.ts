@@ -3,7 +3,7 @@ import type {
 	PluginPresentationOptions,
 	PluginSection,
 	PluginView,
-} from "@f5-sales-demo/pi-agent-core";
+} from "@f5-sales-demo/pi-agent-core/plugin-presentation";
 
 type Fields = Extract<PluginSection, { kind: "fields" }>;
 type Table = Extract<PluginSection, { kind: "table" }>;
