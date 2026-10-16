@@ -106,6 +106,34 @@ class AcceptanceTests(unittest.TestCase):
             events, "litellm/gpt-6.1-sol:medium", "LOCAL_ACCEPTANCE_OK"
         )["passed"]
 
+    def test_f5_curl_inventory_requires_operation_and_returned_fields(self):
+        calls = {
+            "inventory": {
+                "toolName": "bash",
+                "args": {
+                    "command": 'curl -fsS -H "Authorization: APIToken $XCSH_API_TOKEN" "${XCSH_API_URL%/}/api/web/namespaces"'
+                },
+            }
+        }
+        results = [
+            {
+                "toolCallId": "inventory",
+                "result": {
+                    "content": [{"type": "text", "text": '{"items":[],"errors":[]}'}],
+                },
+            }
+        ]
+        assert acceptance.live_evidence(calls, results, "f5")
+        calls["inventory"]["args"]["command"] = "printf LIVE_F5_OK"
+        assert not acceptance.live_evidence(calls, results, "f5")
+        calls["inventory"] = {"toolName": "xcsh_context", "args": {"action": "show"}}
+        assert not acceptance.live_evidence(calls, results, "f5")
+        calls["inventory"] = {
+            "toolName": "xcsh_api",
+            "args": {"method": "GET", "path": "/api/web/namespaces"},
+        }
+        assert acceptance.live_evidence(calls, results, "f5")
+
     def test_malformed_tool_events_and_unmatched_calls_are_rejected(self):
         events = [{"type": "tool_execution_start"}]
         assert not acceptance.evaluate(events, "litellm/gpt-6.1-sol:medium", "MARKER")[

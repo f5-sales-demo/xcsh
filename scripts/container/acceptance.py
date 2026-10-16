@@ -42,7 +42,7 @@ LIVE = {
         "LIVE_GCLOUD_OK",
     ),
     "f5": (
-        "Read the F5 API catalog to verify the namespace inventory GET endpoint, then use bash with curl and the configured XCSH_API_URL/XCSH_API_TOKEN to retrieve namespace inventory. Preserve the existing API base prefix and never print the token. Do not create or modify resources. Reply exactly LIVE_F5_OK only if actual authorized tenant inventory is retrieved.",
+        "Read the F5 API catalog to verify GET /web/namespaces, then use bash with curl and XCSH_API_URL/XCSH_API_TOKEN to retrieve namespace inventory. Normalize the base URL so it ends with /api exactly once, then append /web/namespaces. Use the Authorization: APIToken header without printing the token. Do not create or modify resources. After actual authorized tenant inventory is retrieved, the final answer must contain only LIVE_F5_OK with no preface, explanation, or extra text. If retrieval fails, report the failure instead.",
         "LIVE_F5_OK",
     ),
     "firecrawl": (
@@ -77,6 +77,19 @@ def live_evidence(calls: dict, results: list[dict], service: str) -> bool:
         )
         if service == "firecrawl" and name == "bash":
             cli = "firecrawl" in arguments or "3002" in arguments
+        if service == "f5" and name == "bash":
+            cli = bool(re.search(r"\bcurl\s", arguments)) and all(
+                part in arguments
+                for part in ("xcsh_api_url", "xcsh_api_token", "web/namespaces")
+            )
+        if service == "f5":
+            args = call.get("args", {})
+            native = (
+                name == "xcsh_api"
+                and isinstance(args, dict)
+                and args.get("method") == "GET"
+                and "web/namespaces" in arguments
+            )
         if native or cli:
             selected.append(result.get("result", {}))
     payload = json.dumps(selected).lower()
@@ -87,7 +100,7 @@ def live_evidence(calls: dict, results: list[dict], service: str) -> bool:
         "azure": (("tenantid", "tenant_id"), ("data", "totalrecords")),
         "salesforce": (("organizationtype",),),
         "gcloud": (("projectnumber", "project_number"),),
-        "f5": (("namespace",),),
+        "f5": (("items", "namespace"),),
         "firecrawl": (("example domain",),),
     }
     return bool(selected) and all(
