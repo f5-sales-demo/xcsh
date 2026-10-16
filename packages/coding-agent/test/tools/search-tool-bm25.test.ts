@@ -56,6 +56,21 @@ function createSession(
 }
 
 describe("generic progressive tool discovery", () => {
+	it("prioritizes an exact registered name over repetitions in another tool description", async () => {
+		const tools: DiscoverableTool[] = [
+			{ name: "sf_query", label: "Salesforce query", description: "query ".repeat(2000), schemaKeys: ["query"] },
+			{ name: "sf_help", label: "Salesforce help", description: "sf_query ".repeat(100), schemaKeys: ["command"] },
+		];
+		const index = buildDiscoverableToolSearchIndex(tools);
+		expect(searchDiscoverableTools(index, "sf_query", 1)[0]?.tool.name).toBe("sf_query");
+		expect(searchDiscoverableTools(index, " SF_QUERY ", 1)[0]?.tool.name).toBe("sf_query");
+		const result = await new SearchToolBm25Tool(createSession(tools)).execute("named", {
+			query: "sf_query",
+			limit: 1,
+		});
+		expect(result.details?.activated_tools).toEqual(["sf_query"]);
+	});
+
 	it("returns trusted activated schemas for client-executed tool search", async () => {
 		const session = createSession();
 		session.getToolDefinition = name =>

@@ -112,6 +112,7 @@ export function searchDiscoverableTools(
 	query: string,
 	limit: number,
 ): DiscoverableToolSearchResult[] {
+	const normalizedQuery = query.trim().toLowerCase();
 	const queryTokens = tokenize(query);
 	if (queryTokens.length === 0) {
 		throw new Error("Query must contain at least one letter or number.");
@@ -139,6 +140,12 @@ export function searchDiscoverableTools(
 			return { tool: document.tool, score };
 		})
 		.filter(result => result.score > 0)
-		.sort((left, right) => right.score - left.score || left.tool.name.localeCompare(right.tool.name))
+		.sort(
+			(left, right) =>
+				Number(right.tool.name.toLowerCase() === normalizedQuery) -
+					Number(left.tool.name.toLowerCase() === normalizedQuery) ||
+				right.score - left.score ||
+				left.tool.name.localeCompare(right.tool.name),
+		)
 		.slice(0, limit);
 }
