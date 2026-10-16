@@ -22,7 +22,7 @@ LIVE = {
         "LIVE_GITHUB_OK",
     ),
     "gitlab": (
-        "Use the bundled GitLab tools or glab CLI to retrieve the authenticated user and one project from the active GitLab host. Retrieve project metadata and verify access. Reply exactly LIVE_GITLAB_OK only if both identity and project retrieval succeed.",
+        "Use bash with the bundled glab CLI: glab api user, then glab api 'projects?membership=true&per_page=1' on the active GitLab host. Retrieve metadata for that project and verify access. An empty project list does not pass. Reply exactly LIVE_GITLAB_OK only if both identity and project retrieval succeed.",
         "LIVE_GITLAB_OK",
     ),
     "aws": (
@@ -34,7 +34,7 @@ LIVE = {
         "LIVE_AZURE_OK",
     ),
     "salesforce": (
-        "Use bash with sf CLI to retrieve active org identity and Organization metadata (SELECT Id, Name, OrganizationType FROM Organization LIMIT 1). Do not retrieve account or contact records. Reply exactly LIVE_SALESFORCE_OK only if both operations succeed.",
+        "Use bash with the bundled sf CLI: sf org display --json | jq 'del(.result.accessToken, .result.sfdxAuthUrl, .result.password)', then sf data query --query 'SELECT Id, Name, OrganizationType FROM Organization LIMIT 1' --json. Do not display secrets or retrieve account or contact records. Reply exactly LIVE_SALESFORCE_OK only if both operations succeed.",
         "LIVE_SALESFORCE_OK",
     ),
     "gcloud": (
@@ -182,12 +182,26 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
     parser.add_argument("--report", required=True)
     parser.add_argument("--live", action="store_true")
     parser.add_argument(
+        "--defer-service",
+        action="append",
+        choices=tuple(LIVE),
+        default=[],
+        help="Explicitly defer a live gate; record omitted coverage in the report",
+    )
+    parser.add_argument(
         "--candidate",
         action="store_true",
         help="Allow an unpublished local image, frozen to its inspected ID",
     )
     parser.add_argument("--timeout", type=int, default=240)
     opts = parser.parse_args(arguments)
+    if opts.defer_service and not opts.live:
+        msg = "--defer-service requires --live"
+        raise ValueError(msg)
+    deferred = sorted(set(opts.defer_service))
+    if len(deferred) == len(LIVE):
+        msg = "Live acceptance requires at least one service"
+        raise ValueError(msg)
     if opts.runs < MINIMUM_RUNS:
         msg = "Full acceptance requires at least three consecutive runs per model"
         raise ValueError(msg)
@@ -229,6 +243,8 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
     report = {
         "schemaVersion": 1,
         "passed": False,
+        "fullSuitePassed": False,
+        "deferredServices": deferred,
         "candidateVersion": opts.expected_version,
         "imageId": identity["Id"],
         "architecture": identity["Architecture"],
@@ -267,6 +283,7 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
                     prompts += [
                         (service, prompt, marker)
                         for service, (prompt, marker) in LIVE.items()
+                        if service not in deferred
                     ]
                 for service, prompt, marker in prompts:
                     started = time.monotonic()
@@ -349,6 +366,7 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
         report["passed"] = (
             opts.live and bool(samples) and all(sample["passed"] for sample in samples)
         )
+        report["fullSuitePassed"] = report["passed"] and not deferred
         report["localPassed"] = bool(samples) and all(
             sample["passed"] for sample in samples if sample["service"] == "local"
         )

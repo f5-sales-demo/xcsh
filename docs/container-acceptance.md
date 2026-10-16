@@ -92,6 +92,11 @@ copying their configuration files. Use explicit container login or an authorized
 portable token import. Authentication failures retain vendor output privately
 and report categories without rendering secrets.
 
+Recent Salesforce CLIs redact `org display` credentials by default. Where the
+installed version supports `SF_TEMP_SHOW_SECRETS`, set it only for an explicit
+export into an owner-only private file, then supply the resulting auth URL to
+container login. Never include that export in acceptance reports or source files.
+
 ## Proxies and certificate trust
 
 The launcher forwards configured HTTP/HTTPS/ALL proxy and NO_PROXY variables.
@@ -136,6 +141,9 @@ persistent Python cells, and browser navigation. Live tests exercise GitHub,
 GitLab, AWS, Azure Resource Graph, Salesforce Organization metadata, Google Cloud
 project access, F5 tenant inventory, and Firecrawl. A text assertion without tool
 results cannot pass. Omitting `--live` cannot produce a full acceptance pass.
+Use `--live --defer-service firecrawl` when Firecrawl acceptance is explicitly
+deferred. The report lists `deferredServices`; `passed` covers the selected
+gates, while `fullSuitePassed` remains false when any service is deferred.
 Missing credentials, project selection, or scoped authorization remain unfinished
 gates. The older `uat-podman-arm64.sh` is a model-route smoke test; it now requires
 an explicit immutable image and expected version and does not replace this matrix.
@@ -163,9 +171,9 @@ The measured Debian candidate used 1,063,398,413 compressed layer bytes and
 3,547,999,354 unpacked bytes; its plugin seed occupied 11,500 KiB. Measurements
 are candidate receipts, not a published-image acceptance claim.
 
-Full live acceptance remains open. The exercised inputs included missing GitLab
-authentication, denied Google Cloud project access, an unavailable Firecrawl
-endpoint, expired AWS credentials, and Salesforce exports whose auth values were
+Live acceptance remains open; Firecrawl is deferred by user instruction. The
+exercised inputs included missing GitLab authentication, denied Google Cloud
+project access, expired AWS credentials, and Salesforce exports whose auth values were
 redacted. Those inputs cannot qualify an authenticated container session.
 Provide usable private inputs or complete explicit container login before
 repeating the full matrix. Publication and fresh-state digest retesting remain

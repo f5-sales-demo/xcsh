@@ -1,6 +1,10 @@
 import importlib.util
+import json
+import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
     "acceptance",
@@ -11,6 +15,80 @@ spec.loader.exec_module(acceptance)
 
 
 class AcceptanceTests(unittest.TestCase):
+    def test_deferred_service_is_reported_and_never_claims_full_suite_coverage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            report = root / "report.json"
+            subprocess_calls = []
+
+            def run(command, **kwargs):
+                subprocess_calls.append(command)
+                if "inspect" in command:
+                    return SimpleNamespace(
+                        stdout=json.dumps(
+                            [
+                                {
+                                    "Id": "sha256:fixture",
+                                    "Architecture": "arm64",
+                                }
+                            ]
+                        )
+                    )
+                if command[-1] == "container-test":
+                    return SimpleNamespace(
+                        returncode=0, stdout="xcsh/23.5.2\n", stderr=""
+                    )
+                if command[-1] == acceptance.LOCAL_PROMPT:
+                    (workspace / "status.txt").write_text("complete\n")
+                    (workspace / "acceptance-result.json").write_text(
+                        json.dumps(
+                            {
+                                "rg": 2,
+                                "jq": 42,
+                                "python": 42,
+                                "browser": "XCSH_BROWSER_42",
+                                "edited": True,
+                            }
+                        )
+                    )
+                return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+            with (
+                patch.object(acceptance.platform, "machine", return_value="arm64"),
+                patch.object(acceptance.subprocess, "run", side_effect=run),
+                patch.object(
+                    acceptance,
+                    "evaluate",
+                    side_effect=lambda *_args, **_kwargs: {"passed": True},
+                ),
+            ):
+                assert acceptance.acceptance(
+                    ["podman", "run", "candidate"],
+                    str(workspace),
+                    [
+                        "--candidate",
+                        "--live",
+                        "--defer-service",
+                        "firecrawl",
+                        "--expected-version",
+                        "23.5.2",
+                        "--report",
+                        str(report),
+                    ],
+                )
+            outcomes = json.loads(report.read_text())
+            assert outcomes["passed"]
+            assert not outcomes["fullSuitePassed"]
+            assert outcomes["deferredServices"] == ["firecrawl"]
+            services = {sample["service"] for sample in outcomes["samples"]}
+            assert services == {"local", *acceptance.LIVE} - {"firecrawl"}
+            assert all(
+                command[-1] != acceptance.LIVE["firecrawl"][0]
+                for command in subprocess_calls
+            )
+
     def test_text_only_success_is_rejected(self):
         events = [
             {

@@ -214,6 +214,18 @@ class StateTests(unittest.TestCase):
             auth.login("salesforce", interactive=False)
         assert "fixture-secret" not in run.call_args.args[0]
         assert run.call_args.kwargs["stdin_text"] == "fixture-secret\n"
+        assert run.call_args.args[0][-2:] == ["--set-default", "--sfdx-url-stdin"]
+
+    def test_vendor_auth_uses_private_home_instead_of_selected_workspace(self):
+        auth = load("auth")
+        with (
+            patch.dict(os.environ, {"XCSH_CONTAINER": "1", "HOME": str(self.home)}),
+            patch.object(
+                auth.subprocess, "run", return_value=SimpleNamespace(returncode=0)
+            ) as run,
+        ):
+            auth.run(["sf", "config", "list", "--json"])
+        assert run.call_args.kwargs["cwd"] == str(self.home)
 
 
 if __name__ == "__main__":

@@ -27,6 +27,8 @@ def run(
         stderr=None if interactive else subprocess.PIPE,
         check=False,
         env=environment,
+        # Vendor defaults must stay in private state even when a workspace is a project.
+        cwd=os.environ["HOME"] if os.environ.get("XCSH_CONTAINER") == "1" else None,
     )
     if result.returncode:
         if os.environ.get("XCSH_CONTAINER") == "1":
@@ -119,7 +121,8 @@ def login(service: str, *, interactive: bool) -> None:
         if env.get("SF_AUTH_URL"):
             (auth_url,) = require("SF_AUTH_URL")
             run(
-                ["sf", "org", "login", "sfdx-url", "--sfdx-url-stdin", "--set-default"],
+                # The stdin flag consumes following argv in the pinned CLI; put it last.
+                ["sf", "org", "login", "sfdx-url", "--set-default", "--sfdx-url-stdin"],
                 stdin_text=auth_url + "\n",
             )
         elif env.get("SF_ACCESS_TOKEN"):
