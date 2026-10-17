@@ -29,6 +29,47 @@ describe("renderInlineMarkdown", () => {
 	});
 });
 
+describe("Markdown heading presentation", () => {
+	it("renders every heading level with styling instead of hash-prefix markers", () => {
+		const source = Array.from({ length: 6 }, (_, i) => `${"#".repeat(i + 1)} Heading ${i + 1}`).join("\n\n");
+		const lines = new Markdown(source, 0, 0, defaultMarkdownTheme).render(40);
+		expect(lines.filter(line => Bun.stripANSI(line).trim()).map(line => Bun.stripANSI(line).trim())).toEqual(
+			Array.from({ length: 6 }, (_, i) => `Heading ${i + 1}`),
+		);
+		expect(lines.filter(line => Bun.stripANSI(line).trim()).every(line => line.includes("\x1b["))).toBe(true);
+	});
+});
+
+describe("Code block presentation", () => {
+	it("renders language context and code without decorative Markdown fences", () => {
+		const source = "```sh\nsf data query --query 'SELECT Id FROM Account'\n```";
+		for (const width of [40, 76, 120, 153]) {
+			const output = new Markdown(source, 0, 0, defaultMarkdownTheme).render(width).map(Bun.stripANSI);
+			expect(output.some(line => line.trim() === "sh")).toBe(true);
+			expect(output.join("\n")).not.toContain("```");
+			expect(output.join("\n")).toContain("sf data query");
+			expect(output.join("\n")).toContain("Account");
+		}
+	});
+
+	it("preserves literal backticks inside an indented code example", () => {
+		const source = "Example:\n\n    printf '%s' '```'";
+		const output = new Markdown(source, 0, 0, defaultMarkdownTheme)
+			.render(76)
+			.map(line => Bun.stripANSI(line).trimEnd());
+		expect(output).toContain("  printf '%s' '```'");
+		expect(output.filter(line => line.trim() === "```")).toHaveLength(0);
+	});
+
+	it("renders code nested in a list without leaking fence markers", () => {
+		const source = "- Example:\n\n  ```js\n  console.log(1);\n  ```";
+		const output = new Markdown(source, 0, 0, defaultMarkdownTheme).render(76).map(Bun.stripANSI).join("\n");
+		expect(output).toContain("console.log(1);");
+		expect(output).toContain("js");
+		expect(output).not.toContain("```");
+	});
+});
+
 describe("Markdown links", () => {
 	it("uses the configured lexer and keeps link order and duplicates", () => {
 		const links = extractMarkdownLinks(
@@ -709,15 +750,15 @@ again, hello world`,
 			const lines = markdown.render(80);
 			const plainLines = lines.map(line => line.replace(/\x1b\[[0-9;]*m/g, "").trimEnd());
 
-			const closingBackticksIndex = plainLines.indexOf("```");
-			expect(closingBackticksIndex !== -1, "Should have closing backticks").toBeTruthy();
+			const lastCodeLineIndex = plainLines.findIndex(line => line.includes('const hello = "world";'));
+			expect(lastCodeLineIndex !== -1, "Should retain the complete code line").toBeTruthy();
 
-			const afterBackticks = plainLines.slice(closingBackticksIndex + 1);
-			const emptyLineCount = afterBackticks.findIndex(line => line !== "");
+			const afterCode = plainLines.slice(lastCodeLineIndex + 1);
+			const emptyLineCount = afterCode.findIndex(line => line !== "");
 
 			expect(
 				emptyLineCount,
-				`Expected 1 empty line after code block, but found ${emptyLineCount}. Lines after backticks: ${JSON.stringify(afterBackticks.slice(0, 5))}`,
+				`Expected 1 empty line after code block, but found ${emptyLineCount}. Lines after code: ${JSON.stringify(afterCode.slice(0, 5))}`,
 			).toBe(1);
 		});
 
@@ -736,7 +777,7 @@ code block
 
 more text`,
 			];
-			const expectedLines = ["hello this is text", "", "```", "  code block", "```", "", "more text"];
+			const expectedLines = ["hello this is text", "", "  code block", "", "more text"];
 
 			for (const text of cases) {
 				const markdown = new Markdown(text, 0, 0, defaultMarkdownTheme);
@@ -1056,9 +1097,9 @@ bar`,
 			const output = lines.join("\n");
 			const plainOutput = quotedLines.join("\n");
 
-			expect(plainOutput.includes("```js")).toBeTruthy();
+			expect(quotedLines.some(line => line.trim() === "│ js")).toBeTruthy();
 			expect(plainOutput.includes("console.log(1)")).toBeTruthy();
-			expect(plainOutput.includes("```")).toBeTruthy();
+			expect(plainOutput.includes("```")).toBeFalsy();
 			expect(output.includes("\x1b[35m")).toBeFalsy();
 			expect(output.includes("\x1b[3m")).toBeTruthy();
 		});
@@ -1225,11 +1266,7 @@ bar`,
 
 			const fence = String.fromCharCode(96).repeat(3);
 			const fenced = [`${fence}text`, "$\\lambda$", fence].join("\n");
-			expect(plain(new Markdown(fenced, 0, 0, defaultMarkdownTheme))).toEqual([
-				`${fence}text`,
-				"  $\\lambda$",
-				fence,
-			]);
+			expect(plain(new Markdown(fenced, 0, 0, defaultMarkdownTheme))).toEqual(["text", "  $\\lambda$"]);
 		});
 
 		it("preserves unsupported, malformed, and incomplete LaTeX source", () => {
@@ -1248,7 +1285,7 @@ bar`,
 
 			const fence = String.fromCharCode(96).repeat(3);
 			const legacy = new Markdown([fence, "x", fence].join("\n"), 0, 0, defaultMarkdownTheme, undefined, 4);
-			expect(plain(legacy)).toEqual([fence, "    x", fence]);
+			expect(plain(legacy)).toEqual(["    x"]);
 		});
 	});
 
