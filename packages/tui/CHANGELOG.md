@@ -6,6 +6,9 @@
 
 ### Fixed
 
+- Render Markdown headings and code examples with theme styling and language labels, without
+  displaying hash prefixes or fence delimiters. Literal backticks inside code remain unchanged
+  ([#4940](https://github.com/f5-sales-demo/xcsh/issues/4940)).
 - Added conservative runtime OSC 8 capability control, safe Markdown link extraction and targets,
   ST normalization, and physical-wrap link isolation. Semantically ported from
   [can1357/oh-my-pi#10196](https://github.com/can1357/oh-my-pi/pull/10196),
