@@ -16,6 +16,8 @@ spec.loader.exec_module(acceptance)
 
 class AcceptanceTests(unittest.TestCase):
     def test_live_prompts_explain_authorized_scope_and_preserve_evidence(self):
+        assert "Never enumerate environment variables" in acceptance.ACCEPTANCE_SYSTEM_PROMPT
+        assert "Do not merge stderr" in acceptance.ACCEPTANCE_SYSTEM_PROMPT
         for service in acceptance.LIVE:
             prompt = acceptance.live_prompt(service)
             assert "explicitly authorized" in prompt
