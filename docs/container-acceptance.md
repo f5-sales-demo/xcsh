@@ -162,7 +162,7 @@ gates, while `fullSuitePassed` remains false when any service is deferred.
 GitLab and Firecrawl live qualification are deferred for this delivery; use
 `--live --defer-service gitlab --defer-service firecrawl` for the agreed matrix.
 Missing credentials, project selection, or scoped authorization remain unfinished
-gates. The older `uat-podman-arm64.sh` is a model-route smoke test; it now requires
+gates. `uat-podman-arm64.sh` is a model-route smoke test; it requires
 an explicit immutable image and expected version and does not replace this matrix.
 
 KVM, Xorg, Zoom, Herdr, Ghostty, and devcontainer integrations are cached. Host
@@ -184,8 +184,8 @@ restarts, mapped workspace writes, and native runtime checks. Debian runtime
 checks also passed on native AMD64. Both reference models passed the complete
 local synthesized tool test three consecutive times on ARM64.
 
-The measured ARM64 Debian v8 candidate used 1,018,644,342 compressed layer bytes
-and 3,548,024,445 unpacked bytes; its plugin seed occupied 11,500 KiB. Measurements
+The measured ARM64 Debian v9 candidate used 1,018,640,476 compressed layer bytes
+and 3,548,025,470 unpacked bytes; its plugin seed occupied 11,500 KiB. Measurements
 are candidate receipts, not a published-image acceptance claim.
 
 Both native AMD64 runtime candidates passed. Debian used 1,063,470,609 compressed
