@@ -1,6 +1,7 @@
 """Keep xcsh's active Git hook aligned with CI's TypeScript gate."""
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -49,12 +50,28 @@ class PreCommitShellGateTests(unittest.TestCase):
         assert hook.index("python3 scripts/check_shell.py --staged") < hook.index(
             "bun run check:ts"
         )
-        assert shutil.which("shellcheck"), "ShellCheck is required for the regression"
-        assert shutil.which("shfmt"), "shfmt is required for the regression"
         git = shutil.which("git")
         assert git is not None
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            tools = root / "tools"
+            tools.mkdir()
+            shellcheck = tools / "shellcheck"
+            shellcheck.write_text(
+                f"#!{sys.executable}\n"
+                "import pathlib,sys\n"
+                "bad=any('export FIXTURE=' in pathlib.Path(p).read_text() for p in sys.argv[3:])\n"
+                "if bad: print('SC2155')\n"
+                "raise SystemExit(int(bad))\n"
+            )
+            shfmt = tools / "shfmt"
+            shfmt.write_text(
+                f"#!{sys.executable}\nimport sys\n"
+                "if '--version' in sys.argv: print('v3.13.1')\n"
+            )
+            shellcheck.chmod(0o755)
+            shfmt.chmod(0o755)
+            env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"])
             subprocess.run([git, "init", "-q", directory], check=True)
             script = root / "fixture.sh"
             script.write_text('#!/bin/sh\nexport FIXTURE="$(mktemp -d)"\n')
@@ -62,6 +79,7 @@ class PreCommitShellGateTests(unittest.TestCase):
             result = subprocess.run(
                 [sys.executable, str(ROOT / "scripts/check_shell.py"), "--staged"],
                 cwd=directory,
+                env=env,
                 capture_output=True,
                 text=True,
                 check=False,
@@ -73,6 +91,7 @@ class PreCommitShellGateTests(unittest.TestCase):
             result = subprocess.run(
                 [sys.executable, str(ROOT / "scripts/check_shell.py"), "--staged"],
                 cwd=directory,
+                env=env,
                 capture_output=True,
                 text=True,
                 check=False,
