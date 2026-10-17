@@ -1342,6 +1342,11 @@ export class ContextService {
 
 	getStatus(): ContextStatus {
 		const url = (process.env[XCSH_API_URL] || undefined) ?? this.#activeContext?.apiUrl ?? null;
+		const credentialSource = process.env[XCSH_API_URL]
+			? this.#activeContext
+				? "mixed"
+				: "environment"
+			: this.#credentialSource;
 		const tenant = url ? deriveTenantFromUrl(url) : null;
 		return {
 			activeContextName: this.#activeContext?.name ?? null,
@@ -1351,9 +1356,9 @@ export class ContextService {
 			activeContextTenant: tenant,
 			activeContextNamespace:
 				(process.env[XCSH_NAMESPACE] || undefined) ?? this.#activeContext?.defaultNamespace ?? null,
-			credentialSource: this.#credentialSource,
+			credentialSource,
 			authStatus: this.#authStatus,
-			isConfigured: this.#credentialSource !== "none",
+			isConfigured: credentialSource !== "none",
 			authLatencyMs: this.#lastAuthLatencyMs,
 			authCheckedAt: this.#lastAuthCheckedAt,
 			tokenHealth: this.#computeTokenHealth(),
