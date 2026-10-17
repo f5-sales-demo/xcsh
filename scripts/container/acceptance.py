@@ -20,41 +20,42 @@ ACCEPTANCE_SYSTEM_PROMPT = (
     "using fresh tool calls in this invocation, even when previous results are "
     "present. Use the requested commands without unrelated processing. Never "
     "replace execution with assertions or cached data. If a required operation "
-    "fails, report the failure. Only after all requested checks succeed, return "
-    "the requested success marker alone, without explanation or formatting."
+    "fails, report the failure. For live checks, briefly summarize verified evidence "
+    "and end with the requested success marker on its own last line. For local "
+    "fixture checks, follow the requested exact final-answer format."
 )
 LOCAL_PROMPT = """Use actual tools to complete these checks in /workspace. Use bash to run rg -c 'needle' fixture.txt and jq '[.[] | .amount] | add' amounts.json; the results must be 2 and 42. Use the edit tool to change status.txt from pending to complete. Use the persistent python tool in two separate calls: first set container_acceptance_value = 40, then print(container_acceptance_value + 2), which must be 42. Use the browser tool (puppeteer) to navigate to data:text/html,<title>XCSH_BROWSER_42</title><p>Browser fixture result 42</p> and read the title or page content. Do not substitute bash or HTTP retrieval for the browser tool. Only after all checks succeed, write acceptance-result.json with {"rg":2,"jq":42,"python":42,"browser":"XCSH_BROWSER_42","edited":true} and reply exactly LOCAL_ACCEPTANCE_OK. If a tool fails, report that failure without claiming success."""
 LIVE = {
     "github": (
-        "Use bash with the bundled gh CLI to retrieve authenticated user identity and repository metadata. Run exactly gh api user, then gh api repos/f5-sales-demo/xcsh, without adding CLI flags. Inspect the returned JSON and verify full_name equals f5-sales-demo/xcsh and default_branch is present. Reply exactly LIVE_GITHUB_OK only on successful authorized retrieval.",
+        "Use bash with the bundled gh CLI to retrieve authenticated user identity and repository metadata. Run exactly gh api user, then gh api repos/f5-sales-demo/xcsh, without adding CLI flags. Inspect the returned JSON and verify full_name equals f5-sales-demo/xcsh and default_branch is present. End with LIVE_GITHUB_OK on its own last line only on successful authorized retrieval.",
         "LIVE_GITHUB_OK",
     ),
     "gitlab": (
-        "Use bash with the bundled glab CLI: glab api user, then glab api 'projects?membership=true&per_page=1' on the active GitLab host. Retrieve metadata for that project and verify access. An empty project list does not pass. Reply exactly LIVE_GITLAB_OK only if both identity and project retrieval succeed.",
+        "Use bash with the bundled glab CLI: glab api user, then glab api 'projects?membership=true&per_page=1' on the active GitLab host. Retrieve metadata for that project and verify access. An empty project list does not pass. End with LIVE_GITLAB_OK on its own last line only if both identity and project retrieval succeed.",
         "LIVE_GITLAB_OK",
     ),
     "aws": (
-        "Use bash with AWS CLI v2: aws sts get-caller-identity --output json, then aws ec2 describe-vpcs --max-results 5 --output json in the configured region and profile. Do not modify any resources. Reply exactly LIVE_AWS_OK only if identity and inventory retrieval both succeed.",
+        "Use bash with AWS CLI v2: aws sts get-caller-identity --output json, then aws ec2 describe-vpcs --max-results 5 --output json in the configured region and profile. Do not modify any resources. End with LIVE_AWS_OK on its own last line only if identity and inventory retrieval both succeed.",
         "LIVE_AWS_OK",
     ),
     "azure": (
-        "Use bash with az CLI: az account show --output json, then az graph query --subscriptions \"$AZURE_SUBSCRIPTION_ID\" -q 'Resources | project type | take 5' --output json. Preserve the configured subscription. Do not change account selection or resources. Reply exactly LIVE_AZURE_OK only if identity and resource retrieval both succeed.",
+        "Use bash with az CLI: az account show --output json, then az graph query --subscriptions \"$AZURE_SUBSCRIPTION_ID\" -q 'Resources | project type | take 5' --output json. Preserve the configured subscription. Do not change account selection or resources. End with LIVE_AZURE_OK on its own last line only if identity and resource retrieval both succeed.",
         "LIVE_AZURE_OK",
     ),
     "salesforce": (
-        "Use bash with the bundled sf CLI: sf org display --json | jq 'del(.result.accessToken, .result.sfdxAuthUrl, .result.password)', then sf data query --query 'SELECT Id, Name, OrganizationType FROM Organization LIMIT 1' --json. Do not display secrets or retrieve account or contact records. Reply exactly LIVE_SALESFORCE_OK only if both operations succeed.",
+        "Use bash with the bundled sf CLI: sf org display --json | jq 'del(.result.accessToken, .result.sfdxAuthUrl, .result.password)', then sf data query --query 'SELECT Id, Name, OrganizationType FROM Organization LIMIT 1' --json. Do not display secrets or retrieve account or contact records. End with LIVE_SALESFORCE_OK on its own last line only if both operations succeed.",
         "LIVE_SALESFORCE_OK",
     ),
     "gcloud": (
-        'Use bash with gcloud CLI: gcloud auth list --filter=status:ACTIVE --format=json, then gcloud projects describe "$(gcloud config get-value project)" --format=json. Inspect the authorized project metadata and its projectNumber. Identity alone does not pass. Reply exactly LIVE_GCLOUD_OK only if project retrieval is authorized and succeeds.',
+        'Use bash with gcloud CLI: gcloud auth list --filter=status:ACTIVE --format=json, then gcloud projects describe "$(gcloud config get-value project)" --format=json. Inspect the authorized project metadata and its projectNumber. Identity alone does not pass. End with LIVE_GCLOUD_OK on its own last line only if project retrieval is authorized and succeeds.',
         "LIVE_GCLOUD_OK",
     ),
     "f5": (
-        'Read the F5 API catalog to verify GET /web/namespaces, then use bash to execute exactly: base="${XCSH_API_URL%/}"; case "$base" in */api) ;; *) base="$base/api" ;; esac; curl --fail --silent --show-error --max-time 60 --header "Authorization: APIToken $XCSH_API_TOKEN" "$base/web/namespaces". Inspect the unmodified JSON inventory without printing the token or adding output-processing code. Do not create or modify resources. Reply exactly LIVE_F5_OK only after authorized tenant inventory is retrieved; otherwise report the failure.',
+        'Read the F5 API catalog to verify GET /web/namespaces, then use bash to execute exactly: base="${XCSH_API_URL%/}"; case "$base" in */api) ;; *) base="$base/api" ;; esac; curl --fail --silent --show-error --max-time 60 --header "Authorization: APIToken $XCSH_API_TOKEN" "$base/web/namespaces". Inspect the unmodified JSON inventory without printing the token or adding output-processing code. Do not create or modify resources. End with LIVE_F5_OK on its own last line only after authorized tenant inventory is retrieved; otherwise report the failure.',
         "LIVE_F5_OK",
     ),
     "firecrawl": (
-        "Use the Firecrawl integration or bash/curl to POST the configured Firecrawl service endpoint to retrieve https://example.com. Verify the response contains Example Domain. Do not substitute direct HTTP retrieval for Firecrawl. Reply exactly LIVE_FIRECRAWL_OK only if the Firecrawl tool result succeeds.",
+        "Use the Firecrawl integration or bash/curl to POST the configured Firecrawl service endpoint to retrieve https://example.com. Verify the response contains Example Domain. Do not substitute direct HTTP retrieval for Firecrawl. End with LIVE_FIRECRAWL_OK on its own last line only if the Firecrawl tool result succeeds.",
         "LIVE_FIRECRAWL_OK",
     ),
 }
@@ -64,11 +65,18 @@ def live_prompt(service: str) -> str:
     """Request fresh execution and an unambiguous final result for each sample."""
     prompt, marker = LIVE[service]
     return (
-        prompt
+        "The user explicitly authorized read-only container acceptance for this "
+        "bundled service CLI and its configured account. Authentication inputs are "
+        "supplied through explicitly selected environment variables or imported "
+        "portable CLI state; do not search for other credentials or initiate login. "
+        "This task qualifies each vendor service independently of the default F5 "
+        "tenant context. Do not change resources or retrieve customer records. "
+        + prompt
         + "\n\nExecute the provided commands as written; do not add output-processing code. "
         "This is a new acceptance sample: execute the tools now; previous "
-        "results do not count. After all requested operations succeed, your final "
-        f"answer must be exactly {marker}, with no explanation or formatting. "
+        "results do not count. After all requested operations succeed, briefly "
+        "summarize the verified operations without personal identifiers or secrets, "
+        f"then put {marker} alone on the last line. "
         "On failure, describe the failure instead of emitting the success marker."
     )
 

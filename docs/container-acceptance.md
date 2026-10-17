@@ -151,6 +151,11 @@ persistent Python cells, and browser navigation. Live tests exercise GitHub,
 GitLab, AWS, Azure Resource Graph, Salesforce Organization metadata, Google Cloud
 project access, F5 tenant inventory, and Firecrawl. A text assertion without tool
 results cannot pass. Omitting `--live` cannot produce a full acceptance pass.
+The runner uses `--require-tool-call` to request fresh execution. Providers that
+support required tool choice receive one required call before ordinary routing
+resumes. Providers configured for automatic tool choice receive at most two
+corrective follow-ups if they return text without executing a tool. Missing or
+failed execution still fails acceptance.
 Use `--live --defer-service firecrawl` when Firecrawl acceptance is explicitly
 deferred. The report lists `deferredServices`; `passed` covers the selected
 gates, while `fullSuitePassed` remains false when any service is deferred.
@@ -179,8 +184,8 @@ restarts, mapped workspace writes, and native runtime checks. Debian runtime
 checks also passed on native AMD64. Both reference models passed the complete
 local synthesized tool test three consecutive times on ARM64.
 
-The measured Debian candidate used 1,063,398,413 compressed layer bytes and
-3,547,999,354 unpacked bytes; its plugin seed occupied 11,500 KiB. Measurements
+The measured ARM64 Debian v8 candidate used 1,018,644,342 compressed layer bytes
+and 3,548,024,445 unpacked bytes; its plugin seed occupied 11,500 KiB. Measurements
 are candidate receipts, not a published-image acceptance claim.
 
 Both native AMD64 runtime candidates passed. Debian used 1,063,470,609 compressed

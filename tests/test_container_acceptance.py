@@ -15,6 +15,16 @@ spec.loader.exec_module(acceptance)
 
 
 class AcceptanceTests(unittest.TestCase):
+    def test_live_prompts_explain_authorized_scope_and_preserve_evidence(self):
+        for service in acceptance.LIVE:
+            prompt = acceptance.live_prompt(service)
+            assert "explicitly authorized" in prompt
+            assert "supplied" in prompt
+            assert "last line" in prompt
+            assert "summarize" in prompt
+            assert "Reply exactly" not in prompt
+            assert "no explanation" not in prompt
+
     def test_deferred_service_is_reported_and_never_claims_full_suite_coverage(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
