@@ -43,8 +43,8 @@ Returns the output, and an exit code from command execution.
 
 <critical>
 For ordinary file operations, you **MUST** use specialized tools instead of bash.
-For explicit named-CLI verification (e.g. `rg`), use bash and report output and exit status.
-This exception applies only to the requested CLI check.
+For requested CLI operations (`rg`, `aws`, `sf`), use bash and report output and exit status.
+This exception applies only to the requested CLI operation.
 
 |Instead of (WRONG)|Use (CORRECT)|
 |---|---|

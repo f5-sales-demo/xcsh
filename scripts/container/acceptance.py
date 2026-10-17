@@ -69,12 +69,12 @@ def live_prompt(service: str) -> str:
     """Request fresh execution and an unambiguous final result for each sample."""
     prompt, marker = LIVE[service]
     return (
-        "The user explicitly authorized read-only container acceptance for this "
+        "I have explicitly authorized read-only container acceptance for this "
         "bundled service CLI and its configured account. Authentication inputs are "
         "supplied through explicitly selected environment variables or imported "
         "portable CLI state; do not search for other credentials or initiate login. "
-        "This task qualifies each vendor service independently of the default F5 "
-        "tenant context. Do not change resources or retrieve customer records. "
+        "This service check concerns its configured account alone. "
+        "Do not change resources or retrieve customer records. "
         + prompt
         + "\n\nExecute the provided commands as written; do not add output-processing code. "
         "This is a new acceptance sample: execute the tools now; previous "
