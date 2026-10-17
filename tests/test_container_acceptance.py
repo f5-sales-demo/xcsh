@@ -185,6 +185,51 @@ class AcceptanceTests(unittest.TestCase):
             events, "litellm/gpt-6.1-sol:medium", "LIVE_GITHUB_OK", service="github"
         )["passed"]
 
+    def test_live_summary_requires_successful_service_results_and_final_marker(self):
+        events = [
+            {
+                "type": "tool_execution_start",
+                "toolCallId": "github",
+                "toolName": "bash",
+                "args": {"command": "gh api user && gh api repos/f5-sales-demo/xcsh"},
+            },
+            {
+                "type": "tool_execution_end",
+                "toolCallId": "github",
+                "isError": False,
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": '{"login":"fixture","full_name":"f5-sales-demo/xcsh","default_branch":"main"}',
+                        }
+                    ]
+                },
+            },
+            {
+                "type": "message_end",
+                "message": {
+                    "role": "assistant",
+                    "provider": "anthropic",
+                    "model": "claude-sonnet-5",
+                    "api": "anthropic-messages",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Both authorized retrievals succeeded.\n\nLIVE_GITHUB_OK",
+                        }
+                    ],
+                },
+            },
+        ]
+        assert acceptance.evaluate(
+            events, "anthropic/claude-sonnet-5", "LIVE_GITHUB_OK", service="github"
+        )["passed"]
+        events[1]["isError"] = True
+        assert not acceptance.evaluate(
+            events, "anthropic/claude-sonnet-5", "LIVE_GITHUB_OK", service="github"
+        )["passed"]
+
     def test_matching_tool_result_and_resolved_route_are_required(self):
         events = [
             {

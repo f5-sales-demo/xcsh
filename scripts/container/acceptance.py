@@ -179,13 +179,17 @@ def evaluate(
         "api": final.get("api"),
     }
     expected_api = "openai-responses" if provider == "litellm" else "anthropic-messages"
+    final_marker = text == marker
+    if service in LIVE:
+        # A correct live interpretation may include a summary before its final marker.
+        final_marker = bool(text) and text.splitlines()[-1].strip() == marker
     passed = (
         route["api"] == expected_api
         and bool(successful)
         and len(successful) == len(results) == len(calls)
         and route["provider"] == provider
         and route["model"] == model
-        and text == marker
+        and final_marker
     )
     if local:
         names = [event.get("toolName") for event in successful]
