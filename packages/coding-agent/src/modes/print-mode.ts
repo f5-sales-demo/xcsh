@@ -24,6 +24,8 @@ export interface PrintModeOptions {
 	initialMessage?: string;
 	/** Images to attach to the initial message */
 	initialImages?: ImageContent[];
+	/** Require a fresh tool invocation for every supplied prompt. */
+	requireToolCall?: boolean;
 }
 
 /**
@@ -76,6 +78,8 @@ export function buildJsonAgentEventLine(event: AgentSessionEvent): string | unde
 
 export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<0 | 1> {
 	const { mode, messages = [], initialMessage, initialImages } = options;
+	let toolCalls = 0;
+	let missingRequiredToolCall = false;
 	const outputWrites: Promise<void>[] = [];
 	const writeOutput = (line: string) => {
 		outputWrites.push(
@@ -202,32 +206,47 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 
 	// Always subscribe to enable session persistence via _handleAgentEvent
 	session.subscribe(event => {
+		if (event.type === "tool_execution_start") toolCalls++;
 		if (mode === "json") {
 			const line = buildJsonAgentEventLine(event);
 			if (line) writeOutput(line);
 		}
 	});
+	const sendPrompt = async (message: string, images?: ImageContent[]) => {
+		const before = toolCalls;
+		if (options.requireToolCall) {
+			if (session.getActiveToolNames().length === 0) {
+				throw new Error("--require-tool-call needs at least one active tool");
+			}
+			session.toolChoiceQueue.pushOnce("required", { label: "print-required-tool", now: true });
+		}
+		await session.prompt(message, { images });
+		if (options.requireToolCall && toolCalls === before) missingRequiredToolCall = true;
+	};
 
 	// Send initial message with attachments
 	if (initialMessage !== undefined) {
-		await session.prompt(initialMessage, { images: initialImages });
+		await sendPrompt(initialMessage, initialImages);
 	}
 
 	// Send remaining messages
 	for (const message of messages) {
-		await session.prompt(message);
+		await sendPrompt(message);
 	}
 
 	const state = session.state;
 	const projected = projectDocumentationTranscript(state.messages);
 	const lastMessage = projected[projected.length - 1];
 	const assistantMsg = lastMessage?.role === "assistant" ? (lastMessage as AssistantMessage) : undefined;
-	const failed = assistantMsg?.stopReason === "error" || assistantMsg?.stopReason === "aborted";
+	const failed =
+		missingRequiredToolCall || assistantMsg?.stopReason === "error" || assistantMsg?.stopReason === "aborted";
+	if (missingRequiredToolCall) process.stderr.write("Model returned without the required fresh tool call\n");
 
 	// In text mode, output final response or the terminal model error.
 	if (mode === "text" && assistantMsg) {
 		if (failed) {
-			process.stderr.write(`${assistantMsg.errorMessage || `Request ${assistantMsg.stopReason}`}\n`);
+			if (!missingRequiredToolCall)
+				process.stderr.write(`${assistantMsg.errorMessage || `Request ${assistantMsg.stopReason}`}\n`);
 		} else {
 			const text = finalAnswerText(assistantMsg);
 			if (text) writeOutput(`${text}\n`);

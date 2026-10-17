@@ -66,6 +66,10 @@ export const LAUNCH_FLAGS = defineFlags({
 		options: ["text", "json", "rpc", "acp"],
 	},
 	print: { arity: "boolean", char: "p", description: "Non-interactive mode: process prompt and exit" },
+	"require-tool-call": {
+		arity: "boolean",
+		description: "Require a tool call before answering each text or JSON prompt",
+	},
 	continue: { arity: "boolean", char: "c", description: "Continue previous session" },
 	resume: {
 		arity: "optional-value",

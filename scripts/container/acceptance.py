@@ -332,6 +332,7 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
                         "--no-memories",
                         "--no-title",
                         "--no-lsp",
+                        "--require-tool-call",
                         "--append-system-prompt",
                         ACCEPTANCE_SYSTEM_PROMPT,
                         "--model",
