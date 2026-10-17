@@ -69,7 +69,17 @@ scripts/xcsh-podman --image "$XCSH_IMAGE" auth login gcloud
 ```
 
 Supported portable directory names for `--credential SERVICE=PATH` are github,
-gitlab, aws, azure, salesforce, gcloud, and ssh. Mount files such as a service
+gitlab, aws, azure, salesforce, gcloud, and ssh. Portable Salesforce state is a
+private directory containing the current CLI's `.sf` settings and `.sfdx`
+authentication files and encryption key:
+
+```sh
+scripts/xcsh-podman --image "$XCSH_IMAGE" \
+  --credential salesforce="$PRIVATE_ORG_STATE_BUNDLE" run
+```
+
+Mac keychain-backed Salesforce sessions need explicit login or a private auth URL
+export. Mount files such as a service
 account or JWT key explicitly with `--mount SOURCE:CONTAINER_PATH:ro`, and set the
 corresponding environment path to the container path. No credential directory
 is mounted automatically.
@@ -144,6 +154,8 @@ results cannot pass. Omitting `--live` cannot produce a full acceptance pass.
 Use `--live --defer-service firecrawl` when Firecrawl acceptance is explicitly
 deferred. The report lists `deferredServices`; `passed` covers the selected
 gates, while `fullSuitePassed` remains false when any service is deferred.
+GitLab and Firecrawl live qualification are deferred for this delivery; use
+`--live --defer-service gitlab --defer-service firecrawl` for the agreed matrix.
 Missing credentials, project selection, or scoped authorization remain unfinished
 gates. The older `uat-podman-arm64.sh` is a model-route smoke test; it now requires
 an explicit immutable image and expected version and does not replace this matrix.
@@ -171,10 +183,13 @@ The measured Debian candidate used 1,063,398,413 compressed layer bytes and
 3,547,999,354 unpacked bytes; its plugin seed occupied 11,500 KiB. Measurements
 are candidate receipts, not a published-image acceptance claim.
 
-Live acceptance remains open; Firecrawl is deferred by user instruction. The
-exercised inputs included missing GitLab authentication, denied Google Cloud
-project access, expired AWS credentials, and Salesforce exports whose auth values were
-redacted. Those inputs cannot qualify an authenticated container session.
-Provide usable private inputs or complete explicit container login before
-repeating the full matrix. Publication and fresh-state digest retesting remain
-required gates.
+Both native AMD64 runtime candidates passed. Debian used 1,063,470,609 compressed
+layer bytes and 3,499,647,185 unpacked bytes; Alpine used 1,082,309,553 compressed
+layer bytes and 3,484,984,743 unpacked bytes. Debian is selected by compressed size.
+The Ubuntu comparison host cannot resolve the corporate gateway used by the Mac;
+model acceptance uses the working Mac routes.
+
+GitLab and Firecrawl are deferred by user instruction. Current inputs passed
+initial container checks for GitHub, AWS, Azure, Salesforce, Google Cloud project
+access, and F5 tenant inventory. The complete model matrix, publication, and
+fresh-state digest retesting remain required gates.

@@ -12,7 +12,15 @@ for service in github gitlab aws azure salesforce gcloud ssh; do
     gitlab) destination="$HOME/.config/glab-cli" ;;
     aws) destination="$HOME/.aws" ;;
     azure) destination="$HOME/.azure" ;;
-    salesforce) destination="$HOME/.sf" ;;
+    salesforce)
+      [[ -d "$source/.sf" && -d "$source/.sfdx" ]] || {
+        echo 'Salesforce portable state requires a bundle containing .sf and .sfdx directories; use explicit login for Mac keychain-backed credentials.' >&2
+        exit 1
+      }
+      python3 /opt/xcsh/state.py "$source/.sf" "$HOME/.sf"
+      python3 /opt/xcsh/state.py "$source/.sfdx" "$HOME/.sfdx"
+      continue
+      ;;
     gcloud) destination="$HOME/.config/gcloud" ;;
     ssh) destination="$HOME/.ssh" ;;
   esac

@@ -15,6 +15,14 @@ MINIMUM_RUNS = 3
 PERSISTENT_CELLS = 2
 
 MODELS = ("litellm/gpt-6.1-sol:medium", "anthropic/claude-sonnet-5")
+ACCEPTANCE_SYSTEM_PROMPT = (
+    "This is a tool-execution acceptance test. Execute every requested operation "
+    "using fresh tool calls in this invocation, even when previous results are "
+    "present. Use the requested commands without unrelated processing. Never "
+    "replace execution with assertions or cached data. If a required operation "
+    "fails, report the failure. Only after all requested checks succeed, return "
+    "the requested success marker alone, without explanation or formatting."
+)
 LOCAL_PROMPT = """Use actual tools to complete these checks in /workspace. Use bash to run rg -c 'needle' fixture.txt and jq '[.[] | .amount] | add' amounts.json; the results must be 2 and 42. Use the edit tool to change status.txt from pending to complete. Use the persistent python tool in two separate calls: first set container_acceptance_value = 40, then print(container_acceptance_value + 2), which must be 42. Use the browser tool (puppeteer) to navigate to data:text/html,<title>XCSH_BROWSER_42</title><p>Browser fixture result 42</p> and read the title or page content. Do not substitute bash or HTTP retrieval for the browser tool. Only after all checks succeed, write acceptance-result.json with {"rg":2,"jq":42,"python":42,"browser":"XCSH_BROWSER_42","edited":true} and reply exactly LOCAL_ACCEPTANCE_OK. If a tool fails, report that failure without claiming success."""
 LIVE = {
     "github": (
@@ -38,11 +46,11 @@ LIVE = {
         "LIVE_SALESFORCE_OK",
     ),
     "gcloud": (
-        "Use bash with gcloud CLI to verify the active account and retrieve metadata for the configured Google Cloud project. Identity alone does not pass. Reply exactly LIVE_GCLOUD_OK only if project retrieval is authorized and succeeds.",
+        'Use bash with gcloud CLI: gcloud auth list --filter=status:ACTIVE --format=json, then gcloud projects describe "$(gcloud config get-value project)" --format=json. Inspect the authorized project metadata and its projectNumber. Identity alone does not pass. Reply exactly LIVE_GCLOUD_OK only if project retrieval is authorized and succeeds.',
         "LIVE_GCLOUD_OK",
     ),
     "f5": (
-        "Read the F5 API catalog to verify GET /web/namespaces, then use bash with curl and XCSH_API_URL/XCSH_API_TOKEN to retrieve namespace inventory. Normalize the base URL so it ends with /api exactly once, then append /web/namespaces. Use the Authorization: APIToken header without printing the token. Do not create or modify resources. After actual authorized tenant inventory is retrieved, the final answer must contain only LIVE_F5_OK with no preface, explanation, or extra text. If retrieval fails, report the failure instead.",
+        'Read the F5 API catalog to verify GET /web/namespaces, then use bash to execute exactly: base="${XCSH_API_URL%/}"; case "$base" in */api) ;; *) base="$base/api" ;; esac; curl --fail --silent --show-error --max-time 60 --header "Authorization: APIToken $XCSH_API_TOKEN" "$base/web/namespaces". Inspect the unmodified JSON inventory without printing the token or adding output-processing code. Do not create or modify resources. Reply exactly LIVE_F5_OK only after authorized tenant inventory is retrieved; otherwise report the failure.',
         "LIVE_F5_OK",
     ),
     "firecrawl": (
@@ -56,7 +64,9 @@ def live_prompt(service: str) -> str:
     """Request fresh execution and an unambiguous final result for each sample."""
     prompt, marker = LIVE[service]
     return (
-        prompt + "\n\nThis is a new acceptance sample: execute the tools now; previous "
+        prompt
+        + "\n\nExecute the provided commands as written; do not add output-processing code. "
+        "This is a new acceptance sample: execute the tools now; previous "
         "results do not count. After all requested operations succeed, your final "
         f"answer must be exactly {marker}, with no explanation or formatting. "
         "On failure, describe the failure instead of emitting the success marker."
@@ -272,6 +282,9 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
         "candidateVersion": opts.expected_version,
         "imageId": identity["Id"],
         "architecture": identity["Architecture"],
+        "systemPromptSha256": hashlib.sha256(
+            ACCEPTANCE_SYSTEM_PROMPT.encode()
+        ).hexdigest(),
         "samples": samples,
     }
     try:
@@ -319,6 +332,8 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
                         "--no-memories",
                         "--no-title",
                         "--no-lsp",
+                        "--append-system-prompt",
+                        ACCEPTANCE_SYSTEM_PROMPT,
                         "--model",
                         selector,
                         prompt,
