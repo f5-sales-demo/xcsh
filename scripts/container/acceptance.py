@@ -55,7 +55,7 @@ LIVE = {
         "LIVE_GCLOUD_OK",
     ),
     "f5": (
-        'Read the F5 API catalog to verify GET /web/namespaces, then use bash to execute exactly: base="${XCSH_API_URL%/}"; case "$base" in */api) ;; *) base="$base/api" ;; esac; curl --fail --silent --show-error --max-time 60 --header "Authorization: APIToken $XCSH_API_TOKEN" "$base/web/namespaces". Inspect the unmodified JSON inventory without printing the token or adding output-processing code. Do not create or modify resources. End with LIVE_F5_OK on its own last line only after authorized tenant inventory is retrieved; otherwise report the failure.',
+        "Read the F5 API catalog to verify namespace inventory, then use the native xcsh_api tool with method GET and path /api/web/namespaces. The configured environment credentials are intentionally supplied without activating a saved context. Do not initiate login or activate another context. Inspect the returned JSON inventory. Do not create or modify resources. End with LIVE_F5_OK on its own last line only after authorized tenant inventory is retrieved; otherwise report the failure.",
         "LIVE_F5_OK",
     ),
     "firecrawl": (
