@@ -11,7 +11,8 @@ spec = importlib.util.spec_from_file_location(
     "acceptance",
     Path(__file__).resolve().parents[1] / "scripts/container/acceptance.py",
 )
-assert spec is not None and spec.loader is not None
+assert spec is not None
+assert spec.loader is not None
 acceptance = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(acceptance)
 
