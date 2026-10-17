@@ -30,7 +30,10 @@ test("required print prompts execute a tool once and allow the final model turn"
 		getToolChoice: () => queue.nextToolChoice(),
 		streamFn: (_model, _context, options) => {
 			choices.push(options?.toolChoice);
-			const forced = options?.toolChoice === "required";
+			const latest = _context.messages.at(-1);
+			const corrective =
+				latest?.role === "user" && JSON.stringify(latest.content).includes("previous reply did not execute");
+			const forced = options?.toolChoice === "required" || corrective;
 			const message: AssistantMessage = {
 				role: "assistant",
 				api: model.api,
@@ -86,10 +89,19 @@ test("required print prompts execute a tool once and allow the final model turn"
 	expect(await runPrintMode(session, { mode: "json", initialMessage: "ordinary text request" })).toBe(0);
 	expect(executions).toBe(2);
 	expect(choices.at(-1)).toBeUndefined();
+	const automaticOnly = { ...model, compat: { ...model.compat, supportsToolChoice: false } };
+	(session as unknown as { model: typeof model }).model = automaticOnly;
+	agent.setModel(automaticOnly);
+	const start = choices.length;
+	expect(
+		await runPrintMode(session, { mode: "json", requireToolCall: true, initialMessage: "automatic-only provider" }),
+	).toBe(0);
+	expect(executions).toBe(3);
+	expect(choices.slice(start)).toEqual([undefined, undefined, undefined]);
 });
 
 test("required print mode rejects a provider that answers without executing tools", async () => {
-	let invoked = false;
+	let invoked = 0;
 	const session = {
 		sessionManager: { getHeader: () => null, ensureOnDisk: async () => {} },
 		model: undefined,
@@ -99,10 +111,10 @@ test("required print mode rejects a provider that answers without executing tool
 		toolChoiceQueue: new ToolChoiceQueue(),
 		subscribe: () => () => {},
 		prompt: async () => {
-			invoked = true;
+			invoked++;
 		},
 		state: { messages: [] },
 	} as unknown as AgentSession;
 	expect(await runPrintMode(session, { mode: "json", requireToolCall: true, initialMessage: "fixture" })).toBe(1);
-	expect(invoked).toBe(true);
+	expect(invoked).toBe(3);
 });

@@ -214,13 +214,29 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 	});
 	const sendPrompt = async (message: string, images?: ImageContent[]) => {
 		const before = toolCalls;
+		const requireNextCall = () => {
+			if (session.model?.compat?.supportsToolChoice !== false) {
+				session.toolChoiceQueue.pushOnce("required", { label: "print-required-tool", now: true });
+			}
+		};
 		if (options.requireToolCall) {
 			if (session.getActiveToolNames().length === 0) {
 				throw new Error("--require-tool-call needs at least one active tool");
 			}
-			session.toolChoiceQueue.pushOnce("required", { label: "print-required-tool", now: true });
+			requireNextCall();
 		}
 		await session.prompt(message, { images });
+		for (let correction = 1; options.requireToolCall && toolCalls === before && correction <= 2; correction++) {
+			const last = session.state.messages.at(-1);
+			if (last?.role === "assistant" && (last.stopReason === "error" || last.stopReason === "aborted")) break;
+			process.stderr.write(`No fresh tool call observed; requesting execution (${correction}/2)\n`);
+			requireNextCall();
+			await session.prompt(
+				"Your previous reply did not execute any tools in this invocation. Execute the original requested " +
+					"operations now using actual tools; previous results do not count. Return the original success marker " +
+					"only after the requested operations succeed. If execution is unavailable or fails, report that failure.",
+			);
+		}
 		if (options.requireToolCall && toolCalls === before) missingRequiredToolCall = true;
 	};
 
