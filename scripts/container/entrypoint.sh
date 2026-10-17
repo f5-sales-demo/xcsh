@@ -2,7 +2,8 @@
 set -euo pipefail
 umask 077
 # Gateway PIDs and locks belong to this container process namespace.
-export XCSH_PYTHON_GATEWAY_DIR="$(mktemp -d /tmp/xcsh-python-gateway.XXXXXX)"
+XCSH_PYTHON_GATEWAY_DIR="$(mktemp -d /tmp/xcsh-python-gateway.XXXXXX)"
+export XCSH_PYTHON_GATEWAY_DIR
 export PUPPETEER_PROXY="${PUPPETEER_PROXY:-${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy:-}}}}}"
 python3 /opt/xcsh/state.py
 # Explicit portable mounts are copied once so vendor CLIs can refresh private state.
