@@ -65,7 +65,7 @@ async function allocatePort(): Promise<number> {
 }
 
 function getGatewayDir(): string {
-	return path.join(getAgentDir(), GATEWAY_DIR_NAME);
+	return process.env.XCSH_PYTHON_GATEWAY_DIR || path.join(getAgentDir(), GATEWAY_DIR_NAME);
 }
 
 function getGatewayInfoPath(): string {

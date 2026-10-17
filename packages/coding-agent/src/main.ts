@@ -780,8 +780,12 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 		stdinContent: pipedInput,
 	});
 	const autoPrint = pipedInput !== undefined && !parsedArgs.print && parsedArgs.mode === undefined;
-	const isInteractive = !parsedArgs.print && !autoPrint && parsedArgs.mode === undefined;
+	const isInteractive =
+		!parsedArgs.print && !parsedArgs.requireToolCall && !autoPrint && parsedArgs.mode === undefined;
 	const mode = parsedArgs.mode || "text";
+	if (parsedArgs.requireToolCall && mode !== "text" && mode !== "json") {
+		throw new Error("--require-tool-call supports text and JSON output modes");
+	}
 
 	modelRegistry.refreshInBackground();
 
@@ -1144,6 +1148,7 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 			messages: parsedArgs.messages,
 			initialMessage,
 			initialImages,
+			requireToolCall: parsedArgs.requireToolCall,
 		});
 		await session.dispose();
 		stopThemeWatcher();

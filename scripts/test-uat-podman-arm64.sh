@@ -82,7 +82,7 @@ JSON
     exit 0
   fi
   if [ "$entrypoint" = "xcsh" ] && printf '%s\n' "$*" | grep -Fq -- "--version"; then
-    echo "${FAKE_XCSH_VERSION:-xcsh/20.15.0}"
+    echo "${FAKE_XCSH_VERSION:-xcsh/23.5.2}"
     exit 0
   fi
   if [[ "$command" == *"--list-models"* ]]; then
@@ -145,7 +145,7 @@ run_harness() {
     FAKE_PODMAN_STATE="$test_root/state" \
     LITELLM_BASE_URL="https://litellm.invalid" \
     LITELLM_API_KEY="test-secret-never-log" \
-    bash "$harness" "$@" --report "$output_file"
+    bash "$harness" --image "ghcr.io/f5-sales-demo/xcsh@sha256:d3e35ebe9fb889fbbf8f9216ac2e62987f72704b0e3387234b0b677fa8a56c95" --expected-version 23.5.2 "$@" --report "$output_file"
 }
 echo "[1/10] Six caller-supplied fixture selectors pass independently."
 : >"$test_root/podman.log"
@@ -211,6 +211,15 @@ if env -u LITELLM_API_KEY PATH="$fake_bin:$PATH" FAKE_PODMAN_LOG="$test_root/pod
   LITELLM_BASE_URL="https://litellm.invalid" bash "$harness" --model "Probe=fixture-gpt/sol-tier" \
   --report "$test_root/missing-key.json" >/dev/null 2>&1; then
   echo "Expected missing-key failure." >&2
+  exit 1
+fi
+
+if FAKE_XCSH_VERSION=xcsh/23.5.1 run_harness "$test_root/wrong-version.json" --runs 1 --warmups 0 --model "Sol=fixture-gpt/sol-tier" >/dev/null 2>&1; then
+  echo "Expected candidate-version rejection." >&2
+  exit 1
+fi
+if run_harness "$test_root/mutable.json" --image ghcr.io/f5-sales-demo/xcsh:latest --runs 1 --warmups 0 --model "Sol=fixture-gpt/sol-tier" >/dev/null 2>&1; then
+  echo "Expected mutable-image rejection." >&2
   exit 1
 fi
 

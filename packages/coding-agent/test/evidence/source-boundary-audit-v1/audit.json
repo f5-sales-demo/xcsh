@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "d2a148341b165955175ba520ce1847e227bbc6cb",
-  "fingerprint": "6fcfe5d4936ee107fb47e01c3246b77e589b4840c0e66ad8d2f9190431ad1dd5",
+  "revision": "12a6ab91aadcfd729926e9eb95dbc4dfef98995f",
+  "fingerprint": "31c31b4bc7ad9cc72a23bdf4cc4da37b09e5e508a12257f6c8548058095f8123",
   "counts": {
     "total": 243,
     "components": 101,
@@ -3795,7 +3795,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "1dbd91bab418b6ac44b07eb3c49336b882cba9d6c891aa09476d7971ad7d6675",
+      "sha256": "e8d28f0778179840856fa15ade94b17490aab5f6989941b200763aaf8cf7abd3",
       "exports": [
         "PrintModeOptions",
         "buildJsonAgentEventLine",
@@ -3810,6 +3810,7 @@
       "directTests": [
         "packages/coding-agent/test/modes/print-mode-json-events.test.ts",
         "packages/coding-agent/test/modes/print-mode-json-header.test.ts",
+        "packages/coding-agent/test/modes/print-mode-required-tool.test.ts",
         "packages/coding-agent/test/modes/print-mode-result.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/print-mode.ts is individually classified as machine-protocol-contract in the protocols domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -4459,7 +4460,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "1354be674f8dc0c062d9f439f10000dc19e6a7c03005ce1bbe3849c8d6e02bcd",
+      "sha256": "7591d62eed42e6806db189fcdf106d25bc783e92a3d84177cb17178cbd73a179",
       "exports": [
         "AssistantCheckpointEntry",
         "AutomaticTitleState",

@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+"""Rootless Podman launcher; argv forwarding never passes through a shell."""
+
+# pylint: disable=invalid-name  # The public executable is named xcsh-podman.
+
+import argparse
+import hashlib
+import json
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any, Literal, overload
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from container.acceptance import acceptance
+
+KNOWN_ENV = [
+    "LITELLM_BASE_URL",
+    "LITELLM_API_KEY",
+    "GH_TOKEN",
+    "GH_HOST",
+    "GITHUB_TOKEN",
+    "GITLAB_TOKEN",
+    "GITLAB_HOST",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_SESSION_TOKEN",
+    "AWS_REGION",
+    "AWS_DEFAULT_REGION",
+    "AWS_PROFILE",
+    "AWS_CONFIG_FILE",
+    "AWS_SHARED_CREDENTIALS_FILE",
+    "AZURE_CLIENT_ID",
+    "AZURE_CLIENT_SECRET",
+    "AZURE_TENANT_ID",
+    "AZURE_SUBSCRIPTION_ID",
+    "SF_AUTH_URL",
+    "SF_ACCESS_TOKEN",
+    "SF_INSTANCE_URL",
+    "SF_CLIENT_ID",
+    "SF_USERNAME",
+    "SF_JWT_KEY_FILE",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    "CLOUDSDK_CORE_PROJECT",
+    "XCSH_API_URL",
+    "XCSH_API_TOKEN",
+    "XCSH_TENANT",
+    "FIRECRAWL_BASE_URL",
+    "FIRECRAWL_API_URL",
+    "FIRECRAWL_API_KEY",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "no_proxy",
+    "PUPPETEER_PROXY",
+]
+LOGIN_ARGUMENTS = 2
+
+SERVICES = {"github", "gitlab", "aws", "azure", "salesforce", "gcloud", "ssh"}
+
+
+@overload
+def call(argv: list[str], *, capture: Literal[True], **kwargs: Any) -> str: ...
+
+
+@overload
+def call(
+    argv: list[str], *, capture: Literal[False] = False, **kwargs: Any
+) -> None: ...
+
+
+def call(argv: list[str], *, capture: bool = False, **kwargs: Any) -> str | None:
+    """Execute a Podman argv without shell interpolation."""
+    if argv[0] != "podman":
+        msg = "Only Podman transport is supported"
+        raise ValueError(msg)
+    if capture:
+        kwargs["stdout"] = subprocess.PIPE
+    result = subprocess.run(  # noqa: S603 - validated Podman argv without a shell.
+        argv,
+        check=True,
+        text=True,
+        **kwargs,
+    )
+    return result.stdout if capture else None
+
+
+def setup(args: argparse.Namespace) -> None:
+    """Reuse or create a rootless AppleHV machine and verify connectivity."""
+    if platform.system() != "Darwin":
+        call(["podman", "info"], stdout=subprocess.DEVNULL)
+        return
+    machines = json.loads(
+        call(["podman", "machine", "list", "--format", "json"], capture=True)
+    )
+    selected = next((m for m in machines if m["Name"] == args.machine), None)
+    if selected is None and machines and args.machine == "xcsh":
+        selected = next((m for m in machines if m.get("Running")), machines[0])
+    name = selected["Name"] if selected else args.machine
+    if not selected:
+        call(
+            [
+                "podman",
+                "machine",
+                "init",
+                "--provider",
+                "applehv",
+                "--rootful=false",
+                "--cpus",
+                str(args.cpus),
+                "--memory",
+                str(args.memory),
+                "--disk-size",
+                str(args.disk_size),
+                name,
+            ]
+        )
+    if not selected or not selected.get("Running"):
+        call(["podman", "machine", "start", name], input="n\n")
+    # Address the selected machine explicitly, without changing another connection's default.
+    args.connection = name
+    info = json.loads(
+        call(["podman", "--connection", name, "info", "--format", "json"], capture=True)
+    )
+    if not info["host"]["security"]["rootless"]:
+        msg = "Selected Podman machine is rootful; select a rootless connection"
+        raise ValueError(msg)
+    if args.ca_cert:
+        # Guest-only trust update. No host sudo or privileged Mac helper.
+        with Path(args.ca_cert).open("rb") as certificate:
+            call(
+                [
+                    "podman",
+                    "machine",
+                    "ssh",
+                    "--username",
+                    "root",
+                    name,
+                    "install -d -m 0755 /etc/pki/ca-trust/source/anchors && cat > /etc/pki/ca-trust/source/anchors/xcsh-container.pem && update-ca-trust",
+                ],
+                stdin=certificate,
+            )
+    print("PASS: rootless Podman setup; host sudo and privileged helper were not used")
+
+
+def append_imports(args: argparse.Namespace, base: list[str], argv: list[str]) -> None:
+    """Add explicitly selected portable state and private certificate mounts."""
+    for credential in args.credential:
+        service, separator, source = credential.partition("=")
+        if (
+            not separator
+            or service not in SERVICES
+            or not Path(source).expanduser().is_dir()
+        ):
+            msg = "--credential requires SERVICE=portable-config-directory"
+            raise ValueError(msg)
+        argv += [
+            "--volume",
+            str(Path(source).expanduser().resolve()) + ":/imports/" + service + ":ro",
+        ]
+    if args.ca_cert:
+        if not Path(args.ca_cert).is_file():
+            msg = "Additional CA bundle unavailable"
+            raise ValueError(msg)
+        certificate = Path(args.ca_cert).read_text()
+        secret_name = "xcsh-ca-" + hashlib.sha256(certificate.encode()).hexdigest()[:24]
+        try:
+            call(
+                [*base, "secret", "inspect", secret_name],
+                capture=True,
+                stderr=subprocess.DEVNULL,
+            )
+        except subprocess.CalledProcessError:
+            call(
+                [*base, "secret", "create", secret_name, "-"],
+                capture=True,
+                input=certificate,
+            )
+        argv += [
+            "--secret",
+            secret_name
+            + ",type=mount,target=/imports/ca.pem,uid=1000,gid=1000,mode=0400",
+        ]
+    if args.import_native:
+        native = Path(args.import_native).expanduser().resolve()
+        for filename in ("models.yml", "config.yml"):
+            path = native / filename
+            if path.is_file():
+                argv += ["--volume", str(path) + ":/imports/native/" + filename + ":ro"]
+        if not (native / "models.yml").is_file():
+            msg = "Native provider configuration requires models.yml"
+            raise ValueError(msg)
+
+
+def run_options(args: argparse.Namespace) -> list[str]:
+    """Build explicit private mounts and rootless runtime arguments."""
+    base = ["podman"] + (["--connection", args.connection] if args.connection else [])
+    info = json.loads(call([*base, "info", "--format", "json"], capture=True))
+    if not info["host"]["security"]["rootless"]:
+        msg = "Rootless Podman is required"
+        raise ValueError(msg)
+    image = args.image or os.environ.get("XCSH_IMAGE")
+    if not image:
+        msg = "Select --image REF or XCSH_IMAGE; published acceptance requires an immutable digest"
+        raise ValueError(msg)
+    workspace = Path(args.workspace).expanduser().resolve()
+    if not workspace.is_dir() or not os.access(workspace, os.W_OK):
+        msg = "Selected workspace must be an existing writable directory"
+        raise ValueError(msg)
+    state = args.state
+    if "/" in state:
+        directory = Path(state).expanduser().resolve()
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if directory.stat().st_uid != os.getuid() or directory.stat().st_mode & 0o077:
+            msg = "State directory must belong to you with mode 0700"
+            raise ValueError(msg)
+        state = str(directory)
+    elif not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", state):
+        msg = "Invalid private state volume name"
+        raise ValueError(msg)
+    argv = [
+        *base,
+        "run",
+        "--rm",
+        "--init",
+        "--read-only",
+        "--cap-drop=all",
+        "--security-opt=no-new-privileges",
+        "--userns=keep-id:uid=1000,gid=1000",
+        "--user=1000:1000",
+        "--tmpfs=/tmp:rw,exec,nosuid,nodev,size=1g,mode=1777",
+        "--shm-size=256m",
+        "--volume",
+        state + ":/home/xcsh:z,U",
+        "--volume",
+        str(workspace) + ":/workspace:rw",
+        "--workdir=/workspace",
+    ]
+    if (
+        getattr(args, "command", "run") != "test"
+        and sys.stdin.isatty()
+        and sys.stdout.isatty()
+    ):
+        argv += ["--interactive", "--tty"]
+    elif args.stdin:
+        argv += ["--interactive"]
+    for name in dict.fromkeys(KNOWN_ENV + args.env):
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            msg = "--env accepts an environment variable name"
+            raise ValueError(msg)
+        if name in os.environ:
+            argv += ["--env", name]
+    for filename in args.env_file:
+        if not Path(filename).is_file():
+            msg = "Environment file unavailable"
+            raise ValueError(msg)
+        argv += ["--env-file", str(Path(filename).resolve())]
+    for mount in args.mount:
+        argv += ["--volume", mount]
+    append_imports(args, base, argv)
+    return [*argv, image]
+
+
+def main() -> None:
+    """Dispatch setup, authentication, acceptance, or unchanged xcsh arguments."""
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        epilog="Launcher options precede COMMAND. xcsh options follow run and are forwarded unchanged.",
+    )
+    parser.add_argument("--image")
+    parser.add_argument(
+        "--connection", default=os.environ.get("XCSH_PODMAN_CONNECTION", "")
+    )
+    parser.add_argument("--machine", default="xcsh")
+    parser.add_argument("--cpus", type=int, default=4)
+    parser.add_argument("--memory", type=int, default=8192, help="VM RAM in MiB")
+    parser.add_argument(
+        "--disk-size", type=int, default=40, help="Sparse guest disk in GiB"
+    )
+    parser.add_argument("--workspace", default=str(Path.cwd()))
+    parser.add_argument(
+        "--state", default=os.environ.get("XCSH_CONTAINER_STATE", "xcsh-private-state")
+    )
+    parser.add_argument("--credential", action="append", default=[])
+    parser.add_argument("--env", action="append", default=[])
+    parser.add_argument("--env-file", action="append", default=[])
+    parser.add_argument("--mount", action="append", default=[])
+    parser.add_argument("--ca-cert")
+    parser.add_argument("--import-native", metavar="AGENT_CONFIG_DIR")
+    parser.add_argument("--stdin", action="store_true")
+    parser.add_argument("command", choices=["setup", "run", "auth", "test"])
+    parser.add_argument("arguments", nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    executable = shutil.which("podman")
+    if executable is None:
+        msg = "Podman is not installed"
+        raise ValueError(msg)
+    if args.command == "setup":
+        if args.arguments or min(args.cpus, args.memory, args.disk_size) < 1:
+            msg = "Provide positive setup resources before setup"
+            raise ValueError(msg)
+        setup(args)
+        return
+    remaining = args.arguments
+    if remaining[:1] == ["--"]:
+        remaining = remaining[1:]
+    if args.command == "auth":
+        if len(remaining) < LOGIN_ARGUMENTS or remaining[0] != "login":
+            msg = "Usage: auth login SERVICE [--noninteractive]"
+            raise ValueError(msg)
+        remaining = ["container-auth", *remaining[1:]]
+    elif args.command == "test":
+        sys.exit(0 if acceptance(run_options(args), args.workspace, remaining) else 1)
+    elif os.environ.get("XCSH_MODEL") and not any(
+        value == "--model" or value.startswith("--model=") for value in remaining
+    ):
+        remaining = ["--model", os.environ["XCSH_MODEL"], *remaining]
+    argv = run_options(args) + remaining
+    os.execvp(executable, argv)  # noqa: S606 - exec preserves terminal signals; fixed Podman executable.
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (
+        ValueError,
+        OSError,
+        subprocess.CalledProcessError,
+        json.JSONDecodeError,
+    ) as error:
+        print(
+            str(error)
+            if isinstance(error, ValueError)
+            else "Podman operation failed; inspect machine connectivity and selected inputs",
+            file=sys.stderr,
+        )
+        sys.exit(1)

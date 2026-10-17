@@ -29,7 +29,7 @@ jobs:
     needs: trust-gate
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: xcsh-container-build
-    timeout-minutes: 30
+    timeout-minutes: 120
     permissions:
       contents: read
     steps:
@@ -46,18 +46,39 @@ jobs:
           use: true
           cleanup: false
 
-      - name: Test native Alpine container
+      - name: Test native marketplace container
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           bash ./scripts/tdd-docker.sh
+
+  container-build-arm64:
+    name: container-build (native-arm64)
+    needs: trust-gate
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - name: Test native ARM64 marketplace container
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          XCSH_TEST_PLATFORM: linux/arm64
+          XCSH_EXPECTED_MACHINE: aarch64
+        run: bash ./scripts/tdd-docker.sh
 
   podman-uat-harness:
     name: podman-uat-harness
     needs: trust-gate
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: xcsh-container-build
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -66,22 +87,26 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Test ARM64 Podman UAT harness
-        run: bash ./scripts/test-uat-podman-arm64.sh
+      - name: Test ARM64 Podman UAT harness and state contracts
+        run: |
+          bash ./scripts/test-uat-podman-arm64.sh
+          python3 -m unittest tests.test_container_state tests.test_container_launcher tests.test_container_acceptance tests.test_container_workflow_contract
 
   container-test:
     name: container-test
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-    needs: [trust-gate, container-build, podman-uat-harness]
+    needs: [trust-gate, container-build, container-build-arm64, podman-uat-harness]
     runs-on: xcsh-container-build
     timeout-minutes: 5
     steps:
       - name: Require architecture and harness tests
         env:
           CONTAINER_BUILD_RESULT: ${{ needs.container-build.result }}
+          ARM64_BUILD_RESULT: ${{ needs.container-build-arm64.result }}
           PODMAN_HARNESS_RESULT: ${{ needs.podman-uat-harness.result }}
         run: |
           test "$CONTAINER_BUILD_RESULT" = success
+          test "$ARM64_BUILD_RESULT" = success
           test "$PODMAN_HARNESS_RESULT" = success
 
   publish-ghcr-amd64:
@@ -130,7 +155,7 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
-          file: Dockerfile.alpine
+          file: Dockerfile.debian
           secrets: |
             github_token=${{ secrets.GITHUB_TOKEN }}
           target: runtime
@@ -154,6 +179,9 @@ jobs:
           test "$(uname -m)" = "$EXPECTED_MACHINE"
           test "$(docker run --rm --entrypoint uname "$IMAGE@$DIGEST" -m)" = "$EXPECTED_MACHINE"
           test "$(docker run --rm "$IMAGE@$DIGEST" --version)" = "xcsh/${GITHUB_REF_NAME#v}"
+          docker run --rm --read-only --cap-drop all --security-opt=no-new-privileges \
+            --tmpfs /home/xcsh:rw,exec,nosuid,nodev,size=512m,mode=0700,uid=1000,gid=1000 \
+            --tmpfs /tmp:rw,exec,nosuid,nodev,size=1g,mode=1777 "$IMAGE@$DIGEST" container-test
           receipt_dir="$RUNNER_TEMP/ghcr-digest-amd64"
           mkdir -p "$receipt_dir"
           jq -n \
@@ -213,7 +241,7 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
-          file: Dockerfile.alpine
+          file: Dockerfile.debian
           secrets: |
             github_token=${{ secrets.GITHUB_TOKEN }}
           target: runtime
@@ -237,6 +265,9 @@ jobs:
           test "$(uname -m)" = "$EXPECTED_MACHINE"
           test "$(docker run --rm --entrypoint uname "$IMAGE@$DIGEST" -m)" = "$EXPECTED_MACHINE"
           test "$(docker run --rm "$IMAGE@$DIGEST" --version)" = "xcsh/${GITHUB_REF_NAME#v}"
+          docker run --rm --read-only --cap-drop all --security-opt=no-new-privileges \
+            --tmpfs /home/xcsh:rw,exec,nosuid,nodev,size=512m,mode=0700,uid=1000,gid=1000 \
+            --tmpfs /tmp:rw,exec,nosuid,nodev,size=1g,mode=1777 "$IMAGE@$DIGEST" container-test
           receipt_dir="$RUNNER_TEMP/ghcr-digest-arm64"
           mkdir -p "$receipt_dir"
           jq -n \

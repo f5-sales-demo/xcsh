@@ -242,6 +242,11 @@ Refer to the [Office add-in development guide](packages/office-pane/DEVELOPING.m
 
 ## Commit conventions
 
+The local pre-commit hook requires ShellCheck and shfmt 3.13.1 for staged shell sources.
+Run `python3 scripts/check_shell.py` for a full tracked-shell audit before pushing.
+Repair existing findings locally; missing linters and failed checks block commits.
+
+
 This repository strictly enforces [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```text

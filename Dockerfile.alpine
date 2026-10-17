@@ -19,11 +19,14 @@ ARG ZIG_AMD64_SHA256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52b
 ARG ZIG_ARM64_SHA256=ea4b09bfb22ec6f6c6ceac57ab63efb6b46e17ab08d21f69f3a48b38e1534f17
 
 # hadolint ignore=DL3018
-RUN apk add --no-cache ca-certificates curl tar unzip xz
+RUN apk add --no-cache ca-certificates curl jq tar unzip xz
+
+COPY scripts/container/build-trust.sh /opt/build-trust.sh
 
 WORKDIR /tmp/downloads
 
-RUN case "${TARGETARCH}" in \
+RUN --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && case "${TARGETARCH}" in \
       amd64) bun_arch=x64-baseline; bun_sha256="${BUN_AMD64_SHA256}" ;; \
       arm64) bun_arch=aarch64; bun_sha256="${BUN_ARM64_SHA256}" ;; \
       *) echo "Unsupported TARGETARCH for Bun: ${TARGETARCH}" >&2; exit 1 ;; \
@@ -35,7 +38,8 @@ RUN case "${TARGETARCH}" in \
     unzip -q bun.zip && \
     install -D -m 0755 "bun-linux-${bun_arch}/bun" /opt/bun/bin/bun
 
-RUN case "${TARGETARCH}" in \
+RUN --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && case "${TARGETARCH}" in \
       amd64) gcloud_arch=x86_64; gcloud_sha256="${GCLOUD_AMD64_SHA256}" ;; \
       arm64) gcloud_arch=arm; gcloud_sha256="${GCLOUD_ARM64_SHA256}" ;; \
       *) echo "Unsupported TARGETARCH for Google Cloud CLI: ${TARGETARCH}" >&2; exit 1 ;; \
@@ -47,7 +51,8 @@ RUN case "${TARGETARCH}" in \
     mkdir -p /opt && \
     tar -xzf gcloud.tar.gz -C /opt
 
-RUN case "${TARGETARCH}" in \
+RUN --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && case "${TARGETARCH}" in \
       amd64) zig_arch=x86_64; zig_sha256="${ZIG_AMD64_SHA256}" ;; \
       arm64) zig_arch=aarch64; zig_sha256="${ZIG_ARM64_SHA256}" ;; \
       *) echo "Unsupported TARGETARCH for Zig: ${TARGETARCH}" >&2; exit 1 ;; \
@@ -59,6 +64,11 @@ RUN case "${TARGETARCH}" in \
     mkdir -p /opt/zig && \
     tar -xJf zig.tar.xz --strip-components=1 -C /opt/zig
 
+RUN jq -n \
+    --arg bun "$(sha256sum /tmp/downloads/bun.zip | cut -d ' ' -f 1)" \
+    --arg gcloud "$(sha256sum /tmp/downloads/gcloud.tar.gz | cut -d ' ' -f 1)" \
+    '{bun: $bun, gcloud: $gcloud}' > /opt/tool-download-checksums.json
+
 FROM ${BUILDER_IMAGE} AS builder
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -68,8 +78,11 @@ ARG RUST_TOOLCHAIN=nightly-2026-09-03
 ARG RUSTUP_INIT_AMD64_SHA256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
 ARG RUSTUP_INIT_ARM64_SHA256=15f6e4ce9f583b929c996c91562bad6d4454f3281de858b02cdfdef615fac433
 
+COPY scripts/container/build-trust.sh /opt/build-trust.sh
+
 # hadolint ignore=DL3008
-RUN apt-get update && \
+RUN --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && apt-get update && \
     apt-get install -y --no-install-recommends \
       build-essential ca-certificates curl git libstdc++6 python3 && \
     rm -rf /var/lib/apt/lists/* && \
@@ -97,7 +110,15 @@ ENV CARGO_HOME=/root/.cargo \
     RUSTUP_TOOLCHAIN=nightly-2026-09-03 \
     PATH="/root/.cargo/bin:/opt/bun/bin:/opt/zig:${PATH}"
 WORKDIR /src
-COPY . .
+COPY package.json bun.lock bunfig.toml Cargo.toml Cargo.lock rust-toolchain.toml tsconfig*.json biome.json ./
+COPY packages/ packages/
+COPY crates/ crates/
+COPY scripts/*.ts scripts/
+COPY tools/ tools/
+COPY patches/ patches/
+COPY assets/ assets/
+COPY resources/ resources/
+COPY docs/ docs/
 
 ARG XCSH_BUILD_COMMIT=""
 ARG XCSH_BUILD_BRANCH=""
@@ -106,7 +127,8 @@ ENV XCSH_BUILD_COMMIT=${XCSH_BUILD_COMMIT} \
     XCSH_BUILD_BRANCH=${XCSH_BUILD_BRANCH} \
     XCSH_BUILD_TAG=${XCSH_BUILD_TAG}
 
-RUN bun install --frozen-lockfile --ignore-scripts && \
+RUN --mount=type=secret,id=corporate_ca --mount=type=cache,id=xcsh-native-${TARGETARCH},target=/src/target,sharing=locked \
+    . /opt/build-trust.sh && bun install --frozen-lockfile --ignore-scripts && \
     bun --cwd=packages/coding-agent run generate-docs-index && \
     case "${TARGETARCH}" in \
       amd64) export TARGET_VARIANT=baseline ;; \
@@ -115,14 +137,16 @@ RUN bun install --frozen-lockfile --ignore-scripts && \
     esac && \
     bun --cwd=packages/natives run build
 
-RUN --mount=type=secret,id=github_token \
+RUN --mount=type=secret,id=github_token --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && \
     GH_TOKEN="$(cat /run/secrets/github_token 2>/dev/null || true)" \
     bun --cwd=packages/coding-agent run build && \
     test -x packages/coding-agent/dist/xcsh
 
 # Preserve the target architecture's glibc interpreter paths while exposing a
 # single architecture-neutral copy source to the runtime stage.
-RUN case "${TARGETARCH}" in \
+RUN --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && case "${TARGETARCH}" in \
       amd64) \
         gnu_triplet=x86_64-linux-gnu; \
         loader=ld-linux-x86-64.so.2; \
@@ -138,70 +162,59 @@ RUN case "${TARGETARCH}" in \
     install -D -m 0755 \
       "/lib/${gnu_triplet}/${loader}" \
       "/opt/glibc-root${loader_destination}" && \
-    for library in libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 libgcc_s.so.1; do \
+    for library in libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 librt.so.1 libutil.so.1 libgcc_s.so.1 libstdc++.so.6; do \
       install -D -m 0755 \
         "/lib/${gnu_triplet}/${library}" \
         "/opt/glibc-root/lib/${gnu_triplet}/${library}"; \
     done
 
+RUN --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && mkdir -p /opt/xcsh && bun packages/coding-agent/scripts/container-materialize.ts /opt/xcsh/seed
+
 FROM ${ALPINE_IMAGE} AS runtime
-
-ARG USER_NAME=xcsh
-ARG USER_UID=1000
-ARG USER_GID=1000
-ARG AZURE_CLI_VERSION=2.90.0
-ARG AWS_CLI_VERSION=1.46.1
-ARG SALESFORCE_CLI_VERSION=2.151.6
-
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
-
+ARG TARGETARCH
+ARG AZURE_CLI_VERSION=2.90.0
+ARG SALESFORCE_CLI_VERSION=2.151.6
+ARG XCSH_BUILD_COMMIT=""
+ARG XCSH_BUILD_TAG=""
+COPY scripts/container/build-trust.sh /opt/build-trust.sh
 # hadolint ignore=DL3018
-RUN apk add --no-cache \
-      bash \
-      ca-certificates \
-      coreutils-env \
-      curl \
-      git \
-      github-cli \
-      jq \
-      libstdc++ \
-      nodejs \
-      npm \
-      py3-pip \
-      python3 && \
-    python3 -m venv /opt/cloud-cli && \
-    /opt/cloud-cli/bin/pip install --no-cache-dir \
-      "awscli==${AWS_CLI_VERSION}" \
-      "azure-cli==${AZURE_CLI_VERSION}" && \
-    npm install --global "@salesforce/cli@${SALESFORCE_CLI_VERSION}" && \
-    npm cache clean --force && \
-    addgroup -g "${USER_GID}" "${USER_NAME}" && \
-    adduser -D -u "${USER_UID}" -G "${USER_NAME}" \
-      -h "/home/${USER_NAME}" -s /bin/bash "${USER_NAME}" && \
-    install -d -o "${USER_UID}" -g "${USER_GID}" \
-      "/home/${USER_NAME}/.azure-host" \
-      "/home/${USER_NAME}/.aws-host" \
-      "/home/${USER_NAME}/.config/gcloud-host" \
-      "/home/${USER_NAME}/.config/gh-host" \
-      "/home/${USER_NAME}/.sfdx-host"
-
-# Bun and the embedded N-API addon use glibc. Keep their pinned loader and
-# shared libraries isolated from Alpine's musl search paths.
+RUN apk add --no-cache bash ca-certificates coreutils-env curl git github-cli jq ripgrep openssh-client chromium nss-tools \
+    python3 py3-pip unzip xz libstdc++ && python3 -m venv /opt/cloud-cli
 COPY --from=builder /opt/glibc-root/ /
-
+COPY scripts/container/download-tools.sh /tmp/download-tools.sh
+RUN --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && bash /tmp/download-tools.sh && rm /tmp/download-tools.sh
+ENV PATH="/opt/cloud-cli/bin:/opt/google-cloud-sdk/bin:/opt/bun/bin:/opt/node/bin:${PATH}"
+RUN --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && python3 -m venv /opt/cloud-cli && /opt/cloud-cli/bin/pip install --no-cache-dir "azure-cli==${AZURE_CLI_VERSION}" && \
+    python3 -m venv /opt/xcsh/python-env && /opt/xcsh/python-env/bin/pip install --no-cache-dir \
+    jupyter_kernel_gateway==3.0.1 ipykernel==6.30.1 && \
+    npm install --global "@salesforce/cli@${SALESFORCE_CLI_VERSION}" && npm cache clean --force
 COPY --from=tools /opt/bun /opt/bun
 COPY --from=tools /opt/google-cloud-sdk /opt/google-cloud-sdk
-COPY --from=tools /opt/zig /opt/zig
+COPY --from=tools /opt/tool-download-checksums.json /opt/xcsh/base-download-checksums.json
 COPY --from=builder /src/packages/coding-agent/dist/xcsh /usr/local/bin/xcsh
-
-ENV CLOUDSDK_PYTHON=/usr/bin/python3 \
-    HOME=/home/xcsh \
-    PATH="/opt/cloud-cli/bin:/opt/google-cloud-sdk/bin:/opt/bun/bin:/opt/zig:${PATH}"
-
+COPY --from=builder /opt/xcsh/seed /opt/xcsh/seed
+COPY --from=builder /opt/xcsh/plugin-manifest.json /opt/xcsh/plugin-manifest.json
+COPY scripts/container/ /opt/xcsh/
+RUN --mount=type=secret,id=corporate_ca \
+    . /opt/build-trust.sh && AZURE_EXTENSION_DIR=/opt/xcsh/seed/azure-extensions az extension add --yes \
+    --source /opt/xcsh/resource_graph-2.1.1-py2.py3-none-any.whl && \
+    rm /opt/xcsh/resource_graph-2.1.1-py2.py3-none-any.whl && \
+    addgroup -g 1000 xcsh && adduser -D -u 1000 -G xcsh -h /home/xcsh -s /bin/bash xcsh && \
+    mkdir -p /workspace /imports/native /imports/github /imports/gitlab /imports/aws /imports/azure \
+    /imports/salesforce /imports/gcloud /imports/ssh && chown 1000:1000 /home/xcsh /workspace && \
+    python3 /opt/xcsh/manifest.py && rm -rf /root/.cache /root/.npm /tmp/*
+ENV HOME=/home/xcsh CLOUDSDK_PYTHON=/usr/bin/python3 \
+    PYTHONDONTWRITEBYTECODE=1 PUPPETEER_SKIP_DOWNLOAD=true \
+    AZURE_EXTENSION_DIR=/home/xcsh/.xcsh/azure-extensions \
+    AZURE_EXTENSION_USE_DYNAMIC_INSTALL=no SF_AUTOUPDATE_DISABLE=true \
+    XCSH_CONTAINER=1
+LABEL org.opencontainers.image.revision="${XCSH_BUILD_COMMIT}" \
+      org.opencontainers.image.version="${XCSH_BUILD_TAG}"
 WORKDIR /workspace
-USER ${USER_NAME}
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD ["xcsh", "--version"]
-
-ENTRYPOINT ["xcsh"]
+USER 1000:1000
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD ["xcsh", "--version"]
+ENTRYPOINT ["/opt/xcsh/entrypoint.sh"]

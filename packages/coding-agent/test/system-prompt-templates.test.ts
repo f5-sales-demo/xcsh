@@ -435,6 +435,24 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("never real victims or third-party targets");
 	});
 
+	test("progressive role preserves cloud and CRM operations with scoped attack restrictions", async () => {
+		const rendered = await buildSystemPrompt({
+			loadingMode: "progressive",
+			cwd: os.tmpdir(),
+			contextFiles: [],
+			skills: [],
+			rules: [],
+			toolNames: ["bash"],
+		});
+		const role = rendered.match(/<role>([\s\S]*?)<\/role>/)?.[1] ?? "";
+		expect(role).toContain("cloud-provider CLIs");
+		expect(role).toContain("CRM");
+		expect(role).toContain("installed plugins");
+		expect(role).toContain("Attack simulation");
+		expect(role).toContain("never attack third-party or production systems");
+		expect(role).not.toContain("Never target third-party");
+	});
+
 	test("system prompt reframes behavior and stakes for SE risk (P4)", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();

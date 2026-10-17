@@ -144,6 +144,10 @@ describe("AgentSession before_agent_start attribution fallback", () => {
 		expect(injectedIndex).toBeGreaterThanOrEqual(0);
 		expect(promptIndex).toBeGreaterThan(injectedIndex);
 		expect(textBlocks.at(-1)).toBe(promptText);
+		expect(textBlocks.slice(0, injectedIndex).some(text => text.includes("Background context from xcsh"))).toBe(true);
+		const replay = convertToLlm(session.sessionManager.buildSessionContext().messages).flatMap(messageTextBlocks);
+		expect(replay.some(text => text.includes("Background context from xcsh"))).toBe(true);
+		expect(replay.indexOf(promptText)).toBeGreaterThan(replay.indexOf(injectedText));
 	});
 
 	it("defaults before_agent_start message attribution to user for user prompts", async () => {

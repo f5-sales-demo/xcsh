@@ -1,10 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-readonly DEFAULT_IMAGE="ghcr.io/f5-sales-demo/xcsh@sha256:d3e35ebe9fb889fbbf8f9216ac2e62987f72704b0e3387234b0b677fa8a56c95"
+readonly DEFAULT_IMAGE=""
 readonly PROMPT='Reply with exactly `PONG` and nothing else.'
 
 image="$DEFAULT_IMAGE"
+expected_version=""
 runs=3
 warmups=1
 timeout_seconds=120
@@ -22,7 +23,8 @@ Usage: scripts/uat-podman-arm64.sh [options]
 Run native ARM64 acceptance tests against the published xcsh container.
 
 Options:
-  --image REF             Immutable image reference (default: v20.15.0 OCI index digest)
+  --image REF             Immutable candidate image reference (required)
+  --expected-version V    Exact candidate xcsh version (required)
   --runs N                Measured runs per model (default: 3)
   --warmups N             Warmup runs per model (default: 1)
   --timeout-seconds N     Maximum seconds for each model invocation (default: 120)
@@ -90,6 +92,11 @@ while [ "$#" -gt 0 ]; do
     image=$2
     shift 2
     ;;
+  --expected-version)
+    [ "$#" -ge 2 ] || die "--expected-version requires a value."
+    expected_version=$2
+    shift 2
+    ;;
   --runs)
     [ "$#" -ge 2 ] || die "--runs requires a value."
     runs=$2
@@ -129,6 +136,9 @@ while [ "$#" -gt 0 ]; do
     ;;
   esac
 done
+
+[[ "$image" =~ @sha256:[0-9a-f]{64}$ ]] || die "--image must select an immutable sha256 digest."
+[[ "$expected_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][a-zA-Z0-9.-]+)?$ ]] || die "--expected-version must specify the candidate version."
 
 require_positive_integer "$runs" "--runs"
 require_nonnegative_integer "$warmups" "--warmups"
@@ -184,9 +194,7 @@ image_architecture=$(podman image inspect --format '{{.Architecture}}' "$image")
   die "Resolved image architecture is $image_architecture, expected arm64."
 image_id=$(podman image inspect --format '{{.Id}}' "$image")
 repo_digests=$(podman image inspect --format '{{json .RepoDigests}}' "$image")
-if ! printf '%s' "$repo_digests" | jq -e 'type == "array"' >/dev/null 2>&1; then
-  repo_digests='[]'
-fi
+printf '%s' "$repo_digests" | jq -e --arg digest "${image##*@}" 'type == "array" and any(.[]; endswith("@" + $digest))' >/dev/null || die "Pulled image does not match the selected digest."
 
 base_run_options=(
   run
@@ -204,8 +212,8 @@ runtime_machine=$(podman "${base_run_options[@]}" --entrypoint uname "$image" -m
 [ "$runtime_machine" = "aarch64" ] ||
   die "Container runtime reports $runtime_machine, expected aarch64."
 xcsh_version=$(podman "${base_run_options[@]}" --entrypoint xcsh "$image" --version)
-[ "$xcsh_version" = "xcsh/20.15.0" ] ||
-  die "Container reports $xcsh_version, expected xcsh/20.15.0."
+[ "$xcsh_version" = "xcsh/$expected_version" ] ||
+  die "Container reports $xcsh_version, expected xcsh/$expected_version."
 
 podman_version=$(podman --version)
 failure_count=0
