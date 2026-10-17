@@ -2159,9 +2159,10 @@ export class ModelRegistry {
 		}
 
 		const headers: Record<string, string> = { ...(providerConfig.headers ?? {}) };
-		const apiKey =
-			this.#customProviderApiKeys.get(providerConfig.provider) ??
-			(await this.#peekApiKeyForProvider(providerConfig.provider));
+		const configuredApiKey = this.#customProviderApiKeys.get(providerConfig.provider);
+		const apiKey = configuredApiKey
+			? resolveApiKeyConfig(configuredApiKey)
+			: await this.#peekApiKeyForProvider(providerConfig.provider);
 		if (apiKey && apiKey !== DEFAULT_LOCAL_TOKEN && apiKey !== kNoAuth) {
 			headers.Authorization = `Bearer ${apiKey}`;
 		}

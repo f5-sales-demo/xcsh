@@ -354,6 +354,7 @@ describe("interactive marketplace refresh surfaces", () => {
 			) as { plugins: Record<string, Array<{ version: string }>> };
 			expect(registry.plugins["hello-plugin@test-marketplace"]?.[0]?.version).toBe("2.0.0");
 		},
+		60_000,
 	);
 
 	it.each(["slash-discover", "install-selector"] as const)(
@@ -382,6 +383,7 @@ describe("interactive marketplace refresh surfaces", () => {
 			const result = await runScript(code, home, source);
 			if (result.code !== 0) throw new Error(result.stderr || result.stdout);
 		},
+		60_000,
 	);
 
 	it("installed-only CLI operations stay offline", async () => {

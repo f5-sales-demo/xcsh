@@ -2101,6 +2101,42 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
+		test("resolves an environment credential before discovery and preserves the restarted catalog", async () => {
+			const previous = Bun.env.MODEL_REGISTRY_TEST_API_KEY;
+			Bun.env.MODEL_REGISTRY_TEST_API_KEY = "fixture-proxy-token";
+			try {
+				writeRawModelsJson({
+					"fixture-gateway": {
+						baseUrl: "https://proxy.example.com/api/v1",
+						apiKey: "MODEL_REGISTRY_TEST_API_KEY",
+						api: "openai-completions",
+						discovery: { type: "openai-compat" },
+					},
+				});
+				const headers: Array<string | null> = [];
+				using _hook = hookFetch((input, init) => {
+					const url = input instanceof Request ? input.url : String(input);
+					if (url !== "https://proxy.example.com/api/v1/models") throw new Error("Unexpected URL");
+					headers.push(
+						input instanceof Request
+							? input.headers.get("Authorization")
+							: new Headers(init?.headers).get("Authorization"),
+					);
+					return Response.json({ data: [{ id: "fixture-model" }] });
+				});
+				const registry = new ModelRegistry(authStorage, modelsJsonPath);
+				await registry.refreshProvider("fixture-gateway", "online");
+				expect(headers).toEqual(["Bearer fixture-proxy-token"]);
+				const restarted = new ModelRegistry(authStorage, modelsJsonPath);
+				await restarted.refreshProvider("fixture-gateway", "online");
+				expect(headers).toEqual(["Bearer fixture-proxy-token", "Bearer fixture-proxy-token"]);
+				expect(restarted.find("fixture-gateway", "fixture-model")).toBeDefined();
+			} finally {
+				if (previous === undefined) delete Bun.env.MODEL_REGISTRY_TEST_API_KEY;
+				else Bun.env.MODEL_REGISTRY_TEST_API_KEY = previous;
+			}
+		});
+
 		test("retains live LiteLLM input and output limits for Codex context tiers", async () => {
 			writeModelsJson({
 				litellm: providerConfig("https://proxy.example.com/v1", [{ id: "gpt-6-sol" }], "openai-responses"),

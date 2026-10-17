@@ -12,7 +12,7 @@ if [ "$#" -ne 0 ]; then
 fi
 
 echo "=== xcsh container verification ==="
-for command_name in xcsh gcloud az aws gh sf bun zig jq; do
+for command_name in xcsh bash curl git jq rg gh glab aws az gcloud sf terraform ssh scp bun node python3 chromium; do
   command -v "$command_name" >/dev/null || {
     echo "ERROR: Required command is unavailable: ${command_name}" >&2
     exit 1
@@ -26,8 +26,14 @@ aws --version >/dev/null
 gh --version >/dev/null
 sf --version >/dev/null
 bun --version >/dev/null
-zig version >/dev/null
 jq --version >/dev/null
+glab --version >/dev/null
+node --version >/dev/null
+python3 --version >/dev/null
+rg --version >/dev/null
+terraform version >/dev/null
+ssh -V >/dev/null 2>&1
+chromium --version >/dev/null
 echo "PASS: xcsh and bundled CLI commands execute successfully."
 
 if [ "$live" = false ]; then

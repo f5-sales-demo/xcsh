@@ -13,3 +13,6 @@ core
 .env.*
 research
 release
+
+.tools
+**/__pycache__

@@ -43,6 +43,7 @@ export interface Args {
 	version?: boolean;
 	mode?: Mode;
 	noSession?: boolean;
+	requireToolCall?: boolean;
 	noMemories?: boolean;
 	sessionDir?: string;
 	providerSessionId?: string;
@@ -149,6 +150,9 @@ const APPLY: Record<LaunchFlagName, (result: Args, value: string | true) => void
 	},
 	"no-session": r => {
 		r.noSession = true;
+	},
+	"require-tool-call": r => {
+		r.requireToolCall = true;
 	},
 	"no-memories": r => {
 		r.noMemories = true;

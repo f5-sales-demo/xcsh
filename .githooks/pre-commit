@@ -1,6 +1,6 @@
 #!/bin/sh
-# Pre-commit hook: checks staged files with Biome and runs the full TypeScript
-# gate used by CI. It also blocks staged F5 XC context files (credentials).
+# Pre-commit hook: checks staged shell files and Biome, then runs the full
+# TypeScript gate used by CI. It also blocks staged F5 XC context files (credentials).
 # Installed automatically via `bun install` (prepare script sets core.hooksPath).
 # To bypass in emergencies: git commit --no-verify
 
@@ -18,13 +18,8 @@ if [ -n "$BLOCKED_FILES" ]; then
   exit 1
 fi
 
-DOCS_QUALITY_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^(docs/en/|docs/llms-config\.json|\.github/docs-quality/|scripts/check_docs_quality\.py|tests/test_docs_quality\.py)' || true)
-if [ -n "$DOCS_QUALITY_FILES" ] && [ "${XCSH_DOCS_QUALITY_CHECK:-1}" != "0" ]; then
-  python3 scripts/check_docs_quality.py || exit 1
-  python3 -m unittest tests.test_docs_quality || exit 1
-elif [ -n "$DOCS_QUALITY_FILES" ]; then
-  echo "WARNING: documentation quality check skipped by XCSH_DOCS_QUALITY_CHECK=0" >&2
-fi
+# Source authority changes can invalidate documentation without editing a page.
+python3 scripts/check_docs_quality.py || exit 1
 
 # Full-workspace checks must see only the staged snapshot. lint-staged may
 # temporarily hide unstaged edits, but check:ts would otherwise inspect them.
@@ -35,6 +30,8 @@ if [ -n "$UNSTAGED_FILES" ] || [ -n "$UNTRACKED_FILES" ]; then
   echo "Stage, stash, or remove unstaged and untracked files before retrying." >&2
   exit 1
 fi
+
+python3 scripts/check_shell.py --staged || exit 1
 
 EXPECTED_BUN=$(sed -n 's/.*"packageManager": "bun@\([^"]*\)".*/\1/p' package.json)
 if [ -z "$EXPECTED_BUN" ]; then

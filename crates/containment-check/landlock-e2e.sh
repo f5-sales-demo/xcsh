@@ -102,11 +102,11 @@ FENCE=$(printf '{"allow":["%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":[]
 # to 1 globally; a local developer process normally starts at 0.
 BASE_NO_NEW_PRIVS=$("$BIN" run --cwd "$WORKSPACE" "grep -Eo '^NoNewPrivs:[[:space:]]*[01]$' /proc/self/status" | sed -n -E 's/^NoNewPrivs:[[:space:]]*([01])$/\1/p')
 case "$BASE_NO_NEW_PRIVS" in
-  0|1) ;;
-  *)
-    printf 'FAIL  unexpected NoNewPrivs baseline: %s\n' "$BASE_NO_NEW_PRIVS"
-    fail=$((fail + 1))
-    ;;
+0 | 1) ;;
+*)
+  printf 'FAIL  unexpected NoNewPrivs baseline: %s\n' "$BASE_NO_NEW_PRIVS"
+  fail=$((fail + 1))
+  ;;
 esac
 expect "external listing keeps operator rights" ok "ls $HOME_DIR/GIT > /dev/null"
 expect "read a named sibling file" ok "cat $SIBLING/secret.txt > /dev/null && echo named-ok"

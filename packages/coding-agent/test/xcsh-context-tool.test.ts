@@ -18,6 +18,16 @@ const env: Record<string, string | undefined> = {};
 const requests: Array<{ url: string; authorization: string | null }> = [];
 let httpStatus = 200;
 
+test("status recognizes explicit environment credentials before saved-context loading", async () => {
+	process.env.XCSH_API_URL = "https://example.console.ves.volterra.io";
+	process.env.XCSH_API_TOKEN = "synthetic-environment-token";
+	const result = await tool.execute("environment-status", { action: "status" });
+	const status = result.details as { credentialSource: string; isConfigured: boolean; authStatus: string };
+	expect(status.credentialSource).toBe("environment");
+	expect(status.isConfigured).toBe(true);
+	expect(status.authStatus).toBe("unknown");
+});
+
 beforeEach(async () => {
 	ContextService._resetForTest();
 	_resetSettingsForTest();

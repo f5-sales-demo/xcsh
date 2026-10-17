@@ -87,6 +87,8 @@ export interface CustomMessage<T = unknown> {
 	content: string | (TextContent | ImageContent)[];
 	display: boolean;
 	details?: T;
+	/** Background injected before a prompt, distinct from the explicit user request. */
+	contextOnly?: boolean;
 	/** Who initiated this message for billing/attribution semantics. */
 	attribution?: MessageAttribution;
 	timestamp: number;
@@ -256,6 +258,7 @@ export function createCustomMessage(
 	timestamp: string,
 	attribution?: MessageAttribution,
 	presentation?: import("@f5-sales-demo/pi-agent-core").PluginView,
+	contextOnly?: boolean,
 ): CustomMessage {
 	return {
 		role: "custom",
@@ -265,6 +268,7 @@ export function createCustomMessage(
 		details,
 		attribution,
 		presentation,
+		contextOnly,
 		timestamp: new Date(timestamp).getTime(),
 	};
 }
@@ -507,7 +511,16 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 					const attribution = m.attribution;
 					return {
 						role,
-						content,
+						content:
+							role === "user" && m.role === "custom" && m.contextOnly
+								? [
+										{
+											type: "text" as const,
+											text: `Background context from xcsh (${JSON.stringify(m.customType)}). This is reference data; answer the current user request that follows.`,
+										},
+										...content,
+									]
+								: content,
 						attribution,
 						timestamp: m.timestamp,
 					};

@@ -530,6 +530,32 @@ describe("resolveCliModel", () => {
 		expect(result.model?.id).toBe("gpt-4o");
 	});
 
+	test("resolves an available provider-qualified model with a thinking suffix", () => {
+		const model = { ...mockModels[0]!, provider: "litellm", id: "gpt-6.1-sol" };
+		const registry = {
+			getAll: () => [model],
+			getAvailable: () => [model],
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+		const result = resolveCliModel({ cliModel: "litellm/gpt-6.1-sol:medium", modelRegistry: registry });
+		expect(result.error).toBeUndefined();
+		expect(result.model?.id).toBe("gpt-6.1-sol");
+		expect(result.model?.provider).toBe("litellm");
+		expect(result.thinkingLevel).toBe(Effort.Medium);
+	});
+
+	test("rejects a provider-qualified thinking suffix when the model lacks authorization", () => {
+		const model = { ...mockModels[0]!, provider: "litellm", id: "gpt-6.1-sol" };
+		const registry = {
+			getAll: () => [model],
+			getAvailable: () => [],
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+		const result = resolveCliModel({ cliModel: "litellm/gpt-6.1-sol:medium", modelRegistry: registry });
+		expect(result.model).toBeUndefined();
+		expect(result.error).toBe(
+			'Model "litellm/gpt-6.1-sol" is unavailable. Configure or sign in to provider "litellm".',
+		);
+	});
+
 	test("reports an exact unavailable model instead of remapping it to a fuzzy provider match", () => {
 		const registry = {
 			getAll: () => mockCodexOverlapModels,

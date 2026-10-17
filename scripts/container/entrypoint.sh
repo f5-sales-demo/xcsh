@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+# Gateway PIDs and locks belong to this container process namespace.
+XCSH_PYTHON_GATEWAY_DIR="$(mktemp -d /tmp/xcsh-python-gateway.XXXXXX)"
+export XCSH_PYTHON_GATEWAY_DIR
+export PUPPETEER_PROXY="${PUPPETEER_PROXY:-${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy:-}}}}}"
+python3 /opt/xcsh/state.py
+# Explicit portable mounts are copied once so vendor CLIs can refresh private state.
+for service in github gitlab aws azure salesforce gcloud ssh; do
+  source="/imports/$service"
+  [[ -d "$source" && -n "$(ls -A "$source")" ]] || continue
+  case "$service" in
+  github) destination="$HOME/.config/gh" ;;
+  gitlab) destination="$HOME/.config/glab-cli" ;;
+  aws) destination="$HOME/.aws" ;;
+  azure) destination="$HOME/.azure" ;;
+  salesforce)
+    [[ -d "$source/.sf" && -d "$source/.sfdx" ]] || {
+      echo 'Salesforce portable state requires a bundle containing .sf and .sfdx directories; use explicit login for Mac keychain-backed credentials.' >&2
+      exit 1
+    }
+    python3 /opt/xcsh/state.py "$source/.sf" "$HOME/.sf"
+    python3 /opt/xcsh/state.py "$source/.sfdx" "$HOME/.sfdx"
+    continue
+    ;;
+  gcloud) destination="$HOME/.config/gcloud" ;;
+  ssh) destination="$HOME/.ssh" ;;
+  esac
+  python3 /opt/xcsh/state.py "$source" "$destination"
+done
+if [[ -r /imports/ca.pem ]]; then
+  cat /etc/ssl/certs/ca-certificates.crt /imports/ca.pem >"$HOME/.xcsh/ca-bundle.pem"
+  export SSL_CERT_FILE="$HOME/.xcsh/ca-bundle.pem" REQUESTS_CA_BUNDLE="$HOME/.xcsh/ca-bundle.pem"
+  export CURL_CA_BUNDLE="$SSL_CERT_FILE" AWS_CA_BUNDLE="$SSL_CERT_FILE" NODE_EXTRA_CA_CERTS=/imports/ca.pem
+  export CLOUDSDK_CORE_CUSTOM_CA_CERTS_FILE="$SSL_CERT_FILE"
+  mkdir -p "$HOME/.pki/nssdb"
+  if [[ ! -f "$HOME/.pki/nssdb/cert9.db" ]]; then certutil -N -d "sql:$HOME/.pki/nssdb" --empty-password; fi
+  python3 /opt/xcsh/import_ca.py
+fi
+if [[ -f /imports/native/models.yml ]]; then bun /opt/xcsh/import-native.ts; fi
+if [[ "${1:-}" == container-auth ]]; then
+  shift
+  exec python3 /opt/xcsh/auth.py "$@"
+fi
+if [[ "${1:-}" == container-test ]]; then
+  shift
+  exec bash /opt/xcsh/runtime-check.sh "$@"
+fi
+exec xcsh "$@"

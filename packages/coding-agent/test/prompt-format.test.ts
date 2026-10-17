@@ -2,6 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { prompt } from "@f5-sales-demo/pi-utils";
 
 describe("prompt.format renderPhase", () => {
+	test("Bash prompt directives remain valid HTML comments through formatting", async () => {
+		const source = await Bun.file(new URL("../src/prompts/tools/bash.md", import.meta.url)).text();
+		const comments = source.split("\n").filter(line => line.startsWith("<!--"));
+		expect(comments.length).toBeGreaterThan(0);
+		for (const comment of comments) expect(comment).toMatch(/^<!--.*-->$/);
+		const formatted = prompt.format(source, { renderPhase: "pre-render", replaceAsciiSymbols: true });
+		expect(formatted.split("\n").filter(line => line.startsWith("<!--"))).toEqual(comments);
+	});
+
 	test("pre-render preserves indentation on Handlebars block lines", () => {
 		const input = "<root>\n  {{#if ok}}\n    value\n  {{/if}}\n</root>";
 
