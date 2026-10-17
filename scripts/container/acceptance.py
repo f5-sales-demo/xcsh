@@ -28,7 +28,7 @@ ACCEPTANCE_SYSTEM_PROMPT = (
     "and end with the requested success marker on its own last line. For local "
     "fixture checks, follow the requested exact final-answer format."
 )
-LOCAL_PROMPT = """Use actual tools to complete these checks in /workspace. Use bash to run rg -c 'needle' fixture.txt and jq '[.[] | .amount] | add' amounts.json; the results must be 2 and 42. Use the edit tool to change status.txt from pending to complete. Use the persistent python tool in exactly two separate tool calls, with one cell per call. First call: set container_acceptance_value = 40. Wait for its successful result before the second call: print(container_acceptance_value + 2), which must be 42. Two cells in a single tool call do not satisfy this test. Use the browser tool (puppeteer) to navigate to data:text/html,<title>XCSH_BROWSER_42</title><p>Browser fixture result 42</p> and read the title or page content. Do not substitute bash or HTTP retrieval for the browser tool. Only after all checks succeed, write acceptance-result.json with {"rg":2,"jq":42,"python":42,"browser":"XCSH_BROWSER_42","edited":true} and reply exactly LOCAL_ACCEPTANCE_OK. If a tool fails, report that failure without claiming success."""
+LOCAL_PROMPT = """Use actual tools to complete these checks in /workspace. Use bash to run rg -c 'needle' fixture.txt and jq '[.[] | .amount] | add' amounts.json; the results must be 2 and 42. Use the edit tool to change status.txt from pending to complete. Use the persistent python tool in exactly two separate tool calls, with one cell per call. First call: set container_acceptance_value = 40. Wait for its successful result before the second call: print(container_acceptance_value + 2), which must be 42. Two cells in a single tool call do not satisfy this test. Use the browser tool (puppeteer) to navigate to data:text/html,<title>XCSH_BROWSER_42</title><p>Browser fixture result 42</p> and read the title or page content. Do not substitute bash or HTTP retrieval for the browser tool. Only after all checks succeed, write acceptance-result.json with {"rg":2,"jq":42,"python":42,"browser":"XCSH_BROWSER_42","edited":true} and briefly summarize the verified results and end with LOCAL_ACCEPTANCE_OK alone on the last line. If a tool fails, report that failure without claiming success."""
 LIVE = {
     "github": (
         "Use bash with the bundled gh CLI to retrieve authenticated user identity and repository metadata. Run exactly gh api user, then gh api repos/f5-sales-demo/xcsh, without adding CLI flags. Inspect the returned JSON and verify full_name equals f5-sales-demo/xcsh and default_branch is present. End with LIVE_GITHUB_OK on its own last line only on successful authorized retrieval.",
@@ -192,8 +192,8 @@ def evaluate(
     }
     expected_api = "openai-responses" if provider == "litellm" else "anthropic-messages"
     final_marker = text == marker
-    if service in LIVE:
-        # A correct live interpretation may include a summary before its final marker.
+    if local or service in LIVE:
+        # A correct interpretation may include a summary before its final marker.
         final_marker = bool(text) and text.splitlines()[-1].strip() == marker
     passed = (
         route["api"] == expected_api

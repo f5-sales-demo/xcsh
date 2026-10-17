@@ -107,6 +107,58 @@ class AcceptanceTests(unittest.TestCase):
                 for command in subprocess_calls
             )
 
+    def test_local_summary_keeps_complete_tool_execution_required(self):
+        events: list[dict[str, Any]] = []
+        for index, name in enumerate(("bash", "edit", "python", "python", "puppeteer")):
+            identifier = str(index)
+            events.extend(
+                [
+                    {
+                        "type": "tool_execution_start",
+                        "toolCallId": identifier,
+                        "toolName": name,
+                    },
+                    {
+                        "type": "tool_execution_end",
+                        "toolCallId": identifier,
+                        "toolName": name,
+                        "isError": False,
+                    },
+                ]
+            )
+        events.append(
+            {
+                "type": "message_end",
+                "message": {
+                    "role": "assistant",
+                    "provider": "anthropic",
+                    "model": "claude-sonnet-5",
+                    "api": "anthropic-messages",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Verified search, JSON, edit, persistent Python and browser.\nLOCAL_ACCEPTANCE_OK",
+                        }
+                    ],
+                },
+            }
+        )
+        assert acceptance.evaluate(
+            events,
+            "anthropic/claude-sonnet-5",
+            "LOCAL_ACCEPTANCE_OK",
+            local=True,
+            service="local",
+        )["passed"]
+        events[3]["isError"] = True
+        assert not acceptance.evaluate(
+            events,
+            "anthropic/claude-sonnet-5",
+            "LOCAL_ACCEPTANCE_OK",
+            local=True,
+            service="local",
+        )["passed"]
+
     def test_text_only_success_is_rejected(self):
         events: list[dict[str, Any]] = [
             {
