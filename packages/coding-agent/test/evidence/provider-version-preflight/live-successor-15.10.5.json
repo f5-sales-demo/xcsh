@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "issue": 4931,
+  "acceptedAt": "2026-10-17",
+  "liveSubsequentPublicationAcceptance": true,
+  "historicalReceipt": "acceptance.json",
+  "providerRelease": {
+    "version": "15.10.5",
+    "immutable": true,
+    "publishedAt": "2026-10-17T04:24:45Z",
+    "sourceCommit": "78b049d4739e46e0cf4a14a3dadddd5f6eaf3116",
+    "registrySourceUrl": "https://registry.terraform.io/v1/providers/f5-sales-demo/xcsh/versions"
+  },
+  "candidateBuildDate": "2026-10-06",
+  "candidateXcshVersion": "22.11.0",
+  "candidatesUnchanged": true,
+  "candidateSha256": {
+    "linux": "38f03fca42a325a0bae74a0c73549ca618d52aafc9baad47595183ca0f567a2b",
+    "macos": "fc7acb524921246115ac64b2a3540e6a852479e1368ae63d332a24657ef4b7bf"
+  },
+  "embeddedDocumentationVersion": "15.2.0",
+  "newSchemaCoverage": {
+    "resource": "xcsh_swagger_object",
+    "field": "content",
+    "absentFromEmbeddedRelease": true,
+    "publishedProviderValidation": true
+  },
+  "limitations": [
+    "The preserved candidates reject fragment/query selectors on targeted release URLs. Models recovered by reading complete canonical pages; successful page contents and published schema validation were verified."
+  ],
+  "results": [
+    {
+      "case": "linux-new",
+      "platform": "linux",
+      "model": "openai-codex/gpt-6.1-sol",
+      "selectedProviderVersion": "15.10.5",
+      "embeddedDocumentationVersion": "15.2.0",
+      "traceSha256": "2bda1032c5c906d4146239f8d463bf77e62b23164cb3bfae0848d6e571913b8b",
+      "hclSha256": "7e01c55dc66bc7dd7cb2b120bb467cf8049d2f8bbcfca820da69f61298b9efd3",
+      "lockSha256": "00d174023133303a1ee5cb90279d9b57f5fee1dac61475054625123084af51fd",
+      "installedProviderSha256": "29e1bcc84f6aba1e2e9bd05d20dec7445acf20dc6b11d3116982e7ab5f3105b7",
+      "exactHclPin": true,
+      "publishedProviderInstalled": true,
+      "formatInitValidatePassed": true,
+      "environmentAuthentication": true,
+      "infrastructureOperations": 0,
+      "embeddedReadCount": 9,
+      "successfulTargetedReads": [
+        {
+          "internalRead": "xcsh://terraform-release/v15.10.5/documentation/resources/swagger_object/index.md",
+          "sourcePath": "documentation/resources/swagger_object/index.md",
+          "sourceSha256": "2e392ee33fc7ca6c6735fa28ccd74a8bf708b7eb20e3cc0abecca69804e3db25"
+        },
+        {
+          "internalRead": "xcsh://terraform-release/v15.10.5/documentation/resources/swagger_object/properties/index.md",
+          "sourcePath": "documentation/resources/swagger_object/properties/index.md",
+          "sourceSha256": "fcf367e195904f59c13bb7836d234c272bc761eb99649d577ef025d0720edb39"
+        }
+      ],
+      "successfulTargetedSectionSelections": 0,
+      "navigationIndexReads": 0,
+      "rejectedFragmentReadRetries": 5
+    },
+    {
+      "case": "linux-upgrade",
+      "platform": "linux",
+      "model": "openai-codex/gpt-6.1-sol",
+      "selectedProviderVersion": "15.10.5",
+      "embeddedDocumentationVersion": "15.2.0",
+      "traceSha256": "35bc2c05824ef3a4bcbeef6c526fd78b84f69491e672902618a7eae2bf616454",
+      "hclSha256": "451a996b38486647808c785296eee6a8c12149b732f28cf0cd071653d49f1b42",
+      "lockSha256": "00d174023133303a1ee5cb90279d9b57f5fee1dac61475054625123084af51fd",
+      "installedProviderSha256": "29e1bcc84f6aba1e2e9bd05d20dec7445acf20dc6b11d3116982e7ab5f3105b7",
+      "exactHclPin": true,
+      "publishedProviderInstalled": true,
+      "formatInitValidatePassed": true,
+      "environmentAuthentication": true,
+      "infrastructureOperations": 0,
+      "embeddedReadCount": 3,
+      "successfulTargetedReads": [],
+      "successfulTargetedSectionSelections": 0,
+      "navigationIndexReads": 0,
+      "rejectedFragmentReadRetries": 0,
+      "previousLockVersion": "15.2.0",
+      "lockUpgradeUsed": true,
+      "lockChangesReported": true
+    },
+    {
+      "case": "mac-new",
+      "platform": "macos",
+      "model": "litellm/gpt-6.1-sol",
+      "selectedProviderVersion": "15.10.5",
+      "embeddedDocumentationVersion": "15.2.0",
+      "traceSha256": "8f5892cd94bdd7c1a4e79790b44cc63caf7872a0a1858cf774e31777e7bdcbd3",
+      "hclSha256": "ec574693c7907753e096c9b6829a5e29b62e01341d42e24d753eee71caf5b564",
+      "lockSha256": "cff0c9e5a0f1971640c3a3a5f70ef0edeefb84dbc2d0e2f1ec2edc749c1448ea",
+      "installedProviderSha256": "17714ed4cb6fed786c35afd4430ec4ac1bfc81f5df0143aaa23296df304ef2e5",
+      "exactHclPin": true,
+      "publishedProviderInstalled": true,
+      "formatInitValidatePassed": true,
+      "environmentAuthentication": true,
+      "infrastructureOperations": 0,
+      "embeddedReadCount": 9,
+      "successfulTargetedReads": [
+        {
+          "internalRead": "xcsh://terraform-release/v15.10.5/documentation/resources/swagger_object/index.md",
+          "sourcePath": "documentation/resources/swagger_object/index.md",
+          "sourceSha256": "2e392ee33fc7ca6c6735fa28ccd74a8bf708b7eb20e3cc0abecca69804e3db25"
+        },
+        {
+          "internalRead": "xcsh://terraform-release/v15.10.5/documentation/resources/swagger_object/properties/index.md",
+          "sourcePath": "documentation/resources/swagger_object/properties/index.md",
+          "sourceSha256": "fcf367e195904f59c13bb7836d234c272bc761eb99649d577ef025d0720edb39"
+        }
+      ],
+      "successfulTargetedSectionSelections": 2,
+      "navigationIndexReads": 0,
+      "rejectedFragmentReadRetries": 3
+    },
+    {
+      "case": "mac-upgrade",
+      "platform": "macos",
+      "model": "litellm/gpt-6.1-sol",
+      "selectedProviderVersion": "15.10.5",
+      "embeddedDocumentationVersion": "15.2.0",
+      "traceSha256": "e11eba3668f79a0822661942bfc38314f852c9812a1dfc2aea505320adca7b2d",
+      "hclSha256": "451a996b38486647808c785296eee6a8c12149b732f28cf0cd071653d49f1b42",
+      "lockSha256": "cff0c9e5a0f1971640c3a3a5f70ef0edeefb84dbc2d0e2f1ec2edc749c1448ea",
+      "installedProviderSha256": "17714ed4cb6fed786c35afd4430ec4ac1bfc81f5df0143aaa23296df304ef2e5",
+      "exactHclPin": true,
+      "publishedProviderInstalled": true,
+      "formatInitValidatePassed": true,
+      "environmentAuthentication": true,
+      "infrastructureOperations": 0,
+      "embeddedReadCount": 5,
+      "successfulTargetedReads": [],
+      "successfulTargetedSectionSelections": 0,
+      "navigationIndexReads": 0,
+      "rejectedFragmentReadRetries": 0,
+      "previousLockVersion": "15.2.0",
+      "lockUpgradeUsed": true,
+      "lockChangesReported": true
+    }
+  ]
+}
