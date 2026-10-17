@@ -135,5 +135,6 @@
       "internalDocumentationReads": 3,
       "infrastructureCommands": 0
     }
-  ]
+  ],
+  "liveSuccessorAcceptanceReceipt": "live-successor-15.10.5.json"
 }
