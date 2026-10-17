@@ -16,6 +16,7 @@ def load(name):
     spec = importlib.util.spec_from_file_location(
         name, ROOT / "scripts/container" / (name + ".py")
     )
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -23,9 +24,8 @@ def load(name):
 
 class StateTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
+        # TestCase owns this context until teardown.
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))  # pylint: disable=consider-using-with
         self.home = self.root / "home"
         self.seed = self.root / "seed"
         (self.seed / "plugins").mkdir(parents=True)

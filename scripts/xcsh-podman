@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Rootless Podman launcher; argv forwarding never passes through a shell."""
 
+# pylint: disable=invalid-name  # The public executable is named xcsh-podman.
+
 import argparse
 import hashlib
 import json
@@ -11,7 +13,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, overload
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -64,6 +66,16 @@ KNOWN_ENV = [
 LOGIN_ARGUMENTS = 2
 
 SERVICES = {"github", "gitlab", "aws", "azure", "salesforce", "gcloud", "ssh"}
+
+
+@overload
+def call(argv: list[str], *, capture: Literal[True], **kwargs: Any) -> str: ...
+
+
+@overload
+def call(
+    argv: list[str], *, capture: Literal[False] = False, **kwargs: Any
+) -> None: ...
 
 
 def call(argv: list[str], *, capture: bool = False, **kwargs: Any) -> str | None:
@@ -140,6 +152,55 @@ def setup(args: argparse.Namespace) -> None:
     print("PASS: rootless Podman setup; host sudo and privileged helper were not used")
 
 
+def append_imports(args: argparse.Namespace, base: list[str], argv: list[str]) -> None:
+    """Add explicitly selected portable state and private certificate mounts."""
+    for credential in args.credential:
+        service, separator, source = credential.partition("=")
+        if (
+            not separator
+            or service not in SERVICES
+            or not Path(source).expanduser().is_dir()
+        ):
+            msg = "--credential requires SERVICE=portable-config-directory"
+            raise ValueError(msg)
+        argv += [
+            "--volume",
+            str(Path(source).expanduser().resolve()) + ":/imports/" + service + ":ro",
+        ]
+    if args.ca_cert:
+        if not Path(args.ca_cert).is_file():
+            msg = "Additional CA bundle unavailable"
+            raise ValueError(msg)
+        certificate = Path(args.ca_cert).read_text()
+        secret_name = "xcsh-ca-" + hashlib.sha256(certificate.encode()).hexdigest()[:24]
+        try:
+            call(
+                [*base, "secret", "inspect", secret_name],
+                capture=True,
+                stderr=subprocess.DEVNULL,
+            )
+        except subprocess.CalledProcessError:
+            call(
+                [*base, "secret", "create", secret_name, "-"],
+                capture=True,
+                input=certificate,
+            )
+        argv += [
+            "--secret",
+            secret_name
+            + ",type=mount,target=/imports/ca.pem,uid=1000,gid=1000,mode=0400",
+        ]
+    if args.import_native:
+        native = Path(args.import_native).expanduser().resolve()
+        for filename in ("models.yml", "config.yml"):
+            path = native / filename
+            if path.is_file():
+                argv += ["--volume", str(path) + ":/imports/native/" + filename + ":ro"]
+        if not (native / "models.yml").is_file():
+            msg = "Native provider configuration requires models.yml"
+            raise ValueError(msg)
+
+
 def run_options(args: argparse.Namespace) -> list[str]:
     """Build explicit private mounts and rootless runtime arguments."""
     base = ["podman"] + (["--connection", args.connection] if args.connection else [])
@@ -205,51 +266,7 @@ def run_options(args: argparse.Namespace) -> list[str]:
         argv += ["--env-file", str(Path(filename).resolve())]
     for mount in args.mount:
         argv += ["--volume", mount]
-    for credential in args.credential:
-        service, separator, source = credential.partition("=")
-        if (
-            not separator
-            or service not in SERVICES
-            or not Path(source).expanduser().is_dir()
-        ):
-            msg = "--credential requires SERVICE=portable-config-directory"
-            raise ValueError(msg)
-        argv += [
-            "--volume",
-            str(Path(source).expanduser().resolve()) + ":/imports/" + service + ":ro",
-        ]
-    if args.ca_cert:
-        if not Path(args.ca_cert).is_file():
-            msg = "Additional CA bundle unavailable"
-            raise ValueError(msg)
-        certificate = Path(args.ca_cert).read_text()
-        secret_name = "xcsh-ca-" + hashlib.sha256(certificate.encode()).hexdigest()[:24]
-        try:
-            call(
-                [*base, "secret", "inspect", secret_name],
-                capture=True,
-                stderr=subprocess.DEVNULL,
-            )
-        except subprocess.CalledProcessError:
-            call(
-                [*base, "secret", "create", secret_name, "-"],
-                capture=True,
-                input=certificate,
-            )
-        argv += [
-            "--secret",
-            secret_name
-            + ",type=mount,target=/imports/ca.pem,uid=1000,gid=1000,mode=0400",
-        ]
-    if args.import_native:
-        native = Path(args.import_native).expanduser().resolve()
-        for filename in ("models.yml", "config.yml"):
-            path = native / filename
-            if path.is_file():
-                argv += ["--volume", str(path) + ":/imports/native/" + filename + ":ro"]
-        if not (native / "models.yml").is_file():
-            msg = "Native provider configuration requires models.yml"
-            raise ValueError(msg)
+    append_imports(args, base, argv)
     return [*argv, image]
 
 
@@ -283,7 +300,8 @@ def main() -> None:
     parser.add_argument("command", choices=["setup", "run", "auth", "test"])
     parser.add_argument("arguments", nargs=argparse.REMAINDER)
     args = parser.parse_args()
-    if not shutil.which("podman"):
+    executable = shutil.which("podman")
+    if executable is None:
         msg = "Podman is not installed"
         raise ValueError(msg)
     if args.command == "setup":
@@ -307,7 +325,7 @@ def main() -> None:
     ):
         remaining = ["--model", os.environ["XCSH_MODEL"], *remaining]
     argv = run_options(args) + remaining
-    os.execvp(shutil.which("podman"), argv)  # noqa: S606 - exec preserves terminal signals; fixed Podman executable.
+    os.execvp(executable, argv)  # noqa: S606 - exec preserves terminal signals; fixed Podman executable.
 
 
 if __name__ == "__main__":

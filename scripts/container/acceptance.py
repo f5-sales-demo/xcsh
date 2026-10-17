@@ -223,8 +223,8 @@ def evaluate(
     }
 
 
-def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
-    """Run the complete matrix in a dedicated workspace and write private outcomes."""
+def parse_options(arguments: list[str]) -> argparse.Namespace:
+    """Validate the selected acceptance scope and minimum repetition count."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-version", required=True)
     parser.add_argument("--runs", type=int, default=3)
@@ -260,6 +260,11 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
         if not separator or not provider or not model:
             msg = "Acceptance --model requires PROVIDER/MODEL"
             raise ValueError(msg)
+    return opts
+
+
+def inspect_image(argv: list[str], opts: argparse.Namespace) -> dict:
+    """Verify the native image and the selected immutable reference."""
     image = argv[-1]
     if not opts.candidate and not re.search(r"@sha256:[a-f0-9]{64}$", image):
         msg = "Published acceptance requires an immutable image digest; use --candidate for local builds"
@@ -282,13 +287,112 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
     ):
         msg = "Pulled image does not match the selected immutable digest"
         raise ValueError(msg)
+    return identity
+
+
+def reset_fixtures(root: Path) -> None:
+    """Reset only the dedicated acceptance workspace between complete runs."""
+    for name, value in {
+        "fixture.txt": "needle\nhaystack\nneedle\n",
+        "amounts.json": '[{"amount":19},{"amount":23}]\n',
+        "status.txt": "pending\n",
+    }.items():
+        (root / name).write_text(value)
+    (root / "acceptance-result.json").unlink(missing_ok=True)
+
+
+def run_sample(
+    argv: list[str],
+    root: Path,
+    private: Path,
+    opts: argparse.Namespace,
+    request: tuple[str, int, str, str, str],
+) -> dict:
+    """Run one fresh invocation and verify its tool results and artifacts."""
+    selector, repeat, service, prompt, marker = request
+    started = time.monotonic()
+    command = [
+        *argv,
+        "--mode",
+        "json",
+        "--no-session",
+        "--no-memories",
+        "--no-title",
+        "--no-lsp",
+        "--require-tool-call",
+        "--append-system-prompt",
+        ACCEPTANCE_SYSTEM_PROMPT,
+        "--model",
+        selector,
+        prompt,
+    ]
+    try:
+        result = subprocess.run(  # noqa: S603 - same validated launcher argv and fixed fixture prompts.
+            command,
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=opts.timeout,
+        )
+        name = f"{selector.split('/')[0]}-{repeat}-{service}"
+        (private / (name + ".events")).write_text(result.stdout)
+        (private / (name + ".stderr")).write_text(result.stderr)
+        events = [
+            json.loads(line) for line in result.stdout.splitlines() if line.strip()
+        ]
+        sample = evaluate(
+            events,
+            selector,
+            marker,
+            local=service == "local",
+            service=service,
+        )
+        sample["passed"] = sample["passed"] and result.returncode == 0
+        if service == "local":
+            artifact = root / "acceptance-result.json"
+            correct = (
+                artifact.exists()
+                and json.loads(artifact.read_text())
+                == {
+                    "rg": 2,
+                    "jq": 42,
+                    "python": 42,
+                    "browser": "XCSH_BROWSER_42",
+                    "edited": True,
+                }
+                and (root / "status.txt").read_text().strip() == "complete"
+            )
+            sample["passed"] = sample["passed"] and correct
+            if artifact.exists():
+                sample["artifactSha256"] = hashlib.sha256(
+                    artifact.read_bytes()
+                ).hexdigest()
+    except (subprocess.TimeoutExpired, json.JSONDecodeError):
+        sample = {
+            "passed": False,
+            "category": "timeout_or_invalid_events",
+        }
+    sample.update(
+        service=service,
+        selector=selector,
+        run=repeat,
+        seconds=round(time.monotonic() - started, 3),
+    )
+    return sample
+
+
+def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
+    """Run the complete matrix in a dedicated workspace and write private outcomes."""
+    opts = parse_options(arguments)
+    deferred = sorted(set(opts.defer_service))
+    identity = inspect_image(argv, opts)
     argv = [*argv[:-1], identity["Id"]]
     os.umask(0o077)
     root = Path(workspace)
     if any(root.iterdir()):
         msg = "Acceptance requires an empty dedicated workspace; select --workspace DIR"
         raise ValueError(msg)
-    samples = []
+    samples: list[dict] = []
     private = Path(tempfile.mkdtemp(prefix="xcsh-container-acceptance-"))
     report = {
         "schemaVersion": 1,
@@ -324,13 +428,7 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
         for selector in opts.model or MODELS:
             for repeat in range(1, opts.runs + 1):
                 # Refuse to overwrite the user's files; fixtures must be a selected dedicated workspace.
-                for name, value in {
-                    "fixture.txt": "needle\nhaystack\nneedle\n",
-                    "amounts.json": '[{"amount":19},{"amount":23}]\n',
-                    "status.txt": "pending\n",
-                }.items():
-                    (root / name).write_text(value)
-                (root / "acceptance-result.json").unlink(missing_ok=True)
+                reset_fixtures(root)
                 prompts = [("local", LOCAL_PROMPT, "LOCAL_ACCEPTANCE_OK")]
                 if opts.live:
                     prompts += [
@@ -339,76 +437,12 @@ def acceptance(argv: list[str], workspace: str, arguments: list[str]) -> bool:
                         if service not in deferred
                     ]
                 for service, prompt, marker in prompts:
-                    started = time.monotonic()
-                    command = [
-                        *argv,
-                        "--mode",
-                        "json",
-                        "--no-session",
-                        "--no-memories",
-                        "--no-title",
-                        "--no-lsp",
-                        "--require-tool-call",
-                        "--append-system-prompt",
-                        ACCEPTANCE_SYSTEM_PROMPT,
-                        "--model",
-                        selector,
-                        prompt,
-                    ]
-                    try:
-                        result = subprocess.run(  # noqa: S603 - same validated launcher argv and fixed fixture prompts.
-                            command,
-                            capture_output=True,
-                            check=False,
-                            text=True,
-                            timeout=opts.timeout,
-                        )
-                        name = f"{selector.split('/')[0]}-{repeat}-{service}"
-                        (private / (name + ".events")).write_text(result.stdout)
-                        (private / (name + ".stderr")).write_text(result.stderr)
-                        events = [
-                            json.loads(line)
-                            for line in result.stdout.splitlines()
-                            if line.strip()
-                        ]
-                        sample = evaluate(
-                            events,
-                            selector,
-                            marker,
-                            local=service == "local",
-                            service=service,
-                        )
-                        sample["passed"] = sample["passed"] and result.returncode == 0
-                        if service == "local":
-                            artifact = root / "acceptance-result.json"
-                            correct = (
-                                artifact.exists()
-                                and json.loads(artifact.read_text())
-                                == {
-                                    "rg": 2,
-                                    "jq": 42,
-                                    "python": 42,
-                                    "browser": "XCSH_BROWSER_42",
-                                    "edited": True,
-                                }
-                                and (root / "status.txt").read_text().strip()
-                                == "complete"
-                            )
-                            sample["passed"] = sample["passed"] and correct
-                            if artifact.exists():
-                                sample["artifactSha256"] = hashlib.sha256(
-                                    artifact.read_bytes()
-                                ).hexdigest()
-                    except (subprocess.TimeoutExpired, json.JSONDecodeError):
-                        sample = {
-                            "passed": False,
-                            "category": "timeout_or_invalid_events",
-                        }
-                    sample.update(
-                        service=service,
-                        selector=selector,
-                        run=repeat,
-                        seconds=round(time.monotonic() - started, 3),
+                    sample = run_sample(
+                        argv,
+                        root,
+                        private,
+                        opts,
+                        (selector, repeat, service, prompt, marker),
                     )
                     samples.append(sample)
                     print(

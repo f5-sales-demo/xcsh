@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "56ff140efea89590c07c5b9e928b89e9d6f84a99",
-  "fingerprint": "83c9e5e171ae7086293e81d1a3d3e2f6e01db4132eecce2764eb6b8b0397e0d4",
+  "revision": "e1876d5172fd0b58df5bea42360531d421278f07",
+  "fingerprint": "e6b72942b1074dae81e17950fd8edccb0e8589a443abeb6c83a46049488f99b4",
   "counts": {
     "total": 243,
     "components": 101,
@@ -4460,7 +4460,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "sessions",
-      "sha256": "1354be674f8dc0c062d9f439f10000dc19e6a7c03005ce1bbe3849c8d6e02bcd",
+      "sha256": "7591d62eed42e6806db189fcdf106d25bc783e92a3d84177cb17178cbd73a179",
       "exports": [
         "AssistantCheckpointEntry",
         "AutomaticTitleState",

@@ -8,9 +8,9 @@ import tempfile
 from pathlib import Path
 
 certificate_bytes = Path("/imports/ca.pem").read_bytes()
-digest = hashlib.sha256(certificate_bytes).hexdigest()
+BUNDLE_DIGEST = hashlib.sha256(certificate_bytes).hexdigest()
 stamp = Path(os.environ["HOME"]) / ".xcsh" / "nss-ca.sha256"
-if stamp.exists() and stamp.read_text().strip() == digest:
+if stamp.exists() and stamp.read_text().strip() == BUNDLE_DIGEST:
     raise SystemExit(0)
 
 for index, certificate in enumerate(
@@ -41,4 +41,4 @@ for index, certificate in enumerate(
             stderr=subprocess.DEVNULL,
         )
 
-stamp.write_text(digest + "\n")
+stamp.write_text(BUNDLE_DIGEST + "\n")

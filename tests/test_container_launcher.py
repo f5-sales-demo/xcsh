@@ -14,6 +14,7 @@ loader = importlib.machinery.SourceFileLoader(
     "launcher", str(ROOT / "scripts/xcsh-podman")
 )
 spec = importlib.util.spec_from_loader(loader.name, loader)
+assert spec is not None
 launcher = importlib.util.module_from_spec(spec)
 loader.exec_module(launcher)
 

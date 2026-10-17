@@ -4,19 +4,24 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
     "acceptance",
     Path(__file__).resolve().parents[1] / "scripts/container/acceptance.py",
 )
+assert spec is not None and spec.loader is not None
 acceptance = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(acceptance)
 
 
 class AcceptanceTests(unittest.TestCase):
     def test_live_prompts_explain_authorized_scope_and_preserve_evidence(self):
-        assert "Never enumerate environment variables" in acceptance.ACCEPTANCE_SYSTEM_PROMPT
+        assert (
+            "Never enumerate environment variables"
+            in acceptance.ACCEPTANCE_SYSTEM_PROMPT
+        )
         assert "Do not merge stderr" in acceptance.ACCEPTANCE_SYSTEM_PROMPT
         for service in acceptance.LIVE:
             prompt = acceptance.live_prompt(service)
@@ -102,7 +107,7 @@ class AcceptanceTests(unittest.TestCase):
             )
 
     def test_text_only_success_is_rejected(self):
-        events = [
+        events: list[dict[str, Any]] = [
             {
                 "type": "message_end",
                 "message": {
@@ -119,7 +124,7 @@ class AcceptanceTests(unittest.TestCase):
         )["passed"]
 
     def test_f5_curl_inventory_requires_operation_and_returned_fields(self):
-        calls = {
+        calls: dict[str, dict[str, Any]] = {
             "inventory": {
                 "toolName": "bash",
                 "args": {
@@ -147,7 +152,7 @@ class AcceptanceTests(unittest.TestCase):
         assert acceptance.live_evidence(calls, results, "f5")
 
     def test_malformed_tool_events_and_unmatched_calls_are_rejected(self):
-        events = [{"type": "tool_execution_start"}]
+        events: list[dict[str, Any]] = [{"type": "tool_execution_start"}]
         assert not acceptance.evaluate(events, "litellm/gpt-6.1-sol:medium", "MARKER")[
             "passed"
         ]
@@ -157,7 +162,7 @@ class AcceptanceTests(unittest.TestCase):
 
     def test_invalid_selector_and_flat_content_are_rejected(self):
         assert not acceptance.evaluate([], "unqualified", "MARKER")["passed"]
-        events = [
+        events: list[dict[str, Any]] = [
             {
                 "type": "message_end",
                 "message": {"role": "assistant", "content": "MARKER"},
@@ -168,7 +173,7 @@ class AcceptanceTests(unittest.TestCase):
         ]
 
     def test_live_marker_from_a_shell_echo_is_rejected(self):
-        events = [
+        events: list[dict[str, Any]] = [
             {
                 "type": "tool_execution_start",
                 "toolCallId": "fixture",
@@ -198,7 +203,7 @@ class AcceptanceTests(unittest.TestCase):
         )["passed"]
 
     def test_live_summary_requires_successful_service_results_and_final_marker(self):
-        events = [
+        events: list[dict[str, Any]] = [
             {
                 "type": "tool_execution_start",
                 "toolCallId": "github",
@@ -243,7 +248,7 @@ class AcceptanceTests(unittest.TestCase):
         )["passed"]
 
     def test_matching_tool_result_and_resolved_route_are_required(self):
-        events = [
+        events: list[dict[str, Any]] = [
             {
                 "type": "tool_execution_start",
                 "toolCallId": "fixture",

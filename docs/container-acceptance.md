@@ -2,7 +2,7 @@
 
 The marketplace image contains 23 cached plugins, AWS CLI v2, Azure CLI with
 Resource Graph, Google Cloud CLI, Salesforce CLI, GitHub and GitLab CLIs,
-Terraform, SSH, Bash, curl, Git, jq, ripgrep, Bun, Node, managed Python, and
+Terraform, SSH, Bash, cURL, Git, jq, ripgrep, Bun, Node, managed Python, and
 native headless Chromium. The build manifest at `/opt/xcsh/build-manifest.json`
 records versions, source provenance, dependency inventories, and checksums.
 
@@ -68,8 +68,8 @@ scripts/xcsh-podman --image "$XCSH_IMAGE" --env-file "$PRIVATE_ENV_FILE" \
 scripts/xcsh-podman --image "$XCSH_IMAGE" auth login gcloud
 ```
 
-Supported portable directory names for `--credential SERVICE=PATH` are github,
-gitlab, aws, azure, salesforce, gcloud, and ssh. Portable Salesforce state is a
+Supported portable directory names for `--credential SERVICE=PATH` are `github`,
+`gitlab`, `aws`, `azure`, `salesforce`, `gcloud`, and `ssh`. Portable Salesforce state is a
 private directory containing the current CLI's `.sf` settings and `.sfdx`
 authentication files and encryption key:
 

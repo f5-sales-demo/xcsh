@@ -236,6 +236,7 @@ export interface ModeChangeEntry extends SessionEntryBase {
  * - true: rendered with distinct styling (different from user messages)
  */
 export interface CustomMessageEntry<T = unknown> extends SessionEntryBase {
+	contextOnly?: boolean;
 	presentation?: import("@f5-sales-demo/pi-agent-core").PluginView;
 	type: "custom_message";
 	customType: string;
@@ -720,6 +721,7 @@ export function buildSessionContext(
 					entry.timestamp,
 					entry.attribution,
 					entry.presentation,
+					entry.contextOnly,
 				),
 			);
 		} else if (entry.type === "branch_summary" && entry.summary) {
@@ -2688,6 +2690,7 @@ export class SessionManager {
 		attribution: MessageAttribution = "agent",
 		timestamp = Date.now(),
 		presentation?: import("@f5-sales-demo/pi-agent-core").PluginView,
+		contextOnly?: boolean,
 	): string {
 		const entry: CustomMessageEntry<T> = {
 			type: "custom_message",
@@ -2697,6 +2700,7 @@ export class SessionManager {
 			details,
 			attribution,
 			presentation,
+			contextOnly,
 			id: generateId(this.#byId),
 			parentId: this.#leafId,
 			timestamp: new Date(timestamp).toISOString(),

@@ -1737,6 +1737,7 @@ export class AgentSession {
 					event.message.attribution ?? "agent",
 					event.message.timestamp,
 					"presentation" in event.message ? event.message.presentation : undefined,
+					event.message.role === "custom" ? event.message.contextOnly : undefined,
 				);
 				if (event.message.role === "custom" && event.message.customType === "ttsr-injection") {
 					this.#markTtsrInjected(this.#extractTtsrRuleNames(event.message.details));
@@ -4223,6 +4224,7 @@ export class AgentSession {
 					built.push({
 						role: "custom",
 						customType: "terraform-preflight",
+						contextOnly: true,
 						content: prompt.render(terraformPreflightPrompt, { ...terraformPreflight }),
 						display: false,
 						details: terraformPreflight,
@@ -4234,6 +4236,7 @@ export class AgentSession {
 					built.push({
 						role: "custom",
 						customType: "api-catalog-preflight",
+						contextOnly: true,
 						content: renderApiCatalogPreflight(apiCatalogPreflight),
 						display: false,
 						details: apiCatalogPreflight,
@@ -4287,6 +4290,7 @@ export class AgentSession {
 						messages.push({
 							role: "custom",
 							customType: msg.customType,
+							contextOnly: true,
 							content: msg.content,
 							display: msg.display,
 							details: msg.details,
