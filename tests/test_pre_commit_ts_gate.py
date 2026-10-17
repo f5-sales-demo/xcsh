@@ -26,6 +26,8 @@ class PreCommitTypeScriptGateContract(unittest.TestCase):
         assert "run: bun run ci:check:full" in workflow
         assert "run: python3 -m unittest tests.test_pre_commit_ts_gate" in workflow
         hook_lines = hook.splitlines()
+        assert "python3 scripts/check_docs_quality.py || exit 1" in hook_lines
+        assert "XCSH_DOCS_QUALITY_CHECK" not in hook
         assert "bun run check:ts" in hook_lines
         assert hook_lines.index(
             "./node_modules/.bin/lint-staged || exit 1"
