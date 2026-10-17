@@ -1,6 +1,6 @@
 #!/bin/sh
-# Pre-commit hook: checks staged files with Biome and runs the full TypeScript
-# gate used by CI. It also blocks staged F5 XC context files (credentials).
+# Pre-commit hook: checks staged shell files and Biome, then runs the full
+# TypeScript gate used by CI. It also blocks staged F5 XC context files (credentials).
 # Installed automatically via `bun install` (prepare script sets core.hooksPath).
 # To bypass in emergencies: git commit --no-verify
 
@@ -35,6 +35,8 @@ if [ -n "$UNSTAGED_FILES" ] || [ -n "$UNTRACKED_FILES" ]; then
   echo "Stage, stash, or remove unstaged and untracked files before retrying." >&2
   exit 1
 fi
+
+python3 scripts/check_shell.py --staged || exit 1
 
 EXPECTED_BUN=$(sed -n 's/.*"packageManager": "bun@\([^"]*\)".*/\1/p' package.json)
 if [ -z "$EXPECTED_BUN" ]; then

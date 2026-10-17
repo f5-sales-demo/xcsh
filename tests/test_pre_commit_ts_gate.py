@@ -1,6 +1,10 @@
 """Keep xcsh's active Git hook aligned with CI's TypeScript gate."""
 
 import json
+import shutil
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -33,6 +37,47 @@ class PreCommitTypeScriptGateContract(unittest.TestCase):
         )
         assert "ACTUAL_BUN=$(bun --version) || exit 1" in hook_lines
         assert any(line.startswith("EXPECTED_BUN=$(sed -n ") for line in hook_lines)
+
+
+# Fixture commands use fixed executables and a test-owned Git repository.
+# ruff: noqa: S603
+
+
+class PreCommitShellGateTests(unittest.TestCase):
+    def test_gate_rejects_shellcheck_errors_before_typescript(self):
+        hook = (ROOT / ".githooks/pre-commit").read_text()
+        assert hook.index("python3 scripts/check_shell.py --staged") < hook.index(
+            "bun run check:ts"
+        )
+        assert shutil.which("shellcheck"), "ShellCheck is required for the regression"
+        assert shutil.which("shfmt"), "shfmt is required for the regression"
+        git = shutil.which("git")
+        assert git is not None
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run([git, "init", "-q", directory], check=True)
+            script = root / "fixture.sh"
+            script.write_text('#!/bin/sh\nexport FIXTURE="$(mktemp -d)"\n')
+            subprocess.run([git, "-C", directory, "add", "fixture.sh"], check=True)
+            result = subprocess.run(
+                [sys.executable, str(ROOT / "scripts/check_shell.py"), "--staged"],
+                cwd=directory,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert result.returncode != 0
+            assert "SC2155" in result.stdout + result.stderr
+            script.write_text('#!/bin/sh\nFIXTURE="$(mktemp -d)"\nexport FIXTURE\n')
+            subprocess.run([git, "-C", directory, "add", "fixture.sh"], check=True)
+            result = subprocess.run(
+                [sys.executable, str(ROOT / "scripts/check_shell.py"), "--staged"],
+                cwd=directory,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert result.returncode == 0, result.stdout + result.stderr
 
 
 if __name__ == "__main__":
