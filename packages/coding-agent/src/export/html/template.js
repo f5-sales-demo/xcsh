@@ -1782,7 +1782,8 @@
           // Code blocks: syntax highlight, no HTML escaping
           code(token) {
             const code = token.text;
-            const lang = token.lang;
+            const first = String(token.lang || '').trim().split(/\s+/)[0];
+            const lang = /^[A-Za-z0-9+#._-]{1,20}$/.test(first) ? first : '';
             let highlighted;
             if (lang && hljs.getLanguage(lang)) {
               try {
@@ -1798,11 +1799,17 @@
                 highlighted = escapeHtml(code);
               }
             }
-            return `<pre><code class="hljs">${highlighted}</code></pre>`;
+            const label = lang ? `<span class="md-lang-label">${escapeHtml(lang)}</span>` : '';
+            return `<pre>${label}<code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre>`;
           },
           // Text content: escape HTML tags
           text(token) {
-            return escapeHtmlTags(escapeHtml(token.text));
+            return token.tokens ? this.parser.parseInline(token.tokens) : escapeHtmlTags(escapeHtml(token.text));
+          },
+          tablecell(token) {
+            const tag = token.header ? 'th' : 'td';
+            const alignment = ['left', 'center', 'right'].includes(token.align) ? ` class="md-align-${token.align}"` : '';
+            return `<${tag}${alignment}>${this.parser.parseInline(token.tokens)}</${tag}>`;
           },
           // Inline code: escape HTML
           codespan(token) {
@@ -1816,9 +1823,10 @@
           link(token) {
             const href = String(token.href || '');
             const label = this.parser.parseInline(token.tokens);
-            if (!/^(?:https?:|mailto:|#|\/(?!\/)|\.\.?\/)/i.test(href)) {
-              return label;
-            }
+            try {
+              const target = new URL(href, 'https://example.invalid');
+              if (!['http:', 'https:', 'mailto:'].includes(target.protocol)) return label;
+            } catch { return label; }
             const title = token.title ? ` title="${escapeHtml(token.title)}"` : '';
             return `<a href="${escapeHtml(href)}"${title}>${label}</a>`;
           },

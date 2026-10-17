@@ -10,6 +10,7 @@ import {
 	Ellipsis,
 	padding,
 	replaceTabs,
+	sliceWithWidth,
 	truncateToWidth,
 	visibleWidth,
 	wrapTextWithAnsi,
@@ -304,7 +305,11 @@ interface InlineStyleContext {
 	stylePrefix: string;
 }
 
-type ListToken = Token & { items: Array<{ tokens?: Token[] }>; ordered: boolean; start?: number };
+type ListToken = Token & {
+	items: Array<{ tokens?: Token[]; task?: boolean; checked?: boolean }>;
+	ordered: boolean;
+	start?: number;
+};
 type TableCellToken = { tokens?: Token[] };
 type TableToken = Token & {
 	header: TableCellToken[];
@@ -461,8 +466,8 @@ export class Markdown implements Component {
 			return result;
 		}
 
-		// Replace tabs with 3 spaces for consistent rendering
-		const normalizedText = normalizeOsc8Terminators(replaceTabs(this.#text));
+		// Parse source whitespace unchanged; expand tabs only for display.
+		const normalizedText = normalizeOsc8Terminators(this.#text);
 
 		// Parse markdown to HTML-like tokens
 		const tokens = markdownParser.lexer(normalizedText);
@@ -635,6 +640,7 @@ export class Markdown implements Component {
 				break;
 			}
 
+			case "text":
 			case "paragraph": {
 				const paragraphTokens = token.tokens || [];
 				if (this.#mediaOptions && paragraphTokens.some(child => child.type === "image")) {
@@ -694,18 +700,19 @@ export class Markdown implements Component {
 					}
 				}
 
-				const codeIndent = padding(this.#codeBlockIndent);
-				if (token.lang) lines.push(this.#theme.codeBlockBorder(token.lang));
-				if (this.#theme.highlightCode) {
-					const highlightedLines = this.#theme.highlightCode(token.text, token.lang);
-					for (const hlLine of highlightedLines) {
-						lines.push(`${codeIndent}${hlLine}`);
-					}
-				} else {
-					// Split code by newlines and style each line
-					const codeLines = token.text.split("\n");
-					for (const codeLine of codeLines) {
-						lines.push(`${codeIndent}${this.#theme.codeBlock(codeLine)}`);
+				const indentWidth = Math.min(this.#codeBlockIndent, Math.max(0, width - 1));
+				const codeIndent = padding(indentWidth);
+				if (token.lang) lines.push(...wrapTextWithAnsi(this.#theme.codeBlockBorder(token.lang), width));
+				const codeLines = this.#theme.highlightCode
+					? this.#theme.highlightCode(token.text, token.lang)
+					: token.text.split("\n").map((line: string) => this.#theme.codeBlock(line));
+				for (const codeLine of codeLines) {
+					const displayed = replaceTabs(codeLine);
+					const leadingSpaces = /^ */.exec(Bun.stripANSI(displayed))?.[0].length ?? 0;
+					const sourceIndentWidth = Math.min(leadingSpaces, Math.max(0, width - indentWidth - 1));
+					const body = sliceWithWidth(displayed, sourceIndentWidth, visibleWidth(displayed), true).text;
+					for (const visualLine of wrapTextWithAnsi(body, width - indentWidth - sourceIndentWidth)) {
+						lines.push(codeIndent + padding(sourceIndentWidth) + visualLine);
 					}
 				}
 				if (nextTokenType && nextTokenType !== "space") {
@@ -715,7 +722,7 @@ export class Markdown implements Component {
 			}
 
 			case "list": {
-				const listLines = this.#renderList(token as ListToken, 0, styleContext);
+				const listLines = this.#renderList(token as ListToken, width, styleContext);
 				lines.push(...listLines);
 				// Don't add spacing after lists if a space token follows
 				// (the space token will handle it)
@@ -801,7 +808,7 @@ export class Markdown implements Component {
 				}
 		}
 
-		return lines;
+		return lines.flatMap(line => (TERMINAL.isImageLine(line) ? [line] : wrapTextWithAnsi(replaceTabs(line), width)));
 	}
 
 	#renderParagraphWithMedia(tokens: Token[], width: number, styleContext?: InlineStyleContext): string[] {
@@ -971,105 +978,22 @@ export class Markdown implements Component {
 		return result;
 	}
 
-	/**
-	 * Render a list with proper nesting support
-	 */
-	#renderList(token: ListToken, depth: number, styleContext?: InlineStyleContext): string[] {
+	/** Render children in their own width, then add the item's structural prefix. */
+	#renderList(token: ListToken, width: number, styleContext?: InlineStyleContext): string[] {
 		const lines: string[] = [];
-		const indent = "  ".repeat(depth);
-		// Use the list's start property (defaults to 1 for ordered lists)
-		const startNumber = token.start ?? 1;
-
-		for (let i = 0; i < token.items.length; i++) {
-			const item = token.items[i];
-			const bullet = token.ordered ? `${startNumber + i}. ` : "- ";
-
-			// Process item tokens to handle nested lists
-			const itemLines = this.#renderListItem(item.tokens || [], depth, styleContext);
-
-			if (itemLines.length > 0) {
-				// First line - check if it's a nested list
-				// A nested list will start with indent (spaces) followed by cyan bullet
-				const firstLine = itemLines[0];
-				const isNestedList = /^\s+\x1b\[36m[-\d]/.test(firstLine); // starts with spaces + cyan + bullet char
-
-				if (isNestedList) {
-					// This is a nested list, just add it as-is (already has full indent)
-					lines.push(firstLine);
-				} else {
-					// Regular text content - add indent and bullet
-					lines.push(indent + this.#theme.listBullet(bullet) + firstLine);
-				}
-
-				// Rest of the lines
-				for (let j = 1; j < itemLines.length; j++) {
-					const line = itemLines[j];
-					const isNestedListLine = /^\s+\x1b\[36m[-\d]/.test(line); // starts with spaces + cyan + bullet char
-
-					if (isNestedListLine) {
-						// Nested list line - already has full indent
-						lines.push(line);
-					} else {
-						// Regular content - add parent indent + 2 spaces for continuation
-						lines.push(`${indent}  ${line}`);
-					}
-				}
-			} else {
-				lines.push(indent + this.#theme.listBullet(bullet));
-			}
+		for (const [index, item] of token.items.entries()) {
+			const bullet = token.ordered ? `${(token.start ?? 1) + index}. ` : "- ";
+			const task = item.task ? (item.checked ? "[x] " : "[ ] ") : "";
+			const prefix = bullet + task;
+			const indentWidth = Math.min(visibleWidth(prefix), Math.max(0, width - 1));
+			const children = item.tokens ?? [];
+			const itemLines = children.flatMap((child, i) =>
+				this.#renderToken(child, Math.max(1, width - indentWidth), children[i + 1]?.type, styleContext),
+			);
+			if (itemLines.length === 0) itemLines.push("");
+			lines.push(this.#theme.listBullet(prefix) + itemLines[0]);
+			for (const line of itemLines.slice(1)) lines.push(padding(indentWidth) + line);
 		}
-
-		return lines;
-	}
-
-	/**
-	 * Render list item tokens, handling nested lists
-	 * Returns lines WITHOUT the parent indent (renderList will add it)
-	 */
-	#renderListItem(tokens: Token[], parentDepth: number, styleContext?: InlineStyleContext): string[] {
-		const lines: string[] = [];
-
-		for (const token of tokens) {
-			if (token.type === "list") {
-				// Nested list - render with one additional indent level
-				// These lines will have their own indent, so we just add them as-is
-				const nestedLines = this.#renderList(token as ListToken, parentDepth + 1, styleContext);
-				lines.push(...nestedLines);
-			} else if (token.type === "text") {
-				// Text content (may have inline tokens)
-				const text =
-					token.tokens && token.tokens.length > 0
-						? this.#renderInlineTokens(token.tokens, styleContext)
-						: token.text || "";
-				lines.push(text);
-			} else if (token.type === "paragraph") {
-				// Paragraph in list item
-				const text = this.#renderInlineTokens(token.tokens || [], styleContext);
-				lines.push(text);
-			} else if (token.type === "code") {
-				// Code block in list item
-				const codeIndent = padding(this.#codeBlockIndent);
-				if (token.lang) lines.push(this.#theme.codeBlockBorder(token.lang));
-				if (this.#theme.highlightCode) {
-					const highlightedLines = this.#theme.highlightCode(token.text, token.lang);
-					for (const hlLine of highlightedLines) {
-						lines.push(`${codeIndent}${hlLine}`);
-					}
-				} else {
-					const codeLines = token.text.split("\n");
-					for (const codeLine of codeLines) {
-						lines.push(`${codeIndent}${this.#theme.codeBlock(codeLine)}`);
-					}
-				}
-			} else {
-				// Other token types - try to render as inline
-				const text = this.#renderInlineTokens([token], styleContext);
-				if (text) {
-					lines.push(text);
-				}
-			}
-		}
-
 		return lines;
 	}
 

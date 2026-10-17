@@ -840,6 +840,8 @@
       font-family: inherit;
     }
 
+    .markdown-content { overflow-wrap: anywhere; }
+
     .markdown-content pre {
       background: transparent;
       margin: var(--line-height) 0;
@@ -850,7 +852,14 @@
       display: block;
       background: none;
       color: var(--text);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
+
+    .markdown-content .md-lang-label { display: block; color: var(--mdCodeBlockBorder); margin-bottom: 4px; }
+    .markdown-content .md-align-left { text-align: left; }
+    .markdown-content .md-align-center { text-align: center; }
+    .markdown-content .md-align-right { text-align: right; }
 
     .markdown-content blockquote {
       border-left: 3px solid var(--mdQuoteBorder);
@@ -876,6 +885,7 @@
     }
 
     .markdown-content table {
+      table-layout: fixed;
       border-collapse: collapse;
       margin: 0.5em 0;
       width: 100%;

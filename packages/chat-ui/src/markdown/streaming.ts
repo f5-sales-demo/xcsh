@@ -12,7 +12,7 @@
  *
  * Two rules, both deliberately STRICT so a completed document is a fixed point
  * (`softCloseForStreaming(final) === final` once nothing is dangling):
- *   1. Odd number of ```` ``` ```` fences → append one synthetic closing fence so
+ *   1. An open fenced code token → append its matching container and delimiter so
  *      an in-progress code block renders as `<pre>` immediately.
  *   2. A trailing partial GFM table — a `≥2`-cell header row followed by an
  *      INCOMPLETE delimiter row — is HELD (stripped) for this frame, so the header
@@ -22,16 +22,56 @@
  *      alone.
  */
 
-/** Count of ```` ``` ```` fence lines (≤3 leading spaces). Odd ⇒ inside a block. */
-function openFenceCount(md: string): number {
-	const matches = md.match(/^ {0,3}```/gm);
-	return matches ? matches.length : 0;
+import { Marked, type Token, type Tokens } from "marked";
+
+const fenceLexer = new Marked({ gfm: true, async: false });
+
+/** Use the lexer to respect inline/indented code and list/quote containers. */
+function openFence(tokens: readonly Token[], prefix = ""): string | undefined {
+	const token = tokens.findLast(token => token.type !== "space");
+	if (!token) return undefined;
+	if (token.type === "blockquote") return openFence(token.tokens ?? [], `${prefix}> `);
+	if (token.type === "list") {
+		const item = (token as Tokens.List).items.at(-1);
+		if (!item) return undefined;
+		const marker = /^( *)(?:[-+*]|\d+[.)])([ \t]+)/.exec(item.raw);
+		return openFence(item.tokens, prefix + " ".repeat(marker?.[0].length ?? 2));
+	}
+	if (token.type !== "code" || token.codeBlockStyle === "indented") return undefined;
+	const opening = /^ {0,3}(`{3,}|~{3,})[^\n]*(?:\n|$)/.exec(token.raw);
+	if (!opening) return undefined;
+	const delimiter = opening[1];
+	const closing = new RegExp(`^ {0,3}${delimiter[0]}{${delimiter.length},}[ \t]*$`);
+	if (
+		token.raw
+			.slice(opening[0].length)
+			.split("\n")
+			.some(line => closing.test(line))
+	)
+		return undefined;
+	return prefix + delimiter;
 }
 
-/** Number of `|`-delimited cells in a table row (outer pipes ignored). */
+/** Split only unescaped GFM pipes; outer empty cells are delimiters. */
+function tableCells(line: string): string[] {
+	const cells: string[] = [];
+	let cell = "";
+	let escaped = false;
+	for (const char of line.trim()) {
+		if (char === "|" && !escaped) {
+			cells.push(cell.trim());
+			cell = "";
+		} else cell += char;
+		escaped = char === "\\" && !escaped;
+	}
+	cells.push(cell.trim());
+	if (cells[0] === "") cells.shift();
+	if (cells.at(-1) === "") cells.pop();
+	return cells;
+}
+
 function cellCount(line: string): number {
-	const trimmed = line.trim().replace(/^\|/, "").replace(/\|$/, "");
-	return trimmed.split("|").length;
+	return tableCells(line).length;
 }
 
 /** A row that could be a table HEADER: contains a pipe and yields ≥2 cells. */
@@ -49,21 +89,8 @@ function looksLikeDelimiterInProgress(line: string): boolean {
  * matches `:?-+:?` and the column count agrees (so marked will render a table).
  */
 function isCompleteDelimiterRow(line: string, headerCells: number): boolean {
-	const cells = line
-		.trim()
-		.replace(/^\|/, "")
-		.replace(/\|$/, "")
-		.split("|")
-		.map(c => c.trim());
+	const cells = tableCells(line);
 	return cells.length === headerCells && cells.every(c => /^:?-+:?$/.test(c));
-}
-
-/** Append a synthetic closing fence when an odd number of fences is open. */
-function closeOpenFence(md: string): string {
-	if (openFenceCount(md) % 2 === 1) {
-		return `${md}\n\`\`\``;
-	}
-	return md;
 }
 
 /**
@@ -90,5 +117,7 @@ function holdPartialTable(md: string): string {
 
 /** Render-only soft-close of a streaming markdown buffer (see file header). */
 export function softCloseForStreaming(md: string): string {
-	return holdPartialTable(closeOpenFence(md));
+	const closing = openFence(fenceLexer.lexer(md));
+	if (closing) return `${md}\n${closing}`;
+	return holdPartialTable(md);
 }
