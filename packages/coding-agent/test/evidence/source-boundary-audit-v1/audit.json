@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "1dd4454456c22e67a845bc80bd5bd41ab913fdad",
-  "fingerprint": "662a21e4958673df8a3fee0b6495edbbef5dd6be91954245cdd4f0df0e108efa",
+  "revision": "d2a148341b165955175ba520ce1847e227bbc6cb",
+  "fingerprint": "6fcfe5d4936ee107fb47e01c3246b77e589b4840c0e66ad8d2f9190431ad1dd5",
   "counts": {
     "total": 243,
     "components": 101,
@@ -6196,7 +6196,7 @@
       "kind": "component",
       "ownership": "shared-rendering-primitive",
       "domain": "shared-components",
-      "sha256": "b1e24b5101ffe6a7602fa64586977c353909773bd1bc363802e94da618e40dd2",
+      "sha256": "609c9ea66d77e8599deb3fe1db7811d60280536e2c0518d59b4449d0ffff7969",
       "exports": [
         "DefaultTextStyle",
         "Markdown",

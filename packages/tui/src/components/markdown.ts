@@ -621,15 +621,12 @@ export class Markdown implements Component {
 		switch (token.type) {
 			case "heading": {
 				const headingLevel = token.depth;
-				const headingPrefix = `${"#".repeat(headingLevel)} `;
 				const headingText = this.#renderInlineTokens(token.tokens || [], styleContext);
 				let styledHeading: string;
 				if (headingLevel === 1) {
 					styledHeading = this.#theme.heading(this.#theme.bold(this.#theme.underline(headingText)));
-				} else if (headingLevel === 2) {
-					styledHeading = this.#theme.heading(this.#theme.bold(headingText));
 				} else {
-					styledHeading = this.#theme.heading(this.#theme.bold(headingPrefix + headingText));
+					styledHeading = this.#theme.heading(this.#theme.bold(headingText));
 				}
 				lines.push(styledHeading);
 				if (nextTokenType && nextTokenType !== "space") {
@@ -698,7 +695,7 @@ export class Markdown implements Component {
 				}
 
 				const codeIndent = padding(this.#codeBlockIndent);
-				lines.push(this.#theme.codeBlockBorder(`\`\`\`${token.lang || ""}`));
+				if (token.lang) lines.push(this.#theme.codeBlockBorder(token.lang));
 				if (this.#theme.highlightCode) {
 					const highlightedLines = this.#theme.highlightCode(token.text, token.lang);
 					for (const hlLine of highlightedLines) {
@@ -711,7 +708,6 @@ export class Markdown implements Component {
 						lines.push(`${codeIndent}${this.#theme.codeBlock(codeLine)}`);
 					}
 				}
-				lines.push(this.#theme.codeBlockBorder("```"));
 				if (nextTokenType && nextTokenType !== "space") {
 					lines.push(""); // Add spacing after code blocks (unless space token follows)
 				}
@@ -1053,7 +1049,7 @@ export class Markdown implements Component {
 			} else if (token.type === "code") {
 				// Code block in list item
 				const codeIndent = padding(this.#codeBlockIndent);
-				lines.push(this.#theme.codeBlockBorder(`\`\`\`${token.lang || ""}`));
+				if (token.lang) lines.push(this.#theme.codeBlockBorder(token.lang));
 				if (this.#theme.highlightCode) {
 					const highlightedLines = this.#theme.highlightCode(token.text, token.lang);
 					for (const hlLine of highlightedLines) {
@@ -1065,7 +1061,6 @@ export class Markdown implements Component {
 						lines.push(`${codeIndent}${this.#theme.codeBlock(codeLine)}`);
 					}
 				}
-				lines.push(this.#theme.codeBlockBorder("```"));
 			} else {
 				// Other token types - try to render as inline
 				const text = this.#renderInlineTokens([token], styleContext);
