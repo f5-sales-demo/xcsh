@@ -505,10 +505,15 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		expect(installer).toContain("setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.16.0");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 		expect(installer).toContain("setup-zig-cache-v3-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}");
-		expect(installer).toContain("ZIG_GLOBAL_CACHE_DIR");
-		expect(installer).toContain("ZIG_LOCAL_CACHE_DIR");
+		const environmentWriter = await fs.readFile(path.join(root, "scripts/export-zig-environment.cjs"), "utf8");
+		expect(installer).toContain('export ZIG_PATH_TO_EXPORT="$ZIG_PATH" ZIG_CACHE_TO_EXPORT="$ZIG_CACHE_DIR"');
+		expect(installer).toContain('node "$WORKSPACE_PATH/scripts/export-zig-environment.cjs"');
+		expect(environmentWriter).toContain("fs.appendFileSync(environment.GITHUB_PATH,");
+		expect(environmentWriter).toContain("environment.ZIG_PATH_TO_EXPORT");
+		expect(environmentWriter).toContain("environment.GITHUB_ENV,");
+		expect(environmentWriter).toMatch(/ZIG_GLOBAL_CACHE_DIR=\$\{environment\.ZIG_CACHE_TO_EXPORT\}/);
+		expect(environmentWriter).toMatch(/ZIG_LOCAL_CACHE_DIR=\$\{environment\.ZIG_CACHE_TO_EXPORT\}/);
 		expect(installer).toContain('cygpath -w "$ZIG_DIR"');
-		expect(installer).toContain('>> "$GITHUB_PATH"');
 		expect(installer).toContain('"$ZIG_BINARY" version');
 	});
 });
