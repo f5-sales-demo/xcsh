@@ -53,12 +53,25 @@ describe("third-party actions in credential-bearing workflows are pinned (#2498)
 	for (const file of CREDENTIAL_BEARING) {
 		it(`${file}: every third-party action is a 40-hex commit`, async () => {
 			const unpinned = (await usesLines(file))
-				.filter(ref => !ref.startsWith("./") && !EXEMPT_OWNER.test(ref))
+				.filter(ref => !ref.startsWith("./") && !ref.startsWith("$/") && !EXEMPT_OWNER.test(ref))
 				.filter(ref => !SHA_PINNED.test(`${ref} `));
 			// Named so the failure says which action to pin, not merely that one exists.
 			expect(unpinned).toEqual([]);
 		});
 	}
+
+	it("local action forms are exempt while unpinned external actions remain rejected", () => {
+		const refs = [
+			"./.github/actions/setup-bun",
+			"$/.github/actions/setup-bun",
+			"vendor/action@main",
+			`vendor/action@${"a".repeat(40)}`,
+		];
+		const unpinned = refs
+			.filter(ref => !ref.startsWith("./") && !ref.startsWith("$/") && !EXEMPT_OWNER.test(ref))
+			.filter(ref => !SHA_PINNED.test(`${ref} `));
+		expect(unpinned).toEqual(["vendor/action@main"]);
+	});
 
 	it("the credential-bearing list still matches workflows with release credentials or OIDC", async () => {
 		// Guards the premise rather than the conclusion: if a workflow starts using a release
