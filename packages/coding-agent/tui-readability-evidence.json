@@ -652,14 +652,14 @@
       "9de4321d"
     ],
     "packages/tui/src/components/markdown.ts": [
-      "609c9ea6",
-      "6d77e859",
-      "9deb3fe1",
-      "db7811d6",
-      "0280536e",
-      "2c0518d5",
-      "9b4449d0",
-      "ffff7969"
+      "a4c79dc0",
+      "582238aa",
+      "90e28d6f",
+      "deef9e54",
+      "7a44d835",
+      "f8d67061",
+      "eb2c6aef",
+      "020ebbaf"
     ],
     "packages/tui/src/components/select-list.ts": [
       "344ef4a0",
@@ -2649,7 +2649,7 @@
     },
     {
       "file": "packages/tui/src/components/markdown.ts",
-      "line": 687,
+      "line": 693,
       "sink": "truncateToWidth",
       "entry": "tui-core-compact"
     },

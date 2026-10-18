@@ -139,8 +139,9 @@ const ALLOWED_ATTR = [
 	"stretchy",
 	"symmetric",
 	"width",
+	"start",
 ];
-const HTML_ATTRIBUTES = new Set(["href", "title", "class", "target", "rel", "type", "checked", "disabled"]);
+const HTML_ATTRIBUTES = new Set(["href", "title", "class", "target", "rel", "type", "checked", "start", "disabled"]);
 const MATHML_ATTRIBUTES = new Set(["class", ...ALLOWED_ATTR.slice(8)]);
 
 const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
@@ -279,6 +280,10 @@ function build(): Purifier {
 		const allowedAttributes = isMathMl ? MATHML_ATTRIBUTES : HTML_ATTRIBUTES;
 		if (!allowedAttributes.has(data.attrName)) {
 			data.keepAttr = false;
+			return;
+		}
+		if (data.attrName === "start") {
+			data.keepAttr = node.nodeName === "OL" && /^-?\d{1,9}$/.test(data.attrValue);
 			return;
 		}
 		if (data.attrName === "style") {

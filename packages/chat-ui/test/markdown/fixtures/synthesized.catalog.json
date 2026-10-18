@@ -1,0 +1,143 @@
+[
+  {
+    "id": "csd",
+    "prompt": "Explain CSD configuration using five numbered sections, HTTP requests, JSON bodies, and multiline Bash curl examples. Examples only; do not execute tools or change any tenant.",
+    "markdown": "1. **Section 1**\n\n   ```http\n   GET /example/1 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/1\"\n   ```\n\n2. **Section 2**\n\n   ```http\n   GET /example/2 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/2\"\n   ```\n\n3. **Section 3**\n\n   ```http\n   GET /example/3 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/3\"\n   ```\n\n4. **Section 4**\n\n   ```http\n   GET /example/4 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/4\"\n   ```\n\n5. **Section 5**\n\n   ```http\n   GET /example/5 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/5\"\n   ```",
+    "selectors": {
+      "ol": 1,
+      "li": 5,
+      "pre code": 15
+    },
+    "text": [
+      "Section 5",
+      "count"
+    ]
+  },
+  {
+    "id": "headings",
+    "prompt": "Demonstrate heading levels 1–6, setext headings, bold, italic, strikethrough, inline code, escaped punctuation, and literal Markdown characters. Examples only; do not execute tools or change any tenant.",
+    "markdown": "# Heading 1\n\n## Heading 2\n\n### Heading 3\n\n#### Heading 4\n\n##### Heading 5\n\n###### Heading 6\n\nSetext one\n===\n\nSetext two\n---\n\n**bold** *italic* ~~strike~~ `code` \\*literal\\* \\#hash \\[brackets\\].",
+    "selectors": {
+      "h1": 2,
+      "h2": 2,
+      "h6": 1,
+      "strong": 1,
+      "em": 1,
+      "del": 1,
+      "code": 1
+    },
+    "text": [
+      "Heading 6",
+      "literal",
+      "hash"
+    ]
+  },
+  {
+    "id": "tasks",
+    "prompt": "Write a deployment checklist with checked and unchecked tasks, three nested levels, ordered numbering starting at 9, long items, and paragraphs inside items. Examples only; do not execute tools or change any tenant.",
+    "markdown": "- [x] Ready\n- [ ] Pending\n  - Child\n    - Grandchild\n\n9. wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation word\n\n   Second paragraph.\n\n10. Next item",
+    "selectors": {
+      "input[checked]": 1,
+      "input:not([checked])": 1,
+      "ul ul ul": 1,
+      "ol[start=\"9\"]": 1
+    },
+    "text": [
+      "Ready",
+      "Pending",
+      "Grandchild",
+      "Second paragraph."
+    ]
+  },
+  {
+    "id": "tables",
+    "prompt": "Compare deployment options in aligned tables containing long URLs, escaped pipes, inline code, Unicode, empty cells, zero values, and warnings; include a table inside a list. Examples only; do not execute tools or change any tenant.",
+    "markdown": "| Option | URL | Value | Warning |\n| :--- | :---: | ---: | --- |\n| Québec | https://example.test/longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong | 0 | A\\|B |\n| Empty | `a\\|b` | | ⚠ warning |\n\n- Nested table\n\n  | Field | Value |\n  | --- | --- |\n  | Widget | 0 |",
+    "selectors": {
+      "table": 2,
+      "li table": 1,
+      "td.md-align-right": 1
+    },
+    "text": [
+      "Québec",
+      "0",
+      "warning",
+      "Widget",
+      "A|B"
+    ]
+  },
+  {
+    "id": "quotes",
+    "prompt": "Write a runbook with nested blockquotes containing headings, lists, tables, and code, followed immediately by normal prose. Examples only; do not execute tools or change any tenant.",
+    "markdown": "> ## Warning\n>\n> - Keep this value.\n>\n> > Nested quote\n> >\n> > | Field | Value |\n> > | --- | --- |\n> > | State | Ready |\n> >\n> > ```json\n> > {\"count\": 0}\n> > ```\n\nNormal prose.",
+    "selectors": {
+      "blockquote blockquote": 1,
+      "blockquote table": 1,
+      "blockquote pre": 1
+    },
+    "text": [
+      "Warning",
+      "Ready",
+      "Normal prose."
+    ]
+  },
+  {
+    "id": "code",
+    "prompt": "Show Bash, JSON, HTTP, and an unknown language; include heredocs, tabs, blank lines, quotes, backslashes, long lines, tilde fences, and four-backtick fences containing literal triple backticks. Examples only; do not execute tools or change any tenant.",
+    "markdown": "~~~bash\ncat <<'EOF'\n\tquoted \"value\" \\ literal\n\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nEOF\n~~~\n\n```json\n{\"text\": \"<tag> & \\\"quote\\\"\", \"count\": 0}\n```\n\n```http\nGET / HTTP/1.1\nHost: example.test\n```\n\n````unknown\nliteral\n```\nend\n````",
+    "selectors": {
+      "pre code": 4,
+      "code.language-unknown": 1
+    },
+    "text": [
+      "literal",
+      "end",
+      "Host: example.test"
+    ]
+  },
+  {
+    "id": "links",
+    "prompt": "Demonstrate inline and reference links, autolinks, relative paths, images with alt text, and an unavailable image. Examples only; do not execute tools or change any tenant.",
+    "markdown": "[inline](https://example.test/a) [reference][ref] <https://example.test/b> [relative](docs/readme.md)\n\n![Example alt](https://example.invalid/missing.png)\n\n[ref]: https://example.test/ref",
+    "selectors": {
+      "a": 4
+    },
+    "text": [
+      "inline",
+      "reference",
+      "relative"
+    ]
+  },
+  {
+    "id": "math",
+    "prompt": "Explain a formula with inline and display math and a Mermaid diagram; include incomplete and unsupported examples to exercise fallbacks. Examples only; do not execute tools or change any tenant.",
+    "markdown": "Inline $x^2$.\n\n$$\nI \\propto \\frac{1}{\\lambda^4}\n$$\n\n```mermaid\ngraph TD\nA --> B\n```\n\nUnsupported $\\includegraphics{file}$\n\nIncomplete $\\frac{1",
+    "selectors": {
+      "math": 2,
+      "pre code.language-mermaid": 1
+    },
+    "text": [
+      "Unsupported",
+      "Incomplete"
+    ]
+  },
+  {
+    "id": "combined",
+    "prompt": "Produce a technical guide combining all preceding constructs, hard and soft line breaks, horizontal rules, and literal HTML examples. Examples only; do not execute tools or change any tenant.",
+    "markdown": "1. **Section 1**\n\n   ```http\n   GET /example/1 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/1\"\n   ```\n\n2. **Section 2**\n\n   ```http\n   GET /example/2 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/2\"\n   ```\n\n3. **Section 3**\n\n   ```http\n   GET /example/3 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/3\"\n   ```\n\n4. **Section 4**\n\n   ```http\n   GET /example/4 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/4\"\n   ```\n\n5. **Section 5**\n\n   ```http\n   GET /example/5 HTTP/1.1\n   Host: example.test\n   ```\n\n   ```json\n   {\"enabled\": true, \"count\": 0}\n   ```\n\n   ```bash\n   curl --request GET \\\n     --header \"Accept: application/json\" \\\n     \"https://example.test/example/5\"\n   ```\n\n# Heading 1\n\n## Heading 2\n\n### Heading 3\n\n#### Heading 4\n\n##### Heading 5\n\n###### Heading 6\n\nSetext one\n===\n\nSetext two\n---\n\n**bold** *italic* ~~strike~~ `code` \\*literal\\* \\#hash \\[brackets\\].\n\n- [x] Ready\n- [ ] Pending\n  - Child\n    - Grandchild\n\n9. wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation wordcontinuation word\n\n   Second paragraph.\n\n10. Next item\n\n| Option | URL | Value | Warning |\n| :--- | :---: | ---: | --- |\n| Québec | https://example.test/longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong | 0 | A\\|B |\n| Empty | `a\\|b` | | ⚠ warning |\n\n- Nested table\n\n  | Field | Value |\n  | --- | --- |\n  | Widget | 0 |\n\n> ## Warning\n>\n> - Keep this value.\n>\n> > Nested quote\n> >\n> > | Field | Value |\n> > | --- | --- |\n> > | State | Ready |\n> >\n> > ```json\n> > {\"count\": 0}\n> > ```\n\nNormal prose.\n\n~~~bash\ncat <<'EOF'\n\tquoted \"value\" \\ literal\n\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nEOF\n~~~\n\n```json\n{\"text\": \"<tag> & \\\"quote\\\"\", \"count\": 0}\n```\n\n```http\nGET / HTTP/1.1\nHost: example.test\n```\n\n````unknown\nliteral\n```\nend\n````\n\n[inline](https://example.test/a) [reference][ref] <https://example.test/b> [relative](docs/readme.md)\n\n![Example alt](https://example.invalid/missing.png)\n\n[ref]: https://example.test/ref\n\nInline $x^2$.\n\n$$\nI \\propto \\frac{1}{\\lambda^4}\n$$\n\n```mermaid\ngraph TD\nA --> B\n```\n\nUnsupported $\\includegraphics{file}$\n\nIncomplete $\\frac{1\n\nHard break  \nnext line\nsoft line\nbreak\n\n---\n\n```html\n<div data-example=\"<literal>\">& source</div>\n```",
+    "selectors": {
+      "h6": 1,
+      "table": 3,
+      "blockquote": 1,
+      "pre code": 1,
+      "hr": 1,
+      "br": 1
+    },
+    "text": [
+      "Hard break",
+      "source",
+      "Pending",
+      "Widget"
+    ]
+  }
+]

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "12a6ab91aadcfd729926e9eb95dbc4dfef98995f",
-  "fingerprint": "31c31b4bc7ad9cc72a23bdf4cc4da37b09e5e508a12257f6c8548058095f8123",
+  "revision": "08d98487cf6f89d9b3efa3f584f3faa5a7ec1f54",
+  "fingerprint": "6de009a69b73d82731af6e1cc09155b3cd78d30cbe8ea7dbf1a0076437ccd0e6",
   "counts": {
     "total": 243,
     "components": 101,
@@ -393,6 +393,7 @@
         "packages/coding-agent/test/extensions-runner.test.ts",
         "packages/coding-agent/test/html-media-export.test.ts",
         "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts",
+        "packages/coding-agent/test/markdown-component-fidelity.test.ts",
         "packages/coding-agent/test/mermaid-renderer.test.ts",
         "packages/coding-agent/test/pending-glyph-sweep.test.ts",
         "packages/coding-agent/test/plugin-presentation.test.ts",
@@ -402,8 +403,7 @@
         "packages/coding-agent/test/tools/chunk-mode.test.ts",
         "packages/coding-agent/test/tools/compile-graph.test.ts",
         "packages/coding-agent/test/tools/edit-renderer.test.ts",
-        "packages/coding-agent/test/tools/fetch-kagi-toggle.test.ts",
-        "packages/coding-agent/test/tools/inspect-image-renderer.test.ts"
+        "packages/coding-agent/test/tools/fetch-kagi-toggle.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/renderer.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1105,6 +1105,7 @@
       "interactionSignals": [],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/markdown-component-fidelity.test.ts",
         "packages/coding-agent/test/modes/components/assistant-message-outcomes.test.ts",
         "packages/coding-agent/test/user-message-hotswap.test.ts",
         "packages/tui/test/markdown.test.ts"
@@ -2048,6 +2049,7 @@
       ],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/markdown-component-fidelity.test.ts",
         "packages/coding-agent/test/marketplace-presentation.test.ts",
         "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts"
       ],
@@ -6197,7 +6199,7 @@
       "kind": "component",
       "ownership": "shared-rendering-primitive",
       "domain": "shared-components",
-      "sha256": "609c9ea66d77e8599deb3fe1db7811d60280536e2c0518d59b4449d0ffff7969",
+      "sha256": "a4c79dc0582238aa90e28d6fdeef9e547a44d835f8d67061eb2c6aef020ebbaf",
       "exports": [
         "DefaultTextStyle",
         "Markdown",
@@ -6227,14 +6229,14 @@
         "packages/coding-agent/test/discovery/agents-monorepo-skills.test.ts",
         "packages/coding-agent/test/herdr/interaction-bridge.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
+        "packages/coding-agent/test/html-markdown-fidelity.test.ts",
         "packages/coding-agent/test/html-math-export.test.ts",
         "packages/coding-agent/test/internal-urls/api-catalog-discovery.test.ts",
         "packages/coding-agent/test/internal-urls/api-catalog-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/api-spec-integration.test.ts",
         "packages/coding-agent/test/internal-urls/api-spec-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/blindfold.test.ts",
-        "packages/coding-agent/test/internal-urls/changes-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/console-resolve.test.ts"
+        "packages/coding-agent/test/internal-urls/changes-resolve.test.ts"
       ],
       "classification": "packages/tui/src/components/markdown.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
