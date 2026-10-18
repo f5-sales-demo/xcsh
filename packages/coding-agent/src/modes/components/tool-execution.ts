@@ -1,4 +1,4 @@
-import type { AgentTool, PluginPresentation } from "@f5-sales-demo/pi-agent-core";
+import type { AgentTool, PluginPresentation, PluginView } from "@f5-sales-demo/pi-agent-core";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import {
 	Box,
@@ -15,6 +15,7 @@ import {
 } from "@f5-sales-demo/pi-tui";
 import { getProjectDir, logger } from "@f5-sales-demo/pi-utils";
 import { computeEditDiff, computeHashlineDiff, computePatchDiff, type DiffError, type DiffResult } from "../../edit";
+import { usablePluginView } from "../../extensibility/presentation-validity";
 import { theme } from "../../modes/theme/theme";
 import { BASH_DEFAULT_PREVIEW_LINES } from "../../tools/bash";
 import { stripInternalArgs } from "../../tools/json-tree";
@@ -708,18 +709,27 @@ export class ToolExecutionComponent extends Container {
 
 	#resultView(): Component {
 		const result = this.#result!;
-		const fallback = new PluginViewComponent(
+		const adapter: { view?: PluginView } = {};
+		const providedEvidence = () => adapter.view?.expandedEvidence === "provided";
+		const fallbackView = new PluginViewComponent(
 			() => fallbackResultView(result),
 			this.#expanded,
 			Boolean(result.isError),
 		);
+		const fallback: Component = {
+			invalidate: () => fallbackView.invalidate(),
+			render: width => {
+				adapter.view = undefined;
+				return fallbackView.render(width);
+			},
+		};
 		const descriptor = this.#tool?.presentation as PluginPresentation | undefined;
 		const presented = descriptor?.result
 			? guardedComponent(
 					() =>
 						new PluginViewComponent(
-							width =>
-								descriptor.result!(
+							width => {
+								const view = descriptor.result!(
 									structuredClone(result),
 									{
 										expanded: this.#expanded,
@@ -728,7 +738,10 @@ export class ToolExecutionComponent extends Container {
 										spinnerFrame: this.#spinnerFrame,
 									},
 									structuredClone(this.#args),
-								),
+								);
+								adapter.view = usablePluginView(view) ? view : undefined;
+								return adapter.view;
+							},
 							this.#expanded,
 							Boolean(result.isError),
 							fallback,
@@ -739,12 +752,14 @@ export class ToolExecutionComponent extends Container {
 		return {
 			invalidate: () => presented.invalidate(),
 			render: width => {
+				adapter.view = undefined;
 				const lines = presented.render(width);
+				const appendEvidence = !providedEvidence();
 				// Retain every source field, argument, error and advisory for transcript inspection.
-				if (descriptor?.result && this.#expanded) {
+				if (descriptor?.result && this.#expanded && appendEvidence) {
 					lines.push(...fallback.render(width));
 				}
-				if (this.#expanded && result.details !== undefined) {
+				if (this.#expanded && result.details !== undefined && appendEvidence) {
 					lines.push(
 						...new PluginViewComponent(
 							() => ({ sections: dataSections(result.details, "Details") }),

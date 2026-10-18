@@ -1,6 +1,6 @@
 /** Data-only presentation contract. Plugins do not import a renderer at runtime. */
 export type PluginSection =
-	| { kind: "fields"; title?: string; values: Readonly<Record<string, unknown>> }
+	| { kind: "fields"; title?: string; values: Readonly<Record<string, unknown>>; previewFields?: number | "all" }
 	| {
 			kind: "table";
 			title?: string;
@@ -19,6 +19,10 @@ export type PluginSection =
 	| { kind: "code"; title?: string; text: string; language?: string; argv?: readonly string[] };
 
 export interface PluginView {
+	/** Append automatic expanded evidence by default; provided adapters include complete safe evidence. */
+	expandedEvidence?: "append" | "provided";
+	/** Automatic streaming/pagination warnings by default; provided adapters explain completion. */
+	completeness?: "automatic" | "provided";
 	summary?: string;
 	warnings?: readonly string[];
 	sections?: readonly PluginSection[];

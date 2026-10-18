@@ -77,3 +77,20 @@ render. Completion retires the timer; abort, context replacement and UI teardown
 without discarding streamed evidence. `stopAnimation()` permanently retires that component,
 including late argument updates. These source guarantees require separate installed native and
 service qualification before an adapter migration is accepted.
+
+
+### Adapter completeness and expanded evidence
+
+Field sections accept `previewFields: number | "all"`. The default preview keeps six
+fields plus consequential counts, scope and completion fields; `"all"` displays the
+whole section. Expanded and failed results continue to show every field.
+
+A valid nonempty result view may declare `expandedEvidence: "provided"` when its
+sections already include complete safe result and metadata evidence. The runtime
+then skips appended result/details, while retaining the shared Arguments section.
+The default is `"append"`.
+
+`completeness: "provided"` delegates streaming and pagination explanations to the
+domain adapter. Explicit adapter warnings remain visible. The default is
+`"automatic"`. Missing, empty, malformed or throwing result callbacks retain
+fallback evidence and automatic warnings regardless of the requested flags.
