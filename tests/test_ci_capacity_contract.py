@@ -65,7 +65,7 @@ class CiCapacityContractTests(unittest.TestCase):
         verifier = (ROOT / "scripts/verify-self-hosted-tools.sh").read_text(
             encoding="utf-8"
         )
-        self.assertIn("uses: ./.github/actions/setup-bun", ci)
+        self.assertIn("uses: $/.github/actions/setup-bun", ci)
         self.assertNotIn("taiki-e/install-action@", ci)
         self.assertNotIn("sudo apt-get install --yes --no-install-recommends llvm", ci)
         for action in (setup_bun, setup_rust, setup_zig):
@@ -118,7 +118,7 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("source-sha:", action)
         self.assertIn("PROFILE_SOURCE_SHA: ${{ inputs.source-sha }}", action)
         self.assertIn(
-            'harness_commit=$(git -C "${{ github.action_path }}/../../.." rev-parse HEAD)',
+            'harness_commit=$(git -C "$PROFILE_HARNESS_ROOT" rev-parse HEAD)',
             action,
         )
         self.assertNotIn("taiki-e/install-action@", action)

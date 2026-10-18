@@ -462,7 +462,7 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		expect(nativeJob).toContain("macos-15-intel");
 		expect(nativeJob).toContain("macos-14");
 		expect(nativeJob).toContain("windows-latest");
-		expect(nativeJob).toContain("uses: ./.github/actions/setup-zig");
+		expect(nativeJob).toContain("uses: $/.github/actions/setup-zig");
 		expect(nativeJob).toContain("run: bash scripts/verify-self-hosted-tools.sh full");
 		expect(installer).toContain("Verify baked Zig 0.16.0");
 		expect(installer).toContain('test "$(zig version)" = 0.16.0');
@@ -475,7 +475,7 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		const installer = await fs.readFile(path.join(root, ".github/actions/setup-zig/action.yml"), "utf8");
 
 		expect(workflow).not.toContain("mlugg/setup-zig");
-		expect(workflow.match(/uses: \.\/\.github\/actions\/setup-zig/g)).toHaveLength(2);
+		expect(workflow.match(/uses: \$\/\.github\/actions\/setup-zig/g)).toHaveLength(2);
 		expect(installer).toContain("using: composite");
 		expect(installer).toContain('ZIG_VERSION: "0.16.0"');
 		const releases = [

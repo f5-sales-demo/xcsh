@@ -67,7 +67,7 @@ jobs:
       # The rest of the repo pins nothing (including `@nightly` and org workflows
       # at `@main`) — that wider gap is its own problem, not one to solve here.
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"

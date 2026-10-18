@@ -41,7 +41,7 @@ runs:
     - name: Profile legacy setup or baked verification
       shell: bash
       env:
-        PROFILE_ACTION_ROOT: ${{ github.action_path }}
+        PROFILE_HARNESS_ROOT: ${{ github.workspace }}/.qualification-harness
         PROFILE_CACHE_STATE: ${{ inputs.cache-state }}
         PROFILE_EXPERIMENT: ${{ inputs.experiment }}
         PROFILE_PAIR_ID: ${{ inputs.pair-id }}
@@ -49,7 +49,7 @@ runs:
         PROFILE_SOURCE_SHA: ${{ inputs.source-sha }}
       run: |
         source_commit=$(git rev-parse HEAD)
-        harness_commit=$(git -C "$PROFILE_ACTION_ROOT/../../.." rev-parse HEAD)
+        harness_commit=$(git -C "$PROFILE_HARNESS_ROOT" rev-parse HEAD)
         if [[ "$source_commit" != "$PROFILE_SOURCE_SHA" ]]; then
           echo "checked-out source SHA $source_commit does not match expected source SHA $PROFILE_SOURCE_SHA" >&2
           exit 1
@@ -58,10 +58,10 @@ runs:
           echo "qualification harness SHA $harness_commit does not match expected source SHA $PROFILE_SOURCE_SHA" >&2
           exit 1
         fi
-        "$PROFILE_ACTION_ROOT/../../../scripts/prepare-runner-optimization-toolchain.sh" \
+        "$PROFILE_HARNESS_ROOT/scripts/prepare-runner-optimization-toolchain.sh" \
           "$PROFILE_EXPERIMENT" "$PROFILE_CACHE_STATE" "$PROFILE_PAIR_ID" \
           "$RUNNER_TEMP/runner-profile-evidence" \
-          "$PROFILE_ACTION_ROOT/../../../scripts/verify-self-hosted-tools.sh" \
+          "$PROFILE_HARNESS_ROOT/scripts/verify-self-hosted-tools.sh" \
           "$PROFILE_PHASE_SET" "$PROFILE_SOURCE_SHA"
     - name: Restore exact warm Rust cache
       if: inputs.cache-state == 'warm'
@@ -76,7 +76,7 @@ runs:
     - name: Profile workload phases
       shell: bash
       env:
-        PROFILE_ACTION_ROOT: ${{ github.action_path }}
+        PROFILE_HARNESS_ROOT: ${{ github.workspace }}/.qualification-harness
         GH_TOKEN: ${{ github.token }}
         PROFILE_CACHE_STATE: ${{ inputs.cache-state }}
         PROFILE_EXPERIMENT: ${{ inputs.experiment }}
@@ -84,9 +84,9 @@ runs:
         PROFILE_PAIR_ID: ${{ inputs.pair-id }}
         PROFILE_PHASE_SET: ${{ inputs.phase-set }}
         PROFILE_SOURCE_SHA: ${{ inputs.source-sha }}
-        XCSH_TEST_RUNNER: ${{ github.action_path }}/../../../scripts/run-ts-tests.ts
+        XCSH_TEST_RUNNER: ${{ github.workspace }}/.qualification-harness/scripts/run-ts-tests.ts
       run: |
-        "$PROFILE_ACTION_ROOT/../../../scripts/runner-optimization-profile.sh" \
+        "$PROFILE_HARNESS_ROOT/scripts/runner-optimization-profile.sh" \
           "$PROFILE_EXPERIMENT" "$PROFILE_CACHE_STATE" "$PROFILE_PAIR_ID" \
           "$PROFILE_FILE_WORKERS" "$RUNNER_TEMP/runner-profile-evidence" \
           "$PROFILE_PHASE_SET" "$PROFILE_SOURCE_SHA"
