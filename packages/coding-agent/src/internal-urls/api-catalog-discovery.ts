@@ -4,8 +4,8 @@ import { mkdir, mkdtemp, realpath, rename, rm, writeFile } from "node:fs/promise
 import os from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
-import { createStore } from "@tobilu/qmd";
 import type { ApiCatalogCategory, ApiCatalogIndex } from "./api-catalog-types";
+import { openQmdBm25Index } from "./qmd-bm25-reader";
 
 export interface ApiCatalogDiscoveryDocument {
 	readonly id: string;
@@ -35,7 +35,7 @@ export interface QmdBm25CatalogDiscoveryOptions {
 	readonly limit?: number;
 }
 
-type QmdStore = Awaited<ReturnType<typeof createStore>>;
+type QmdStore = ReturnType<typeof openQmdBm25Index>;
 
 const qmdStores = new Map<string, Promise<QmdStore>>();
 const verifiedIndexPaths = new Map<string, string>();
@@ -60,14 +60,13 @@ async function getQmdStore(databasePath: string): Promise<QmdStore> {
 	let store = qmdStores.get(databasePath);
 	if (!store) {
 		store = (async () => {
-			// QMD's FTS query path can create SQLite sidecars even on a read-only
-			// connection. Search a disposable copy so the checksum-pinned cache
-			// remains byte-immutable on every supported platform.
+			// Search a disposable copy so SQLite connection behavior cannot change
+			// the checksum-pinned cache on any supported platform.
 			const runtimeRoot = await mkdtemp(path.join(os.tmpdir(), "xcsh-api-catalog-runtime-"));
 			const runtimeDatabasePath = path.join(runtimeRoot, "index.sqlite");
 			try {
 				await Bun.write(runtimeDatabasePath, Bun.file(databasePath));
-				const runtimeStore = await createStore({ dbPath: runtimeDatabasePath });
+				const runtimeStore = openQmdBm25Index(runtimeDatabasePath);
 				registerRuntimeRoot(runtimeRoot);
 				return runtimeStore;
 			} catch (error) {
