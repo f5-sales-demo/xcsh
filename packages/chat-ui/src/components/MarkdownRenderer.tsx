@@ -16,7 +16,7 @@
  * final frame is never dropped).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { installCodePanels } from "../markdown/code-presentation.generated.js";
+import { installCodePanels } from "../markdown/code-presentation.generated.min.js";
 import { renderMarkdown } from "../markdown/render";
 
 export interface MarkdownRendererProps {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { installCodePanels, renderCodePanel } from "../markdown/code-presentation.generated.js";
+import { installCodePanels, renderCodePanel } from "../markdown/code-presentation.generated.min.js";
 
 /** Plain tool output stays plain unless its host supplies explicit language metadata. */
 export function CodePanel({

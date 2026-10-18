@@ -5,15 +5,15 @@
 			"size_bytes": 46321246
 		},
 		"canonical-manifest.json": {
-			"sha256": "16ef4307c7d22d457023154ed108a783caf7baec03edd85941751ef84e67037f",
+			"sha256": "3b9ad5c3409120c0f4e73b8fff1757fc2088d7ee2acb063aa0747a35600017d7",
 			"size_bytes": 7565728
 		},
 		"manifest.json": {
-			"sha256": "6c6d5f68c3cdfb448760f5ead027d9e41c447fbdbf9cdd5b879a210e93e871d5",
+			"sha256": "28790fe65d401e86c1f7ff7b7a751a80efd5b9bed458bda02b6fa47d57de82db",
 			"size_bytes": 70477563
 		},
 		"publication.json": {
-			"sha256": "dd64d4128c4069fda4acbae8ec8900ef11b3182f27a5c11ed7369c2cb148aac4",
+			"sha256": "07bf497b0907e6d30764ffc1141d963f4c6ecb4c53c7e62dd605b6a685bc8dfd",
 			"size_bytes": 1380
 		},
 		"registry-documentation.tar.gz": {
@@ -21,7 +21,7 @@
 			"size_bytes": 9981564
 		},
 		"registry-manifest.json": {
-			"sha256": "dddaca986ce9852c28ee318fd555f5ebb680545d1555acb0285174dd6e9f27b6",
+			"sha256": "23e1b7dc12dce04851a231d7ca05c23914fff2d5ffc6da5e00c076d29ce2d55a",
 			"size_bytes": 237498
 		},
 		"registry-projection-manifest.json": {
@@ -29,7 +29,7 @@
 			"size_bytes": 276722
 		},
 		"SHA256SUMS": {
-			"sha256": "ce1f1038e5c3c85196bf269b9c49c70bfcca6b512b6398db57d1fd9f8c3e815e",
+			"sha256": "c4e7be7cede41154e6791b2cca519c4f75ed559cedad6baae4065078dedfe34a",
 			"size_bytes": 723
 		},
 		"terraform-docs.tar.gz": {
@@ -39,19 +39,19 @@
 	},
 	"document_count": 16403,
 	"provider_schema_digest": "sha256:a43a21ec82c017926d35acc6efc3b0a8740fd394357a09aa0e63e65503eb7aff",
-	"provider_version": "v15.12.0",
-	"release_tag": "documentation-v15.12.0",
+	"provider_version": "v15.12.1",
+	"release_tag": "documentation-v15.12.1",
 	"retrieval_metadata_version": 1,
 	"schema_version": 2,
-	"source_commit": "563309460e457418c5700de99dbaafeaf9e2f9f3",
+	"source_commit": "2671e34d85a46fd390df80bb2fe97089c47b0c28",
 	"source_repository": "f5-sales-demo/terraform-provider-xcsh",
 	"source_root": "documentation",
 	"spec_pin_digest": "sha256:ea0d80973b5efe05eb3575be6beda9c96b86701d264dc1aee3972e6a23ebb3fb",
-	"receipt_sha256": "dd64d4128c4069fda4acbae8ec8900ef11b3182f27a5c11ed7369c2cb148aac4",
+	"receipt_sha256": "07bf497b0907e6d30764ffc1141d963f4c6ecb4c53c7e62dd605b6a685bc8dfd",
 	"index": {
-		"sha256": "7e941b2499941f4ac441808dfc3182e97b26dea7b0b7acedb1b2e329ce801cf6",
+		"sha256": "d9e67e0f1ea878bd5c10246d3b5bbdc15670da1ef21910ee704ecd2baf030cc6",
 		"size_bytes": 668168192,
-		"gzip_sha256": "f4d51ad8588acbbd01798ad2ec43a9517893c2c039a15ea06065a87c534373e5",
-		"gzip_size_bytes": 63490075
+		"gzip_sha256": "16d30377e8c9f486a62872ffdddc62432e2f6e3287d40e4984631e5467d997ca",
+		"gzip_size_bytes": 63490072
 	}
 }

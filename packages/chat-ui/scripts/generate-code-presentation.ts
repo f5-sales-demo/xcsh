@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 const source = resolve(import.meta.dir, "../../utils/src/code-presentation.browser.ts");
 const dependencyRoot = resolve(import.meta.dir, "../../utils/node_modules");
 const notices = `highlight.js 11.11.1\n${await readFile(join(dependencyRoot, "highlight.js/LICENSE"), "utf8")}\nYAML 2.9.0\n${await readFile(join(dependencyRoot, "yaml/LICENSE"), "utf8")}`;
-const target = resolve(import.meta.dir, "../src/markdown/code-presentation.generated.js");
+const target = resolve(import.meta.dir, "../src/markdown/code-presentation.generated.min.js");
 const build = await Bun.build({ entrypoints: [source], target: "browser", format: "esm", minify: true });
 if (!build.success || build.outputs.length !== 1)
 	throw new AggregateError(build.logs, "Code presentation bundle failed");
@@ -52,7 +52,7 @@ try {
 			),
 		],
 		[
-			target.replace(/\.generated\.js$/, ".types.generated.d.ts"),
+			target.replace(/\.generated\.min\.js$/, ".types.generated.d.ts"),
 			await readFile(join(temporary, "code-presentation.d.ts"), "utf8"),
 		],
 	]);

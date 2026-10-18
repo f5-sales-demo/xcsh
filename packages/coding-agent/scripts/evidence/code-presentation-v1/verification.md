@@ -84,6 +84,25 @@ Coverage failures remain explicit: optional-property omission, negative vendor
 validation cases, response bodies/errors, and live authorization or JS-injection
 behavior. Generic JSON Schema checks do not establish server-side enforcement.
 
+## CI repair receipts
+
+The first PR revision exposed a stale Terraform corpus pin during container and
+installation builds. Normal immutable-source discovery and the Terraform index
+generator refreshed provider/documentation `v15.12.1` and regenerated its reviewed
+index attestation. The normal CLI build then succeeded with the freshness gate
+intact. The API corpus remains `v12.1.3`; the schema review above remains bound to
+its explicitly stated raw API release.
+
+CI spelling checks treated generated minifier identifiers as prose. The compiled
+browser adapter now uses the repository's existing `.min.js` asset convention;
+no spelling exclusion or ignore word was added.
+
+CI also found an offline math-export regression. Temml's UTF-16 regex ranges were
+damaged by the minified inline-script path. The template generator preserves the
+math script syntax and escapes inline-script Unicode code units before embedding.
+Existing math-export and Markdown fidelity tests pass together with the code
+presentation suite. The Office bundle remains below 256 KB.
+
 ## Delivery gates
 
 Human visual acceptance of representative YAML, JSON, Terraform, Bash and Python

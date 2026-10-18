@@ -1,4 +1,4 @@
-import { CODE_PANEL_CSS } from "../markdown/code-presentation.generated.js";
+import { CODE_PANEL_CSS } from "../markdown/code-presentation.generated.min.js";
 /**
  * The shared xcsh-terminal panel stylesheet, emitted as a string and injected by
  * each host at boot. Promoted from the Chrome extension's `PANEL_CSS` — already

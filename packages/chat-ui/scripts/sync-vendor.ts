@@ -73,7 +73,7 @@ export function buildManifest(srcDir: string = SRC_DIR): VendorManifest {
 		const hash = createHash("sha256");
 		for (const file of ["code-presentation.ts", "code-presentation.browser.ts", "../package.json"])
 			hash.update(fs.readFileSync(path.resolve(upstream, file)));
-		const generated = fs.readFileSync(path.join(SRC_DIR, "markdown/code-presentation.generated.js"), "utf8");
+		const generated = fs.readFileSync(path.join(SRC_DIR, "markdown/code-presentation.generated.min.js"), "utf8");
 		if (!generated.includes(`source sha256 ${hash.digest("hex")}`))
 			throw new Error("Stale code presentation adapter; run gen-code-presentation before vendoring");
 	}

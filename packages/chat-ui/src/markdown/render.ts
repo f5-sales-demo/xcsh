@@ -15,7 +15,7 @@
  * and both are unit-tested as the retained, load-bearing primitives.
  */
 import { Marked, type Tokens } from "marked";
-import { isCodeBlockComplete, renderCodePanel } from "./code-presentation.generated.js";
+import { isCodeBlockComplete, renderCodePanel } from "./code-presentation.generated.min.js";
 import { createMathExtensions } from "./math";
 import { sanitizeHtml } from "./sanitize";
 import { softCloseForStreaming } from "./streaming";
