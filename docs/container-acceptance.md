@@ -34,3 +34,29 @@ state in that existing rootless machine.
 
 Rollback image retained:
 `ghcr.io/f5-sales-demo/xcsh@sha256:7eb3dc53c014248ade2642a84f54bb4edef8ea42cfb7bf24e625e79699e83d17`.
+
+## Docker local model and tool qualification
+
+On 2026-10-18, Ubuntu Docker qualification selected `latest`, which reported
+`xcsh/23.6.1`. Both `litellm/gpt-6.1-sol:medium` through Responses and
+`anthropic/claude-sonnet-5` through Anthropic Messages authenticated and passed
+three consecutive local tool cycles each. The six samples required actual file
+search, JSON aggregation, edits, two separate persistent Python cells, and native
+browser navigation. Non-root execution, the 23-plugin seed, repeated private-state
+use, workspace ownership, and clean process exits also passed.
+
+The selected local image ID was `sha256:cb04d9f536317080d104053477e0ebd394ae81e805a7177f4e68a17cc6e9ff79`. This identifies the tested artifact;
+normal operating instructions continue to use `latest`.
+
+The gateway was reachable through the Mac VPN. Ubuntu's direct route selected an
+existing Docker bridge, so qualification used an explicit SSH loopback forward
+through the Mac with the gateway's original TLS hostname and certificate
+validation preserved. Provider and per-model endpoints were adapted only in
+private disposable configuration. This qualifies that transport path; an
+independent Ubuntu VPN route was not established.
+
+This was local model/tool qualification, not a new full cloud-service matrix.
+The report recorded six passing local samples and `fullSuitePassed: false`.
+Credentials, gateway identity, endpoint details, and raw model events were excluded
+from public evidence. See [issue #4964](https://github.com/f5-sales-demo/xcsh/issues/4964)
+for delivery and cleanup evidence.
