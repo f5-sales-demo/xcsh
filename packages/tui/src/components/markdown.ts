@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
+import { isCodeBlockComplete, presentCode, wrapCodeLine } from "@f5-sales-demo/pi-utils/code-presentation";
 import { Marked, type Token, type TokenizerExtension, type Tokens } from "marked";
 import { renderLatex } from "../latex";
 import type { SymbolTheme } from "../symbols";
@@ -277,6 +278,7 @@ export interface MarkdownTheme {
 	code: (text: string) => string;
 	codeBlock: (text: string) => string;
 	codeBlockBorder: (text: string) => string;
+	codeBlockBackground?: (text: string) => string;
 	quote: (text: string) => string;
 	quoteBorder: (text: string) => string;
 	hr: (text: string) => string;
@@ -700,19 +702,41 @@ export class Markdown implements Component {
 					}
 				}
 
-				const indentWidth = Math.min(this.#codeBlockIndent, Math.max(0, width - 1));
-				const codeIndent = padding(indentWidth);
-				if (token.lang) lines.push(...wrapTextWithAnsi(this.#theme.codeBlockBorder(token.lang), width));
+				const view = presentCode(
+					token.text,
+					token.lang,
+					isCodeBlockComplete(token.raw, token.codeBlockStyle === "indented"),
+				);
+				const indentWidth = Math.min(this.#codeBlockIndent, Math.max(0, width - 5));
+				const prefixWidth = Math.min(width - 1, indentWidth + 4);
+				const available = Math.max(1, width - prefixWidth);
 				const codeLines = this.#theme.highlightCode
-					? this.#theme.highlightCode(token.text, token.lang)
-					: token.text.split("\n").map((line: string) => this.#theme.codeBlock(line));
+					? this.#theme.highlightCode(view.display, view.language)
+					: view.display.split("\n").map(line => this.#theme.codeBlock(line));
 				for (const codeLine of codeLines) {
 					const displayed = replaceTabs(codeLine);
-					const leadingSpaces = /^ */.exec(Bun.stripANSI(displayed))?.[0].length ?? 0;
-					const sourceIndentWidth = Math.min(leadingSpaces, Math.max(0, width - indentWidth - 1));
-					const body = sliceWithWidth(displayed, sourceIndentWidth, visibleWidth(displayed), true).text;
-					for (const visualLine of wrapTextWithAnsi(body, width - indentWidth - sourceIndentWidth)) {
-						lines.push(codeIndent + padding(sourceIndentWidth) + visualLine);
+					const plain = Bun.stripANSI(displayed);
+					const leading = /^ */.exec(plain)?.[0].length ?? 0;
+					const sourceIndent = leading < available / 2 ? leading : 0;
+					const body = plain.slice(sourceIndent);
+					for (const part of wrapCodeLine(body, available - sourceIndent, visibleWidth)) {
+						const a = visibleWidth(plain.slice(0, sourceIndent + part.start));
+						const b = visibleWidth(plain.slice(0, sourceIndent + part.end));
+						const gutter =
+							this.#theme.symbols.boxSharp.vertical +
+							" " +
+							(part.continuation ? this.#theme.symbols.boxSharp.teeRight : " ") +
+							" ";
+						const prefix = padding(indentWidth) + this.#theme.codeBlockBorder(gutter);
+						const visual =
+							sliceWithWidth(prefix, 0, prefixWidth, true).text +
+							padding(sourceIndent) +
+							sliceWithWidth(displayed, a, b - a, true).text;
+						lines.push(
+							this.#theme.codeBlockBackground
+								? applyBackgroundToLine(visual, width, this.#theme.codeBlockBackground)
+								: visual,
+						);
 					}
 				}
 				if (nextTokenType && nextTokenType !== "space") {

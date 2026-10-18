@@ -11,6 +11,7 @@ import {
 } from "@f5-sales-demo/pi-natives";
 import type { EditorTheme, MarkdownTheme, SelectListTheme, SymbolTheme } from "@f5-sales-demo/pi-tui";
 import { adjustHsv, detectDiagramType, getCustomThemesDir, isEnoent, logger } from "@f5-sales-demo/pi-utils";
+import { mapHttpCode, normalizeCodeLanguage } from "@f5-sales-demo/pi-utils/code-presentation";
 import { type Static, Type } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import chalk from "chalk";
@@ -2469,11 +2470,22 @@ function getHighlightColors(t: Theme): NativeHighlightColors {
  * Returns array of highlighted lines.
  */
 export function highlightCode(code: string, lang?: string): string[] {
-	const validLang = lang && nativeSupportsLanguage(lang) ? lang : undefined;
+	const language = normalizeCodeLanguage(lang);
+	const colors = getHighlightColors(theme);
 	try {
-		return nativeHighlightCode(code, validLang, getHighlightColors(theme)).split("\n");
+		if (language === "http")
+			return mapHttpCode(
+				code,
+				(text, category) => (category ? `${colors[category]}${text}\x1b[39m` : theme.fg("mdCodeBlock", text)),
+				(text, bodyLanguage) =>
+					bodyLanguage ? nativeHighlightCode(text, bodyLanguage, colors) : theme.fg("mdCodeBlock", text),
+			).split("\n");
+		if (!language || ["text", "plain", "plaintext", "txt"].includes(language) || !nativeSupportsLanguage(language))
+			return code.split("\n").map(line => theme.fg("mdCodeBlock", line));
+		const validLang = language;
+		return nativeHighlightCode(code, validLang, colors).split("\n");
 	} catch {
-		return code.split("\n");
+		return code.split("\n").map(line => theme.fg("mdCodeBlock", line));
 	}
 }
 
@@ -2500,6 +2512,7 @@ export function getMarkdownTheme(): MarkdownTheme {
 		code: (text: string) => theme.fg("mdCode", text),
 		codeBlock: (text: string) => theme.fg("mdCodeBlock", text),
 		codeBlockBorder: (text: string) => theme.fg("mdCodeBlockBorder", text),
+		codeBlockBackground: (text: string) => theme.bg("toolPendingBg", text),
 		quote: (text: string) => theme.fg("mdQuote", text),
 		quoteBorder: (text: string) => theme.fg("mdQuoteBorder", text),
 		hr: (text: string) => theme.fg("mdHr", text),
@@ -2508,7 +2521,9 @@ export function getMarkdownTheme(): MarkdownTheme {
 		italic: (text: string) => theme.italic(text),
 		underline: (text: string) => theme.underline(text),
 		strikethrough: (text: string) => chalk.strikethrough(text),
-		symbols: getSymbolTheme(),
+		get symbols() {
+			return getSymbolTheme();
+		},
 		getMermaidAscii: (hash: bigint | number) => getMermaidAscii(hash, mermaidThemeSignature(theme)),
 		renderMermaidBlock: (source: string, width: number): string[] | null => {
 			const diagram = renderMermaidThemed(source, theme, { targetWidth: Math.max(20, width - 4) });
@@ -2518,14 +2533,7 @@ export function getMarkdownTheme(): MarkdownTheme {
 				theme,
 			);
 		},
-		highlightCode: (code: string, lang?: string): string[] => {
-			const validLang = lang && nativeSupportsLanguage(lang) ? lang : undefined;
-			try {
-				return nativeHighlightCode(code, validLang, getHighlightColors(theme)).split("\n");
-			} catch {
-				return code.split("\n").map(line => theme.fg("mdCodeBlock", line));
-			}
-		},
+		highlightCode,
 	};
 }
 

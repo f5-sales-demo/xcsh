@@ -28,7 +28,22 @@ const THEME_JSON = path.resolve(
 const OUT = path.resolve(import.meta.dir, "..", "src", "theme", "colors.generated.ts");
 
 /** Semantic colors promoted from `colors` (they are hex literals, not in `vars`). */
-const EXTRA_FROM_COLORS = ["chromeAccent", "dim"] as const;
+const EXTRA_FROM_COLORS = [
+	"chromeAccent",
+	"dim",
+	"mdCodeBlock",
+	"mdCodeBlockBorder",
+	"syntaxComment",
+	"syntaxKeyword",
+	"syntaxControl",
+	"syntaxFunction",
+	"syntaxVariable",
+	"syntaxString",
+	"syntaxNumber",
+	"syntaxType",
+	"syntaxOperator",
+	"syntaxPunctuation",
+] as const;
 
 interface ThemeJson {
 	vars: Record<string, string>;
@@ -43,12 +58,27 @@ function build(): string {
 		entries.push([k, v]);
 	}
 	for (const k of EXTRA_FROM_COLORS) {
-		const v = theme.colors[k];
+		const raw = theme.colors[k];
+		const v = typeof raw === "string" ? (theme.vars[raw] ?? raw) : raw;
 		if (typeof v !== "string" || !v.startsWith("#")) {
 			throw new Error(`xcsh-dark.json colors.${k} must be a hex string`);
 		}
 		entries.push([k, v]);
 	}
+	const light = JSON.parse(
+		fs.readFileSync(THEME_JSON.replace("xcsh-dark.json", "xcsh-light.json"), "utf8"),
+	) as ThemeJson;
+	const lightEntries = EXTRA_FROM_COLORS.filter(key => key.startsWith("syntax") || key.startsWith("mdCodeBlock")).map(
+		key => {
+			const raw = light.colors[key];
+			const value = typeof raw === "string" ? (light.vars[raw] ?? raw) : raw;
+			if (typeof value !== "string" || !value.startsWith("#")) throw new Error(`Missing light syntax color: ${key}`);
+			return `\t${key}: "${value}",`;
+		},
+	);
+	const rawPanel = light.colors.toolPendingBg;
+	const panel = typeof rawPanel === "string" ? (light.vars[rawPanel] ?? rawPanel) : "#ffffff";
+	lightEntries.push(`\tcodeBg: "${panel}",`);
 	const body = entries.map(([k, v]) => `\t${k}: "${v}",`).join("\n");
 	return [
 		"// GENERATED — do not edit by hand.",
@@ -59,6 +89,10 @@ function build(): string {
 		"} as const;",
 		"",
 		"export type ColorName = keyof typeof COLORS;",
+		"",
+		"export const LIGHT_CODE_COLORS = {",
+		...lightEntries,
+		"} as const;",
 		"",
 	].join("\n");
 }

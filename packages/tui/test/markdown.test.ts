@@ -41,11 +41,11 @@ describe("Markdown heading presentation", () => {
 });
 
 describe("Code block presentation", () => {
-	it("renders language context and code without decorative Markdown fences", () => {
+	it("renders styled code without visible language context without decorative Markdown fences", () => {
 		const source = "```sh\nsf data query --query 'SELECT Id FROM Account'\n```";
 		for (const width of [40, 76, 120, 153]) {
 			const output = new Markdown(source, 0, 0, defaultMarkdownTheme).render(width).map(Bun.stripANSI);
-			expect(output.some(line => line.trim() === "sh")).toBe(true);
+			expect(output.some(line => line.trim() === "sh")).toBe(false);
 			expect(output.join("\n")).not.toContain("```");
 			expect(output.join("\n")).toContain("sf data query");
 			expect(output.join("\n")).toContain("Account");
@@ -57,7 +57,7 @@ describe("Code block presentation", () => {
 		const output = new Markdown(source, 0, 0, defaultMarkdownTheme)
 			.render(76)
 			.map(line => Bun.stripANSI(line).trimEnd());
-		expect(output).toContain("  printf '%s' '```'");
+		expect(output).toContain("  |   printf '%s' '```'");
 		expect(output.filter(line => line.trim() === "```")).toHaveLength(0);
 	});
 
@@ -65,7 +65,7 @@ describe("Code block presentation", () => {
 		const source = "- Example:\n\n  ```js\n  console.log(1);\n  ```";
 		const output = new Markdown(source, 0, 0, defaultMarkdownTheme).render(76).map(Bun.stripANSI).join("\n");
 		expect(output).toContain("console.log(1);");
-		expect(output).toContain("js");
+		expect(output).not.toContain("js");
 		expect(output).not.toContain("```");
 	});
 });
@@ -777,7 +777,7 @@ code block
 
 more text`,
 			];
-			const expectedLines = ["hello this is text", "", "  code block", "", "more text"];
+			const expectedLines = ["hello this is text", "", "  |   code block", "", "more text"];
 
 			for (const text of cases) {
 				const markdown = new Markdown(text, 0, 0, defaultMarkdownTheme);
@@ -1097,7 +1097,7 @@ bar`,
 			const output = lines.join("\n");
 			const plainOutput = quotedLines.join("\n");
 
-			expect(quotedLines.some(line => line.trim() === "│ js")).toBeTruthy();
+			expect(quotedLines.some(line => line.trim() === "│ js")).toBeFalsy();
 			expect(plainOutput.includes("console.log(1)")).toBeTruthy();
 			expect(plainOutput.includes("```")).toBeFalsy();
 			expect(output.includes("\x1b[35m")).toBeFalsy();
@@ -1266,7 +1266,7 @@ bar`,
 
 			const fence = String.fromCharCode(96).repeat(3);
 			const fenced = [`${fence}text`, "$\\lambda$", fence].join("\n");
-			expect(plain(new Markdown(fenced, 0, 0, defaultMarkdownTheme))).toEqual(["text", "  $\\lambda$"]);
+			expect(plain(new Markdown(fenced, 0, 0, defaultMarkdownTheme))).toEqual(["  |   $\\lambda$"]);
 		});
 
 		it("preserves unsupported, malformed, and incomplete LaTeX source", () => {
@@ -1285,7 +1285,7 @@ bar`,
 
 			const fence = String.fromCharCode(96).repeat(3);
 			const legacy = new Markdown([fence, "x", fence].join("\n"), 0, 0, defaultMarkdownTheme, undefined, 4);
-			expect(plain(legacy)).toEqual(["    x"]);
+			expect(plain(legacy)).toEqual(["    |   x"]);
 		});
 	});
 

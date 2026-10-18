@@ -61,7 +61,7 @@
 		"syntaxFunction": "#795E26",
 		"syntaxVariable": "#001080",
 		"syntaxString": "#A31515",
-		"syntaxNumber": "#098658",
+		"syntaxNumber": "#08774E",
 		"syntaxType": "f5Red",
 		"syntaxOperator": "f5DarkRed",
 		"syntaxPunctuation": "darkText",
@@ -105,7 +105,7 @@
 		"statusLineContextXcshBg": "f5Red",
 		"statusLineContextXcshFg": 231,
 		"pythonMode": "warningAmber",
-		"syntaxControl": "f5Red"
+		"syntaxControl": "#7B267B"
 	},
 	"export": {
 		"pageBg": "warmWhite",

@@ -633,7 +633,7 @@
           c: 'c', cpp: 'cpp', h: 'c', hpp: 'cpp', cs: 'csharp',
           php: 'php', sh: 'bash', bash: 'bash', zsh: 'bash',
           sql: 'sql', html: 'html', css: 'css', scss: 'scss',
-          json: 'json', yaml: 'yaml', yml: 'yaml', xml: 'xml',
+          tf: 'hcl', tfvars: 'hcl', hcl: 'hcl', json: 'json', yaml: 'yaml', yml: 'yaml', xml: 'xml',
           md: 'markdown', dockerfile: 'dockerfile'
         };
         return extToLang[ext];
@@ -651,66 +651,16 @@
       }
 
       function formatExpandableOutput(text, maxLines, lang) {
-        text = replaceTabs(text);
         const lines = text.split('\n');
-        const displayLines = lines.slice(0, maxLines);
         const remaining = lines.length - maxLines;
-
-        if (lang) {
-          let highlighted;
-          try {
-            highlighted = hljs.highlight(text, { language: lang }).value;
-          } catch {
-            highlighted = escapeHtml(text);
-          }
-
-          if (remaining > 0) {
-            const previewCode = displayLines.join('\n');
-            let previewHighlighted;
-            try {
-              previewHighlighted = hljs.highlight(previewCode, { language: lang }).value;
-            } catch {
-              previewHighlighted = escapeHtml(previewCode);
-            }
-
-            return `<div class="tool-output expandable" onclick="this.classList.toggle('expanded')">
-              <div class="output-preview"><pre><code class="hljs">${previewHighlighted}</code></pre>
-              <div class="expand-hint">... (${remaining} more lines)</div></div>
-              <div class="output-full"><pre><code class="hljs">${highlighted}</code></pre></div></div>`;
-          }
-
-          return `<div class="tool-output"><pre><code class="hljs">${highlighted}</code></pre></div>`;
-        }
-
-        // Plain text output
-        if (remaining > 0) {
-          let out = '<div class="tool-output expandable" onclick="this.classList.toggle(\'expanded\')">';
-          out += '<div class="output-preview">';
-          for (const line of displayLines) {
-            out += `<div>${escapeHtml(replaceTabs(line))}</div>`;
-          }
-          out += `<div class="expand-hint">... (${remaining} more lines)</div></div>`;
-          out += '<div class="output-full">';
-          for (const line of lines) {
-            out += `<div>${escapeHtml(replaceTabs(line))}</div>`;
-          }
-          out += '</div></div>';
-          return out;
-        }
-
-        let out = '<div class="tool-output">';
-        for (const line of displayLines) {
-          out += `<div>${escapeHtml(replaceTabs(line))}</div>`;
-        }
-        out += '</div>';
-        return out;
+        const panel = xcshCodePresentation.renderCodePanel(text, lang, true);
+        if (remaining > 0) return `<div class="tool-output markdown-root expandable" onclick="this.classList.toggle('expanded')">
+          <div class="output-preview"><div style="max-height:${maxLines * 1.6}em;overflow:hidden">${panel}</div>
+          <div class="expand-hint">... (${remaining} more lines)</div></div>
+          <div class="output-full">${panel}</div></div>`;
+        return `<div class="tool-output markdown-root">${panel}</div>`;
       }
 
-      // ============================================================
-      // TOOL CALL RENDERING
-      // ============================================================
-
-      // Shared helpers for per-tool renderers.
       function toolHead(label, pathHtml, badges) {
         let html = '<div class="tool-header"><span class="tool-name">' + escapeHtml(label) + '</span>';
         if (pathHtml) html += ' <span class="tool-path">' + pathHtml + '</span>';
@@ -742,14 +692,7 @@
 
       function codeBlock(code, lang) {
         if (code == null || code === '') return '';
-        const text = String(code);
-        let highlighted;
-        try {
-          highlighted = lang ? hljs.highlight(text, { language: lang }).value : escapeHtml(text);
-        } catch {
-          highlighted = escapeHtml(text);
-        }
-        return '<div class="tool-output"><pre><code class="hljs">' + highlighted + '</code></pre></div>';
+        return '<div class="tool-output markdown-root">' + xcshCodePresentation.renderCodePanel(String(code), lang, true) + '</div>';
       }
 
       // Per-tool renderers. Each accepts (name, args, result, ctx) and returns the inner HTML.
@@ -1735,6 +1678,9 @@
         messagesEl.appendChild(fragment);
         activateMedia(messagesEl);
 
+        if (window.xcshCodePanelCleanup) window.xcshCodePanelCleanup();
+        window.xcshCodePanelCleanup = xcshCodePresentation.installCodePanels(messagesEl);
+
         // Attach click handlers for copy-link buttons
         messagesEl.querySelectorAll('.copy-link-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
@@ -1781,26 +1727,8 @@
         renderer: {
           // Code blocks: syntax highlight, no HTML escaping
           code(token) {
-            const code = token.text;
-            const first = String(token.lang || '').trim().split(/\s+/)[0];
-            const lang = /^[A-Za-z0-9+#._-]{1,20}$/.test(first) ? first : '';
-            let highlighted;
-            if (lang && hljs.getLanguage(lang)) {
-              try {
-                highlighted = hljs.highlight(code, { language: lang }).value;
-              } catch {
-                highlighted = escapeHtml(code);
-              }
-            } else {
-              // Auto-detect language if not specified
-              try {
-                highlighted = hljs.highlightAuto(code).value;
-              } catch {
-                highlighted = escapeHtml(code);
-              }
-            }
-            const label = lang ? `<span class="md-lang-label">${escapeHtml(lang)}</span>` : '';
-            return `<pre>${label}<code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre>`;
+            return xcshCodePresentation.renderCodePanel(token.text, token.lang,
+              xcshCodePresentation.isCodeBlockComplete(token.raw, token.codeBlockStyle === 'indented'));
           },
           // Text content: escape HTML tags
           text(token) {

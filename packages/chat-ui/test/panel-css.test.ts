@@ -34,13 +34,14 @@ describe(".markdown-root block model", () => {
 		expect(PANEL_CSS).toContain(".md-align-right { text-align: right; }");
 	});
 
-	test("carries heading, list, blockquote, hr, task-checkbox, and code-chip rules", () => {
+	test("carries heading, list, blockquote, hr, task-checkbox, and code-panel rules", () => {
 		expect(PANEL_CSS).toContain(".markdown-root h1");
 		expect(PANEL_CSS).toContain(".markdown-root ul");
 		expect(PANEL_CSS).toContain(".markdown-root blockquote");
 		expect(PANEL_CSS).toContain(".markdown-root hr");
 		expect(PANEL_CSS).toContain(".markdown-root pre");
-		expect(PANEL_CSS).toContain(".md-lang-label");
+		expect(PANEL_CSS).toContain(".md-code-panel");
+		expect(PANEL_CSS).not.toContain(".md-lang-label");
 		expect(PANEL_CSS).toContain('input[type="checkbox"]');
 	});
 

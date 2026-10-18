@@ -34,8 +34,10 @@
 		"@f5-sales-demo/i18n-core": "1.0.59",
 		"beautiful-mermaid": "^1.1",
 		"handlebars": "^4.7.9",
+		"highlight.js": "11.11.1",
 		"winston": "^3.19",
-		"winston-daily-rotate-file": "^5.0"
+		"winston-daily-rotate-file": "^5.0",
+		"yaml": "2.9.0"
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.2",

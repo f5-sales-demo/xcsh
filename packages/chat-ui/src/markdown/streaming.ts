@@ -116,8 +116,8 @@ function holdPartialTable(md: string): string {
 }
 
 /** Render-only soft-close of a streaming markdown buffer (see file header). */
-export function softCloseForStreaming(md: string): string {
+export function softCloseForStreaming(md: string, options: { closeCode?: boolean } = {}): string {
 	const closing = openFence(fenceLexer.lexer(md));
-	if (closing) return `${md}\n${closing}`;
+	if (closing) return options.closeCode === false ? md : `${md}\n${closing}`;
 	return holdPartialTable(md);
 }
