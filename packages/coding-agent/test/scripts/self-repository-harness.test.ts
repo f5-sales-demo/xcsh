@@ -39,7 +39,7 @@ unixTest("self-repository controller executes only the matching frozen harness",
 			"-c",
 			"user.name=Fixture",
 			"-c",
-			"user.email=fixture@example.invalid",
+			"user.email=noreply@example.com",
 		];
 		for (const args of [
 			["init", "-q"],
