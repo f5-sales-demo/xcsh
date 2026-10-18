@@ -17,7 +17,10 @@ class ContainerWorkflowContractTests(unittest.TestCase):
     def test_npm_prepack_discovery_receives_authenticated_github_input(self) -> None:
         for name, step in (
             ("ci.yml", "      - name: Publish to npm"),
-            ("release-npm-backfill.yml", "      - name: Publish missing versions without moving latest"),
+            (
+                "release-npm-backfill.yml",
+                "      - name: Publish missing versions without moving latest",
+            ),
         ):
             workflow = (ROOT / ".github/workflows" / name).read_text()
             block = workflow.split(step, 1)[1].split("      - name:", 1)[0]
