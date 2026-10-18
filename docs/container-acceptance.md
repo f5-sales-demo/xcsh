@@ -60,3 +60,35 @@ The report recorded six passing local samples and `fullSuitePassed: false`.
 Credentials, gateway identity, endpoint details, and raw model events were excluded
 from public evidence. See [issue #4964](https://github.com/f5-sales-demo/xcsh/issues/4964)
 for delivery and cleanup evidence.
+
+## Docker cloud-service qualification
+
+On 2026-10-18, fresh Ubuntu Docker qualification selected `latest`, which reported
+`xcsh/23.6.8`. Both `litellm/gpt-6.1-sol:medium` and
+`anthropic/claude-sonnet-5` passed three complete cycles each: 42 fresh tool-backed
+samples covering local tools, GitHub, AWS, Azure, Salesforce, Google Cloud, and F5
+Distributed Cloud. Identity checks and authorized repository, VPC, subscription,
+organization, project, and namespace reads passed separately. No resources were changed.
+
+GitHub, AWS, and Salesforce explicit noninteractive authentication passed twice
+with the same private state. Azure and Google Cloud reused imported portable
+sessions. This verifies session reuse; interactive renewal after expiry was not
+exercised. Salesforce's default export was redacted, so the private export used
+the documented temporary secret-export option. No exported values entered the
+workspace or public evidence.
+
+The runtime check, both model requests, repeated launches, file ownership, search,
+JSON aggregation, edits, persistent Python cells, native browser navigation, and
+clean exits passed. The selected image ID was `sha256:72e845da7c2ed659e4658e806f67c3ed0a176b041827194fe6fbdeb6ae868634`.
+This records the observed artifact; installation procedures continue to use `latest`.
+Model transport used an explicit SSH loopback forward through the Mac VPN with the
+original TLS hostname and certificate verification preserved. Cloud-service reads
+used the container's available service routes.
+
+GitLab and Firecrawl retain their previous user-directed deferrals. The selected
+six-service matrix passed; `fullSuitePassed` remains false because those services
+were omitted. Remote desktop, hypervisor, meeting, terminal, SSH integration,
+and interactive expired-session renewal remain separate acceptance gates.
+Credentials, account identifiers, resource metadata, raw events, temporary forwarding,
+and disposable runtime state were removed after verification. See
+[issue #5001](https://github.com/f5-sales-demo/xcsh/issues/5001) for delivery evidence.
