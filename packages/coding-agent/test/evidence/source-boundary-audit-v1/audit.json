@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "revision": "08d98487cf6f89d9b3efa3f584f3faa5a7ec1f54",
-  "fingerprint": "6de009a69b73d82731af6e1cc09155b3cd78d30cbe8ea7dbf1a0076437ccd0e6",
+  "revision": "6cf0608dd4c5c3a48af4bfb5b8e9946e675ddd21",
+  "fingerprint": "7f84f734786d491daf62a18d7cb31b5bcc32a231a985bd2c85fc56a7d18734cc",
   "counts": {
-    "total": 243,
-    "components": 101,
+    "total": 244,
+    "components": 102,
     "integrations": 142
   },
   "audits": [
@@ -1321,6 +1321,20 @@
       "classification": "packages/coding-agent/src/modes/components/copy-selector.ts is individually classified as caller-owned-draft in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
+      "source": "packages/coding-agent/src/modes/components/copyable-command.ts",
+      "kind": "component",
+      "ownership": "read-only-renderer",
+      "domain": "core",
+      "sha256": "174524ff3b7778d2d7c101ec7f6e2c084b91c294de4c26d8a03a7d245307c415",
+      "exports": [
+        "copyableCommand"
+      ],
+      "interactionSignals": [],
+      "persistenceSignals": [],
+      "directTests": [],
+      "classification": "packages/coding-agent/src/modes/components/copyable-command.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
       "source": "packages/coding-agent/src/modes/components/countdown-timer.ts",
       "kind": "component",
       "ownership": "read-only-renderer",
@@ -2037,7 +2051,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "0f3e6c5326da5ccea50a58f7390a78bafc322786a6c9714b1b7e7c2dad9974f4",
+      "sha256": "13347a85ef097c988f7e65da00416fb40969f858266e25c45ddf88a47b63d229",
       "exports": [
         "PluginViewComponent",
         "dataSections",
@@ -2051,7 +2065,8 @@
       "directTests": [
         "packages/coding-agent/test/markdown-component-fidelity.test.ts",
         "packages/coding-agent/test/marketplace-presentation.test.ts",
-        "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts"
+        "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts",
+        "packages/coding-agent/test/shared-presentation-layout.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/plugin-view.ts is individually classified as read-only-renderer in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2938,7 +2953,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "6d8ae0e589000ce9dec39eaedc1d1c6f5b903c7a21cff4900b4e98b701debb3a",
+      "sha256": "e8156537f75fedf605f0a363dc4db48b0758fcaa926ac52bef4f6355b6ad564a",
       "exports": [
         "ToolExecutionComponent",
         "ToolExecutionHandle",
@@ -2957,6 +2972,7 @@
         "packages/coding-agent/test/plugin-presentation.test.ts",
         "packages/coding-agent/test/presentation-helpers.test.ts",
         "packages/coding-agent/test/session/messages-repair.test.ts",
+        "packages/coding-agent/test/shared-presentation-layout.test.ts",
         "packages/coding-agent/test/tools/vim.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/tool-execution.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -3210,7 +3226,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "a4b146cc26d067eb1e30abf5469514d83ccd6ac5067f73d171d55cc965f565fb",
+      "sha256": "a4ccddb349142076cc5704339db0536ab93a79f1cb9d22da38b1c50b5dc5e8c2",
       "exports": [
         "CommandController",
         "renderProviderSection",
@@ -3314,7 +3330,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "7d2eb113ed1fd1f9fb5fed059d352a965854896c04cabc0bb4726b6e89027000",
+      "sha256": "4041b45d406a7ad58143cc42a197958d9e4cdeebe9ec36421dd06ee08122a18b",
       "exports": [
         "EventController"
       ],
@@ -3328,6 +3344,7 @@
         "packages/coding-agent/test/event-controller-warning-outcome.test.ts",
         "packages/coding-agent/test/modes/controllers/event-controller-background.test.ts",
         "packages/coding-agent/test/modes/controllers/event-controller-idle-compaction.test.ts",
+        "packages/coding-agent/test/presentation-progress-cleanup.test.ts",
         "packages/coding-agent/test/question-transcript.test.ts",
         "packages/coding-agent/test/read-group-outcome-aggregator.test.ts"
       ],
@@ -3338,7 +3355,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "22a1d746ad953b31fc454d9aa9d51ad7a50555fc2597df35bb9a18978fe3d331",
+      "sha256": "70477d1cc7762d256f3cf664162ba3404af669413569e518ae9d1cdc0b7c645b",
       "exports": [
         "ExtensionUiController"
       ],
@@ -4375,7 +4392,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "d01293d29bf184bd6d92ae6422fdb77bdce63b9b31e8c31f231841d30c727cbe",
+      "sha256": "2e457f8f91053062f1dbc0f6f297a9b213ce444b1e0750c33476b8b676f84a60",
       "exports": [
         "UiHelpers"
       ],
@@ -6342,7 +6359,7 @@
       "kind": "component",
       "ownership": "shared-rendering-primitive",
       "domain": "shared-components",
-      "sha256": "6f3e3659247405488d29961e20a6b17c6db737cfadd74b6e400561074c9ebd8e",
+      "sha256": "1ddffd1069ea0c9aa51938e9f60dc0af0ffdca06d2c0a2833accb2361bc35d39",
       "exports": [
         "TableTheme",
         "renderTable"

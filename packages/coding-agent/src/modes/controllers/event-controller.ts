@@ -52,6 +52,7 @@ export class EventController {
 
 	dispose(): void {
 		this.#cancelIdleCompaction();
+		for (const component of this.ctx.pendingTools?.values() ?? []) component.stopAnimation?.();
 	}
 
 	#resetReadGroup(): void {
@@ -617,6 +618,7 @@ export class EventController {
 					const orphanGutters = new Set<GutterBlock<any>>();
 					for (const toolCallId of Array.from(this.ctx.pendingTools.keys())) {
 						if (this.#backgroundToolCallIds.has(toolCallId)) continue;
+						this.ctx.pendingTools.get(toolCallId)?.stopAnimation?.();
 						const gutter = this.#pendingGutters.get(toolCallId);
 						if (gutter) {
 							this.#readGroupAggregator.record(gutter, "error");

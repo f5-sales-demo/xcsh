@@ -1309,6 +1309,7 @@ export class CommandController {
 		this.ctx.compactionQueuedMessages = [];
 		this.ctx.streamingComponent = undefined;
 		this.ctx.streamingMessage = undefined;
+		for (const component of this.ctx.pendingTools.values()) component.stopAnimation?.();
 		this.ctx.pendingTools.clear();
 
 		this.ctx.chatContainer.addChild(new Spacer(1));

@@ -39,6 +39,7 @@ test("runtime injects one reusable data-only presentation API", () => {
 test("command helper preserves quoting, empty argv, Unicode and newlines without execution", () => {
 	expect(presentation.command(["sf", "", "literal's value", "北方\nline"])).toEqual({
 		kind: "code",
+		argv: ["sf", "", "literal's value", "北方\nline"],
 		text: "sf '' 'literal'\\''s value' '北方\nline'",
 	});
 });

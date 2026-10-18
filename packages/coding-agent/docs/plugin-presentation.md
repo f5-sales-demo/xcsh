@@ -16,10 +16,13 @@ const presentation: PluginPresentation<unknown, { total: number }> = {
 
 Attach the descriptor to the object passed to `registerTool`. Its optional `call(args, options)`
 and `result(result, options, args)` callbacks return a `PluginView`. Options include `expanded`
-and `isPartial`. A view contains a summary, warnings, and sections:
+and `isPartial`, plus the available inner `width` and current `spinnerFrame` at render time.
+A view contains a summary, warnings, and sections:
 
 - `fields`: a labeled `values` record.
-- `table`: `columns` with a key, optional label and alignment, plus `rows` of records.
+- `table`: `columns` with a key, optional label, alignment, `minWidth` and `maxWidth`, plus `rows`
+  of records. A table reflows into labeled fields when readable column widths cannot fit.
+  Optional `previewRows` selects the complete collapsed rows; the default is three.
 - `markdown`: Markdown text, rendered by xcsh.
 - `code`: literal text and an optional language.
 
@@ -56,7 +59,10 @@ execution evidence. Summary-only callbacks retain default data sections.
 `fields(values, title)`, `table(rows, columns, title)`, and `data(value, title)` handle structured
 values. Ordered table columns accept labels, alignment, and optional `Intl.NumberFormatOptions`
 in `numberFormat`; formatting changes display copies only. Monetary units must remain explicit.
-`command(argv, title)` displays shell-quoted arguments without executing them. Lifecycle setup
+`command(argv, title)` retains a copied argv declaration alongside its quoted text. The shared
+renderer inserts Bash/Zsh continuations at the actual width, including within long quoted
+arguments, without changing empty arguments, literal shell syntax, control characters or Unicode.
+Plain `code` sections remain literal evidence. The helper never executes a command. Lifecycle setup
 reviews use this same helper and retain timeouts and verification commands.
 
 Custom messages may provide a UI-only `presentation` view built with these helpers. It survives
@@ -64,3 +70,10 @@ session reconstruction and remains separate from model-facing `content`. Unavail
 state is evidence of unavailability, not a verified zero. Streaming and explicitly partial data
 retain warnings in collapsed and expanded views. Content-only plugins and advisory messages use
 the same themed Markdown and lifecycle primitives without needing a tool adapter.
+
+Registered tools animate while executing or streaming partial results. The shared frame and
+descriptor callbacks receive the current spinner frame and resolve the active theme on each
+render. Completion retires the timer; abort, context replacement and UI teardown stop animation
+without discarding streamed evidence. `stopAnimation()` permanently retires that component,
+including late argument updates. These source guarantees require separate installed native and
+service qualification before an adapter migration is accepted.
