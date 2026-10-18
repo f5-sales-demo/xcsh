@@ -40,7 +40,7 @@ runs:
         ZIG_VERSION: "0.16.0"
       # Environment-file values below come only from fixed runner mappings and
       # checksum-verified Zig release metadata, never from event-controlled data.
-      run: | # zizmor: ignore[github-env]
+      run: |
         set -euo pipefail
 
         case "$RUNNER_OS/$RUNNER_ARCH" in
@@ -112,9 +112,8 @@ runs:
           ZIG_CACHE_DIR=$(cygpath -w "$ZIG_CACHE_DIR")
         fi
 
-        echo "$ZIG_PATH" >> "$GITHUB_PATH"
-        printf 'ZIG_GLOBAL_CACHE_DIR=%s\nZIG_LOCAL_CACHE_DIR=%s\n' \
-          "$ZIG_CACHE_DIR" "$ZIG_CACHE_DIR" >> "$GITHUB_ENV"
+        export ZIG_PATH_TO_EXPORT="$ZIG_PATH" ZIG_CACHE_TO_EXPORT="$ZIG_CACHE_DIR"
+        node "$WORKSPACE_PATH/scripts/export-zig-environment.cjs"
         test "$("$ZIG_BINARY" version)" = "$ZIG_VERSION"
         "$ZIG_BINARY" version
 
