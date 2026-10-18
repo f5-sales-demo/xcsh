@@ -190,7 +190,7 @@ test("CI reuses source-bound Linux natives and aggregates independent TypeScript
 	expect(source).toContain("ci-native-manifest.ts verify");
 	expect(source).not.toContain("sudo apt-get install --yes --no-install-recommends llvm");
 	expect(source).not.toContain("taiki-e/install-action@");
-	expect(source).toContain("uses: ./.github/actions/setup-bun");
+	expect(source).toContain("uses: $/.github/actions/setup-bun");
 	expect(source).not.toContain("--concurrent");
 });
 
@@ -305,8 +305,8 @@ test("manual ARC compatibility covers both profiles without publication mutation
 	expect(workflow.jobs?.container?.["runs-on"]).toBe("xcsh-container-build");
 	expect(source).toContain("Verify baked Bun 1.4.2");
 	expect(source).not.toContain("oven-sh/setup-bun@");
-	expect(source).toContain("uses: ./.github/actions/setup-rust");
-	expect(source).toContain("uses: ./.github/actions/setup-zig");
+	expect(source).toContain("uses: $/.github/actions/setup-rust");
+	expect(source).toContain("uses: $/.github/actions/setup-zig");
 	expect(source).toContain("aarch64-unknown-linux-gnu");
 	expect(source).toContain("TARGET_ARCH=x64");
 	expect(source).toContain("TARGET_ARCH=arm64");

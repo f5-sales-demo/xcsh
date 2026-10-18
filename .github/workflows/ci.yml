@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bun
+      - uses: $/.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -239,18 +239,18 @@ jobs:
         run: bash scripts/verify-self-hosted-tools.sh full
       - name: Set up hosted Rust
         if: runner.environment != 'self-hosted' || runner.os != 'Linux'
-        uses: ./.github/actions/setup-rust
+        uses: $/.github/actions/setup-rust
         with:
           target: ${{ matrix.target }}
       - name: Set up hosted Bun 1.4.2
         if: runner.environment != 'self-hosted' || runner.os != 'Linux'
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
       - name: Set up hosted Zig 0.16.0
         if: runner.environment != 'self-hosted' || runner.os != 'Linux'
-        uses: ./.github/actions/setup-zig
+        uses: $/.github/actions/setup-zig
       - name: Restore exact Rust cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -401,7 +401,7 @@ jobs:
           persist-credentials: false
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -446,7 +446,7 @@ jobs:
           fi
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
-      - uses: ./.github/actions/setup-rust
+      - uses: $/.github/actions/setup-rust
       - name: Restore exact Rust cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -457,7 +457,7 @@ jobs:
             target/
           key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - name: Setup Zig 0.16.0
-        uses: ./.github/actions/setup-zig
+        uses: $/.github/actions/setup-zig
       - name: Cache bun dependencies
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -490,7 +490,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -513,7 +513,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -635,7 +635,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -790,7 +790,7 @@ jobs:
           fi
           printf 'SOURCE_SHA=%s\n' "$source_sha" >> "$GITHUB_ENV"
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         id: setup-bun
         continue-on-error: true
         with:
@@ -1171,7 +1171,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -1247,7 +1247,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -1394,7 +1394,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bun
+      - uses: $/.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -1434,7 +1434,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -1618,7 +1618,7 @@ jobs:
       - name: Verify runner Node.js
         run: node --version && npm --version
       - name: Setup Bun 1.4.2
-        uses: ./.github/actions/setup-bun
+        uses: $/.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true

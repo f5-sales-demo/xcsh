@@ -140,7 +140,7 @@ jobs:
             scripts/run-ts-tests.ts
             scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false
-      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
+      - uses: $/.github/actions/runner-optimization-profile
         with:
           source-sha: ${{ inputs.source_sha }}
           experiment: ${{ inputs.experiment }}
@@ -176,7 +176,7 @@ jobs:
             scripts/run-ts-tests.ts
             scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false
-      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
+      - uses: $/.github/actions/runner-optimization-profile
         with:
           source-sha: ${{ inputs.source_sha }}
           experiment: dag-control
@@ -213,7 +213,7 @@ jobs:
             scripts/run-ts-tests.ts
             scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false
-      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
+      - uses: $/.github/actions/runner-optimization-profile
         with:
           source-sha: ${{ inputs.source_sha }}
           experiment: dag-candidate
@@ -266,7 +266,7 @@ jobs:
             scripts/run-ts-tests.ts
             scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false
-      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
+      - uses: $/.github/actions/runner-optimization-profile
         with:
           source-sha: ${{ inputs.source_sha }}
           experiment: dag-candidate
@@ -319,7 +319,7 @@ jobs:
         run: >-
           bun .qualification-harness/scripts/ci-native-manifest.ts verify
           --source-sha "$SOURCE_SHA" --root "$GITHUB_WORKSPACE"
-      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
+      - uses: $/.github/actions/runner-optimization-profile
         with:
           source-sha: ${{ inputs.source_sha }}
           experiment: dag-candidate
@@ -347,7 +347,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bun
+      - uses: $/.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -391,7 +391,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bun
+      - uses: $/.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"

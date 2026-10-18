@@ -25,9 +25,9 @@ test("CI installs cross targets into the repository-selected Rust toolchain", as
 	const setupAction = await Bun.file(RUST_SETUP_ACTION).text();
 
 	expect(ciWorkflow).not.toMatch(/nightly-\d{4}-\d{2}-\d{2}/);
-	expect(ciWorkflow).toContain("uses: ./.github/actions/setup-rust");
+	expect(ciWorkflow).toContain("uses: $/.github/actions/setup-rust");
 
-	expect(ciWorkflow.match(/uses: \.\/\.github\/actions\/setup-rust/g)).toHaveLength(2);
+	expect(ciWorkflow.match(/uses: \$\/\.github\/actions\/setup-rust/g)).toHaveLength(2);
 	expect(ciWorkflow).toContain("run: bash scripts/verify-self-hosted-tools.sh full");
 	expect(ciWorkflow).toContain(`target: \${{ matrix.target }}`);
 	expect(setupAction).toContain('RUST_TOOLCHAIN="$(sed -nE');
