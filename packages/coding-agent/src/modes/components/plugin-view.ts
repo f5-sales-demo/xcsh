@@ -60,11 +60,14 @@ export class PluginViewComponent implements Component {
 			if (section.kind === "fields") {
 				const entries = Object.entries(section.values);
 				const shown =
-					this.expanded || this.complete
+					this.expanded || this.complete || section.previewFields === "all"
 						? entries
 						: entries.filter(
 								([key], index) =>
-									index < 6 || /total|count|scope|warning|incomplete|done|hasMore|partial/i.test(key),
+									index <
+										(Number.isFinite(section.previewFields)
+											? Math.max(0, Math.floor(section.previewFields as number))
+											: 6) || /total|count|scope|warning|incomplete|done|hasMore|partial/i.test(key),
 							);
 				for (const [key, value] of shown)
 					lines.push(

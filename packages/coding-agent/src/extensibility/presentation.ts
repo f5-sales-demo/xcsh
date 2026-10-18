@@ -5,6 +5,8 @@ import type {
 	PluginView,
 } from "@f5-sales-demo/pi-agent-core/plugin-presentation";
 
+import { usablePluginView } from "./presentation-validity";
+
 type Fields = Extract<PluginSection, { kind: "fields" }>;
 type Table = Extract<PluginSection, { kind: "table" }>;
 type Code = Extract<PluginSection, { kind: "code" }>;
@@ -37,8 +39,13 @@ function valueText(value: unknown): string {
 		return String(value);
 	}
 }
-function fields(values: Readonly<Record<string, unknown>>, title?: string): Fields {
-	return { kind: "fields", ...(title ? { title } : {}), values };
+function fields(values: Readonly<Record<string, unknown>>, title?: string, previewFields?: number | "all"): Fields {
+	return {
+		kind: "fields",
+		...(title ? { title } : {}),
+		values,
+		...(previewFields !== undefined ? { previewFields } : {}),
+	};
 }
 function table(
 	rows: readonly Readonly<Record<string, unknown>>[],
@@ -298,6 +305,7 @@ function withPresentation<
 				} catch {
 					/* Retain execution evidence. */
 				}
+				if (!usablePluginView(view)) view = undefined;
 				const fallback = defaultResult(result);
 				view = { ...fallback, ...view, sections: view?.sections?.length ? view.sections : fallback.sections };
 				return {
@@ -305,8 +313,12 @@ function withPresentation<
 					warnings: [
 						...new Set([
 							...(view.warnings ?? []),
-							...(options.isPartial ? ["Output is still streaming; results are not final."] : []),
-							...completenessWarnings(result.details),
+							...(view.completeness === "provided"
+								? []
+								: [
+										...(options.isPartial ? ["Output is still streaming; results are not final."] : []),
+										...completenessWarnings(result.details),
+									]),
 						]),
 					],
 				};
