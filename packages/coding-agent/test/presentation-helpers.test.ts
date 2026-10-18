@@ -272,3 +272,34 @@ test("wrapping a class tool preserves prototype execution and private state", as
 	expect(await wrapped.execute()).toEqual(await original.execute());
 	expect("presentation" in original).toBe(false);
 });
+
+test("provided completion preserves domain warnings and falls back for empty or invalid adapters", () => {
+	const payload = { content: [{ type: "text", text: "actual-evidence" }], details: { done: false } };
+	const options = { expanded: true, isPartial: true };
+	const valid = presentation
+		.withPresentation({ name: "domain" }, {
+			result: () => ({
+				completeness: "provided",
+				warnings: ["Domain provisional"],
+				sections: [{ kind: "code", text: "evidence" }],
+			}),
+		} as any)
+		.presentation.result(payload, options, {});
+	expect(valid.warnings).toEqual(["Domain provisional"]);
+	for (const result of [
+		() => undefined,
+		() => ({ completeness: "provided", expandedEvidence: "provided", sections: [] }),
+		() => ({ completeness: "provided", sections: [{ kind: "code", text: "" }] }),
+		() => ({ completeness: "provided", sections: [{ kind: "fields", values: null }] }),
+		() => {
+			throw new Error("adapter failed");
+		},
+	]) {
+		const view = presentation
+			.withPresentation({ name: "domain" }, { result } as any)
+			.presentation.result(payload, options, {});
+		expect(view.warnings?.join()).toContain("streaming");
+		expect(view.warnings?.join()).toContain("incomplete");
+		expect(view.expandedEvidence).not.toBe("provided");
+	}
+});

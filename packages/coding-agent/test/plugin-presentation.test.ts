@@ -266,3 +266,44 @@ test("registered descriptors and fallback share XC-API thin themed frames and st
 		}
 	}
 });
+
+test("adapter fields can show all values or a chosen preview without hiding consequential fields", async () => {
+	const values = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`field${i}`, i]));
+	for (const [previewFields, visible] of [
+		[undefined, 6],
+		[2, 2],
+		["all", 9],
+	] as const) {
+		const c = await component({
+			presentation: {
+				result: () => ({ sections: [{ kind: "fields", values: { ...values, total: 0 }, previewFields }] }),
+			},
+		});
+		c.updateResult({ content: [{ type: "text", text: "raw" }] });
+		const output = plain(c.render(76));
+		expect(output).toContain("total");
+		expect(output).toContain(`field${visible - 1}`);
+		if (visible < 9) expect(output).not.toContain(`field${visible}`);
+	}
+});
+
+test("provided expanded evidence appears once while shared Arguments remain", async () => {
+	const c = await component({
+		presentation: {
+			result: () => ({
+				expandedEvidence: "provided",
+				sections: [
+					{ kind: "code", text: "unique-evidence-token" },
+					{ kind: "fields", values: { metadataToken: false } },
+				],
+			}),
+		},
+	});
+	c.updateResult({ content: [{ type: "text", text: "unique-evidence-token" }], details: { metadataToken: false } });
+	c.setExpanded(true);
+	const output = plain(c.render(120));
+	expect(output.match(/unique-evidence-token/g)?.length).toBe(1);
+	expect(output.match(/metadataToken/g)?.length).toBe(1);
+	expect(output).toContain("Arguments");
+	expect(output).toContain("SELECT COUNT(Id) total");
+});
