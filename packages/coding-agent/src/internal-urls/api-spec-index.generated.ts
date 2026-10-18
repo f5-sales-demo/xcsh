@@ -2,12 +2,12 @@
 
 import type { ApiSpecDomainEnrichments, ApiSpecIndex, ApiSpecNetworkAllowlist, ApiSpecValidationResourceEntry } from "./api-spec-types";
 
-export const API_SPEC_VERSION = "12.1.2";
+export const API_SPEC_VERSION = "12.1.3";
 
 export const API_NETWORK_ALLOWLIST: ApiSpecNetworkAllowlist | undefined = {
 "sourceUrl": "https://docs.cloud.f5.com/docs-v2/downloads/platform/reference/network-cloud-ref/ips-domains.json",
 "sha256": "67bc756eb9b4ad90412f635aa54955864845e1d4082583ca1882d912e596f5eb",
-"releaseVersion": "12.1.2",
+"releaseVersion": "12.1.3",
 "manifest": {
 "manifest_type": "firewall_proxy_allowlist",
 "schema_version": "1.0.0",
@@ -369,7 +369,7 @@ export const API_NETWORK_ALLOWLIST: ApiSpecNetworkAllowlist | undefined = {
 };
 
 export const API_SPEC_INDEX: ApiSpecIndex = {
-	version: "12.1.2",
+	version: "12.1.3",
 	timestamp: "2026-10-17T10:10:42+00:00",
 	domains: [
 		{
@@ -3059,7 +3059,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Admin Console And Ui",
 "description": "Dashboard customization through namespace-bounded asset libraries. Storage systems for branding resources, layout templates, and interactive widgets. Catalog organization with system object references tracking modification history and deployment status. Schema enforcement ensuring configuration validity across tenant hierarchies and environment boundaries.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -9363,7 +9363,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Ai Services",
 "description": "Query handling through inference routing with production and test modes. Positive and negative quality markers with detailed categorization capture assistant performance. Streaming connections support authenticated access, subscription lifecycles, and feature flags. IP provisioning services allocate infrastructure resources for model workloads across distributed systems.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -18354,7 +18354,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Api",
       "description": "Structured classification systems with versioning support for contract evolution. Hierarchical groupings segment resources by operational role or security boundaries. Behavioral verification confirms authentication flows and permission constraints. Token and key safeguards protect sensitive credentials. Traffic inspection through connected load balancers and firewalls enables threat detection at network perimeters.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -63975,7 +63975,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Authentication",
       "description": "Identity and access management providing APIs for configuring identity providers, access policies, and user credentials. Supports MFA, identity provider integration, and lifecycle operations for credential management across distributed deployments.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -73773,7 +73773,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Bigip",
 "description": "On-premises appliance connector enabling iRule lifecycle operations and data group replication. APM policy coordination, virtual server configuration binding, and CNE linkage. Telemetry aggregation and health status monitoring across hybrid infrastructure deployments.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -104218,7 +104218,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Billing And Usage",
 "description": "Subscription lifecycle with plan transitions and billing states. Payment method hierarchies supporting primary and secondary configurations. Invoice generation with PDF downloads and custom listing. Resource quotas per namespace with limit definitions and consumption metrics. Contact types for billing notifications and tenant deletion workflows.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -116461,7 +116461,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Blindfold",
 "description": "Public key retrieval and secret policy enforcement for encrypted data handling. Policy rules govern access with configurable matching and transformation actions. VoltShare integration provides decryption services, access counting, and audit log aggregation. Namespace-scoped policies enable fine-grained control over sensitive information with administrative overrides.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -140324,7 +140324,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Bot And Threat Defense",
 "description": "Behavioral fingerprinting identifies automated clients through request patterns, mouse movements, and JavaScript execution. Threat categories classify attacks by type including credential stuffing, scraping, and denial-of-service. Defense instances apply per-namespace policies with configurable sensitivity thresholds and challenge actions. Provisioning handles integration credentials for third-party threat intelligence feeds.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -154656,7 +154656,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Cdn",
 "description": "Content delivery networks with edge caching, geographic distribution, and cache management. Supports custom rules, asset purge operations, and performance analytics. Enables worldwide asset distribution, optimization, and delivery monitoring across regions and protocols.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -242888,7 +242888,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Ce Management",
 "description": "Customer edge node lifecycle through secure enrollment tokens and downloadable deployment images. Network connectivity options span exclusive, common, and administrative pathways with DHCP address pools supporting both IPv4 and IPv6. Bulk grouping consolidates configuration across distributed locations. Compatibility verification runs before software updates, with rollout tracking for version progression across the infrastructure.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -283988,7 +283988,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Certificates",
 "description": "X.509 certificate chains with intermediate and root CA support. Trusted CA list bundles for client authentication and mTLS validation. CRL distribution points and OCSP stapling configuration. Certificate manifests link credentials to load balancers and gateways. Automatic expiration tracking and renewal notifications.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -298866,7 +298866,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Cloud Infrastructure",
 "description": "Hyperscaler integration supporting Amazon Web Services, Microsoft Azure, and Google Cloud Platform environments. Virtual network attachment workflows enable elastic compute provisioning with automatic reattachment capabilities. Edge authentication secrets for provider access. Segment telemetry and cross-region link reapplication for distributed deployments. Autonomous path synchronization across peered networks with real-time topology updates.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -320452,7 +320452,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Container Services",
 "description": "Namespaced isolation with configurable limits and autoscaling policies. vK8s abstracts operational overhead while providing scheduling, persistent storage, and service mesh integration. Compute profiles specify CPU, memory, and GPU allocations for reproducible environments. Telemetry tracks consumption patterns across geographically distributed infrastructure nodes.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -344047,7 +344047,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Data And Privacy Security",
 "description": "Pattern-based detection for personally identifiable information across request and response payloads. Custom data type definitions enable organization-specific classification beyond built-in PII categories. Regional log and metrics aggregation with Clickhouse, Elasticsearch, and Kafka export options. Geo-configuration policies enforce data residency requirements and jurisdiction-specific privacy regulations.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -356104,7 +356104,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Data Intelligence",
 "description": "APIs for configuring classification policies and resource management. Supports data classification, insight generation, and integration with security services across deployments.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -368963,7 +368963,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Ddos",
 "description": "Network perimeter hardening through deny list configurations, rule group hierarchies, and encrypted tunnel endpoints. Attack signature detection identifies flood patterns while throttling mechanisms block anomalous traffic bursts. Tunnel health checks verify coverage across distributed segments. Priority ordering governs policy application for multi-layered screening approaches.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -417958,7 +417958,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Dns",
 "description": "Name infrastructure with authoritative zones, A/AAAA/CNAME record types, and zone management. Supports zone transfers, security extensions, health-based routing, and delegation. Enables reliable name resolution, geographic load balancing, and name-based traffic steering across distributed environments.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -468147,7 +468147,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Managed Kubernetes",
 "description": "Role-based access controls with cluster-scoped permissions and namespace bindings. Pod security admission levels enforce baseline, restricted, or privileged profiles. Container registry credentials support private image pulls across hybrid deployments. Policy rules define resource verbs, groups, and non-resource URL access patterns.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -486958,7 +486958,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Marketplace",
 "description": "External connector infrastructure supporting direct, GRE, and encrypted tunnel modes with IKE parameter configuration and dead peer detection intervals. Cloud provider instances for Terraform automation and vendor partnerships. Service catalog entries with per-namespace activation flags, resource quotas, and administrative dashboard tile arrangement for operational workflows.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -516089,7 +516089,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Network",
 "description": "Routing table manipulation via peer state machines and path selection algorithms. Secure conduits between locations using IKE handshakes, cipher suites, and key exchanges. Segment attachments bridge hybrid topologies spanning cloud providers and on-premises infrastructure. SRv6 addressing, CIDR block matching, and advertisement controls direct traffic flows across distributed deployments with granular policy enforcement.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -591434,7 +591434,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Network Security",
 "description": "Perimeter defense through firewall configurations, address translation, and ingress/egress policies. Traffic steering directs packets according to defined criteria including origin, target, and service type. Segment boundaries create workload isolation zones while HTTP intermediaries manage client requests to external destinations. Port mappings employ static and dynamic address pools for flexible translation scenarios across multi-tenant environments.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -651921,7 +651921,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Nginx One",
 "description": "Dataplane server registration with health status tracking and location awareness. Service discovery bindings for dynamic upstream resolution. Cloud service gateway integration for hybrid deployments. WAF policy attachment and instance-level security controls.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -663387,7 +663387,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Object Storage",
 "description": "Blob management for application component delivery across namespaces. Time-limited download links with cryptographic signing protect asset retrieval. Version-controlled packages organized by operating system type support artifact discovery. Query filtering by name, type, and release number enables programmatic access to integrator libraries and protection modules for mobile deployments.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -668715,7 +668715,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Observability",
 "description": "Telemetry systems execute scheduled availability checks from distributed AWS locations worldwide. Response code validation and timing metrics feed into historical trend analysis. DNS resolution accuracy verification ensures name service reliability. Certificate lifecycle tracking generates expiration warnings before outages occur. Regional probe distribution provides geographic coverage insights. Health summaries aggregate results into actionable dashboards with configurable alerting thresholds.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -707876,7 +707876,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Other",
 "description": "F5 Distributed Cloud Other",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -717652,7 +717652,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Rate Limiting",
 "description": "Threshold-based request blocking using sliding window calculations. Burst smoothing algorithms maintain sustained throughput without exceeding defined maximums. Per-connection controls apply granular restrictions by protocol type. Automatic block actions trigger when request counts surpass configured limits within specified intervals.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -729716,7 +729716,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Secops And Incident Response",
 "description": "User threat assessment with configurable risk thresholds and mitigation rules. Detection covers high, medium, and low threat levels with corresponding actions like blocking, rate limiting, or alerting. Mitigation policies link to load balancers for real-time enforcement against identified bad actors.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -735416,7 +735416,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Service Mesh",
 "description": "NFV service lifecycle and software version tracking. Machine learning-driven classification with security risk assessment and PII detection. Override management for application behavior customization. Sidecar proxy orchestration with automatic mTLS certificate rotation and policy enforcement across distributed workloads.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -774069,7 +774069,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Shape",
 "description": "Bot infrastructure policies with deployment tracking and subscription management. SafeAP protection against credential stuffing and account takeover. Mobile application shielding through SDK integration with OS-specific configurations. Real-time threat intelligence updates and automated response actions based on risk scoring and traffic patterns.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -933330,7 +933330,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Sites",
 "description": "Multi-cloud node provisioning spanning major public cloud environments including TGW, VNet, and VPC architectures. VPN tunnel configuration handles secure connectivity while IP prefix management controls address allocation. Customer edge deployments support external container orchestration platforms. Geographic distribution with resource sharing enables consistent policy enforcement across deployment points.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -987260,6 +987260,78 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
 "upgrade_acceptance": false,
 "fresh_acceptance_required": true
 },
+"single_node_lifecycle": {
+"availability": "evidence_backed_single_node",
+"node_count": 1,
+"interface_count": 2,
+"interface_roles": [
+"slo",
+"sli"
+],
+"engines": [
+"native",
+"terraform"
+],
+"fresh_acceptance_required": true,
+"consumer_runtime_qualification_required": true,
+"site_create": {
+"method": "POST",
+"path": "/api/config/namespaces/system/securemesh_site_v2s",
+      "request_schema": "securemesh_site_v2CreateRequest",
+"spec": {
+"gcp": {
+"not_managed": {}
+},
+"disable_ha": {},
+"disable_management_network": {},
+"block_all_services": {},
+"no_network_policy": {},
+"no_forward_proxy": {},
+"f5_proxy": {},
+"no_proxy_bypass": {},
+"logs_streaming_disabled": {},
+"no_s2s_connectivity_sli": {},
+"no_s2s_connectivity_slo": {},
+"disable_url_categorization": {},
+"local_vrf": {
+"default_config": {},
+"default_sli_config": {}
+}
+},
+"ownership_labels": [
+"xcsh-deployment",
+"xcsh-engine"
+],
+"configured_interface_strategy": "registration_discovery"
+},
+"site_delete": {
+"method": "DELETE",
+"path": "/api/config/namespaces/system/securemesh_site_v2s/{site}",
+      "exact_ownership_recheck": true,
+"absence_required": true
+},
+"bootstrap": {
+"strategy": "guide_backed_gcp_user_data",
+"token_method": "POST",
+      "token_path": "/api/register/namespaces/system/tokens",
+      "token_type": 1,
+      "site_binding_required": true,
+"credential_response_path": "spec.content",
+      "metadata_key": "user-data",
+      "issued_path": "/etc/vpm/user_data",
+"preserve_path": "/etc/vpm/config.yaml",
+"private_deployment_storage": true,
+"one_use_checkout_required": true,
+"terraform_sensitive_state_required": true,
+"cloud_init_placeholder_only": "reject"
+},
+"receipt_path": "config/evidence/gcp-single-node-lifecycle-20261018.json",
+"receipt_sha256": "sha256:1f8d185527e00cc7743376753c517cb4e04b26299dc6088ac5614239faaa86c2",
+"ha": "unavailable",
+"routing": "unavailable",
+"site_upgrade": "unavailable",
+"recovery120seconds": "unqualified"
+},
 "global_health_observation": {
 "availability": "observational_read_only",
 "method": "GET",
@@ -989740,6 +989812,78 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
 "upgrade_acceptance": false,
 "fresh_acceptance_required": true
 },
+"single_node_lifecycle": {
+"availability": "evidence_backed_single_node",
+"node_count": 1,
+"interface_count": 2,
+"interface_roles": [
+"slo",
+"sli"
+],
+"engines": [
+"native",
+"terraform"
+],
+"fresh_acceptance_required": true,
+"consumer_runtime_qualification_required": true,
+"site_create": {
+"method": "POST",
+"path": "/api/config/namespaces/system/securemesh_site_v2s",
+      "request_schema": "securemesh_site_v2CreateRequest",
+"spec": {
+"gcp": {
+"not_managed": {}
+},
+"disable_ha": {},
+"disable_management_network": {},
+"block_all_services": {},
+"no_network_policy": {},
+"no_forward_proxy": {},
+"f5_proxy": {},
+"no_proxy_bypass": {},
+"logs_streaming_disabled": {},
+"no_s2s_connectivity_sli": {},
+"no_s2s_connectivity_slo": {},
+"disable_url_categorization": {},
+"local_vrf": {
+"default_config": {},
+"default_sli_config": {}
+}
+},
+"ownership_labels": [
+"xcsh-deployment",
+"xcsh-engine"
+],
+"configured_interface_strategy": "registration_discovery"
+},
+"site_delete": {
+"method": "DELETE",
+"path": "/api/config/namespaces/system/securemesh_site_v2s/{site}",
+      "exact_ownership_recheck": true,
+"absence_required": true
+},
+"bootstrap": {
+"strategy": "guide_backed_gcp_user_data",
+"token_method": "POST",
+      "token_path": "/api/register/namespaces/system/tokens",
+      "token_type": 1,
+      "site_binding_required": true,
+"credential_response_path": "spec.content",
+      "metadata_key": "user-data",
+      "issued_path": "/etc/vpm/user_data",
+"preserve_path": "/etc/vpm/config.yaml",
+"private_deployment_storage": true,
+"one_use_checkout_required": true,
+"terraform_sensitive_state_required": true,
+"cloud_init_placeholder_only": "reject"
+},
+"receipt_path": "config/evidence/gcp-single-node-lifecycle-20261018.json",
+"receipt_sha256": "sha256:1f8d185527e00cc7743376753c517cb4e04b26299dc6088ac5614239faaa86c2",
+"ha": "unavailable",
+"routing": "unavailable",
+"site_upgrade": "unavailable",
+"recovery120seconds": "unqualified"
+},
 "global_health_observation": {
 "availability": "observational_read_only",
 "method": "GET",
@@ -992113,6 +992257,78 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
 "routing_acceptance": false,
 "upgrade_acceptance": false,
 "fresh_acceptance_required": true
+},
+"single_node_lifecycle": {
+"availability": "evidence_backed_single_node",
+"node_count": 1,
+"interface_count": 2,
+"interface_roles": [
+"slo",
+"sli"
+],
+"engines": [
+"native",
+"terraform"
+],
+"fresh_acceptance_required": true,
+"consumer_runtime_qualification_required": true,
+"site_create": {
+"method": "POST",
+"path": "/api/config/namespaces/system/securemesh_site_v2s",
+      "request_schema": "securemesh_site_v2CreateRequest",
+"spec": {
+"gcp": {
+"not_managed": {}
+},
+"disable_ha": {},
+"disable_management_network": {},
+"block_all_services": {},
+"no_network_policy": {},
+"no_forward_proxy": {},
+"f5_proxy": {},
+"no_proxy_bypass": {},
+"logs_streaming_disabled": {},
+"no_s2s_connectivity_sli": {},
+"no_s2s_connectivity_slo": {},
+"disable_url_categorization": {},
+"local_vrf": {
+"default_config": {},
+"default_sli_config": {}
+}
+},
+"ownership_labels": [
+"xcsh-deployment",
+"xcsh-engine"
+],
+"configured_interface_strategy": "registration_discovery"
+},
+"site_delete": {
+"method": "DELETE",
+"path": "/api/config/namespaces/system/securemesh_site_v2s/{site}",
+      "exact_ownership_recheck": true,
+"absence_required": true
+},
+"bootstrap": {
+"strategy": "guide_backed_gcp_user_data",
+"token_method": "POST",
+      "token_path": "/api/register/namespaces/system/tokens",
+      "token_type": 1,
+      "site_binding_required": true,
+"credential_response_path": "spec.content",
+      "metadata_key": "user-data",
+      "issued_path": "/etc/vpm/user_data",
+"preserve_path": "/etc/vpm/config.yaml",
+"private_deployment_storage": true,
+"one_use_checkout_required": true,
+"terraform_sensitive_state_required": true,
+"cloud_init_placeholder_only": "reject"
+},
+"receipt_path": "config/evidence/gcp-single-node-lifecycle-20261018.json",
+"receipt_sha256": "sha256:1f8d185527e00cc7743376753c517cb4e04b26299dc6088ac5614239faaa86c2",
+"ha": "unavailable",
+"routing": "unavailable",
+"site_upgrade": "unavailable",
+"recovery120seconds": "unqualified"
 },
 "global_health_observation": {
 "availability": "observational_read_only",
@@ -1054641,7 +1054857,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Statistics",
 "description": "Alert policies with custom matchers, label groupings, and notification parameters. Log receivers for centralized collection with confirmation and verification workflows. Flow analytics, historical trend data, and namespace-scoped dashboards. Topology discovery and site-level health indicators for operational visibility.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -1136038,7 +1136254,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Support",
 "description": "Case management workflows including submission, commentary, and closure paths. Urgency adjustments and routing for time-sensitive incidents. Tax exemption verification requests. Site-level tcpdump operations—initiation, enumeration, and termination—for low-level network troubleshooting and protocol analysis.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -1169303,7 +1169519,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Telemetry And Insights",
 "description": "APIs for configuring collection endpoints, metrics storage, and insight generation. Supports log aggregation, performance monitoring, and alerting integration across deployments.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -1195857,7 +1196073,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Tenant And Identity",
 "description": "Profile images and display customizations for personalized dashboard experiences. Federated authentication toggles controlling SSO behavior across organizational boundaries. Session lifecycle tracking with real-time visibility into active connections and timeout policies. Support ticket workflows including attachment handling and closure procedures for managed client escalations. Initial access provisioning sequences for new user onboarding.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -1312431,7 +1312647,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Threat Campaign",
 "description": "APIs for configuring detection policies and attack tracking. Supports campaign analysis, risk assessment, and automated mitigation rule generation across security domains.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -1328743,7 +1328959,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Users",
 "description": "Token lifecycle governs automated site onboarding through cloud-init integration with configurable validity periods. Explicit category keys establish permitted classification hierarchies enforced across deployments. Inferred attributes attach automatically based on object characteristics and placement context. Namespace-scoped operations handle credential generation, revocation, and state transitions for streamlined provisioning workflows.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -1338843,7 +1339059,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Virtual",
 "description": "Load balancing for HTTP, TCP, and UDP traffic with configurable routing rules and origin pool management. Supports health checks, session persistence, and automatic failover. Enables geographic distribution, rate limiting, and service policy enforcement across load balancers and routes.",
-"version": "12.1.2",
+"version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
@@ -1502217,7 +1502433,7 @@ export const API_SPEC_DATA: Readonly<Record<string, unknown>> = {
       "info": {
 "title": "Vpm And Node Management",
 "description": "APIs for configuring node policies, fleet management, and lifecycle operations. Supports node registration, configuration deployment, and status monitoring across distributed infrastructure.",
-      "version": "12.1.2",
+      "version": "12.1.3",
 "contact": {
 "name": "F5 Distributed Cloud",
 "url": "https://docs.cloud.f5.com"
