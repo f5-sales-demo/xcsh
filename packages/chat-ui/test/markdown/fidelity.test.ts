@@ -98,13 +98,14 @@ describe("Layer 1 — structural invariants", () => {
 		expect((boxes[1] as HTMLInputElement).checked).toBe(true);
 	});
 
-	test("fenced code emits code.language-ts with NO info-string leak in the body", () => {
+	test("fenced code emits code.language-typescript with NO info-string leak in the body", () => {
 		const el = renderInto(readFixture("code-lang"));
-		const code = el.querySelector("pre code.language-ts");
+		const code = el.querySelector("pre code.language-typescript");
 		expect(code).not.toBeNull();
 		// The body is exactly the code — the `ts` info string must not appear in it.
 		expect(code?.textContent?.trim()).toBe("const x: number = 1;");
-		expect(el.querySelector(".md-lang-label")?.textContent).toBe("ts");
+		expect(el.querySelector(".md-lang-label")).toBeNull();
+		expect(JSON.parse(code?.getAttribute("data-code-source") ?? '""')).toBe("const x: number = 1;");
 	});
 
 	test("inline code renders code spans incl. a double-backtick span with a literal backtick", () => {

@@ -1,3 +1,4 @@
+import { CODE_PANEL_CSS } from "../markdown/code-presentation.generated.min.js";
 /**
  * The shared xcsh-terminal panel stylesheet, emitted as a string and injected by
  * each host at boot. Promoted from the Chrome extension's `PANEL_CSS` — already
@@ -15,7 +16,8 @@
  */
 import { TEMML_CSS } from "../markdown/temml-css.generated";
 
-export const PANEL_CSS = `${TEMML_CSS}
+export const PANEL_CSS = `${CODE_PANEL_CSS}
+${TEMML_CSS}
 * { box-sizing: border-box; }
 html,body { margin:0; height:100%; }
 body { background: var(--charcoal); color: var(--bright-white);
@@ -342,8 +344,6 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; overflow-w
   padding: var(--space-3); margin: var(--space-3) 0; overflow: auto; }
 .markdown-root pre code { display: block; background: none; padding: 0; font-family: var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .markdown-root code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); }
-.markdown-root .md-lang-label { display: block; margin-bottom: var(--space-2); color: var(--dim); font-family: var(--font-mono);
-  font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .06em; }
 .markdown-root a { color: var(--chrome-accent); }
 .markdown-root del { color: var(--dim); }
 
@@ -363,6 +363,5 @@ code { background:var(--code-bg); padding:1px 5px; border-radius:4px; overflow-w
   max-width: min(var(--measure), var(--measure-px)); }
 .xcsh-doc .markdown-root code,
 .xcsh-doc .markdown-root pre,
-.xcsh-doc .markdown-root pre code,
-.xcsh-doc .markdown-root .md-lang-label { font-family: var(--font-mono); }
+.xcsh-doc .markdown-root pre code { font-family: var(--font-mono); }
 `;

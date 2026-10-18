@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "38672bb53f5f6f3a938c1c04fca3349014c0af64",
-  "fingerprint": "5065121f6ee70180c36f9ac1f3f234e607d23a9ffbb97412f7448f6be00752df",
+  "revision": "236cdea5985c58ab28ec1eb08cad635b4f36170e",
+  "fingerprint": "c13065f5d461d2dcfda1931c66d561a5a8b64508c110352f0d9769f73ebd2e60",
   "counts": {
     "total": 244,
     "components": 102,
@@ -69,8 +69,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/autoresearch/index.ts is individually classified as runtime-lifecycle in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -284,8 +284,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/debug/index.ts is individually classified as reviewed-mutation-adapter in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -347,6 +347,7 @@
         "packages/coding-agent/test/browser/chat-handler.configure.test.ts",
         "packages/coding-agent/test/browser/chat-handler.host-tools.test.ts",
         "packages/coding-agent/test/cli/flag-spec.test.ts",
+        "packages/coding-agent/test/code-presentation-source.test.ts",
         "packages/coding-agent/test/codex-interaction-source.test.ts",
         "packages/coding-agent/test/context-add-wizard.test.ts",
         "packages/coding-agent/test/context-completion.test.ts",
@@ -357,8 +358,7 @@
         "packages/coding-agent/test/discovery/helpers.test.ts",
         "packages/coding-agent/test/edit-diff.test.ts",
         "packages/coding-agent/test/herdr-reporter.test.ts",
-        "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/documentation-snapshot.test.ts"
+        "packages/coding-agent/test/internal-urls/documentation-resolve.test.ts"
       ],
       "classification": "packages/coding-agent/src/edit/normalize.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1046,8 +1046,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/acp/index.ts is individually classified as machine-protocol-contract in the protocols domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1105,6 +1105,7 @@
       "interactionSignals": [],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/markdown-component-fidelity.test.ts",
         "packages/coding-agent/test/modes/components/assistant-message-outcomes.test.ts",
         "packages/coding-agent/test/user-message-hotswap.test.ts",
@@ -1496,8 +1497,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/extensions/index.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1777,8 +1778,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/index.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2063,6 +2064,7 @@
       ],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/markdown-component-fidelity.test.ts",
         "packages/coding-agent/test/marketplace-presentation.test.ts",
         "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts",
@@ -2098,8 +2100,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/plugins/index.ts is individually classified as read-only-renderer in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2752,8 +2754,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/status-line/index.ts is individually classified as read-only-renderer in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3988,6 +3990,7 @@
         "packages/coding-agent/test/blindfold-process.test.ts",
         "packages/coding-agent/test/blindfold-retrieval.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/context-operations.test.ts",
@@ -3996,8 +3999,7 @@
         "packages/coding-agent/test/core/python-kernel.lifecycle.test.ts",
         "packages/coding-agent/test/core/python-prelude.test.ts",
         "packages/coding-agent/test/debug/debug-selector-review.test.ts",
-        "packages/coding-agent/test/discovery/claude-plugins.test.ts",
-        "packages/coding-agent/test/discovery/monorepo-skills.test.ts"
+        "packages/coding-agent/test/discovery/claude-plugins.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/shared.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4066,8 +4068,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/theme/defaults/index.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4121,7 +4123,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "settings",
-      "sha256": "e4823fc6ca3d3610d01a244beaf0f570700e51e2fc2a3ffe34764f9496966fa1",
+      "sha256": "3b87d49be17d85767c02e0b36418895a189b555ea6230f8c26175ac333f79ca7",
       "exports": [
         "SpinnerType",
         "SymbolKey",
@@ -4183,6 +4185,8 @@
         "packages/coding-agent/test/bordered-loader.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/btw-panel-pending.test.ts",
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/command-controller-status-icon.test.ts",
         "packages/coding-agent/test/compaction-hooks.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
@@ -4190,9 +4194,7 @@
         "packages/coding-agent/test/components/todo-reminder.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
         "packages/coding-agent/test/context-picker.test.ts",
-        "packages/coding-agent/test/custom-editor-keybindings.test.ts",
-        "packages/coding-agent/test/debug/debug-selector-review.test.ts",
-        "packages/coding-agent/test/debug/log-viewer.test.ts"
+        "packages/coding-agent/test/custom-editor-keybindings.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/theme/theme.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4922,10 +4924,10 @@
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/browser/host-profiles.test.ts",
         "packages/coding-agent/test/cli-output-pipe.test.ts",
+        "packages/coding-agent/test/code-presentation-source.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
-        "packages/coding-agent/test/context-execution-snapshot.test.ts",
-        "packages/coding-agent/test/curl-shell-execution.test.ts",
-        "packages/coding-agent/test/extension-bridge-tools.test.ts"
+        "packages/coding-agent/test/context-execution-snapshot.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/bash.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5264,6 +5266,8 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/bash-executor.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
+        "packages/coding-agent/test/code-presentation-source.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/core/python-executor-lifecycle.test.ts",
         "packages/coding-agent/test/core/python-executor-owner-cleanup.test.ts",
         "packages/coding-agent/test/core/python-executor-per-call.test.ts",
@@ -5276,9 +5280,7 @@
         "packages/coding-agent/test/core/settings-manager-python.test.ts",
         "packages/coding-agent/test/extension-bridge-tools.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
-        "packages/coding-agent/test/input-controller-escape.test.ts",
-        "packages/coding-agent/test/python-execution-outcome.test.ts",
-        "packages/coding-agent/test/python-tool-settings.test.ts"
+        "packages/coding-agent/test/input-controller-escape.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/python.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6216,7 +6218,7 @@
       "kind": "component",
       "ownership": "shared-rendering-primitive",
       "domain": "shared-components",
-      "sha256": "a4c79dc0582238aa90e28d6fdeef9e547a44d835f8d67061eb2c6aef020ebbaf",
+      "sha256": "e600c76bb43c8e0a44010e1d956de02c9661f0655db2ab0b2ad48550f98202ec",
       "exports": [
         "DefaultTextStyle",
         "Markdown",
@@ -6238,6 +6240,8 @@
         "packages/coding-agent/test/browser/chat-handler.test.ts",
         "packages/coding-agent/test/browser/extract-references.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/core/chunk-tree.test.ts",
         "packages/coding-agent/test/core/hashline.test.ts",
@@ -6251,9 +6255,7 @@
         "packages/coding-agent/test/internal-urls/api-catalog-discovery.test.ts",
         "packages/coding-agent/test/internal-urls/api-catalog-resolve.test.ts",
         "packages/coding-agent/test/internal-urls/api-spec-integration.test.ts",
-        "packages/coding-agent/test/internal-urls/api-spec-resolve.test.ts",
-        "packages/coding-agent/test/internal-urls/blindfold.test.ts",
-        "packages/coding-agent/test/internal-urls/changes-resolve.test.ts"
+        "packages/coding-agent/test/internal-urls/api-spec-resolve.test.ts"
       ],
       "classification": "packages/tui/src/components/markdown.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6597,8 +6599,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/tui/src/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6826,6 +6828,7 @@
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/highlight-languages.test.ts",
         "packages/coding-agent/test/plugin-dashboard-interactions.test.ts",
         "packages/coding-agent/test/plugin-lifecycle-presentation.test.ts",
@@ -6835,6 +6838,7 @@
         "packages/coding-agent/test/scripts/terminal-uat-profile.test.ts",
         "packages/coding-agent/test/terminal-capture.test.ts",
         "packages/coding-agent/test/tools/lsp-regressions.test.ts",
+        "packages/tui/test/code-presentation.test.ts",
         "packages/tui/test/editor.test.ts",
         "packages/tui/test/keys.test.ts",
         "packages/tui/test/latex.test.ts",
@@ -6893,6 +6897,7 @@
         "packages/coding-agent/test/bash-execution-sixel.test.ts",
         "packages/coding-agent/test/bash-executor.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/hyperlink-settings-side-effects.test.ts",
         "packages/coding-agent/test/image-passthrough.test.ts",
@@ -6908,8 +6913,7 @@
         "packages/tui/test/markdown-media.test.ts",
         "packages/tui/test/markdown.test.ts",
         "packages/tui/test/media-playback.test.ts",
-        "packages/tui/test/notifications.test.ts",
-        "packages/tui/test/sixel-probe.test.ts"
+        "packages/tui/test/notifications.test.ts"
       ],
       "classification": "packages/tui/src/terminal-capabilities.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6963,6 +6967,7 @@
         "packages/coding-agent/test/browser/chat-handler.tool-turn.test.ts",
         "packages/coding-agent/test/chat-handler-matrix.test.ts",
         "packages/coding-agent/test/chat-handler-reason.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
@@ -6970,8 +6975,7 @@
         "packages/coding-agent/test/debug/log-viewer.test.ts",
         "packages/coding-agent/test/e2e/panel-harness.test.ts",
         "packages/coding-agent/test/gutter-block.test.ts",
-        "packages/coding-agent/test/herdr-reporter.test.ts",
-        "packages/coding-agent/test/herdr-terminal.test.ts"
+        "packages/coding-agent/test/herdr-reporter.test.ts"
       ],
       "classification": "packages/tui/src/terminal.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -7035,6 +7039,7 @@
         "packages/coding-agent/test/branding-lowercase.test.ts",
         "packages/coding-agent/test/browser/dom-context.test.ts",
         "packages/coding-agent/test/btw-panel-pending.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts",
         "packages/coding-agent/test/codex-interaction-source.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/components/read-tool-group.test.ts",
@@ -7043,8 +7048,7 @@
         "packages/coding-agent/test/context-picker.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
         "packages/coding-agent/test/custom-editor-keybindings.test.ts",
-        "packages/coding-agent/test/debug/debug-selector-review.test.ts",
-        "packages/coding-agent/test/debug/log-viewer.test.ts"
+        "packages/coding-agent/test/debug/debug-selector-review.test.ts"
       ],
       "classification": "packages/tui/src/tui.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -7133,8 +7137,8 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/ci-release-interaction-sources.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/config-spacing.test.ts"
+        "packages/coding-agent/test/code-presentation-browser.test.ts",
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/typescript-edit-benchmark/src/index.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     }

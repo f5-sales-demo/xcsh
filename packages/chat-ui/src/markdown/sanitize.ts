@@ -89,6 +89,8 @@ const ALLOWED_TAGS = [
 
 /** Only these attributes survive; style is restricted to generated MathML below. */
 const ALLOWED_ATTR = [
+	"data-code-source",
+	"data-code-display",
 	"href",
 	"title",
 	"class",
@@ -142,7 +144,7 @@ const ALLOWED_ATTR = [
 	"start",
 ];
 const HTML_ATTRIBUTES = new Set(["href", "title", "class", "target", "rel", "type", "checked", "start", "disabled"]);
-const MATHML_ATTRIBUTES = new Set(["class", ...ALLOWED_ATTR.slice(8)]);
+const MATHML_ATTRIBUTES = new Set(["class", ...ALLOWED_ATTR.slice(10)]);
 
 const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
 const TEMML_EXACT_CLASSES = new Set([
@@ -221,14 +223,17 @@ const EXACT_CLASSES = new Set([
 	"md-align-left",
 	"md-align-center",
 	"md-align-right",
-	"md-lang-label",
+	"md-code-panel",
+	"hljs",
+	"function_",
+	"class_",
 	"task-list-item",
 	"contains-task-list",
 ]);
 
 /** A class token is kept iff it is an exact allow-listed name or a `language-` code hint. */
 function isAllowedClass(token: string): boolean {
-	return EXACT_CLASSES.has(token) || token.startsWith("language-");
+	return EXACT_CLASSES.has(token) || /^language-[A-Za-z0-9+#._-]{1,20}$/.test(token) || /^hljs-[a-z-]+$/.test(token);
 }
 
 function isAllowedTemmlClass(token: string): boolean {
@@ -240,6 +245,7 @@ const CONFIG: Config = {
 	ALLOWED_TAGS,
 	ALLOWED_ATTR,
 	ALLOW_DATA_ATTR: false,
+	ADD_URI_SAFE_ATTR: ["data-code-source", "data-code-display"],
 	ALLOW_ARIA_ATTR: false,
 };
 
@@ -278,6 +284,10 @@ function build(): Purifier {
 		const node = rawNode as Element;
 		const isMathMl = isMathMlElement(node);
 		const allowedAttributes = isMathMl ? MATHML_ATTRIBUTES : HTML_ATTRIBUTES;
+		if (data.attrName === "data-code-source" || data.attrName === "data-code-display") {
+			data.keepAttr = node.nodeName === "CODE";
+			return;
+		}
 		if (!allowedAttributes.has(data.attrName)) {
 			data.keepAttr = false;
 			return;

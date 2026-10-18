@@ -103,7 +103,7 @@
 		"statusLineContextXcshBg": "f5Red",
 		"statusLineContextXcshFg": 231,
 		"pythonMode": "#f0c040",
-		"syntaxControl": "#569CD6"
+		"syntaxControl": "#C586C0"
 	},
 	"export": {
 		"pageBg": "charcoal",

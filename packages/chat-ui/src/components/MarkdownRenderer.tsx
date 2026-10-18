@@ -16,6 +16,7 @@
  * final frame is never dropped).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { installCodePanels } from "../markdown/code-presentation.generated.min.js";
 import { renderMarkdown } from "../markdown/render";
 
 export interface MarkdownRendererProps {
@@ -59,9 +60,14 @@ export function MarkdownRenderer({ text, className, streaming = false }: Markdow
 	}, [streaming, settledHtml]);
 
 	const html = streaming ? frameHtml : settledHtml;
+	const root = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (!html || !root.current) return;
+		return installCodePanels(root.current);
+	}, [html]);
 
 	return (
 		// biome-ignore lint/security/noDangerouslySetInnerHtml: output is DOMPurify-sanitized (see markdown/sanitize.ts)
-		<div className={className ?? "body"} dangerouslySetInnerHTML={{ __html: html }} />
+		<div ref={root} className={className ?? "body"} dangerouslySetInnerHTML={{ __html: html }} />
 	);
 }

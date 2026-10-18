@@ -261,14 +261,6 @@ fn find_alias(lang: &str) -> Option<&'static str> {
 		.map(|(_, target)| *target)
 }
 
-/// Check if language is in the alias table.
-#[inline]
-fn is_known_alias(lang: &str) -> bool {
-	LANG_ALIASES
-		.iter()
-		.any(|(aliases, _)| aliases.iter().any(|a| lang.eq_ignore_ascii_case(a)))
-}
-
 /// Compute the color index for a single scope (uncached).
 ///
 /// Ordering is critical: more-specific scopes must be checked before their
@@ -563,6 +555,10 @@ pub fn highlight_code(code: String, lang: Option<String>, colors: HighlightColor
 		control,                     // 11
 	];
 
+	if lang.as_deref().is_some_and(is_hcl) {
+		return highlight_hcl(&code, &palette).unwrap_or(code);
+	}
+
 	let ss = get_syntax_set();
 
 	// Find syntax for the language
@@ -634,12 +630,74 @@ pub fn highlight_code(code: String, lang: Option<String>, colors: HighlightColor
 	result
 }
 
+fn is_hcl(lang: &str) -> bool {
+	["hcl", "tf", "tfvars", "terraform"]
+		.iter()
+		.any(|alias| lang.eq_ignore_ascii_case(alias))
+}
+
+/// Use the already-vendored tree-sitter HCL grammar. Walk leaves so interpolation
+/// expressions override surrounding string categories, retaining every source byte.
+fn highlight_hcl(code: &str, palette: &[&str]) -> Option<String> {
+	use ast_grep_core::tree_sitter::LanguageExt;
+	let mut parser = tree_sitter::Parser::new();
+	parser
+		.set_language(&crate::language::Hcl.get_ts_language())
+		.ok()?;
+	let tree = parser.parse(code, None)?;
+	let mut spans: Vec<(usize, usize, usize)> = Vec::new();
+	fn walk(node: tree_sitter::Node<'_>, inherited: usize, spans: &mut Vec<(usize, usize, usize)>) {
+		let kind = node.kind();
+		let category = match kind {
+			"comment" => 0,
+			"bool_lit" | "null_lit" => 1,
+			"identifier" if node.parent().is_some_and(|p| p.kind() == "block") => 1,
+			"identifier" if node.parent().is_some_and(|p| p.kind() == "function_call") => 2,
+			"identifier" | "variable_expr" | "get_attr" => 3,
+			"string_lit" | "quoted_template" | "heredoc_template" | "template_literal" => 4,
+			"numeric_lit" => 5,
+			"=" | "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&"
+			| "||" | "!" | "?" | ":" | "=>" => 7,
+			"{" | "}" | "[" | "]" | "(" | ")" | "," | "." | "${" | "%{" => 8,
+			"for" | "in" | "if" | "else" | "endif" | "endfor" => 11,
+			"template_interpolation" | "template_directive" => 12,
+			_ => inherited,
+		};
+		if node.child_count() == 0 || kind == "comment" {
+			spans.push((node.start_byte(), node.end_byte(), category));
+		} else {
+			let mut cursor = node.walk();
+			for child in node.children(&mut cursor) {
+				walk(child, category, spans);
+			}
+		}
+	}
+	walk(tree.root_node(), 12, &mut spans);
+	let mut result = String::with_capacity(code.len() * 2);
+	let mut end = 0;
+	for (start, stop, category) in spans {
+		if start < end || stop > code.len() {
+			continue;
+		}
+		result.push_str(&code[end..start]);
+		if category < palette.len() && !palette[category].is_empty() {
+			result.push_str(palette[category]);
+			result.push_str(&code[start..stop]);
+			result.push_str("\x1b[39m");
+		} else {
+			result.push_str(&code[start..stop]);
+		}
+		end = stop;
+	}
+	result.push_str(&code[end..]);
+	Some(result)
+}
+
 /// Check if a language is supported for highlighting.
-/// Returns true if the language has either direct support or a fallback
-/// mapping.
+/// Returns true only when the requested language resolves to an installed grammar.
 #[napi]
 pub fn supports_language(lang: String) -> bool {
-	if is_known_alias(&lang) {
+	if is_hcl(&lang) {
 		return true;
 	}
 
@@ -652,5 +710,9 @@ pub fn supports_language(lang: String) -> bool {
 #[napi]
 pub fn get_supported_languages() -> Vec<String> {
 	let ss = get_syntax_set();
-	ss.syntaxes().iter().map(|s| s.name.clone()).collect()
+	ss.syntaxes()
+		.iter()
+		.map(|s| s.name.clone())
+		.chain(std::iter::once("HCL".to_string()))
+		.collect()
 }

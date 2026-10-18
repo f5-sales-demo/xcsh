@@ -7,7 +7,7 @@
  * DOMPurify pass (see sanitize.ts), not the grammar. The custom token-object
  * renderers below add defense-in-depth (link-protocol gating, an info-string-free
  * code body, enumerated alignment classes) and the Office-parity chrome
- * (language chip, per-column table alignment) — but they are NOT the safety net;
+ * (code panel, per-column table alignment) — but they are NOT the safety net;
  * sanitize.ts is.
  *
  * Browser-safe: `marked` is pure JS and DOMPurify uses the browser build.
@@ -15,6 +15,7 @@
  * and both are unit-tested as the retained, load-bearing primitives.
  */
 import { Marked, type Tokens } from "marked";
+import { isCodeBlockComplete, renderCodePanel } from "./code-presentation.generated.min.js";
 import { createMathExtensions } from "./math";
 import { sanitizeHtml } from "./sanitize";
 import { softCloseForStreaming } from "./streaming";
@@ -37,16 +38,6 @@ export function isSafeUrl(url: string): boolean {
 	}
 }
 
-/**
- * Allow-list a fenced-code info string to a short, class-safe language token
- * (`ts`, `c++`, `objective-c`, …). Anything outside the shape yields `""` so no
- * attacker-controlled text reaches the `language-*` class.
- */
-function sanitizeLang(lang: string | undefined): string {
-	const first = (lang ?? "").trim().split(/\s+/)[0] ?? "";
-	return /^[A-Za-z0-9+#._-]{1,20}$/.test(first) ? first : "";
-}
-
 const RAW_MATHML_TAG =
 	/<\/?(?:annotation|maction|math|menclose|merror|mfrac|mi|mmultiscripts|mn|mo|mover|mpadded|mphantom|mprescripts|mroot|mrow|ms|mspace|msqrt|mstyle|msub|msubsup|msup|mtable|mtd|mtext|mtr|munder|munderover|none|semantics)\b/i;
 
@@ -59,7 +50,8 @@ const marked = new Marked({ gfm: true, async: false }).use({
 	extensions: createMathExtensions(),
 	renderer: {
 		html({ raw }: Tokens.HTML | Tokens.Tag) {
-			return RAW_MATHML_TAG.test(raw) ? escapeHtml(raw) : raw;
+			// Source/display metadata belongs to generated panels, never author HTML.
+			return RAW_MATHML_TAG.test(raw) || /\bdata-code-(?:source|display)\b/i.test(raw) ? escapeHtml(raw) : raw;
 		},
 
 		/**
@@ -77,17 +69,14 @@ const marked = new Marked({ gfm: true, async: false }).use({
 		/**
 		 * Fenced code: `token.text` is the body WITHOUT the info string (marked
 		 * separates `lang`), so the old "the language leaks as the first code line"
-		 * bug cannot recur. Emits a language chip + `code.language-*` for a later
-		 * syntax-highlight layer.
+		 * bug cannot recur. Language metadata selects syntax without visible labels.
 		 */
-		code({ text, lang }: Tokens.Code) {
-			const language = sanitizeLang(lang);
-			const langClass = language ? ` class="language-${language}"` : "";
-			const chip = language ? `<span class="md-lang-label">${language}</span>` : "";
-			// No `class="code"`: it is not in the sanitizer's enumerated class allow-list
-			// (content must not be able to set app-chrome classes). Code blocks are
-			// styled by the scoped `.markdown-root pre` rule instead.
-			return `<pre>${chip}<code${langClass}>${escapeHtml(text)}\n</code></pre>`;
+		code(token: Tokens.Code) {
+			return renderCodePanel(
+				token.text,
+				token.lang,
+				isCodeBlockComplete(token.raw, token.codeBlockStyle === "indented"),
+			);
 		},
 
 		/**
@@ -106,7 +95,7 @@ const marked = new Marked({ gfm: true, async: false }).use({
 });
 
 export function renderMarkdown(md: string): string {
-	const prepared = softCloseForStreaming(md);
+	const prepared = softCloseForStreaming(md, { closeCode: false });
 	const html = marked.parse(prepared, { async: false });
 	return sanitizeHtml(html);
 }

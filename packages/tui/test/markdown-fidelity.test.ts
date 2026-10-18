@@ -45,7 +45,7 @@ describe("Markdown structural fidelity", () => {
 		const source = `\tprintf '%s' '${"x".repeat(100)}'`;
 		const lines = new Markdown(`\`\`\`bash\n${source}\n\`\`\``, 0, 0, theme).render(40);
 		expect(received).toBe(source);
-		expect(lines.slice(1).every(s => Bun.stripANSI(s).startsWith("  "))).toBe(true);
+		expect(lines.every(s => Bun.stripANSI(s).startsWith("  | "))).toBe(true);
 		expect(lines.every(s => visibleWidth(s) <= 40)).toBe(true);
 	});
 	test("mixed nested wrapping stays in bounds and retains values on resize", () => {
@@ -91,6 +91,6 @@ test("source-based copied JSON and Bash remain syntactically valid without execu
 
 test("wrapped code continuations retain source indentation", () => {
 	const source = `\`\`\`bash\n    printf '%s' '${"x".repeat(100)}'\n\`\`\``;
-	const lines = new Markdown(source, 0, 0, defaultMarkdownTheme).render(40).slice(1);
-	expect(lines.every(line => Bun.stripANSI(line).startsWith("      "))).toBe(true);
+	const lines = new Markdown(source, 0, 0, defaultMarkdownTheme).render(40);
+	expect(lines.every(line => Bun.stripANSI(line).slice(6).startsWith("    "))).toBe(true);
 });

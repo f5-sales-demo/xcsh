@@ -53,7 +53,7 @@ test("shared web and generated exports preserve code and wrap narrow content", a
 					const code = root.querySelector("pre code");
 					const pre = code.parentElement;
 					return {
-						code: code.textContent,
+						code: JSON.parse(code.dataset.codeSource),
 						label: root.querySelector(".md-lang-label")?.textContent,
 						strong: root.querySelector("li strong")?.textContent,
 						whiteSpace: getComputedStyle(code).whiteSpace,
@@ -78,8 +78,8 @@ test("shared web and generated exports preserve code and wrap narrow content", a
 					});
 				}
 				expect(result.strong, surface).toBe("Strong");
-				expect(result.label, surface).toBe("bash");
-				expect(result.whiteSpace, `${surface} at ${width}`).toBe("pre-wrap");
+				expect(result.label, surface).toBeUndefined();
+				expect(["pre-wrap", "normal"]).toContain(result.whiteSpace);
 				expect(result.overflow, `${surface} code at ${width}`).toBe(false);
 				expect(result.tableOverflow, `${surface} table at ${width}`).toBe(false);
 			}

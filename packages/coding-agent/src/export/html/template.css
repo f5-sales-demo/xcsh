@@ -856,7 +856,6 @@
       overflow-wrap: anywhere;
     }
 
-    .markdown-content .md-lang-label { display: block; color: var(--mdCodeBlockBorder); margin-bottom: 4px; }
     .markdown-content .md-align-left { text-align: left; }
     .markdown-content .md-align-center { text-align: center; }
     .markdown-content .md-align-right { text-align: right; }
@@ -911,8 +910,8 @@
     /* Syntax highlighting */
     .hljs { background: transparent; color: var(--text); }
     .hljs-comment, .hljs-quote { color: var(--syntaxComment); }
-    .hljs-keyword, .hljs-selector-tag { color: var(--syntaxKeyword); }
-    .hljs-number, .hljs-literal { color: var(--syntaxNumber); }
+    .hljs-keyword, .hljs-literal, .hljs-selector-tag { color: var(--syntaxKeyword); }
+    .hljs-number { color: var(--syntaxNumber); }
     .hljs-string, .hljs-doctag { color: var(--syntaxString); }
     /* Function names: hljs v11 uses .hljs-title.function_ compound class */
     .hljs-function, .hljs-title, .hljs-title.function_, .hljs-section, .hljs-name { color: var(--syntaxFunction); }

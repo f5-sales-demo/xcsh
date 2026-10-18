@@ -5,6 +5,7 @@
  */
 import { useState } from "react";
 import type { ToolUseBlock } from "../types";
+import { CodePanel } from "./CodePanel";
 
 export interface ToolUseContentProps {
 	block: ToolUseBlock;
@@ -31,7 +32,7 @@ export function ToolUseContent({ block }: ToolUseContentProps) {
 					<div className="tool-row">
 						<div className="tool-row-label">IN</div>
 						<div className="tool-row-content">
-							<pre>{block.input}</pre>
+							<CodePanel source={block.input} complete={!block.running} />
 						</div>
 						<button className="tool-copy-btn" type="button" onClick={() => handleCopy(block.input ?? "")}>
 							{copied ? "Copied" : "Copy"}
@@ -42,7 +43,7 @@ export function ToolUseContent({ block }: ToolUseContentProps) {
 					<div className="tool-row">
 						<div className="tool-row-label">OUT</div>
 						<div className="tool-row-content">
-							<pre>{block.output}</pre>
+							<CodePanel source={block.output} complete={!block.running} />
 						</div>
 					</div>
 				)}

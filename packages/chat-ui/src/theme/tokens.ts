@@ -14,7 +14,7 @@
  */
 export { COLORS, type ColorName } from "./colors.generated";
 
-import { COLORS } from "./colors.generated";
+import { COLORS, LIGHT_CODE_COLORS } from "./colors.generated";
 
 export const GLYPHS = {
 	assistant: "●",
@@ -117,7 +117,10 @@ export function cssVars(): string {
 	lines.push("  --measure: 68ch;");
 	lines.push("  --measure-px: 660px;");
 	lines.push("  --gutter-doc: 22px;");
-	return `:root {\n${lines.join("\n")}\n}`;
+	const light = Object.entries(LIGHT_CODE_COLORS)
+		.map(([key, value]) => `--${kebab(key)}:${value};`)
+		.join("");
+	return `:root {\n${lines.join("\n")}\n}\n[data-theme="light"], [data-theme="xcsh-light"], .xcsh-light {${light}}`;
 }
 
 /** Insert the token stylesheet once into a Document or ShadowRoot (idempotent).

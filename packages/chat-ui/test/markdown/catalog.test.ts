@@ -27,7 +27,11 @@ for (const item of catalog) {
 			.parse(buffer, { async: false });
 		const parsed = document.createElement("div");
 		parsed.innerHTML = sanitizeHtml(complete);
-		for (const chip of el.querySelectorAll(".md-lang-label")) chip.remove();
+		// Compare authoritative source, independently parsed by uncustomized marked.
+		for (const code of el.querySelectorAll<HTMLElement>("pre code[data-code-source]")) {
+			expect(code.dataset.codeSource).toBeDefined();
+			code.textContent = `${JSON.parse(code.dataset.codeSource ?? '""')}\n`;
+		}
 		expect(el.textContent?.replace(/\s+/g, " ").trim()).toBe(parsed.textContent?.replace(/\s+/g, " ").trim());
 	}, 20_000);
 }

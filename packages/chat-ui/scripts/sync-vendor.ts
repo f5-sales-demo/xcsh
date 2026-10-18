@@ -54,7 +54,10 @@ export function listSourceFiles(srcDir: string = SRC_DIR): string[] {
 			const full = path.join(dir, entry.name);
 			if (entry.isDirectory()) {
 				walk(full);
-			} else if (/\.tsx?$/.test(entry.name) && !entry.name.includes(".test.")) {
+			} else if (
+				(/\.(?:tsx?|js|LICENSE)$/.test(entry.name) || entry.name === "LICENSE.code-presentation") &&
+				!entry.name.includes(".test.")
+			) {
 				out.push(full);
 			}
 		}
@@ -65,6 +68,15 @@ export function listSourceFiles(srcDir: string = SRC_DIR): string[] {
 
 /** Build the content-hash manifest for the source tree. */
 export function buildManifest(srcDir: string = SRC_DIR): VendorManifest {
+	if (srcDir === SRC_DIR) {
+		const upstream = path.resolve(PKG_DIR, "../utils/src");
+		const hash = createHash("sha256");
+		for (const file of ["code-presentation.ts", "code-presentation.browser.ts", "../package.json"])
+			hash.update(fs.readFileSync(path.resolve(upstream, file)));
+		const generated = fs.readFileSync(path.join(SRC_DIR, "markdown/code-presentation.generated.min.js"), "utf8");
+		if (!generated.includes(`source sha256 ${hash.digest("hex")}`))
+			throw new Error("Stale code presentation adapter; run gen-code-presentation before vendoring");
+	}
 	const files: Record<string, string> = {};
 	for (const rel of listSourceFiles(srcDir)) {
 		files[rel] = sha256(fs.readFileSync(path.join(srcDir, rel)));
