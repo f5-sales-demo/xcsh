@@ -54,7 +54,8 @@ documentation checks are required again for the final PR revision.
 Native xterm captures were created on a task-owned Xvfb display. The shared Xorg
 worker timed out at startup, so capture used the isolated display directly.
 Raw captures stay private. Nerd and Unicode code-panel pixels match at every
-tested width in both themes. Human visual acceptance remains a separate gate.
+tested width in both themes. Human visual acceptance was granted on October 18,
+2026 for representative JSON, YAML, Terraform, Bash and Python panels.
 
 ## Schema-grounded assistant review
 
@@ -103,10 +104,15 @@ math script syntax and escapes inline-script Unicode code units before embedding
 Existing math-export and Markdown fidelity tests pass together with the code
 presentation suite. The Office bundle remains below 256 KB.
 
+The next CI revision caught public-citation provenance still naming the preceding
+Terraform documentation release. The normal public-citation generator used
+digest-verified current release manifests and saved live publication sitemaps.
+The previously failing provenance test and citation qualification tests pass.
+
 ## Delivery gates
 
 Human visual acceptance of representative YAML, JSON, Terraform, Bash and Python
-is required before merge by the accepted plan. Immutable publication, corpus
+was granted with authorization to continue after green CI. Immutable publication, corpus
 freshness checks for release scheduling, downloaded Homebrew/npm executable
 hashes and repeated installed acceptance follow that gate. A source check, tag,
 build or historical installation does not establish those later receipts.
