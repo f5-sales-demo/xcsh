@@ -1,6 +1,7 @@
 import { TerraformDocumentationRepository, terraformHash } from "../../../src/internal-urls/terraform-documentation";
 import { EMBEDDED_TERRAFORM_DOCUMENTATION as assets } from "../../../src/internal-urls/terraform-documentation-assets.generated";
 import type { InternalUrl } from "../../../src/internal-urls/types";
+if (!assets) throw new Error("Generate the Terraform documentation index before running this benchmark.");
 const repo = new TerraformDocumentationRepository(assets, process.argv[2] ?? "/tmp/4682-cache");
 const read = (url: string) =>
 	repo.resolve(Object.assign(new URL(url), { rawHost: "terraform-documentation" }) as InternalUrl);
