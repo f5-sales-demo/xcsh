@@ -12,6 +12,8 @@ export interface PresentationColumn {
 	key: string;
 	label?: string;
 	align?: "left" | "right";
+	minWidth?: number;
+	maxWidth?: number;
 	/** Display formatting only; never changes the execution result or combines units. */
 	numberFormat?: Intl.NumberFormatOptions;
 }
@@ -95,6 +97,7 @@ function data(value: unknown, title?: string, ancestors = new Set<object>()): Pl
 function command(argv: readonly string[], title?: string): Code {
 	return {
 		kind: "code",
+		argv: [...argv],
 		...(title ? { title } : {}),
 		text: argv
 			.map(arg => (/^[A-Za-z0-9_@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replaceAll("'", "'\\''")}'`))

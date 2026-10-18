@@ -48,4 +48,16 @@ describe("shared plugin and Markdown tables", () => {
 		expect(lines.join("\n")).toContain("Field 11: value-11");
 		expect(lines.every(line => visibleWidth(line) <= 40)).toBe(true);
 	});
+	test("declared maximum widths wrap long cells without dropping their contents", () => {
+		const lines = renderTable(
+			["Record", "Currency"],
+			[["Z".repeat(200), "CAD"]],
+			120,
+			{ symbols, bold: s => s },
+			["left", "left"],
+			[{ minWidth: 10, maxWidth: 12 }, { minWidth: 8 }],
+		);
+		expect(lines.every(line => visibleWidth(line) <= 27)).toBe(true);
+		expect(lines.join("\n").match(/Z/g)?.length).toBe(200);
+	});
 });

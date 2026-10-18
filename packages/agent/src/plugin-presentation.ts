@@ -4,11 +4,19 @@ export type PluginSection =
 	| {
 			kind: "table";
 			title?: string;
-			columns: readonly { key: string; label?: string; align?: "left" | "right" }[];
+			columns: readonly {
+				key: string;
+				label?: string;
+				align?: "left" | "right";
+				minWidth?: number;
+				maxWidth?: number;
+			}[];
 			rows: readonly Readonly<Record<string, unknown>>[];
+			/** Complete rows in the collapsed preview; defaults to three. */
+			previewRows?: number;
 	  }
 	| { kind: "markdown"; title?: string; text: string }
-	| { kind: "code"; title?: string; text: string; language?: string };
+	| { kind: "code"; title?: string; text: string; language?: string; argv?: readonly string[] };
 
 export interface PluginView {
 	summary?: string;
@@ -18,6 +26,9 @@ export interface PluginView {
 export interface PluginPresentationOptions {
 	readonly expanded: boolean;
 	readonly isPartial: boolean;
+	/** Available inner columns, resolved on every render. */
+	readonly width?: number;
+	readonly spinnerFrame?: number;
 }
 export interface PluginPresentation<TArgs = unknown, TResult = unknown> {
 	call?: (args: TArgs, options: PluginPresentationOptions) => PluginView | undefined;

@@ -15,6 +15,7 @@ export function renderTable(
 	availableWidth: number,
 	theme: TableTheme,
 	alignment?: readonly ("left" | "right" | "center" | null)[],
+	columnSizing?: readonly { minWidth?: number; maxWidth?: number }[],
 ): string[] {
 	const lines: string[] = [];
 	const numCols = headers.length;
@@ -55,6 +56,18 @@ export function renderTable(
 			naturalWidths[i] = Math.max(naturalWidths[i] || 0, visibleWidth(cellText));
 			minWordWidths[i] = Math.max(minWordWidths[i] || 1, longestWordWidth(cellText, maxUnbrokenWordWidth));
 		}
+	}
+	const readableWidths = naturalWidths.map((natural, index) => {
+		const declared = columnSizing?.[index]?.minWidth;
+		return Number.isFinite(declared) ? Math.max(1, Math.floor(declared!)) : Math.min(6, natural);
+	});
+	if (readableWidths.reduce((sum, width) => sum + width, 0) > availableForCells) return reflow();
+	for (let i = 0; i < numCols; i++) {
+		const max = columnSizing?.[i]?.maxWidth;
+		if (Number.isFinite(max))
+			naturalWidths[i] = Math.min(naturalWidths[i], Math.max(readableWidths[i], Math.floor(max!)));
+		naturalWidths[i] = Math.max(naturalWidths[i], readableWidths[i]);
+		minWordWidths[i] = Math.max(readableWidths[i], Math.min(minWordWidths[i], naturalWidths[i]));
 	}
 
 	let minColumnWidths = minWordWidths;
@@ -127,7 +140,7 @@ export function renderTable(
 		}
 	}
 
-	if (columnWidths.some((width, index) => width < Math.min(6, naturalWidths[index]))) return reflow();
+	if (columnWidths.some((width, index) => width < readableWidths[index])) return reflow();
 
 	const t = theme.symbols;
 	const h = t.horizontal;

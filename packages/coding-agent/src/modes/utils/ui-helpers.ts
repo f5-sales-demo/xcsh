@@ -280,6 +280,7 @@ export class UiHelpers {
 	): void {
 		this.ctx.optimisticUserMessageSignature = undefined;
 		this.#asyncQuestionBatches.clear();
+		for (const component of this.ctx.pendingTools.values()) component.stopAnimation?.();
 		this.ctx.pendingTools.clear();
 
 		if (options.updateFooter) {

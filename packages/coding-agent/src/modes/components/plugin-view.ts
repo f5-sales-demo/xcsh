@@ -4,6 +4,7 @@ import { type Component, Markdown, renderTable, visibleWidth, wrapTextWithAnsi }
 import { presentation } from "../../extensibility/presentation";
 import { renderStructuredRow } from "../../tui/tree-list";
 import { getMarkdownTheme, getSymbolTheme, theme } from "../theme/theme";
+import { copyableCommand } from "./copyable-command";
 
 export { resultView as fallbackResultView } from "../../extensibility/presentation";
 export const dataSections = presentation.data;
@@ -40,14 +41,14 @@ export function guardedComponent(factory: () => Component | undefined, fallback:
 /** Layout is resolved on each render so resize and active-theme changes reflow data. */
 export class PluginViewComponent implements Component {
 	constructor(
-		private view: () => PluginView | undefined,
+		private view: (width: number) => PluginView | undefined,
 		private expanded: boolean,
 		private complete = false,
 		private fallback?: Component,
 	) {}
 	invalidate(): void {}
 	render(width: number): string[] {
-		const view = this.view();
+		const view = this.view(width);
 		if (!view || (!view.summary && !view.warnings?.length && !view.sections?.length))
 			return this.fallback?.render(width) ?? [];
 		const lines: string[] = [];
@@ -77,7 +78,8 @@ export class PluginViewComponent implements Component {
 				if (shown.length < entries.length)
 					lines.push(...wrapped(theme.fg("dim", `${entries.length - shown.length} more fields`)));
 			} else if (section.kind === "table") {
-				const rows = this.expanded || this.complete ? section.rows : section.rows.slice(0, 3);
+				const limit = Number.isFinite(section.previewRows) ? Math.max(1, Math.floor(section.previewRows!)) : 3;
+				const rows = this.expanded || this.complete ? section.rows : section.rows.slice(0, limit);
 				lines.push(
 					...renderTable(
 						section.columns.map(c => c.label ?? c.key),
@@ -92,13 +94,18 @@ export class PluginViewComponent implements Component {
 									? "right"
 									: "left"),
 						),
+						section.columns,
 					),
 				);
 				if (rows.length < section.rows.length)
 					lines.push(...wrapped(theme.fg("dim", `${section.rows.length - rows.length} more rows`)));
 				if (!section.rows.length) lines.push(...wrapped(theme.fg("dim", "0 rows")));
 			} else if (section.kind === "code") {
-				lines.push(...wrapped(theme.fg("toolOutput", section.text)));
+				lines.push(
+					...(section.argv
+						? copyableCommand(section.argv, width).map(line => theme.fg("toolOutput", line))
+						: wrapped(theme.fg("toolOutput", section.text))),
+				);
 			} else {
 				// Errors and tables retain complete semantic blocks in the collapsed preview.
 				const text =

@@ -51,6 +51,7 @@ export interface ToolExecutionOptions {
 }
 
 export interface ToolExecutionHandle {
+	stopAnimation?(): void;
 	updateArgs(args: any, toolCallId?: string): void;
 	updateResult(
 		result: {
@@ -98,6 +99,7 @@ export class ToolExecutionComponent extends Container {
 	// Spinner animation for partial task results
 	#spinnerFrame?: number;
 	#spinnerInterval?: NodeJS.Timeout;
+	#animationStopped = false;
 	// Track if args are still being streamed (for edit/write spinner)
 	#argsComplete = false;
 	// True when this component uses #contentText (fallback path, no custom renderer)
@@ -311,7 +313,9 @@ export class ToolExecutionComponent extends Container {
 			this.#toolName === "task" &&
 			(this.#result?.details as { async?: { state?: string } } | undefined)?.async?.state === "running";
 		const isPartialTask = this.#isPartial && this.#toolName === "task" && !isBackgroundAsyncTask;
-		const needsSpinner = isStreamingArgs || isPartialTask;
+		const isExtensionProgress =
+			!!this.#tool?.presentation && this.#isPartial && (this.#argsComplete || !!this.#result);
+		const needsSpinner = !this.#animationStopped && (isStreamingArgs || isPartialTask || isExtensionProgress);
 		if (needsSpinner && !this.#spinnerInterval) {
 			this.#spinnerInterval = setInterval(() => {
 				const frameCount = theme.spinnerFrames.length;
@@ -320,9 +324,12 @@ export class ToolExecutionComponent extends Container {
 				this.#renderState.spinnerFrame = this.#spinnerFrame;
 				this.#ui.requestRender();
 			}, 80);
+			this.#spinnerInterval.unref();
 		} else if (!needsSpinner && this.#spinnerInterval) {
 			clearInterval(this.#spinnerInterval);
 			this.#spinnerInterval = undefined;
+			this.#spinnerFrame = undefined;
+			this.#renderState.spinnerFrame = undefined;
 		}
 	}
 
@@ -330,11 +337,13 @@ export class ToolExecutionComponent extends Container {
 	 * Stop spinner animation and cleanup resources.
 	 */
 	stopAnimation(): void {
+		this.#animationStopped = true;
 		if (this.#spinnerInterval) {
 			clearInterval(this.#spinnerInterval);
 			this.#spinnerInterval = undefined;
-			this.#spinnerFrame = undefined;
 		}
+		this.#spinnerFrame = undefined;
+		this.#renderState.spinnerFrame = undefined;
 	}
 
 	setExpanded(expanded: boolean): void {
@@ -681,10 +690,12 @@ export class ToolExecutionComponent extends Container {
 			? guardedComponent(
 					() =>
 						new PluginViewComponent(
-							() =>
+							width =>
 								descriptor.call!(structuredClone(args), {
 									expanded: this.#expanded,
 									isPartial: this.#isPartial,
+									width,
+									spinnerFrame: this.#spinnerFrame,
 								}),
 							this.#expanded,
 							false,
@@ -707,10 +718,15 @@ export class ToolExecutionComponent extends Container {
 			? guardedComponent(
 					() =>
 						new PluginViewComponent(
-							() =>
+							width =>
 								descriptor.result!(
 									structuredClone(result),
-									{ expanded: this.#expanded, isPartial: this.#isPartial },
+									{
+										expanded: this.#expanded,
+										isPartial: this.#isPartial,
+										width,
+										spinnerFrame: this.#spinnerFrame,
+									},
 									structuredClone(this.#args),
 								),
 							this.#expanded,
