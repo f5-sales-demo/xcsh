@@ -21,6 +21,7 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { codePresentationFingerprint } from "./code-presentation-fingerprint";
 
 const PKG_DIR = path.resolve(import.meta.dir, "..");
 const SRC_DIR = path.join(PKG_DIR, "src");
@@ -70,11 +71,14 @@ export function listSourceFiles(srcDir: string = SRC_DIR): string[] {
 export function buildManifest(srcDir: string = SRC_DIR): VendorManifest {
 	if (srcDir === SRC_DIR) {
 		const upstream = path.resolve(PKG_DIR, "../utils/src");
-		const hash = createHash("sha256");
-		for (const file of ["code-presentation.ts", "code-presentation.browser.ts", "../package.json"])
-			hash.update(fs.readFileSync(path.resolve(upstream, file)));
+		const fingerprint = codePresentationFingerprint(
+			["code-presentation.ts", "code-presentation.browser.ts"].map(file =>
+				fs.readFileSync(path.resolve(upstream, file)),
+			),
+			fs.readFileSync(path.resolve(upstream, "../package.json")),
+		);
 		const generated = fs.readFileSync(path.join(SRC_DIR, "markdown/code-presentation.generated.min.js"), "utf8");
-		if (!generated.includes(`source sha256 ${hash.digest("hex")}`))
+		if (!generated.includes(`source sha256 ${fingerprint}`))
 			throw new Error("Stale code presentation adapter; run gen-code-presentation before vendoring");
 	}
 	const files: Record<string, string> = {};
