@@ -1,6 +1,6 @@
 ---
 title: "Containers"
-description: "Run the published multi-architecture Alpine image with explicit mounts and credentials."
+description: "Run the latest marketplace image with rootless Podman or Docker, persistent state, model authentication, and explicit service credentials."
 sidebar:
   order: 4
   label: "Containers"
@@ -11,23 +11,519 @@ head:
       .sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
 ---
 
-The published container packages xcsh for process isolation and repeatable deployment. It does not grant cloud credentials or filesystem access by itself.
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+The marketplace image packages xcsh, 23 cached plugins, cloud and source-control CLIs,
+Terraform, SSH, Bash, Git, jq, ripgrep, Bun, Node, managed Python, and native headless
+Chromium. The runtime uses Debian and supports `linux/arm64` and `linux/amd64`.
+Use `latest` while this unreleased project iterates. Pull again before upgrading;
+a local copy of that tag does not update itself.
+
+The [universal installer](/xcsh/en/#install-xcsh) remains the simplest native installation.
+Choose a container for an isolated tool environment. Model and service credentials,
+workspace access, and host integration prerequisites still need explicit setup.
+
+## How do I start with Podman on a Mac?
+
+This is the tested no-sudo path on Apple Silicon. Install Podman, Python 3, cURL,
+and an archive tool. Homebrew can install the first two with `brew install podman python`.
+Allow space for the VM, image, and private state; the default sparse VM disk is 40 GiB.
+
+<Steps>
+
+1. Download current source with the launcher and its neighboring modules. No Bun
+   installation or source build is needed to use the launcher. Keep the extracted
+   `scripts/` directory together; downloading `xcsh-podman` alone will fail its imports.
+
+   ```bash
+   mkdir -p "$HOME/.local/share/xcsh-launcher"
+   curl -fL https://codeload.github.com/f5-sales-demo/xcsh/tar.gz/refs/heads/main \
+     -o "$HOME/.local/share/xcsh-launcher/main.tar.gz"
+   tar -xzf "$HOME/.local/share/xcsh-launcher/main.tar.gz" \
+     -C "$HOME/.local/share/xcsh-launcher"
+   export XCSH_LAUNCHER="$HOME/.local/share/xcsh-launcher/xcsh-main/scripts/xcsh-podman"
+   export XCSH_IMAGE=ghcr.io/f5-sales-demo/xcsh:latest
+   python3 "$XCSH_LAUNCHER" --help
+   ```
+
+2. Set up rootless Podman. Setup reuses an existing machine or creates an AppleHV
+   machine with four CPUs, 8 GiB RAM, and a 40 GiB sparse disk. It checks the actual
+   connection before reporting success and does not require a privileged Mac helper.
+
+   ```bash
+   python3 "$XCSH_LAUNCHER" setup
+   podman pull "$XCSH_IMAGE"
+   ```
+
+   To choose a new machine and its initial resources, put options before `setup`:
+
+   ```bash
+   python3 "$XCSH_LAUNCHER" --machine xcsh --cpus 4 --memory 8192 --disk-size 40 setup
+   ```
+
+   Existing machines keep their resources. If you selected a nondefault machine,
+   use `--connection NAME` on subsequent launcher commands and
+   `podman --connection NAME pull "$XCSH_IMAGE"` for the pull. Alternatively export
+   `XCSH_PODMAN_CONNECTION=NAME` for the launcher; this does not change Podman's own default.
+
+3. Create a dedicated workspace and check the executable before configuring a model.
+
+   ```bash
+   mkdir -p "$HOME/xcsh-workspace"
+   export XCSH_WORKSPACE="$HOME/xcsh-workspace"
+   export XCSH_CONTAINER_STATE=xcsh-private-state
+   python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" run --version
+   python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" run --help
+   ```
+
+4. Start the interactive UI, then follow [model setup](#how-do-i-authenticate-and-select-a-model).
+
+   ```bash
+   python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" run
+   ```
+
+   The launcher attaches the terminal automatically. Exit with `/exit`. Start the
+   same command again to reuse settings, sessions, plugins, and service logins.
+
+</Steps>
+
+## How do I start with Podman on Linux?
+
+Install Python 3 and Podman through your distribution. Configure rootless Podman for
+an ordinary user, including subordinate UID/GID ranges and working user namespaces.
+Run `podman info` as that user. The launcher rejects a rootful connection.
+
+Use the [source download above](#how-do-i-start-with-podman-on-a-mac), then run:
+
+```bash
+export XCSH_IMAGE=ghcr.io/f5-sales-demo/xcsh:latest
+mkdir -p "$HOME/xcsh-workspace"
+export XCSH_WORKSPACE="$HOME/xcsh-workspace"
+python3 "$XCSH_LAUNCHER" setup
+podman pull "$XCSH_IMAGE"
+python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" run --version
+python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" run
+```
+
+On Linux, `setup` checks Podman connectivity; it does not create a Mac VM. The
+launcher maps your host user to container UID/GID 1000, keeping workspace writes
+owned by you. On SELinux hosts, an explicitly selected workspace may need an
+appropriate container label; use a dedicated directory and your distribution's
+labeling procedure rather than relabeling an entire home directory.
+
+## How do I start with Docker?
+
+Install Docker Desktop on a Mac, or Docker Engine on Linux, and confirm `docker info`
+works for your account. Docker Engine access follows your host's daemon policy.
+The Podman launcher does not support Docker; use Docker's own commands below.
+
+```bash
+export XCSH_IMAGE=ghcr.io/f5-sales-demo/xcsh:latest
+docker pull "$XCSH_IMAGE"
+docker run --rm "$XCSH_IMAGE" --version
+mkdir -p "$HOME/xcsh-workspace" "$HOME/.local/share/xcsh-docker-state"
+chmod 700 "$HOME/.local/share/xcsh-docker-state"
+export XCSH_WORKSPACE="$HOME/xcsh-workspace"
+export XCSH_DOCKER_STATE="$HOME/.local/share/xcsh-docker-state"
+```
+
+Define this shell helper to keep the mounts and non-root identity consistent:
+
+```bash
+dxcsh() {
+  docker run --rm --init --read-only --cap-drop=all \
+    --security-opt=no-new-privileges \
+    --user "$(id -u):$(id -g)" \
+    --tmpfs /tmp:rw,exec,nosuid,nodev,size=1g,mode=1777 --shm-size=256m \
+    --volume "$XCSH_DOCKER_STATE:/home/xcsh:rw" \
+    --volume "$XCSH_WORKSPACE:/workspace:rw" --workdir /workspace \
+    "$@"
+}
+dxcsh -it "$XCSH_IMAGE"
+```
+
+Use `/login` inside xcsh and `/exit` to quit. Repeat the last command to reuse state.
+On Linux, matching your numeric UID/GID to the bind mounts avoids root-owned workspace
+files. Invoke this helper as an ordinary user. Do not use `sudo dxcsh` or make your
+workspace world-writable to fix a permission error. Docker Desktop translates bind
+mount access through its VM; ensure the selected directories are shared with Docker.
+
+Options before the image belong to Docker; options after it belong to xcsh:
+
+```bash
+dxcsh "$XCSH_IMAGE" --help
+dxcsh "$XCSH_IMAGE" --no-tools -p "Reply with only: container ready"
+```
+
+For private inputs, use `dxcsh --env-file "$PRIVATE_ENV_FILE" "$XCSH_IMAGE" ...`.
+For explicit service login, use
+`dxcsh -it "$XCSH_IMAGE" container-auth azure`, or add the environment file and
+`--noninteractive` after the service name. See [service authentication](#how-do-i-connect-bundled-services).
 
 ## How do I verify an image?
 
+Check the current tag's architecture list and executable version. These commands
+retrieve metadata and run the image without a workspace or host credential mount:
+
 ```bash
-docker pull ghcr.io/f5-sales-demo/xcsh:latest
+podman manifest inspect ghcr.io/f5-sales-demo/xcsh:latest
+podman run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
+```
+
+For Docker:
+
+```bash
+docker manifest inspect ghcr.io/f5-sales-demo/xcsh:latest
 docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
 ```
 
-Pin a version tag or digest for automation. Mount only the task directory and inject credentials through the runtime's secret mechanism.
+The index should contain `linux/amd64` and `linux/arm64`; provenance entries can
+appear alongside them. Record the observed version when diagnosing an issue.
+`/opt/xcsh/build-manifest.json` records tool versions, source provenance, inventories,
+and checksums. Inspect it without invoking a model:
+
+```bash
+podman run --rm --entrypoint cat "$XCSH_IMAGE" /opt/xcsh/build-manifest.json
+```
+
+Use `docker` in that command for Docker. The [qualification record](https://github.com/f5-sales-demo/xcsh/blob/main/docs/container-acceptance.md)
+identifies the historical image that passed the published matrix. Its results do
+not automatically qualify a newer `latest` image.
+
+## How do I authenticate and select a model?
+
+For a new state directory, start interactively and enter `/login`. Select the provider,
+complete its sign-in flow, and choose a model offered to your account. The login and
+selection persist in container state. Browser sign-in happens on your host; follow
+the displayed device or authorization flow. See [model authentication](/xcsh/en/getting-started/model-authentication/)
+for supported providers and their API-key or subscription options.
+
+For API-key authentication, keep the key in a private environment file outside the
+workspace and pass it on every run that needs it. For example, an Anthropic API route
+uses `ANTHROPIC_API_KEY`; forward it with `--env ANTHROPIC_API_KEY` if it is exported
+in your host shell. The launcher forwards its known service inputs automatically,
+but other model-provider inputs require `--env NAME` or `--env-file`.
+
+```bash
+python3 "$XCSH_LAUNCHER" --env-file "$PRIVATE_ENV_FILE" \
+  --workspace "$XCSH_WORKSPACE" run --list-models
+python3 "$XCSH_LAUNCHER" --env-file "$PRIVATE_ENV_FILE" \
+  --workspace "$XCSH_WORKSPACE" run --no-tools -p "Reply with only: container ready"
+```
+
+Choose a provider-qualified model from the displayed list. Launcher model precedence is:
+
+1. An explicit `run --model PROVIDER/MODEL` wins.
+2. Otherwise the host's `XCSH_MODEL` becomes a forwarded `--model` argument.
+3. Otherwise xcsh resolves the model from its saved configuration and normal defaults.
+
+An `XCSH_MODEL` assignment inside an environment file does not select a launcher model;
+the launcher reads it from its own host environment. Docker has no launcher model
+selection: put `--model` after the image or use the saved selection.
+
+```bash
+python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" \
+  --env-file "$PRIVATE_ENV_FILE" run --model "$XCSH_MODEL" \
+  --no-tools -p "Reply with only: container ready"
+```
+
+For a headless job, use `-p`, supply model authentication, and keep the same state.
+Use `--stdin` before `run` only when xcsh must consume piped input; terminal attachment
+is otherwise automatic for interactive use. Tool-backed prompts can modify the mounted
+workspace, so start with a dedicated fixture directory.
+
+## How do I import existing native configuration?
+
+Import the native agent directory containing `models.yml` and optional `config.yml`:
+
+```bash
+python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" \
+  --import-native "$HOME/.xcsh/agent" --env-file "$PRIVATE_ENV_FILE" run
+```
+
+The importer writes missing container `models.yml` and `config.yml` once, preserving
+existing files and the native originals. It imports provider definitions, model roles,
+discovery and routing settings, and forces headless browser mode. It does not import
+native account logins, plugins, memories, or executable credential commands.
+Literal or shell-backed credentials become environment references: imported `litellm`
+and `anthropic` gateway routes use `LITELLM_API_KEY`; other providers use
+`XCSH_PROVIDER_NAME_API_KEY`, with NAME uppercase and punctuation replaced by underscores.
+Existing environment references remain intact. Supply those inputs on subsequent runs.
+
+For Docker, add read-only mounts for the selected native `models.yml` and, if present,
+`config.yml` at `/imports/native/models.yml` and `/imports/native/config.yml` before the
+image. The same entrypoint importer runs. Use new private state when testing another
+import; reattaching a changed host file does not overwrite saved container routing.
+
+## Where are workspace, state, and secrets stored?
+
+Launcher options always precede `setup`, `run`, `auth`, or `test`. Arguments after
+`run` pass unchanged to xcsh. `--workspace` defaults to the directory where you invoke
+the launcher; select it explicitly to avoid exposing an unintended checkout.
+`--image` overrides `XCSH_IMAGE`, and `--state` overrides `XCSH_CONTAINER_STATE`.
+
+| Container path | Purpose |
+| --- | --- |
+| `/workspace` | Selected host workspace; writable and the initial working directory |
+| `/home/xcsh` | Persistent private home; Podman defaults to named volume `xcsh-private-state` |
+| `/home/xcsh/.xcsh/agent` | Model configuration, authentication, settings, and sessions |
+| `/home/xcsh/.xcsh/plugins` | Persistent plugin registry and cached marketplace installs |
+| `/tmp` | Temporary writable storage; discarded when the container exits |
+| `/imports/SERVICE` | Explicit read-only portable service directory; copied into private home once |
+| `/imports/native` | Explicit read-only native routing files |
+| `/imports/ca.pem` | Additional CA bundle used for runtime trust |
+| `/opt/xcsh` | Read-only runtime helpers, plugin seed, and build manifest |
+
+A state argument containing `/` selects a host directory. It must belong to you with
+mode 0700. Podman's `:U` mapping can change its ownership inside the VM/user namespace;
+use a dedicated state directory, never your whole native home. Named volumes are simpler.
+The image defaults to UID/GID 1000. The launcher adds a read-only root filesystem,
+dropped capabilities, no new privileges, and writable workspace, home, and temporary mounts.
 
 ## What must remain outside the image?
 
-Keep user contexts, provider tokens, and writable session data in explicit mounts or secret stores. Do not bake them into a derived layer.
+Keep credentials, user contexts, private reports, and CA material outside image layers,
+source control, and public documentation. An environment file contains `NAME=value`
+assignments, without shell `export` or command substitution. Create it outside the
+workspace with mode 0600. `--env-file PATH` can repeat; `--env NAME` forwards an exported
+host input by name. Environment values remain visible to a sufficiently privileged
+runtime administrator, so use your organization's secret delivery policy for automation.
 
-Pull a versioned image, resolve its immutable digest, and run `xcsh --version` from that digest
-before mounting a workspace. The container image supplies the executable, not model or tenant
-authority. Mount only required paths read-only where possible and inject credentials at runtime
-through the platform's secret mechanism. Remove the test container after exit; delete the pinned
-image only when no deployment still references its digest.
+`--credential SERVICE=PATH` accepts a portable directory for `github`, `gitlab`, `aws`,
+`azure`, `salesforce`, `gcloud`, or `ssh`. Nothing is mounted automatically. A first import
+copies the directory into container-owned private state so vendor CLIs can refresh it;
+reattaching it does not replace that state or write renewed credentials back to the host.
+For Docker, mount the directory read-only at `/imports/SERVICE` before the image.
+
+```bash
+python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" \
+  --credential aws="$HOME/.aws" --credential azure="$HOME/.azure" run
+```
+
+Mount individual credential files explicitly, and make environment paths refer to their
+container location rather than a Mac or Linux host path:
+
+```bash
+python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" \
+  --mount "$PRIVATE_GCLOUD_KEY:/imports/gcloud-key.json:ro" \
+  --env-file "$PRIVATE_ENV_FILE" auth login gcloud --noninteractive
+```
+
+Here the private environment file sets
+`GOOGLE_APPLICATION_CREDENTIALS=/imports/gcloud-key.json`. Ensure UID 1000 can read an
+explicit Podman file mount through its user mapping; Docker's helper uses your numeric UID.
+
+## How do I connect bundled services?
+
+Ordinary startup never initiates account login. Run explicit login for the selected
+service using the same workspace, state, and private inputs as your normal launch:
+
+```bash
+python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" auth login azure
+python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" \
+  --env-file "$PRIVATE_ENV_FILE" auth login azure --noninteractive
+```
+
+Interactive login supports device or browser flows where the vendor allows them.
+`--noninteractive` requires usable portable state or the service inputs below.
+Login services are `github`, `gitlab`, `aws`, `azure`, `salesforce`, and `gcloud`.
+SSH keys are imported, with no `auth login ssh` command. F5 and Firecrawl use runtime
+inputs; they have no container-auth login recipe.
+
+| Service | Authentication and selection inputs |
+| --- | --- |
+| LiteLLM | `LITELLM_BASE_URL`, `LITELLM_API_KEY`, provider configuration or imported routes; model setup remains separate from service login |
+| GitHub | `GH_TOKEN` or `GITHUB_TOKEN`, optional `GH_HOST`; portable `~/.config/gh` or explicit web login |
+| GitLab | `GITLAB_TOKEN`, optional `GITLAB_HOST`; portable `~/.config/glab-cli` or explicit login |
+| AWS | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, optional `AWS_SESSION_TOKEN`; `AWS_REGION`, `AWS_DEFAULT_REGION`, `AWS_PROFILE`; portable `~/.aws` with configured SSO profile and cache |
+| Azure | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` together for a service principal; optional `AZURE_SUBSCRIPTION_ID`; portable `~/.azure` or device-code login |
+| Salesforce | `SF_AUTH_URL`; or `SF_ACCESS_TOKEN` and `SF_INSTANCE_URL`; or `SF_CLIENT_ID`, `SF_USERNAME`, `SF_JWT_KEY_FILE` and optional `SF_INSTANCE_URL` |
+| Google Cloud | Portable `~/.config/gcloud`; `GOOGLE_APPLICATION_CREDENTIALS` pointing to a mounted service-account key for explicit activation; `CLOUDSDK_CORE_PROJECT` selects the project; explicit user login is also available |
+| F5 Distributed Cloud | `XCSH_API_URL`, `XCSH_API_TOKEN`, `XCSH_TENANT`; verify authorized tenant inventory |
+| Firecrawl | `FIRECRAWL_API_URL` or `FIRECRAWL_BASE_URL`, and `FIRECRAWL_API_KEY` where required; verify retrieval through the configured service |
+| SSH | Portable `~/.ssh`, readable keys, known-host trust, and reachable authorized hosts; a host SSH agent is not forwarded automatically |
+
+AWS's `AWS_CONFIG_FILE` and `AWS_SHARED_CREDENTIALS_FILE`, Salesforce's
+`SF_JWT_KEY_FILE`, and Google Cloud's key path must identify files inside the container.
+For AWS SSO, import an already configured profile and select `AWS_PROFILE` before
+`auth login aws`; that command renews a session, but does not create an SSO profile.
+Environment-based AWS credentials must be renewed and supplied again when they expire.
+For Azure, the login helper selects `AZURE_SUBSCRIPTION_ID` after authentication.
+Google Cloud portable sessions can be used directly; noninteractive explicit login
+activates a supplied service-account key.
+
+Salesforce portable state is a private bundle containing both `.sf` and `.sfdx`
+directories and its portable encryption key. Mac keychain-backed sessions do not
+become portable by copying config files. Use authorized auth-URL, access-token, or
+JWT login inputs. The helper does not implement Salesforce browser login. Recent
+CLIs redact exports; if an authorized private export needs `SF_TEMP_SHOW_SECRETS`,
+limit it to that export and store the result in an owner-only file. Never paste it
+into a prompt or a public report. Other Mac keychain-backed vendor credentials also
+need explicit login or a portable credential.
+
+Renew expired sessions with `auth login SERVICE` using the same state and updated
+inputs. A copied host cache is a one-time import, so renewing only the host session
+will not refresh the saved container copy. Plugin **Setup** can perform that plugin's
+explicit configuration workflow; merely loading the plugin does not grant access.
+
+Verify identity and resource access separately. In an authorized tool-backed session,
+check the vendor identity, then retrieve a resource you are allowed to read:
+
+| Service | Identity check | Resource-access check |
+| --- | --- | --- |
+| GitHub | `gh api user` | `gh repo view OWNER/REPO` for your repository |
+| GitLab | `glab api user` | `glab api projects/PROJECT_ID` for your project |
+| AWS | `aws sts get-caller-identity` | A scoped read on the intended AWS resource |
+| Azure | `az account show` | An Azure Resource Graph query in the selected subscription |
+| Salesforce | `sf org list` | Organization metadata through the authorized org |
+| Google Cloud | `gcloud auth list` | `gcloud projects describe PROJECT_ID` |
+
+Keep returned identities and private resource metadata out of public receipts. A
+successful login, model enumeration, or CLI identity check alone does not prove a
+model request or repository, subscription, project, or tenant access.
+
+## How do proxies, certificates, and host connections work?
+
+The launcher forwards configured `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`
+and their lowercase equivalents. Chromium uses the HTTPS/HTTP proxy by default;
+`PUPPETEER_PROXY` overrides the browser proxy. Docker requires explicit `--env NAME`
+or `--env-file` options before the image for these inputs.
+
+Use `--ca-cert "$PRIVATE_CA_BUNDLE"` before both `setup` and `run` when corporate trust
+is needed. On a Mac, setup updates registry trust inside the guest without host sudo.
+At runtime, the entrypoint builds a private combined CA bundle for xcsh and vendor
+CLIs and imports certificates into Chromium's private NSS store. For Docker, mount
+the selected CA read-only at `/imports/ca.pem`; configure Docker's registry trust
+separately through the daemon/Desktop settings. Linux Podman registry trust also
+follows the host's configuration. Do not disable TLS verification.
+
+Container `localhost` is the container itself. Use `host.containers.internal` for a
+Mac-hosted service from Podman, or `host.docker.internal` with Docker Desktop. On Linux
+Docker, add `--add-host=host.docker.internal:host-gateway` before the image if needed.
+The host service must listen on a reachable interface and allow the container network.
+Private model gateways also require working container DNS and routing to their endpoint;
+importing provider configuration does not establish those network prerequisites.
+Use explicit port publication with Docker for incoming listeners. The Podman launcher
+exposes volume mounts but no arbitrary networking or port-publication option; use a
+remote context for host operations or a reviewed direct Podman invocation when needed.
+
+KVM, Xorg, Zoom, Herdr, Ghostty, and devcontainer plugins are cached. Their host work
+requires a reachable supported remote context, that host's own applications and
+prerequisites, SSH credentials, and any explicitly required pairing. The image does
+not install a desktop, hypervisor, or meeting application. A cached plugin is not
+proof that the remote integration is connected.
+
+## How do I upgrade, roll back, or remove the container?
+
+Pull `latest` again, then rerun your normal command with the same private state.
+Refresh the current source archive when updating the launcher; retain its neighboring
+modules. Stop active sessions before replacing a launcher directory.
+
+```bash
+podman pull ghcr.io/f5-sales-demo/xcsh:latest
+# For Docker:
+docker pull ghcr.io/f5-sales-demo/xcsh:latest
+```
+
+First launch publishes the complete plugin seed atomically. Later launches preserve
+settings, disabled plugins, uninstalls, and plugin upgrades. A newer image does not
+replace your plugin state. Use the normal [plugin lifecycle](/xcsh/en/automate-extend/plugins-marketplaces/)
+to update plugins; `xcsh self-update` does not replace a running container image.
+
+Before an upgrade you may keep the currently installed image under a local name,
+for example `podman tag "$XCSH_IMAGE" xcsh-before-upgrade` or the Docker equivalent.
+If the new image fails, select that local image with `--image xcsh-before-upgrade`
+or use it in place of `$XCSH_IMAGE` in Docker. Back up private state separately before
+upgrading; an older image may not understand changes made to the newer state.
+Use a separate state copy for a rollback trial. This is a local recovery option,
+not a requirement to pin a release version.
+
+Containers launched with `--rm` disappear on exit; state and workspace remain.
+To remove an unused image, run `podman image rm "$XCSH_IMAGE"` or
+`docker image rm "$XCSH_IMAGE"`. To erase Podman state deliberately, first inspect
+`podman volume inspect xcsh-private-state`, then run `podman volume rm xcsh-private-state`
+only if it is the state you intend to delete and no container uses it. For Docker's
+bind-directory recipe, back up and remove only the selected private state directory.
+If you used `--ca-cert`, identify the launcher-created `xcsh-ca-` secret with
+`podman secret ls` and remove only the unused selected secret with
+`podman secret rm NAME`. Guest registry trust follows the machine
+configuration and has a separate lifecycle.
+Deleting state removes its logins, settings, plugins, and sessions. Keep workspaces
+and shared Podman machines unless you explicitly intend to remove those too.
+
+## How do I test a container installation?
+
+The runtime check verifies non-root execution, bundled CLIs, Python dependencies,
+headless Chromium, and the 23-plugin seed without requiring a model:
+
+```bash
+python3 "$XCSH_LAUNCHER" --workspace "$XCSH_WORKSPACE" run container-test
+dxcsh "$XCSH_IMAGE" container-test
+```
+
+For synthesized model/tool acceptance, use an empty dedicated fixture workspace,
+private report path, and a configured model. The runner writes and resets fixture
+files. `test` requires an expected version and freezes the inspected image ID.
+For a `latest` development run, use `--candidate`; that result is a development
+check, not immutable published qualification:
+
+```bash
+python3 "$XCSH_LAUNCHER" --workspace "$EMPTY_TEST_WORKSPACE" \
+  --state xcsh-test-state --env-file "$PRIVATE_ENV_FILE" \
+  test --candidate --expected-version "$XCSH_VERSION" \
+  --model "$XCSH_MODEL" --report "$PRIVATE_REPORT"
+```
+
+Set `XCSH_VERSION` from the observed `--version` output and `XCSH_MODEL` to an available
+provider-qualified model. The runner requires at least three cycles per selected
+model and actual successful tool results for file search, JSON aggregation, edits,
+persistent Python cells, and browser navigation. Add `--live` only for authorized
+service-access checks with their credentials. Missing credentials or scoped access
+are unfinished gates. Without live checks, `passed` and `fullSuitePassed` stay false and the runner exits nonzero, even if all
+local samples pass. Inspect the individual sample outcomes. Explicit
+`--defer-service SERVICE` options also leave full-suite coverage incomplete.
+`scripts/uat-podman-arm64.sh` is a narrower model-route smoke test and does not replace
+this matrix. Docker's runtime check above is separate from the Podman acceptance runner.
+
+The `docker-compose.dev.yml` development service builds the same Debian runtime,
+runs `--help` as UID/GID 1000, and mounts the checkout read-only. It requires
+the Docker Compose plugin. Use
+`docker compose -f docker-compose.dev.yml up --build` for that source fixture and
+`docker compose -f docker-compose.dev.yml down --remove-orphans` to stop it.
+Historical configurable Compose `UID`/`GID` inputs have been replaced by the fixed
+non-root identity. `scripts/tdd-docker.sh` builds and checks a disposable hardened
+runtime image, then removes its own test image; it requires the development toolchain.
+For an Apple Silicon source build, provide registry access and corporate trust as
+build secrets, outside the build context:
+
+```bash
+podman build --platform linux/arm64 --build-arg TARGETARCH=arm64 \
+  --secret id=github_token,env=GH_TOKEN \
+  --secret id=corporate_ca,src="$PRIVATE_CA_BUNDLE" \
+  -f Dockerfile.debian --target runtime -t xcsh-candidate .
+```
+
+Build-time CA bundles are temporary; do not copy credentials or certificates into
+layers. Follow the [build prerequisites](/xcsh/en/architecture-contribution/build-release/)
+before building from source. Container
+user documentation is authored in English; locale maintenance follows repository policy.
+
+## What should I do when a launch fails?
+
+| Symptom | Next step |
+| --- | --- |
+| Missing provider key or no usable model | Reopen `/login`, verify the selected provider/model, and pass the required environment names or private file on this run; imported routing does not import account login |
+| Expired session or HTTP 401 | Renew through `auth login SERVICE` in the same state, or replace the supplied environment credential; a host-cache renewal does not replace a prior import |
+| HTTP 403 or denied resource access | Verify the account, model entitlement, repository/project/subscription/tenant selection, and required scopes; keep identity and resource-access checks separate |
+| Podman cannot connect after a start message | Inspect `podman machine list`, `podman system connection list`, and `podman info`; select the actual rootless connection and rerun setup, preserving existing machines |
+| Permission denied on state or workspace | Check host ownership, directory mode, VM file sharing, SELinux labels, and container user mapping; select a dedicated writable workspace and owner-only state |
+| Chromium or a CLI rejects HTTPS | Pass the approved CA bundle, check registry trust separately, and check proxy/NO_PROXY settings; do not bypass certificate validation |
+| Host service is unreachable | Replace container localhost with the runtime's host address and check the listening interface, firewall, and remote context prerequisites |
+| No space left on device | Check host free space, guest disk capacity, and `podman system df` or `docker system df`; remove only identified unused images and expand the selected VM disk if needed |
+| Launcher cannot import `container.acceptance` | Retrieve the complete current source archive and retain neighboring `scripts/container/` modules |
+
+Authentication errors report categories while retaining private diagnostics under
+`/home/xcsh/.xcsh/auth-diagnostics`. Do not publish those files or environment dumps.
+In a tool-managed shell, keep the VM launch session alive while testing; terminating
+its owner can terminate guest processes. A successful machine-start message alone
+does not prove connectivity or a working model request.

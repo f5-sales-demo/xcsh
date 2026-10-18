@@ -150,20 +150,35 @@ Re-run the installer to upgrade. `xcsh self-update` reports the PowerShell insta
 </TabItem>
 
 <TabItem label="Container" icon="seti:docker">
-Docker and Podman use the same multi-architecture image. Pin a release tag, resolve its digest for deployment, and mount only the workspace and state required by the task:
+Run the latest multi-architecture marketplace image with persistent private state and an explicit workspace.
+[Open the complete container guide](/xcsh/en/integrations-deployment/containers/) for first launch, model setup, configuration import, and service authentication.
+
+### Podman
+
+Requires Podman and Python 3. On a Mac, use the guide's no-sudo launcher setup to start a rootless VM first; on Linux, configure rootless Podman for your user.
 
 ```bash
-docker pull ghcr.io/f5-sales-demo/xcsh:vX.Y.Z
-docker image inspect --format '{{index .RepoDigests 0}}' ghcr.io/f5-sales-demo/xcsh:vX.Y.Z
-docker run --rm ghcr.io/f5-sales-demo/xcsh@sha256:<digest> --version
+podman pull ghcr.io/f5-sales-demo/xcsh:latest
+podman run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
 ```
 
-Podman accepts the same pull, inspect, and run arguments. Pass provider credentials at runtime through a secret manager or environment file; never bake them into an image layer.
+Continue with [Podman on a Mac](/xcsh/en/integrations-deployment/containers/#how-do-i-start-with-podman-on-a-mac) or [Podman on Linux](/xcsh/en/integrations-deployment/containers/#how-do-i-start-with-podman-on-linux).
+
+### Docker
+
+Requires a running Docker Desktop or Docker Engine accessible to your account.
+
+```bash
+docker pull ghcr.io/f5-sales-demo/xcsh:latest
+docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
+```
+
+Continue with the [Docker procedure](/xcsh/en/integrations-deployment/containers/#how-do-i-start-with-docker) for non-root workspace access and persistent state.
 
 <details class="landing-disclosure">
 <summary>Upgrade or remove</summary>
 
-Pull a newer pinned tag to upgrade. Remove an unused image with `docker image rm IMAGE` or `podman image rm IMAGE`.
+Pull `latest` again to upgrade, then restart using the same state. Remove an unused image with `docker image rm IMAGE` or `podman image rm IMAGE`. See [state and removal](/xcsh/en/integrations-deployment/containers/#how-do-i-upgrade-roll-back-or-remove-the-container) before deleting private data.
 </details>
 </TabItem>
 
