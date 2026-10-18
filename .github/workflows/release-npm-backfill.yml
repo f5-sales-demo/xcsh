@@ -179,6 +179,7 @@ jobs:
 
       - name: Publish missing versions without moving latest
         env:
+          GH_TOKEN: ${{ github.token }}
           XCSH_RELEASE_SOURCE_ROOT: ${{ github.workspace }}/.release-source
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
