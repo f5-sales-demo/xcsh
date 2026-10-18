@@ -1,0 +1,28 @@
+date_utc: 2026-10-18
+source_commit: 121db4428a0274f1ac8d1260eac0b7cb533e1244
+observed_latest: xcsh/23.6.1
+observed_index_digest: sha256:2996e2bf5d7dd73873efd7085c9918bef48d77b272b81c32bb25b82447c6556c
+scope: documentation procedures; this is not full live-service image qualification
+
+commands_and_outcomes:
+  current_source_archive: fetched from codeload main, extracted with neighboring modules, launcher --help passed
+  mac_podman: setup passed without host sudo; first/repeated launch and runtime check passed
+  linux_podman: rootless setup, --version and container-test passed
+  docker: --version, --help, first/repeated container-test passed
+  runtimes: non-root identity, bundled CLIs, managed Python, Chromium and 23 cached plugins passed
+  workspace_ownership: Mac Podman and Linux Docker fixture writes matched invoking user's UID
+  mac_interactive: rendered terminal UI and /exit completed with exit status 0
+  podman_model: three local tool cycles passed on litellm/gpt-6.1-sol:medium / openai-responses
+  model_tools: file search, JSON aggregation, edits, two persistent Python cells, native browser navigation
+  live_services: not rerun; passed=false and fullSuitePassed=false are expected for the local-only matrix
+  architecture_index: linux/amd64 and linux/arm64 present
+  tests: 61 documentation/container unit tests passed; mock service samples do not establish live service access
+  shell_examples: 29 Bash blocks parsed with bash -n
+  lint: changed MDX prose and all tracked shell checks passed; TypeScript checks passed with existing advisory diagnostics
+  pre_commit: normal changed-file hooks passed including PII, secrets, prose, spelling, JSON and security checks
+  docs_build: production shared docs-builder 1.11.1, shared publication contract v1 consume, 763 pages built
+  browser: headless Chrome verified 1440x1000 and 390x844 rendering, tab ArrowLeft/ArrowRight, copy contents, links and anchors
+  overflow: document scrollWidth matched viewport width for both pages at both sizes; code blocks scroll independently
+
+cleanup: Mac fixture workspaces, temporary archive and private Podman state removed; Ubuntu delivery fixtures retained for publication verification
+privacy: credentials, gateway endpoints, service metadata, raw model events and screenshots remain outside public evidence

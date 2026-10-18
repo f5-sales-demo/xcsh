@@ -66,6 +66,7 @@
     "f5-distributed-cloud/validate-diff*",
     "configure-secure/providers-routing*",
     "configure-secure/secrets-obfuscation*",
+    "integrations-deployment/containers*",
     "reference-troubleshooting/diagnostics*"
   ],
   "demote": [

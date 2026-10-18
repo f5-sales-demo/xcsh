@@ -555,7 +555,7 @@
         "legacy-enrichment"
       ],
       "id": "lc-db62fc59bf4174cd",
-      "knowledgeSummary": "Covers provider-specific runtime configuration for environment variables. When `CLAUDECODEUSEFOUNDRY` is active, Anthropic requests route to Foundry mode: `ANTHROPICFOUNDRYAPIKEY` —> `ANTHROPICOAUTHTOKEN` —> `ANTHROPICAPIKEY`. Key interfaces include `CLAUDE_CODE_USE_FOUNDRY`, `FOUNDRY_BASE_URL`, `anthropic`.",
+      "knowledgeSummary": "Covers provider-specific runtime configuration for environment variables. When `CLAUDECODEUSEFOUNDRY` is active, Anthropic requests route to Foundry mode: `ANTHROPICFOUNDRYAPIKEY` \u2014> `ANTHROPICOAUTHTOKEN` \u2014> `ANTHROPICAPIKEY`. Key interfaces include `CLAUDE_CODE_USE_FOUNDRY`, `FOUNDRY_BASE_URL`, `anthropic`.",
       "legacyBlob": "02928628931a5f8aa4c389d3c0a1850664c4223b",
       "legacyHeading": "Provider-specific runtime configuration",
       "legacyPath": "docs/en/configuration/environment-variables.md",
@@ -2449,13 +2449,13 @@
     {
       "category": "containers",
       "currentSourceAuthorities": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/test"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/acceptance.py"
       ],
-      "destinationHeading": "How do I verify an image?",
+      "destinationHeading": "How do I start with Docker?",
       "destinationPage": "docs/en/integrations-deployment/containers.mdx",
-      "disposition": "retained",
+      "disposition": "corrected",
       "evidenceIdentifiers": [
         "source-authority",
         "candidate-cli",
@@ -2466,18 +2466,19 @@
       "legacyBlob": "8df9021b356e2aeac63ee453e91bad164d3daf83",
       "legacyHeading": "Prerequisites",
       "legacyPath": "docs/en/container/alpine-deployment.md",
-      "readerQuestion": "What should a reader know about prerequisites?"
+      "readerQuestion": "What should a reader know about prerequisites?",
+      "rationale": "The marketplace runtime now uses Debian with a rootless launcher and latest-image procedures. Historical Alpine Compose build fixtures remain separate development tools."
     },
     {
       "category": "containers",
       "currentSourceAuthorities": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/test"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/acceptance.py"
       ],
-      "destinationHeading": "How do I verify an image?",
+      "destinationHeading": "How do I upgrade, roll back, or remove the container?",
       "destinationPage": "docs/en/integrations-deployment/containers.mdx",
-      "disposition": "retained",
+      "disposition": "corrected",
       "evidenceIdentifiers": [
         "source-authority",
         "candidate-cli",
@@ -2488,18 +2489,19 @@
       "legacyBlob": "8df9021b356e2aeac63ee453e91bad164d3daf83",
       "legacyHeading": "Pulling release images",
       "legacyPath": "docs/en/container/alpine-deployment.md",
-      "readerQuestion": "What should a reader know about pulling release images?"
+      "readerQuestion": "What should a reader know about pulling release images?",
+      "rationale": "The marketplace runtime now uses Debian with a rootless launcher and latest-image procedures. Historical Alpine Compose build fixtures remain separate development tools."
     },
     {
       "category": "containers",
       "currentSourceAuthorities": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/test"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/acceptance.py"
       ],
-      "destinationHeading": "How do I verify an image?",
+      "destinationHeading": "How do I test a container installation?",
       "destinationPage": "docs/en/integrations-deployment/containers.mdx",
-      "disposition": "retained",
+      "disposition": "corrected",
       "evidenceIdentifiers": [
         "source-authority",
         "candidate-cli",
@@ -2510,18 +2512,19 @@
       "legacyBlob": "8df9021b356e2aeac63ee453e91bad164d3daf83",
       "legacyHeading": "Building the development service",
       "legacyPath": "docs/en/container/alpine-deployment.md",
-      "readerQuestion": "What should a reader know about building the development service?"
+      "readerQuestion": "What should a reader know about building the development service?",
+      "rationale": "The marketplace runtime now uses Debian with a rootless launcher and latest-image procedures. Historical Alpine Compose build fixtures remain separate development tools."
     },
     {
       "category": "containers",
       "currentSourceAuthorities": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/test"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/acceptance.py"
       ],
-      "destinationHeading": "How do I verify an image?",
+      "destinationHeading": "How do I test a container installation?",
       "destinationPage": "docs/en/integrations-deployment/containers.mdx",
-      "disposition": "retained",
+      "disposition": "corrected",
       "evidenceIdentifiers": [
         "source-authority",
         "candidate-cli",
@@ -2532,18 +2535,19 @@
       "legacyBlob": "8df9021b356e2aeac63ee453e91bad164d3daf83",
       "legacyHeading": "Configuring the Docker Compose environment",
       "legacyPath": "docs/en/container/alpine-deployment.md",
-      "readerQuestion": "What should a reader know about configuring the docker compose environment?"
+      "readerQuestion": "What should a reader know about configuring the docker compose environment?",
+      "rationale": "The marketplace runtime now uses Debian with a rootless launcher and latest-image procedures. Historical Alpine Compose build fixtures remain separate development tools."
     },
     {
       "category": "containers",
       "currentSourceAuthorities": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/test"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/acceptance.py"
       ],
-      "destinationHeading": "How do I verify an image?",
+      "destinationHeading": "How do I test a container installation?",
       "destinationPage": "docs/en/integrations-deployment/containers.mdx",
-      "disposition": "retained",
+      "disposition": "corrected",
       "evidenceIdentifiers": [
         "source-authority",
         "candidate-cli",
@@ -2554,18 +2558,19 @@
       "legacyBlob": "8df9021b356e2aeac63ee453e91bad164d3daf83",
       "legacyHeading": "Running verification tests",
       "legacyPath": "docs/en/container/alpine-deployment.md",
-      "readerQuestion": "What should a reader know about running verification tests?"
+      "readerQuestion": "What should a reader know about running verification tests?",
+      "rationale": "The marketplace runtime now uses Debian with a rootless launcher and latest-image procedures. Historical Alpine Compose build fixtures remain separate development tools."
     },
     {
       "category": "containers",
       "currentSourceAuthorities": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/test"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/acceptance.py"
       ],
-      "destinationHeading": "How do I verify an image?",
+      "destinationHeading": "How do I test a container installation?",
       "destinationPage": "docs/en/integrations-deployment/containers.mdx",
-      "disposition": "retained",
+      "disposition": "corrected",
       "evidenceIdentifiers": [
         "source-authority",
         "candidate-cli",
@@ -2576,18 +2581,19 @@
       "legacyBlob": "8df9021b356e2aeac63ee453e91bad164d3daf83",
       "legacyHeading": "Running native ARM64 Podman UAT",
       "legacyPath": "docs/en/container/alpine-deployment.md",
-      "readerQuestion": "What should a reader know about running native arm64 podman uat?"
+      "readerQuestion": "What should a reader know about running native arm64 podman uat?",
+      "rationale": "The marketplace runtime now uses Debian with a rootless launcher and latest-image procedures. Historical Alpine Compose build fixtures remain separate development tools."
     },
     {
       "category": "containers",
       "currentSourceAuthorities": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/test"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/acceptance.py"
       ],
       "destinationHeading": "How do I verify an image?",
       "destinationPage": "docs/en/integrations-deployment/containers.mdx",
-      "disposition": "retained",
+      "disposition": "corrected",
       "evidenceIdentifiers": [
         "source-authority",
         "candidate-cli",
@@ -2598,18 +2604,19 @@
       "legacyBlob": "8df9021b356e2aeac63ee453e91bad164d3daf83",
       "legacyHeading": "Verifying published container images",
       "legacyPath": "docs/en/container/alpine-deployment.md",
-      "readerQuestion": "What should a reader know about verifying published container images?"
+      "readerQuestion": "What should a reader know about verifying published container images?",
+      "rationale": "The marketplace runtime now uses Debian with a rootless launcher and latest-image procedures. Historical Alpine Compose build fixtures remain separate development tools."
     },
     {
       "category": "containers",
       "currentSourceAuthorities": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/test"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/acceptance.py"
       ],
-      "destinationHeading": "How do I verify an image?",
+      "destinationHeading": "How do I upgrade, roll back, or remove the container?",
       "destinationPage": "docs/en/integrations-deployment/containers.mdx",
-      "disposition": "retained",
+      "disposition": "corrected",
       "evidenceIdentifiers": [
         "source-authority",
         "candidate-cli",
@@ -2620,18 +2627,19 @@
       "legacyBlob": "8df9021b356e2aeac63ee453e91bad164d3daf83",
       "legacyHeading": "Cleaning up resources",
       "legacyPath": "docs/en/container/alpine-deployment.md",
-      "readerQuestion": "What should a reader know about cleaning up resources?"
+      "readerQuestion": "What should a reader know about cleaning up resources?",
+      "rationale": "The marketplace runtime now uses Debian with a rootless launcher and latest-image procedures. Historical Alpine Compose build fixtures remain separate development tools."
     },
     {
       "category": "containers",
       "currentSourceAuthorities": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/test"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/acceptance.py"
       ],
-      "destinationHeading": "How do I verify an image?",
+      "destinationHeading": "How do I test a container installation?",
       "destinationPage": "docs/en/integrations-deployment/containers.mdx",
-      "disposition": "retained",
+      "disposition": "corrected",
       "evidenceIdentifiers": [
         "source-authority",
         "candidate-cli",
@@ -2642,7 +2650,8 @@
       "legacyBlob": "8df9021b356e2aeac63ee453e91bad164d3daf83",
       "legacyHeading": "Localization policy",
       "legacyPath": "docs/en/container/alpine-deployment.md",
-      "readerQuestion": "What should a reader know about localization policy?"
+      "readerQuestion": "What should a reader know about localization policy?",
+      "rationale": "The marketplace runtime now uses Debian with a rootless launcher and latest-image procedures. Historical Alpine Compose build fixtures remain separate development tools."
     },
     {
       "category": "extensions",
@@ -7839,7 +7848,7 @@
         "legacy-build-browser"
       ],
       "id": "lc-3d1f1b81f8d9ce71",
-      "knowledgeSummary": "Covers navigation and selection semantics for tree. Key interfaces include `•`.",
+      "knowledgeSummary": "Covers navigation and selection semantics for tree. Key interfaces include `\u2022`.",
       "legacyBlob": "d9a5e3c43e15d18dec0d005b8655f5ce5075d8a1",
       "legacyHeading": "Navigation and selection semantics",
       "legacyPath": "docs/en/tui/tree.md",

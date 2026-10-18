@@ -2110,7 +2110,8 @@
         "legacy-build-browser",
         "legacy-enrichment",
         "production-build-20260916",
-        "source-authority"
+        "source-authority",
+        "container-instructions-20261017"
       ],
       "headings": [
         {
@@ -2154,7 +2155,8 @@
             "legacy-build-browser",
             "legacy-enrichment",
             "production-build-20260916",
-            "source-authority"
+            "source-authority",
+            "container-instructions-20261017"
           ],
           "legacyConceptIds": [],
           "purpose": "Present platform and package alternatives, including channel-specific upgrades and removal.",
@@ -2226,6 +2228,40 @@
           "purpose": "Route readers to task-oriented documentation and catalog context.",
           "readerQuestion": "Where should I go after xcsh is working?",
           "text": "Explore by goal"
+        },
+        {
+          "text": "Podman",
+          "readerQuestion": "How do I verify the latest image with Podman?",
+          "purpose": "Provide prerequisites, current image verification and a link to full Podman procedures.",
+          "evidence": [
+            "browser-build",
+            "candidate-cli",
+            "install-channels-20260916",
+            "installed-release",
+            "legacy-build-browser",
+            "legacy-enrichment",
+            "production-build-20260916",
+            "source-authority",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Docker",
+          "readerQuestion": "How do I verify the latest image with Docker?",
+          "purpose": "Provide prerequisites, current image verification and a link to full Docker procedures.",
+          "evidence": [
+            "browser-build",
+            "candidate-cli",
+            "install-channels-20260916",
+            "installed-release",
+            "legacy-build-browser",
+            "legacy-enrichment",
+            "production-build-20260916",
+            "source-authority",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
         }
       ],
       "path": "docs/en/index.mdx",
@@ -2284,49 +2320,190 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "legacy-enrichment"
+        "legacy-enrichment",
+        "container-instructions-20261017"
       ],
       "headings": [
         {
+          "text": "How do I start with Podman on a Mac?",
+          "readerQuestion": "How do I start with Podman on a Mac?",
+          "purpose": "Explain how do I start with Podman on a Mac?",
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "legacy-enrichment"
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do I start with Podman on Linux?",
+          "readerQuestion": "How do I start with Podman on Linux?",
+          "purpose": "Explain how do I start with Podman on Linux?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do I start with Docker?",
+          "readerQuestion": "How do I start with Docker?",
+          "purpose": "Explain how do I start with Docker?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
           ],
           "legacyConceptIds": [
-            "lc-2f4663a857e23a8a",
+            "lc-2f4663a857e23a8a"
+          ]
+        },
+        {
+          "text": "How do I verify an image?",
+          "readerQuestion": "How do I verify an image?",
+          "purpose": "Explain how do I verify an image?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": [
+            "lc-0539c4d9d0ed5aa2"
+          ]
+        },
+        {
+          "text": "How do I authenticate and select a model?",
+          "readerQuestion": "How do I authenticate and select a model?",
+          "purpose": "Explain how do I authenticate and select a model?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do I import existing native configuration?",
+          "readerQuestion": "How do I import existing native configuration?",
+          "purpose": "Explain how do I import existing native configuration?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Where are workspace, state, and secrets stored?",
+          "readerQuestion": "Where are workspace, state, and secrets stored?",
+          "purpose": "Explain where are workspace, state, and secrets stored?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "What must remain outside the image?",
+          "readerQuestion": "What must remain outside the image?",
+          "purpose": "Explain what must remain outside the image?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do I connect bundled services?",
+          "readerQuestion": "How do I connect bundled services?",
+          "purpose": "Explain how do I connect bundled services?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do proxies, certificates, and host connections work?",
+          "readerQuestion": "How do proxies, certificates, and host connections work?",
+          "purpose": "Explain how do proxies, certificates, and host connections work?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do I upgrade, roll back, or remove the container?",
+          "readerQuestion": "How do I upgrade, roll back, or remove the container?",
+          "purpose": "Explain how do I upgrade, roll back, or remove the container?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": [
             "lc-0a4c9818628936fd",
+            "lc-59c7a618a612fb60"
+          ]
+        },
+        {
+          "text": "How do I test a container installation?",
+          "readerQuestion": "How do I test a container installation?",
+          "purpose": "Explain how do I test a container installation?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "container-instructions-20261017"
+          ],
+          "legacyConceptIds": [
             "lc-61a76dd3595fe570",
             "lc-67a1879312089171",
             "lc-b8ee0f3c341ec2da",
             "lc-0042a1ac1bae68f3",
-            "lc-0539c4d9d0ed5aa2",
-            "lc-59c7a618a612fb60",
             "lc-cde8c6cdc1e41664"
-          ],
-          "purpose": "Answer this question within Containers: How do I verify an image?.",
-          "readerQuestion": "How do I verify an image?",
-          "text": "How do I verify an image?"
+          ]
         },
         {
+          "text": "What should I do when a launch fails?",
+          "readerQuestion": "What should I do when a launch fails?",
+          "purpose": "Explain what should I do when a launch fails?",
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "legacy-enrichment"
+            "legacy-enrichment",
+            "container-instructions-20261017"
           ],
-          "legacyConceptIds": [],
-          "purpose": "Answer this question within Containers: What must remain outside the image?.",
-          "readerQuestion": "What must remain outside the image?",
-          "text": "What must remain outside the image?"
+          "legacyConceptIds": []
         }
       ],
       "path": "docs/en/integrations-deployment/containers.mdx",
-      "purpose": "Guide operators through digest-pinned image verification, least-privilege mounts, and cleanup.",
-      "readerNeed": "Containers: Run the published multi-architecture Alpine image with explicit mounts and credentials.",
+      "purpose": "Run the latest marketplace image with rootless Podman or Docker, authenticate models and services, preserve private state, and diagnose deployment failures.",
+      "readerNeed": "Containers: complete Mac/Linux Podman and Docker operating procedures.",
       "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/src/browser"
+        "scripts/xcsh-podman",
+        "scripts/container/entrypoint.sh",
+        "scripts/container/auth.py",
+        "scripts/container/import-native.ts",
+        "scripts/container/acceptance.py",
+        "Dockerfile.debian"
       ]
     },
     {

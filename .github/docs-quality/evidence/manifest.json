@@ -515,6 +515,21 @@
         "docs/en/f5-distributed-cloud/blindfold-certificates.mdx",
         "docs/en/f5-distributed-cloud/blindfold-certificates.mdx#Replace the vesctl secrets procedure"
       ]
+    },
+    {
+      "id": "container-instructions-20261017",
+      "receipt": ".github/docs-quality/evidence/container-instructions-20261017.txt",
+      "receiptSha256": "329a82e14d8410f06394fc4fdffd3dc2c17306aea6bcc6ff5a371b15c2d5386f",
+      "sourceDigest": "121db4428a0274f1ac8d1260eac0b7cb533e1244",
+      "xcshVersion": "23.6.1",
+      "command": "current source archive; xcsh-podman setup/run/test; Docker runtime fixtures; shared docs-builder; headless Chrome",
+      "exitStatus": 0,
+      "verificationLevel": "executed-runtime-and-rendered",
+      "cleanupResult": "Mac fixtures removed; Ubuntu delivery fixtures retained until publication verification",
+      "sections": [
+        "docs/en/index.mdx#Installation options",
+        "docs/en/integrations-deployment/containers.mdx"
+      ]
     }
   ],
   "schemaVersion": 1
