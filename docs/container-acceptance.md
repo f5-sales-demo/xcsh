@@ -92,3 +92,36 @@ and interactive expired-session renewal remain separate acceptance gates.
 Credentials, account identifiers, resource metadata, raw events, temporary forwarding,
 and disposable runtime state were removed after verification. See
 [issue #5001](https://github.com/f5-sales-demo/xcsh/issues/5001) for delivery evidence.
+
+## Refreshed latest container qualification
+
+After the canonical Terraform corpus refresh and citation-provenance repairs
+[#5003](https://github.com/f5-sales-demo/xcsh/pull/5003) and
+[#5005](https://github.com/f5-sales-demo/xcsh/pull/5005), the release workflow published
+`23.6.9`. On 2026-10-18, a fresh Ubuntu Docker pull of `latest` reported
+`xcsh/23.6.9` and passed all 42 new tool-backed samples: three complete cycles
+per model for `litellm/gpt-6.1-sol:medium` and `anthropic/claude-sonnet-5`, covering
+local tools and the same six services qualified above. Every sample used fresh
+tool calls; earlier qualification results were not reused.
+
+The runtime, both model requests, separate service identity and resource reads,
+repeated GitHub/AWS/Salesforce login, portable Azure/Google Cloud session reuse,
+workspace ownership, repeated state, persistent Python, native browser, and clean
+exits passed. GitLab and Firecrawl remain deferred, so `fullSuitePassed` remains
+false. Interactive expired-session renewal and remote integrations retain their
+separate acceptance gates.
+
+The published two-platform index was
+`sha256:44c13ba476ae5545c381e8467f8a628a3f3f34b3feceee88e8b3568bb242d92a`.
+The tested AMD64 image ID was `sha256:f1e04359506f5eda3ba4ceed51f5b4e310928517e3a92322d93f0286512bc53f`.
+These identify the observed qualification artifact; operating instructions
+continue to use `latest`. The refreshed provider/documentation source was
+`v15.12.0`; API `v12.1.3` remained current. Full-main CI, native AMD64/ARM64
+container builds, and the container runtime gate passed before publication.
+
+The model path retained verified TLS through the private Mac VPN forward described
+above. Credentials, raw events, fixture state, temporary inputs, and the owned
+forward were removed after acceptance. See
+[issue #5008](https://github.com/f5-sales-demo/xcsh/issues/5008) and
+[corpus follow-up #4975](https://github.com/f5-sales-demo/xcsh/issues/4975)
+for delivery evidence and package-channel acceptance status.
