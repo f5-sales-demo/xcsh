@@ -10,11 +10,15 @@ on:
         description: Original successful publication run with native artifacts
         required: true
         type: string
+concurrency:
+  group: verify-published-npm-${{ inputs.tag }}-${{ inputs.source_run_id }}
+  cancel-in-progress: false
 permissions:
-  contents: read
-  actions: read
+  contents: read # inspect the immutable release and check out its verifier
+  actions: read # inspect the publication run and download its native artifacts
 jobs:
   verify:
+    name: Verify immutable npm installation
     runs-on: xcsh-socketless
     timeout-minutes: 20
     steps:

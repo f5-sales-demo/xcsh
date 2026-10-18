@@ -1152,7 +1152,7 @@ jobs:
           path: packages/coding-agent/binaries/*
           if-no-files-found: error
     permissions:
-      actions: read
+      actions: read # download native artifacts from the selected publication or recovery run
       contents: read
 
   # Collect all artifacts and create the GitHub Release
