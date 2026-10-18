@@ -1517,6 +1517,7 @@ jobs:
           find "$NPM_DIR" -name "*.node" -exec ls -lh {} \;
       - name: Publish to npm
         env:
+          GH_TOKEN: ${{ github.token }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail

@@ -179,22 +179,35 @@ A successful start message alone does not pass setup acceptance.
 
 ## Qualification status
 
-On 2026-10-16, the ARM64 Mac passed rootless AppleHV setup, private state
-restarts, mapped workspace writes, and native runtime checks. Debian runtime
-checks also passed on native AMD64. Both reference models passed the complete
-local synthesized tool test three consecutive times on ARM64.
+Published version `23.6.0` passed the agreed 42-case matrix in fresh private state
+on the ARM64 Mac: three complete cycles per configured model, with successful
+local tools and live GitHub, AWS, Azure, Salesforce, Google Cloud, and F5 reads.
+GitLab and Firecrawl are deferred by user instruction; their plugins remain bundled.
 
-The measured ARM64 Debian v9 candidate used 1,018,640,476 compressed layer bytes
-and 3,548,025,470 unpacked bytes; its plugin seed occupied 11,500 KiB. Measurements
-are candidate receipts, not a published-image acceptance claim.
+Immutable image:
+`ghcr.io/f5-sales-demo/xcsh@sha256:a2430b2cab35ac61259a54915f750ecda644efe014dc290f4ac022402f161159`.
+The native ARM64 and AMD64 release builds, runtime qualification, provenance,
+SBOM, and two-platform index verification passed in container workflow run
+`39079735542`. The published ARM64 image uses 3,536,707,590 unpacked bytes.
+The fresh runtime verification completed in 2.771 seconds.
 
-Both native AMD64 runtime candidates passed. Debian used 1,063,470,609 compressed
-layer bytes and 3,499,647,185 unpacked bytes; Alpine used 1,082,309,553 compressed
-layer bytes and 3,484,984,743 unpacked bytes. Debian is selected by compressed size.
-The Ubuntu comparison host cannot resolve the corporate gateway used by the Mac;
-model acceptance uses the working Mac routes.
+Published-image Mac checks also passed real HTTPS Chromium navigation with the
+selected CA, workspace writes owned by the Mac user, interactive terminal rendering,
+draft cancellation, and clean explicit exit. No host sudo or privileged helper was used.
+Private authentication persisted across repeated launches. Python gateway locks use
+private temporary storage because process identifiers change across containers.
 
-GitLab and Firecrawl are deferred by user instruction. Current inputs passed
-initial container checks for GitHub, AWS, Azure, Salesforce, Google Cloud project
-access, and F5 tenant inventory. The complete model matrix, publication, and
-fresh-state digest retesting remain required gates.
+The final ARM64 candidate used 1,018,595,366 compressed layer bytes and
+3,548,024,442 unpacked bytes. Native AMD64 comparison selected Debian at
+1,063,470,609 compressed bytes versus Alpine at 1,082,309,553 bytes.
+The plugin seed occupied 11,500 KiB. The launcher defaults remain 4 CPUs,
+8 GiB memory, and a 40 GiB sparse disk. Repeated builds in the acceptance VM
+required expanding its disk to 60 GiB; installed-image acceptance used private
+state in that existing rootless machine.
+
+Rollback image retained:
+`ghcr.io/f5-sales-demo/xcsh@sha256:7eb3dc53c014248ade2642a84f54bb4edef8ea42cfb7bf24e625e79699e83d17`.
+
+The local commit hook checks ShellCheck, CI-pinned shfmt 3.13.1, and documentation
+authority before TypeScript validation. Missing linters and findings fail locally;
+source-only changes cannot bypass documentation checks.

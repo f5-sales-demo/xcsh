@@ -14,6 +14,15 @@ def job_block(workflow: str, job: str, next_job: str | None) -> str:
 
 
 class ContainerWorkflowContractTests(unittest.TestCase):
+    def test_npm_prepack_discovery_receives_authenticated_github_input(self) -> None:
+        for name, step in (
+            ("ci.yml", "      - name: Publish to npm"),
+            ("release-npm-backfill.yml", "      - name: Publish missing versions without moving latest"),
+        ):
+            workflow = (ROOT / ".github/workflows" / name).read_text()
+            block = workflow.split(step, 1)[1].split("      - name:", 1)[0]
+            self.assertIn("GH_TOKEN: ${{ github.token }}", block)
+
     def test_build_time_discovery_uses_ephemeral_token_mount(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         dockerfile = (ROOT / "Dockerfile.alpine").read_text(encoding="utf-8")
