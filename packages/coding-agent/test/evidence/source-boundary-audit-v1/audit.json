@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "6cf0608dd4c5c3a48af4bfb5b8e9946e675ddd21",
-  "fingerprint": "7f84f734786d491daf62a18d7cb31b5bcc32a231a985bd2c85fc56a7d18734cc",
+  "revision": "38672bb53f5f6f3a938c1c04fca3349014c0af64",
+  "fingerprint": "5065121f6ee70180c36f9ac1f3f234e607d23a9ffbb97412f7448f6be00752df",
   "counts": {
     "total": 244,
     "components": 102,
@@ -2051,7 +2051,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "settings",
-      "sha256": "13347a85ef097c988f7e65da00416fb40969f858266e25c45ddf88a47b63d229",
+      "sha256": "8d4bf41fb4aef20c99131c3681c6f08399d6c67c1496f84cb561d648880520aa",
       "exports": [
         "PluginViewComponent",
         "dataSections",
@@ -2953,7 +2953,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "e8156537f75fedf605f0a363dc4db48b0758fcaa926ac52bef4f6355b6ad564a",
+      "sha256": "1683543e7889d452791c68630879898ea97489f8cd499665672282b172c82abf",
       "exports": [
         "ToolExecutionComponent",
         "ToolExecutionHandle",
