@@ -201,49 +201,49 @@
 	},
 	"api": {
 		"repository": "f5-sales-demo/api-specs-enriched",
-		"tag": "v12.1.1",
-		"commit": "bafefa99cbad3ad2e3c2c4fd9c0611a0cbcc36b3",
+		"tag": "v12.1.2",
+		"commit": "3c8b495d51c3fbc7c4a1bc7d86fcfdb6ab5f16ea",
 		"acceptance": "immutable",
 		"assets": {
 			"api-catalog.json": {
-				"sha256": "6c63cb7c7bc323f3d128976de418a364315024ed16dc0a46e55215fa0cb265ea",
+				"sha256": "c2b40e5e47178095b7923d627daf11b4d203a62f0a1d9d12a4a5a12814066b60",
 				"size_bytes": 51182626
 			},
 			"concurrency_contracts.json": {
-				"sha256": "4fd1fe09e751e023fe7806668db303ab74fe56a8032e6d0be7375fb1da53efc4",
+				"sha256": "c7b4f14da5dd8275a700009280c809db050525b3414cf704a678b03d04e660da",
 				"size_bytes": 76670
 			},
 			"enrichment-coverage.json": {
-				"sha256": "b12abc2bb2f52c4fc074bedd5c36afc6aea7ba1f4f10bbbae0d1e8a21c27d83b",
+				"sha256": "74f244d1b2fcc84c76bceff9eab84154feb8febd9d6dfd4458caaa588c3da3cc",
 				"size_bytes": 443526
 			},
-			"f5xc-api-specs-v12.1.1.zip": {
-				"sha256": "71e908c13ddd054203bc9faa7c1a6e8f326a8501a62745161653e84431e051f5",
-				"size_bytes": 7755110
+			"f5xc-api-specs-v12.1.2.zip": {
+				"sha256": "948e6ec74f4fb91537028bf23d7983d448ad5a2245aae70362e46513202f38a5",
+				"size_bytes": 7756348
 			},
 			"index.json": {
-				"sha256": "a14f3c653b61cddc16bc98334b9b0a23311309ae35a97d22e12c3548c9afe030",
+				"sha256": "d4a898ba80e2047c001be13ae5769ecbf28f64689430a2aa6e2a24d2aa32b854",
 				"size_bytes": 222841
 			},
 			"minimal-export-defaults.json": {
-				"sha256": "8ee567c1130df8b3ec2d68c103a2ede5ef22140d2063e65e92d4389bf504568d",
+				"sha256": "1510b215e2f4ef4e7900aa6fe31a4919332915a1cfe70da9d3f5352acdf7624c",
 				"size_bytes": 149975
 			},
 			"openapi.json": {
-				"sha256": "d4334dbf10c5a2b7d367de8d76356886a646ba017edf53e8d211c23365fc9f60",
+				"sha256": "0d9e018baf5288da3c80afc162b339b30cf93344935cfd4fc8ae11cbf0586742",
 				"size_bytes": 37011349
 			},
 			"smsv2_parity_manifest.json": {
-				"sha256": "82804033920763e4ca1b401b56991f74518ddf7fff8e66da14f71b524826855d",
+				"sha256": "20c0d25f0c7fd03a36d3e336d7d7db88143f291c2bd067f4598431e8b483c124",
 				"size_bytes": 541911
 			},
 			"smsv2-contract-manifest.json": {
-				"sha256": "644d4b5652a2b23dbb99d317de504732170a9b4e4674688df668559d12468053",
+				"sha256": "0ce4927203a6ac87a89be5637aa61d19b6fd24fe1836e10eb7dbc702547a44c7",
 				"size_bytes": 372
 			},
 			"smsv2-contract.json": {
-				"sha256": "93c430e884be34fb80de9e572e1aa6dddbb1e804df65867b9479cb77660c0f16",
-				"size_bytes": 29884
+				"sha256": "07f797c5d48fe8fc7557add08242cb5fff04ffe69f669c84ce377ca7c6abc325",
+				"size_bytes": 30899
 			},
 			"smsv2-evidence-receipt.json": {
 				"sha256": "e9bd60f46acd2a003010cbf20d0581af364cce0486f8a7eefc9eb85562ab0bff",
