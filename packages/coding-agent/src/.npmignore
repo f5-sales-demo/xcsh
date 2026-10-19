@@ -1,0 +1,3 @@
+# Terraform snapshot inputs and uncompressed generation cache are build-only.
+internal-urls/.documentation-generated/terraform/*
+!internal-urls/.documentation-generated/terraform/terraform-documentation.sqlite.gz
