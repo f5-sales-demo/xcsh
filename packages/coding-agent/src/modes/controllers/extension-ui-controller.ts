@@ -266,7 +266,7 @@ export class ExtensionUiController {
 			abort: () => this.ctx.session.abort(),
 			hasPendingMessages: () => this.ctx.session.queuedMessageCount > 0,
 			shutdown: () => {
-				// Signal shutdown request (will be handled by main loop)
+				this.ctx.requestShutdown();
 			},
 			getContextUsage: () => this.ctx.session.getContextUsage(),
 			compact: async instructionsOrOptions => {
@@ -547,7 +547,7 @@ export class ExtensionUiController {
 			abort: () => this.ctx.session.abort(),
 			hasPendingMessages: () => this.ctx.session.queuedMessageCount > 0,
 			shutdown: () => {
-				// Signal shutdown request (will be handled by main loop)
+				this.ctx.requestShutdown();
 			},
 			getContextUsage: () => this.ctx.session.getContextUsage(),
 			compact: async instructionsOrOptions => {
@@ -748,7 +748,7 @@ export class ExtensionUiController {
 							this.ctx.session.abort();
 						},
 						shutdown: () => {
-							// Signal shutdown request
+							this.ctx.requestShutdown();
 						},
 						getSystemPrompt: () => this.ctx.session.systemPrompt,
 					});

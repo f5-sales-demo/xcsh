@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "9e0f6fa0b57f5b7629864ca58a2037d7fc5c2d8c",
-  "fingerprint": "c13065f5d461d2dcfda1931c66d561a5a8b64508c110352f0d9769f73ebd2e60",
+  "revision": "6b19c82db21fd2e3fd2570cb09cbf311e04594ab",
+  "fingerprint": "58f0d556300a60438be83f4e4616328c0929c9558bc8aab75790409b8859a7cb",
   "counts": {
     "total": 244,
     "components": 102,
@@ -537,8 +537,8 @@
         "packages/coding-agent/test/extensions-runner.test.ts",
         "packages/coding-agent/test/fable-uat.test.ts",
         "packages/coding-agent/test/integration-registry.test.ts",
-        "packages/coding-agent/test/interactive-mode-lsp-startup.test.ts",
-        "packages/coding-agent/test/manager.int.test.ts"
+        "packages/coding-agent/test/interactive-mode-extension-shutdown.test.ts",
+        "packages/coding-agent/test/interactive-mode-lsp-startup.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/extensions/runner.ts is individually classified as public-extension-contract in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -3357,7 +3357,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "70477d1cc7762d256f3cf664162ba3404af669413569e518ae9d1cdc0b7c645b",
+      "sha256": "f6eeb380c41f384006c04133b3184ccefe226293d2e2123432e29728b2fe8992",
       "exports": [
         "ExtensionUiController"
       ],
@@ -3373,6 +3373,7 @@
       "directTests": [
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/hook-selector-overflow.test.ts",
+        "packages/coding-agent/test/interactive-mode-extension-shutdown.test.ts",
         "packages/coding-agent/test/remote-control/interaction-host.test.ts",
         "packages/coding-agent/test/reviewed-action-dialog.test.ts"
       ],
@@ -3755,7 +3756,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "2bb240c9581749e79e18f241f8a3cb73e149b1f3ac876245df1f6e948e074a14",
+      "sha256": "5ae4526affad1d31072fd01de642240f43e7e5eb9731407e4ceb411446f0d13f",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -3784,12 +3785,12 @@
         "packages/coding-agent/test/input-controller-keybindings.test.ts",
         "packages/coding-agent/test/input-controller-llm-gate.test.ts",
         "packages/coding-agent/test/input-controller-suspend.test.ts",
+        "packages/coding-agent/test/interactive-mode-extension-shutdown.test.ts",
         "packages/coding-agent/test/interactive-mode-finish-pending.test.ts",
         "packages/coding-agent/test/interactive-mode-lsp-startup.test.ts",
         "packages/coding-agent/test/interactive-mode-plan-review.test.ts",
         "packages/coding-agent/test/interactive-mode-status.test.ts",
-        "packages/coding-agent/test/media-message-component.test.ts",
-        "packages/coding-agent/test/modes/controllers/btw-controller.test.ts"
+        "packages/coding-agent/test/media-message-component.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/interactive-mode.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4203,7 +4204,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "15a2837c393790c03aebdee25ef6f058666b47bec3e7b8b9e6eacf5cb11e1859",
+      "sha256": "4c12ce8bc4b74c680c066c8f654f51b04bb0b724ad74c808fadef992cad7c878",
       "exports": [
         "CompactionQueuedMessage",
         "InteractiveModeContext",

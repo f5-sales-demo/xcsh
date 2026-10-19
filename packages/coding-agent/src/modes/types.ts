@@ -121,6 +121,7 @@ export interface InteractiveModeContext {
 
 	// Lifecycle
 	init(): Promise<void>;
+	requestShutdown(): void;
 	shutdown(): Promise<void>;
 	checkShutdownRequested(): Promise<void>;
 
