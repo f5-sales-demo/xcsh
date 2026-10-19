@@ -896,6 +896,17 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 	}
 
+	/** Defer teardown outside the requesting extension callback, including while idle. */
+	requestShutdown(): void {
+		if (this.shutdownRequested || this.#isShuttingDown) return;
+		this.shutdownRequested = true;
+		setImmediate(() => {
+			void this.checkShutdownRequested().catch(error => {
+				logger.error("Interactive extension shutdown failed", { error: String(error) });
+			});
+		});
+	}
+
 	async shutdown(): Promise<void> {
 		if (this.#isShuttingDown) return;
 		this.#isShuttingDown = true;
