@@ -767,7 +767,7 @@ export class ToolExecutionComponent extends Container {
 						).render(width),
 					);
 				}
-				if (!this.#expanded) lines.push(formatExpandHint(theme, false, true));
+				if (!this.#expanded) lines.push(formatExpandHint(theme, false, true, "(Ctrl+O for details)"));
 				return lines;
 			},
 		};

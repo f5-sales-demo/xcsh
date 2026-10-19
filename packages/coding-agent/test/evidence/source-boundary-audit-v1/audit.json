@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "6b19c82db21fd2e3fd2570cb09cbf311e04594ab",
-  "fingerprint": "58f0d556300a60438be83f4e4616328c0929c9558bc8aab75790409b8859a7cb",
+  "revision": "73563972964aa8425792ef568d0eb664bda3edf7",
+  "fingerprint": "1ce503b36f8807b29614903363066bab2169140e93755bc0b748a45a4ea6ef7f",
   "counts": {
     "total": 244,
     "components": 102,
@@ -2955,7 +2955,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "1683543e7889d452791c68630879898ea97489f8cd499665672282b172c82abf",
+      "sha256": "35331fd03448d883f32ade3653f7e62853edfa50d430e7cb9b85cb6806929b97",
       "exports": [
         "ToolExecutionComponent",
         "ToolExecutionHandle",
@@ -5331,7 +5331,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "6fc277354271db2619d970d2051287fcb42a46edf38a188a0cb209e2e512507a",
+      "sha256": "ef7152be918359ad4890a76aaf843b4201c097f970745b2f78e1f89e287e7f36",
       "exports": [
         "DiffStats",
         "EXPAND_HINT",

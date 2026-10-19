@@ -307,3 +307,45 @@ test("provided expanded evidence appears once while shared Arguments remain", as
 	expect(output).toContain("Arguments");
 	expect(output).toContain("SELECT COUNT(Id) total");
 });
+
+for (const themeName of ["xcsh-dark", "xcsh-light"]) {
+	for (const preset of ["unicode", "ascii", "nerd"] as const) {
+		test(`shared expansion cue describes details: ${themeName}/${preset}`, async () => {
+			await initTheme(false, preset);
+			await setTheme(themeName);
+			for (const descriptor of [
+				{ result: () => ({ sections: [{ kind: "fields", values: { Count: 0 } }] }) },
+				{ result: () => undefined },
+				{
+					result: () => {
+						throw new Error("synthetic callback failure");
+					},
+				},
+				undefined,
+			]) {
+				const c = await component(descriptor ? { presentation: descriptor } : {});
+				c.setArgsComplete();
+				c.updateResult({
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify({ records: Array.from({ length: 5 }, (_, i) => ({ Count: i })) }),
+						},
+					],
+				});
+				for (const width of [40, 76, 120, 153]) {
+					c.setExpanded(false);
+					const collapsed = c.render(width);
+					expect(plain(collapsed)).toContain("(Ctrl+O for details)");
+					expect(plain(collapsed)).not.toContain("(Ctrl+O for more)");
+					expect(collapsed.every(line => visibleWidth(line) <= width)).toBe(true);
+					c.setExpanded(true);
+					const expanded = plain(c.render(width));
+					expect(expanded).not.toContain("(Ctrl+O for details)");
+					expect(expanded).toContain("Arguments");
+					expect(expanded).toContain("4");
+				}
+			}
+		});
+	}
+}
