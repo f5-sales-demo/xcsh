@@ -16,7 +16,7 @@
     },
     "packages/agent": {
       "name": "@f5-sales-demo/pi-agent-core",
-      "version": "23.9.2",
+      "version": "23.9.3",
       "dependencies": {
         "@f5-sales-demo/pi-ai": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -28,7 +28,7 @@
     },
     "packages/ai": {
       "name": "@f5-sales-demo/pi-ai",
-      "version": "23.9.2",
+      "version": "23.9.3",
       "bin": {
         "pi-ai": "./src/cli.ts",
       },
@@ -76,7 +76,7 @@
     },
     "packages/coding-agent": {
       "name": "@f5-sales-demo/xcsh",
-      "version": "23.9.2",
+      "version": "23.9.3",
       "bin": {
         "xcsh": "bin/xcsh.ts",
       },
@@ -116,7 +116,7 @@
     },
     "packages/natives": {
       "name": "@f5-sales-demo/pi-natives",
-      "version": "23.9.2",
+      "version": "23.9.3",
       "devDependencies": {
         "@napi-rs/cli": "3.9.0",
         "@types/bun": "1.4.2",
@@ -153,7 +153,7 @@
     },
     "packages/resource-management": {
       "name": "@f5-sales-demo/pi-resource-management",
-      "version": "23.9.2",
+      "version": "23.9.3",
       "dependencies": {
         "yaml": "2.9.0",
       },
@@ -163,7 +163,7 @@
     },
     "packages/stats": {
       "name": "@f5-sales-demo/xcsh-stats",
-      "version": "23.9.2",
+      "version": "23.9.3",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
@@ -188,7 +188,7 @@
     },
     "packages/tui": {
       "name": "@f5-sales-demo/pi-tui",
-      "version": "23.9.2",
+      "version": "23.9.3",
       "dependencies": {
         "@f5-sales-demo/pi-natives": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -225,7 +225,7 @@
     },
     "packages/utils": {
       "name": "@f5-sales-demo/pi-utils",
-      "version": "23.9.2",
+      "version": "23.9.3",
       "dependencies": {
         "@f5-sales-demo/i18n-core": "1.0.59",
         "beautiful-mermaid": "^1.1",
