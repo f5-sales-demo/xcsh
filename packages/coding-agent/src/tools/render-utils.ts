@@ -144,10 +144,10 @@ export function formatStatusIcon(status: ToolUIStatus, theme: Theme, spinnerFram
  * Format the expand hint with proper theming.
  * Returns empty string if already expanded or there is nothing more to show.
  */
-export function formatExpandHint(theme: Theme, expanded?: boolean, hasMore?: boolean): string {
+export function formatExpandHint(theme: Theme, expanded?: boolean, hasMore?: boolean, hint = EXPAND_HINT): string {
 	if (expanded) return "";
 	if (hasMore === false) return "";
-	return theme.fg("dim", wrapBrackets(EXPAND_HINT, theme));
+	return theme.fg("dim", wrapBrackets(hint, theme));
 }
 
 /**
