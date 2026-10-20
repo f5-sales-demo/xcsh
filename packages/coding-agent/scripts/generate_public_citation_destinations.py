@@ -27,6 +27,55 @@ args = parser.parse_args()
 root = args.evidence_root
 repo = pathlib.Path(__file__).resolve().parents[3]
 receipts = json.loads((root / "assessment/source-receipts.json").read_text())
+# Bind offline receipts to the repository's reviewed pins before reading or writing mappings.
+for source_name, pin_name, default_archive_name in (
+    ("content", "documentation-release.json", "html-to-markdown-content.tar.gz"),
+    (
+        "provider",
+        "terraform-documentation-release.json",
+        "canonical-documentation.tar.gz",
+    ),
+    ("api", "spec-release.json", None),
+):
+    pin = json.loads((repo / "tools" / pin_name).read_text())
+    receipt = receipts[source_name]
+    if receipt["tag"] != pin["release_tag"]:
+        raise SystemExit(
+            "publication receipt tag disagrees with reviewed pin: " + source_name
+        )
+    archive_name = (
+        default_archive_name or "f5xc-api-specs-" + pin["release_tag"] + ".zip"
+    )
+    pinned_asset = pin["assets"][archive_name]
+    pinned_digest = (
+        pinned_asset.removeprefix("sha256:")
+        if isinstance(pinned_asset, str)
+        else pinned_asset["sha256"]
+    )
+    if receipt["assets"][archive_name]["sha256"] != pinned_digest:
+        raise SystemExit(
+            "publication receipt digest disagrees with reviewed pin: " + source_name
+        )
+# Verify consumed manifest bytes independently of the evidence receipt's claims.
+for source_name, pin_name in (
+    ("content", "documentation-release.json"),
+    ("provider", "terraform-documentation-release.json"),
+    ("api", "spec-release.json"),
+):
+    pin = json.loads((repo / "tools" / pin_name).read_text())
+    manifest_name = "api-catalog.json" if source_name == "api" else "manifest.json"
+    manifest_asset = pin["assets"][manifest_name]
+    manifest_digest = (
+        manifest_asset.removeprefix("sha256:")
+        if isinstance(manifest_asset, str)
+        else manifest_asset["sha256"]
+    )
+    manifest_path = root / "sources" / source_name / manifest_name
+    if hashlib.sha256(manifest_path.read_bytes()).hexdigest() != manifest_digest:
+        raise SystemExit(
+            "publication manifest digest disagrees with reviewed pin: " + source_name
+        )
+
 SITEMAP_NAMESPACE = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
 ARCHIVE_EXPANSION_ERROR = "API archive expanded payload exceeds limit"
 
