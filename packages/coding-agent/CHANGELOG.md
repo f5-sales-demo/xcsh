@@ -79,6 +79,8 @@
 
 ### Fixed
 
+- Keep Read filenames and selectors visible before long directory paths, and wrap complete original and corrected path evidence ([#5047](https://github.com/f5-sales-demo/xcsh/issues/5047)).
+
 - Show bounded completed Bash output when collapsed, retain complete expanded evidence, and keep active calls compact ([#5039](https://github.com/f5-sales-demo/xcsh/issues/5039)).
 
 - Salesforce setup errors now show concise guidance, and the built-in catalog includes the published host-aware Salesforce integration. Standalone CI installation authenticates release metadata without forwarding tokens to public assets.
