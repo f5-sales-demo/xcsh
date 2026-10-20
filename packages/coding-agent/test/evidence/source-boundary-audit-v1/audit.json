@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "73563972964aa8425792ef568d0eb664bda3edf7",
-  "fingerprint": "1ce503b36f8807b29614903363066bab2169140e93755bc0b748a45a4ea6ef7f",
+  "revision": "61bed6b0bb3dfd55e1a0de7fac8717f59128e0c7",
+  "fingerprint": "385e87703910cfd1f655e0b1a5ccde0d87f30057f99f5b826f0af8c09359dc2c",
   "counts": {
     "total": 244,
     "components": 102,
@@ -930,6 +930,7 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
         "packages/coding-agent/test/bash-executor.test.ts",
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/blindfold-intent.test.ts",
         "packages/coding-agent/test/bordered-loader.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
@@ -940,8 +941,7 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/browser/resolver.test.ts",
-        "packages/coding-agent/test/btw-panel-pending.test.ts",
-        "packages/coding-agent/test/chat-handler-images.test.ts"
+        "packages/coding-agent/test/btw-panel-pending.test.ts"
       ],
       "classification": "packages/coding-agent/src/lsp/render.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -2968,6 +2968,7 @@
       ],
       "persistenceSignals": [],
       "directTests": [
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/marketplace-presentation.test.ts",
         "packages/coding-agent/test/pending-glyph-sweep.test.ts",
@@ -3090,7 +3091,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "50206e8dbe96de418368e7cc10436418c223412a873ffa40f6ff87680a6fbb5f",
+      "sha256": "f5793b4db509edbedc7745788540c8169be110fad1ff05b118c12952cf6dbd92",
       "exports": [
         "VisualTruncateResult",
         "truncateToVisualLines"
@@ -4183,6 +4184,7 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
         "packages/coding-agent/test/bash-execution-sixel.test.ts",
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/bordered-loader.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/btw-panel-pending.test.ts",
@@ -4194,8 +4196,7 @@
         "packages/coding-agent/test/components/read-tool-group.test.ts",
         "packages/coding-agent/test/components/todo-reminder.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
-        "packages/coding-agent/test/context-picker.test.ts",
-        "packages/coding-agent/test/custom-editor-keybindings.test.ts"
+        "packages/coding-agent/test/context-picker.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/theme/theme.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4762,6 +4763,7 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
         "packages/coding-agent/test/bash-executor.test.ts",
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/blindfold-intent.test.ts",
         "packages/coding-agent/test/bordered-loader.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
@@ -4772,8 +4774,7 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/browser/resolver.test.ts",
-        "packages/coding-agent/test/btw-panel-pending.test.ts",
-        "packages/coding-agent/test/chat-handler-images.test.ts"
+        "packages/coding-agent/test/btw-panel-pending.test.ts"
       ],
       "classification": "packages/coding-agent/src/task/render.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4890,7 +4891,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "0cfae9ab26bac510ca8d7321110a05881e3944dff7358a6c44476675d0526395",
+      "sha256": "6fa26ff53b7da049f98bc1dc6a14aa46d91a77bf31c74880534e350ce58f8c1c",
       "exports": [
         "BASH_DEFAULT_PREVIEW_LINES",
         "BashTool",
@@ -4922,13 +4923,13 @@
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
         "packages/coding-agent/test/bash-execution-sixel.test.ts",
         "packages/coding-agent/test/bash-executor.test.ts",
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/browser/host-profiles.test.ts",
         "packages/coding-agent/test/cli-output-pipe.test.ts",
         "packages/coding-agent/test/code-presentation-source.test.ts",
         "packages/coding-agent/test/code-presentation-terminal.test.ts",
-        "packages/coding-agent/test/component-boundary-contract.test.ts",
-        "packages/coding-agent/test/context-execution-snapshot.test.ts"
+        "packages/coding-agent/test/component-boundary-contract.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/bash.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5490,6 +5491,7 @@
         "packages/coding-agent/test/agent-session-resolve-reminder.test.ts",
         "packages/coding-agent/test/agent-session-role-thinking.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/bench-routing-matrix.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/chat-handler-slash-commands.test.ts",
@@ -5504,8 +5506,7 @@
         "packages/coding-agent/test/extension-dashboard.test.ts",
         "packages/coding-agent/test/herdr-terminal.test.ts",
         "packages/coding-agent/test/host-software.test.ts",
-        "packages/coding-agent/test/input-controller-clipboard-review.test.ts",
-        "packages/coding-agent/test/integration-registry.test.ts"
+        "packages/coding-agent/test/input-controller-clipboard-review.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/review.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5837,6 +5838,7 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
         "packages/coding-agent/test/bash-executor.test.ts",
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/blindfold-intent.test.ts",
         "packages/coding-agent/test/bordered-loader.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
@@ -5847,8 +5849,7 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/browser/resolver.test.ts",
-        "packages/coding-agent/test/btw-panel-pending.test.ts",
-        "packages/coding-agent/test/chat-handler-images.test.ts"
+        "packages/coding-agent/test/btw-panel-pending.test.ts"
       ],
       "classification": "packages/coding-agent/src/vim/render.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5878,6 +5879,7 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
         "packages/coding-agent/test/bash-executor.test.ts",
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/blindfold-intent.test.ts",
         "packages/coding-agent/test/bordered-loader.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
@@ -5888,8 +5890,7 @@
         "packages/coding-agent/test/browser/extension-reference.test.ts",
         "packages/coding-agent/test/browser/office-pane-server.test.ts",
         "packages/coding-agent/test/browser/resolver.test.ts",
-        "packages/coding-agent/test/btw-panel-pending.test.ts",
-        "packages/coding-agent/test/chat-handler-images.test.ts"
+        "packages/coding-agent/test/btw-panel-pending.test.ts"
       ],
       "classification": "packages/coding-agent/src/web/search/render.ts is individually classified as runtime-lifecycle in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6964,6 +6965,7 @@
         "packages/coding-agent/test/background-terminal.test.ts",
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
         "packages/coding-agent/test/bash-execution-sixel.test.ts",
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/browser/chat-handler.tool-turn.test.ts",
         "packages/coding-agent/test/chat-handler-matrix.test.ts",
@@ -6975,8 +6977,7 @@
         "packages/coding-agent/test/debug/debug-selector-review.test.ts",
         "packages/coding-agent/test/debug/log-viewer.test.ts",
         "packages/coding-agent/test/e2e/panel-harness.test.ts",
-        "packages/coding-agent/test/gutter-block.test.ts",
-        "packages/coding-agent/test/herdr-reporter.test.ts"
+        "packages/coding-agent/test/gutter-block.test.ts"
       ],
       "classification": "packages/tui/src/terminal.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -7035,6 +7036,7 @@
         "packages/coding-agent/test/autoresearch-state.test.ts",
         "packages/coding-agent/test/bash-execution-outcome.test.ts",
         "packages/coding-agent/test/bash-execution-sixel.test.ts",
+        "packages/coding-agent/test/bash-result-preview.test.ts",
         "packages/coding-agent/test/bordered-loader.test.ts",
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/branding-lowercase.test.ts",
@@ -7048,8 +7050,7 @@
         "packages/coding-agent/test/connected-provider-reload.test.ts",
         "packages/coding-agent/test/context-picker.test.ts",
         "packages/coding-agent/test/core/apply-patch-regression.test.ts",
-        "packages/coding-agent/test/custom-editor-keybindings.test.ts",
-        "packages/coding-agent/test/debug/debug-selector-review.test.ts"
+        "packages/coding-agent/test/custom-editor-keybindings.test.ts"
       ],
       "classification": "packages/tui/src/tui.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

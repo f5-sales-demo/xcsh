@@ -105,7 +105,7 @@ describe("bash collapsed view (bash.verbose=false)", () => {
 		_resetSettingsForTest();
 	});
 
-	it("renders single status line with description on success", () => {
+	it("renders description and bounded output on success", () => {
 		const result = {
 			content: [{ type: "text", text: "added 150 packages\n" }],
 			isError: false,
@@ -116,8 +116,8 @@ describe("bash collapsed view (bash.verbose=false)", () => {
 		});
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("Install dependencies");
-		expect(rendered).not.toContain("added 150 packages");
-		expect(rendered).not.toContain("Output");
+		expect(rendered).toContain("added 150 packages");
+		expect(rendered).toContain("Output");
 	});
 
 	it("falls back to command when no description, truncating at terminal width not 60 chars", () => {
@@ -135,8 +135,8 @@ describe("bash collapsed view (bash.verbose=false)", () => {
 		const rendered = stripAnsi(component.render(200).join("\n"));
 		expect(rendered).toContain("with-a-really-long-name@1.2.3-beta.4");
 		expect(rendered).not.toContain("$ ");
-		expect(rendered).not.toContain("some verbose output");
-		expect(rendered).not.toContain("Output");
+		expect(rendered).toContain("some verbose output");
+		expect(rendered).toContain("Output");
 	});
 
 	it("normalizes backslash line continuations in command fallback", () => {
@@ -334,6 +334,6 @@ describe("bash collapsed view — Settings not initialized", () => {
 		});
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("Run test");
-		expect(rendered).not.toContain("output text");
+		expect(rendered).toContain("output text");
 	});
 });
