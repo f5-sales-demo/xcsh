@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "61bed6b0bb3dfd55e1a0de7fac8717f59128e0c7",
-  "fingerprint": "385e87703910cfd1f655e0b1a5ccde0d87f30057f99f5b826f0af8c09359dc2c",
+  "revision": "04580a3643c8a6dfa74c64fb28a5a86bf4799efc",
+  "fingerprint": "c7d7b33bfd3351e00cdf7d5d99792d63cf954f411830c2a9586685b3e4e289b2",
   "counts": {
     "total": 244,
     "components": 102,
@@ -2976,6 +2976,7 @@
         "packages/coding-agent/test/presentation-helpers.test.ts",
         "packages/coding-agent/test/session/messages-repair.test.ts",
         "packages/coding-agent/test/shared-presentation-layout.test.ts",
+        "packages/coding-agent/test/tools/read-path-identity.test.ts",
         "packages/coding-agent/test/tools/vim.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/tool-execution.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
@@ -5291,7 +5292,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "3b089b01bda1aa0bdeeaf971f1ed3391741effa304415e02819caef86d393dc5",
+      "sha256": "1b2d73a4b72aa200cc49be539cfd0780fa0f2cfa08b314b7f8b14bcb7f3638eb",
       "exports": [
         "ReadTool",
         "ReadToolDetails",

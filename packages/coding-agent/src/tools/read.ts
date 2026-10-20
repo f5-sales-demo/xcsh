@@ -1497,6 +1497,20 @@ interface ReadRenderArgs {
 	raw?: boolean;
 }
 
+// Put the file identity before directory context so the shared frame can truncate
+// the header without discarding the part that tells the operator what was read.
+function readPathTitle(filePath: string, args?: ReadRenderArgs): string {
+	const basename = path.basename(filePath);
+	const directory = path.dirname(filePath);
+	let selection = args?.sel ? `:${args.sel}` : "";
+	if (!selection && (args?.offset !== undefined || args?.limit !== undefined)) {
+		const startLine = args.offset ?? 1;
+		const endLine = args.limit !== undefined ? startLine + args.limit - 1 : "";
+		selection = `:${startLine}${endLine ? `-${endLine}` : ""}`;
+	}
+	return `${basename}${selection}${directory === "." ? "" : ` (${directory})`}`;
+}
+
 export const readToolRenderer = {
 	renderCall(args: ReadRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
 		const rawPath =
@@ -1506,15 +1520,7 @@ export const readToolRenderer = {
 		}
 
 		const filePath = shortenPath(rawPath);
-		const offset = args.offset;
-		const limit = args.limit;
-
-		let pathDisplay = filePath || "…";
-		if (offset !== undefined || limit !== undefined) {
-			const startLine = offset ?? 1;
-			const endLine = limit !== undefined ? startLine + limit - 1 : "";
-			pathDisplay += `:${startLine}${endLine ? `-${endLine}` : ""}`;
-		}
+		const pathDisplay = filePath ? readPathTitle(filePath, args) : "…";
 
 		const text = renderStatusLine({ icon: "pending", title: "Read", description: pathDisplay }, uiTheme);
 		return new Text(text, 0, 0);
@@ -1545,6 +1551,15 @@ export const readToolRenderer = {
 		const lang = rawPath ? getLanguageFromPath(rawPath) : undefined;
 
 		const warningLines: string[] = [];
+		if (rawPath) {
+			warningLines.push(uiTheme.fg("dim", wrapBrackets(`Path: ${rawPath}`, uiTheme)));
+		}
+		if (details?.suffixResolution) {
+			warningLines.push(uiTheme.fg("dim", wrapBrackets(`Corrected path: ${details.suffixResolution.to}`, uiTheme)));
+		}
+		if (args?.sel) {
+			warningLines.push(uiTheme.fg("dim", wrapBrackets(`Selector: ${args.sel}`, uiTheme)));
+		}
 		const truncation = details?.meta?.truncation;
 		const fallback = details?.truncation;
 		if (details?.resolvedPath) {
@@ -1567,7 +1582,10 @@ export const readToolRenderer = {
 			const suffix = details?.suffixResolution;
 			const displayPath = suffix ? shortenPath(suffix.to) : filePath || rawPath || "image";
 			const correction = suffix ? ` ${uiTheme.fg("dim", `(corrected from ${shortenPath(suffix.from)})`)}` : "";
-			const header = renderStatusLine({ title: "Read", description: `${displayPath}${correction}` }, uiTheme);
+			const header = renderStatusLine(
+				{ title: "Read", description: `${readPathTitle(displayPath, args)}${correction}` },
+				uiTheme,
+			);
 			const detailLines = contentText ? contentText.split("\n").map(line => uiTheme.fg("toolOutput", line)) : [];
 			const lines = [...detailLines, ...warningLines];
 			const outputBlock = new CachedOutputBlock();
@@ -1594,12 +1612,7 @@ export const readToolRenderer = {
 		const suffix = details?.suffixResolution;
 		const displayPath = suffix ? shortenPath(suffix.to) : filePath;
 		const correction = suffix ? ` ${uiTheme.fg("dim", `(corrected from ${shortenPath(suffix.from)})`)}` : "";
-		let title = displayPath ? `Read ${displayPath}${correction}` : "Read";
-		if (args?.offset !== undefined || args?.limit !== undefined) {
-			const startLine = args.offset ?? 1;
-			const endLine = args.limit !== undefined ? startLine + args.limit - 1 : "";
-			title += `:${startLine}${endLine ? `-${endLine}` : ""}`;
-		}
+		const title = displayPath ? `Read ${readPathTitle(displayPath, args)}${correction}` : "Read";
 		let cachedWidth: number | undefined;
 		let cachedLines: string[] | undefined;
 		return {
