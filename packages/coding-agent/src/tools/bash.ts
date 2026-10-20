@@ -1003,7 +1003,10 @@ export const bashToolRenderer = {
 	): Component {
 		const cmdText = args ? formatBashCommand(args) : undefined;
 		const isError = result.isError === true;
-		const header = renderStatusLine({ title: "Bash" }, uiTheme);
+		const header = renderStatusLine(
+			{ title: "Bash", description: args?.description ?? args?.command?.replace(/\s*\\\r?\n\s*/g, " ") },
+			uiTheme,
+		);
 		const details = result.details;
 		const outputBlock = new CachedOutputBlock();
 
@@ -1013,39 +1016,27 @@ export const bashToolRenderer = {
 				const { renderContext } = options;
 				const expanded = renderContext?.expanded ?? options.expanded;
 
-				// Collapsed mode check first — before heavy computation.
-				// This ensures the collapsed line is always returned when bash.verbose=false,
-				// preventing any transient verbose output flash.
+				// Keep active calls compact; completed calls expose bounded result evidence.
 				const verbose = getBashVerboseSetting();
-				if (!verbose && !expanded) {
-					const hasAsyncDetails = details?.async != null;
+				if (!verbose && !expanded && options.isPartial) {
 					const outputText = renderContext?.output ?? result.content?.find(c => c.type === "text")?.text ?? "";
 					const hasSixel = TERMINAL.imageProtocol === ImageProtocol.Sixel && outputText.includes("\x1bP");
-					if (!isError && !hasAsyncDetails && !hasSixel) {
-						const rawCmd = args?.command?.replace(/\s*\\\r?\n\s*/g, " ");
-						const summaryText = args?.description ?? rawCmd ?? undefined;
-
-						if (options.isPartial) {
-							const lineCount = outputText.split("\n").filter(l => l.trim().length > 0).length;
-							const line = renderStatusLine(
-								{
-									title: "Bash",
-									description: summaryText,
-									meta: lineCount > 0 ? [`${lineCount} lines`] : undefined,
-								},
-								uiTheme,
-							);
-							return [truncateToWidth(line, width)];
-						}
-
-						const line = renderStatusLine(
-							{
-								title: "Bash",
-								description: summaryText,
-							},
-							uiTheme,
-						);
-						return [truncateToWidth(line, width)];
+					if (!isError && !details?.async && !hasSixel) {
+						const summaryText = args?.description ?? args?.command?.replace(/\s*\\\r?\n\s*/g, " ");
+						const lineCount = outputText.split("\n").filter(line => line.trim().length > 0).length;
+						return [
+							truncateToWidth(
+								renderStatusLine(
+									{
+										title: "Bash",
+										description: summaryText,
+										meta: lineCount > 0 ? [`${lineCount} lines`] : undefined,
+									},
+									uiTheme,
+								),
+								width,
+							),
+						];
 					}
 				}
 
@@ -1091,18 +1082,25 @@ export const bashToolRenderer = {
 							.map(line => uiTheme.fg("toolOutput", replaceTabs(line)))
 							.join("\n");
 						const textContent = styledOutput;
-						const result = truncateToVisualLines(textContent, previewLines, width);
+						const result = truncateToVisualLines(
+							textContent,
+							previewLines,
+							Math.max(1, width - 3),
+							0,
+							options.isPartial ? "tail" : "head",
+						);
 						if (result.skippedCount > 0) {
 							outputLines.push(
 								uiTheme.fg(
 									"dim",
-									`… (${result.skippedCount} earlier lines, showing ${result.visualLines.length} of ${result.skippedCount + result.visualLines.length}) (ctrl+o to expand)`,
+									`… (${result.skippedCount} ${options.isPartial ? "earlier" : "more"} lines; ctrl+o to expand)`,
 								),
 							);
 						}
 						outputLines.push(...result.visualLines);
 					}
 				}
+				if (!hasOutput && !options.isPartial) outputLines.push(uiTheme.fg("dim", "No output"));
 				if (timeoutLine) outputLines.push(timeoutLine);
 				if (warningLine) outputLines.push(warningLine);
 
@@ -1111,7 +1109,12 @@ export const bashToolRenderer = {
 						header,
 						state: options.isPartial ? "pending" : isError ? "error" : "success",
 						sections: [
-							{ lines: cmdText ? [uiTheme.fg("dim", cmdText)] : [] },
+							{
+								lines:
+									cmdText && (expanded || verbose || isError || details?.async || hasSixelOutput)
+										? [uiTheme.fg("dim", cmdText)]
+										: [],
+							},
 							{ label: uiTheme.fg("toolTitle", "Output"), lines: outputLines },
 						],
 						width,
