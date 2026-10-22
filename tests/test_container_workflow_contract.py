@@ -14,6 +14,34 @@ def job_block(workflow: str, job: str, next_job: str | None) -> str:
 
 
 class ContainerWorkflowContractTests(unittest.TestCase):
+    def test_rustup_downloads_are_immutable_and_verified_before_execution(self) -> None:
+        for name in ("Dockerfile.alpine", "Dockerfile.debian"):
+            with self.subTest(dockerfile=name):
+                dockerfile = (ROOT / name).read_text(encoding="utf-8")
+                self.assertIn("ARG RUSTUP_VERSION=1.28.2", dockerfile)
+                self.assertIn(
+                    "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${rust_host}/rustup-init",
+                    dockerfile,
+                )
+                self.assertNotIn("rustup/dist/", dockerfile)
+                self.assertIn(
+                    "ARG RUSTUP_INIT_AMD64_SHA256=20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c",
+                    dockerfile,
+                )
+                self.assertIn(
+                    "ARG RUSTUP_INIT_ARM64_SHA256=e3853c5a252fca15252d07cb23a1bdd9377a8c6f3efa01531109281ae47f841c",
+                    dockerfile,
+                )
+                download = dockerfile.index("--output /tmp/rustup-init")
+                verify = dockerfile.index(
+                    'echo "${rustup_sha256}  /tmp/rustup-init" | sha256sum -c -',
+                    download,
+                )
+                execute = dockerfile.index("/tmp/rustup-init -y", download)  # noqa: S108 - source text only
+                self.assertLess(verify, execute)
+                self.assertIn("Unsupported TARGETARCH for Rust", dockerfile)
+                self.assertIn("ARG RUST_TOOLCHAIN=nightly-2026-09-03", dockerfile)
+
     def test_npm_prepack_discovery_receives_authenticated_github_input(self) -> None:
         for name, step in (
             ("ci.yml", "      - name: Publish to npm"),
