@@ -12,6 +12,7 @@ import {
 	fingerprintApiCatalogDiscoveryCorpus,
 } from "../src/internal-urls/api-catalog-discovery";
 import { API_CATALOG_DATA, API_CATALOG_INDEX } from "../src/internal-urls/api-catalog-index.generated";
+import { canonicalizeSqliteHeader } from "../src/internal-urls/sqlite-canonical";
 import { insertApiQmdDocuments } from "./api-qmd-documents";
 import { assertSourceRecord, requireFreshCorpusSources } from "./corpus-sources";
 
@@ -71,10 +72,7 @@ try {
 		await store.close();
 	}
 	canonicalizeSqliteMetadata(databasePath);
-	const sqlite = await readFile(databasePath);
-	sqlite.writeUInt32BE(1, 24);
-	sqlite.writeUInt32BE(1, 92);
-	sqlite.writeUInt32BE(3_000_000, 96);
+	const sqlite = canonicalizeSqliteHeader(await readFile(databasePath));
 	const gzip = gzipSync(sqlite);
 	gzip[9] = 255;
 	const generated = [

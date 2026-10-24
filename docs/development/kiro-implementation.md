@@ -36,7 +36,7 @@ separate development facility.
   The extension-discovery fixture isolates installed developer integrations;
   cross-platform checksum fixtures use the installed Homebrew GNU coreutils.
 - [x] Validated source commits, privacy repair and source-bound native acceptance.
-- [ ] Ubuntu PR delivery; hosted CI, human UX acceptance, merge and task cleanup.
+- [ ] Ubuntu PR delivery; hosted CI, merge and task cleanup.
 
 The named rigor planner/auditor skills are absent from the installed catalog and
 repository. This record tracks explicit acceptance criteria, red/green evidence

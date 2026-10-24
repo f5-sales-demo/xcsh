@@ -8,6 +8,7 @@ import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { citationLine, publicCitationForInternalUri } from "./public-citations";
+import { canonicalizeSqliteHeader } from "./sqlite-canonical";
 import { lookupTerraformAlias } from "./terraform-alias-lookup";
 import { terraformBranchChoices, terraformLeadingRoleHint, terraformRoleChoices } from "./terraform-branch-choices";
 import { verifiedChoiceEdges } from "./terraform-choice-edges";
@@ -526,6 +527,9 @@ export async function buildTerraformIndex(
 	});
 	try {
 		const db = store.internal.db;
+		// Platform SQLite builds have different defaults for clearing unused bytes.
+		// Keep compaction deterministic as well as the live table contents.
+		db.exec("PRAGMA secure_delete = ON");
 		db.exec(`
             CREATE TABLE terraform_documents(path TEXT PRIMARY KEY,metadata TEXT NOT NULL,markdown TEXT NOT NULL,
               id TEXT NOT NULL,canonical_id TEXT NOT NULL,parent_id TEXT,summary TEXT NOT NULL,
@@ -727,6 +731,7 @@ export async function buildTerraformIndex(
 	} finally {
 		await store.close();
 	}
+	await writeFile(output, canonicalizeSqliteHeader(await readFile(output)));
 }
 
 export interface TerraformEmbeddedAssets {
