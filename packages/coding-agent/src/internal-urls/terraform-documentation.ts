@@ -527,6 +527,9 @@ export async function buildTerraformIndex(
 	});
 	try {
 		const db = store.internal.db;
+		// Platform SQLite builds have different defaults for clearing unused bytes.
+		// Keep compaction deterministic as well as the live table contents.
+		db.exec("PRAGMA secure_delete = ON");
 		db.exec(`
             CREATE TABLE terraform_documents(path TEXT PRIMARY KEY,metadata TEXT NOT NULL,markdown TEXT NOT NULL,
               id TEXT NOT NULL,canonical_id TEXT NOT NULL,parent_id TEXT,summary TEXT NOT NULL,

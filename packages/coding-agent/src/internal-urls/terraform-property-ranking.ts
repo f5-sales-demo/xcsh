@@ -811,7 +811,11 @@ export function preparePropertyScope(rows: readonly PropertyCandidate[]) {
 	for (const row of prepared)
 		for (const term of new Set([...row.leaf, ...row.context, ...row.descriptionTerms, ...row.aliasTerms]))
 			frequencies.set(term, (frequencies.get(term) ?? 0) + 1);
-	const weights = new Map([...frequencies].map(([term, count]) => [term, Math.log(2 + rows.length / (1 + count))]));
+	// Math libraries can differ in the final bits of log(). Fixed precision keeps
+	// persisted ranking weights identical across hosts without meaningful score loss.
+	const weights = new Map(
+		[...frequencies].map(([term, count]) => [term, Number(Math.log(2 + rows.length / (1 + count)).toFixed(12))]),
+	);
 	return { rows: prepared, weights };
 }
 export function rankPropertyScope(
