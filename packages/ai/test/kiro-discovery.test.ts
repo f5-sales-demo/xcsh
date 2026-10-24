@@ -13,7 +13,7 @@ const c: KiroCredentials = {
 	region: "eu-west-1",
 	serviceRegion: "us-east-1",
 	startUrl: "https://company.awsapps.com/start",
-	accountId: "one",
+	accountId: "<account-id>",
 	profileArn: "arn:aws:codewhisperer:us-east-1:123:profile/one",
 };
 it("paginates native profiles/models and retains exact IDs, limits and default", async () => {
@@ -54,7 +54,11 @@ it("paginates native profiles/models and retains exact IDs, limits and default",
 });
 it("isolates caches by account, profile and service region", () => {
 	const key = kiroCacheNamespace(c);
-	for (const changed of [{ accountId: "two" }, { profileArn: "other" }, { serviceRegion: "eu-central-1" }])
+	for (const changed of [
+		{ accountId: "<other-account-id>" },
+		{ profileArn: "other" },
+		{ serviceRegion: "eu-central-1" },
+	])
 		expect(kiroCacheNamespace({ ...c, ...changed })).not.toBe(key);
 });
 it("rejects empty, malformed, failed and cycling catalogs", async () => {
@@ -98,7 +102,7 @@ it("never uses another account catalog as an offline or failed-discovery fallbac
 		expect((await left.refresh("online")).models).toHaveLength(1);
 		const right = createModelManager({
 			...base,
-			cacheNamespace: kiroCacheNamespace({ ...c, accountId: "other" }),
+			cacheNamespace: kiroCacheNamespace({ ...c, accountId: "<other-account-id>" }),
 			fetchDynamicModels: async () => {
 				throw new Error("offline");
 			},

@@ -25,7 +25,7 @@ it("coordinates Kiro refresh and preserves metadata across restart and logout", 
 		clientId: "fake",
 		clientSecret: "fake",
 		registrationExpires: Date.now() + 9999999,
-		accountId: "fake-account",
+		accountId: "<account-id>",
 		profileArn: "arn:aws:codewhisperer:us-east-1:123:profile/one",
 		source: { kind: "desktop", path: "fake" },
 	};
@@ -76,10 +76,10 @@ it("keeps account/profile connections separate and binds inference to its select
 		region: "us-east-1",
 		serviceRegion: "us-east-1",
 		startUrl: "https://company.awsapps.com/start",
-		accountId: "old-account",
+		accountId: "<account-id>",
 		profileArn: "arn:aws:codewhisperer:us-east-1:123:profile/one",
 	};
-	const next = { ...old, access: "new-account", accountId: "new-account" };
+	const next = { ...old, access: "new-account", accountId: "<other-account-id>" };
 	const profile = { ...old, access: "other-profile", profileArn: "arn:aws:codewhisperer:us-east-1:123:profile/two" };
 	try {
 		await storage.set("kiro", [
@@ -94,7 +94,9 @@ it("keeps account/profile connections separate and binds inference to its select
 			"old-account",
 		);
 		expect(
-			await storage.getApiKey("kiro", "missing", { kiroConnection: { ...binding, accountId: "missing" } }),
+			await storage.getApiKey("kiro", "missing", {
+				kiroConnection: { ...binding, accountId: "<missing-account-id>" },
+			}),
 		).toBeUndefined();
 	} finally {
 		storage.close();
@@ -115,10 +117,10 @@ it("uses the latest explicit login even when that connection already existed", a
 		region: "us-east-1",
 		serviceRegion: "us-east-1",
 		startUrl: "https://view.awsapps.com/start",
-		accountId: "old",
+		accountId: "<account-id>",
 		profileArn: "profile",
 	};
-	const newer = { ...old, accountId: "new", access: "new", selectedAt: Date.now() + 1000 };
+	const newer = { ...old, accountId: "<other-account-id>", access: "new", selectedAt: Date.now() + 1000 };
 	registerOAuthProvider({
 		id: "kiro",
 		name: "Kiro test",
@@ -157,10 +159,16 @@ it("never falls back to another Kiro account when the selected account loses aut
 		region: "us-east-1",
 		serviceRegion: "us-east-1",
 		startUrl: "https://view.awsapps.com/start",
-		accountId: "old",
+		accountId: "<account-id>",
 		profileArn: "profile",
 	};
-	const selected = { ...old, accountId: "selected", access: "expired", expires: 0, selectedAt: Date.now() };
+	const selected = {
+		...old,
+		accountId: "<selected-account-id>",
+		access: "expired",
+		expires: 0,
+		selectedAt: Date.now(),
+	};
 	registerOAuthProvider({
 		...createKiroOAuth({
 			readSources: async () => [],

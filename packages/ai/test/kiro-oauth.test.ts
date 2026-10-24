@@ -173,7 +173,7 @@ it("rereads newer imported credentials without accepting a changed native login 
 		authMethod: "idc" as const,
 		region: "us-east-1",
 		startUrl: "https://company.awsapps.com/start",
-		accountId: "account",
+		accountId: "<account-id>",
 		profileArn: "profile",
 		serviceRegion: "us-east-1",
 		source: { kind: "desktop" as const, path: "fake" },

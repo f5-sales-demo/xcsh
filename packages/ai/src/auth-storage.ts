@@ -2460,7 +2460,7 @@ function resolveCredentialIdentityKey(provider: string, credential: AuthCredenti
 	if (provider === "kiro") {
 		const c = credential as OAuthCredential & Partial<KiroCredentials>;
 		return c.accountId && c.profileArn && c.serviceRegion
-			? `account:${c.accountId}|profile:${c.profileArn}|region:${c.serviceRegion}`
+			? JSON.stringify([c.accountId, c.profileArn, c.serviceRegion])
 			: null;
 	}
 	return resolveProviderCredentialIdentityKey(provider, extractOAuthCredentialIdentifiers(credential));
