@@ -11,6 +11,7 @@ export type OAuthCredentials = {
 };
 
 export type OAuthProvider =
+	| "kiro"
 	| "xai"
 	| "openrouter"
 	| "meta"

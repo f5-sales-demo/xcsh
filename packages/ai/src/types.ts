@@ -33,6 +33,7 @@ export type { AssistantMessageEventStream } from "./utils/event-stream";
 export const NO_AUTH_API_KEY = "N/A";
 
 export type KnownApi =
+	| "kiro-api"
 	| "pi-messages"
 	| "mistral-conversations"
 	| "openai-completions"
@@ -47,6 +48,7 @@ export type KnownApi =
 	| "cursor-agent";
 export type Api = KnownApi | (string & {});
 export interface ApiOptionsMap {
+	"kiro-api": import("./providers/kiro").KiroOptions;
 	"pi-messages": import("./providers/pi-messages").PiMessagesOptions;
 	"mistral-conversations": import("./providers/mistral-conversations").MistralOptions;
 	"anthropic-messages": AnthropicOptions;
@@ -96,6 +98,7 @@ export interface ThinkingConfig {
 }
 
 export type KnownProvider =
+	| "kiro"
 	| "typesafe"
 	| "cloudflare-workers-ai"
 	| "radius"
@@ -383,6 +386,8 @@ export interface ToolCall {
 }
 
 export interface Usage {
+	/** Distinguishes service token counts from local estimates. */
+	tokenSource?: "reported" | "estimated";
 	/** Distinguishes token reporting from API dollar estimates. */
 	billing?: "api" | "subscription" | "internal";
 	/** False when the catalog rate is dynamic or unavailable. */
@@ -738,6 +743,10 @@ export interface VercelGatewayRouting {
 
 // Model interface for the unified model system
 export interface Model<TApi extends Api = any> {
+	/** Available default certified by the provider catalog. */
+	providerDefault?: boolean;
+	/** Native account/profile that certified a Kiro catalog; never rotate across it. */
+	kiroConnection?: { accountId: string; profileArn: string; serviceRegion: string };
 	/** Catalog-supported model-facing tools; absence does not imply support. */
 	experimentalSupportedTools?: string[];
 	/** Catalog overrides for async question guidance and JSON parameters. */

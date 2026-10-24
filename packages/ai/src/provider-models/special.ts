@@ -1,6 +1,8 @@
 import type { ModelManagerOptions } from "../model-manager";
+import { discoverKiroModels, kiroCacheNamespace } from "../providers/kiro-service";
 import { fetchCodexModels } from "../utils/discovery/codex";
 import { fetchCursorUsableModels } from "../utils/discovery/cursor";
+import type { KiroCredentials } from "../utils/oauth/kiro-credentials";
 
 // ---------------------------------------------------------------------------
 // OpenAI Codex
@@ -104,4 +106,15 @@ export interface ZaiModelManagerConfig {}
 
 export function zaiModelManagerOptions(_config: ZaiModelManagerConfig = {}): ModelManagerOptions<"anthropic-messages"> {
 	return { providerId: "zai" };
+}
+
+/** Kiro catalogs are private to the selected native account and profile. */
+export function kiroModelManagerOptions(config: { apiKey: string }): ModelManagerOptions<"kiro-api"> {
+	const credentials = JSON.parse(config.apiKey) as KiroCredentials;
+	return {
+		providerId: "kiro",
+		cacheNamespace: kiroCacheNamespace(credentials),
+		staticModels: [],
+		fetchDynamicModels: async signal => (await discoverKiroModels(credentials, { signal })).models,
+	};
 }

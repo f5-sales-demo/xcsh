@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "issue": 5066,
+  "executionHost": "macOS arm64",
+  "upstream": {
+    "name": "pi-kiro",
+    "version": "0.1.3",
+    "archiveSha1": "b335e80e6fc2739129092e56abc86afedaa24d8b",
+    "license": "MIT"
+  },
+  "nativeBaseline": {
+    "cliVersion": "2.33.1",
+    "desktopVersion": "1.4.26",
+    "accountType": "AWS Builder ID",
+    "identityMatchVerifiedPrivately": true,
+    "issuerRegion": "us-east-1",
+    "serviceRegion": "us-east-1",
+    "verifiedAvailableModels": [
+      "auto",
+      "claude-haiku-4.5",
+      "claude-sonnet-4.5"
+    ]
+  },
+  "actualTuiRuns": [
+    {
+      "method": "mock Company SSO",
+      "status": "passed",
+      "sourceCommit": "d00638f795f49d88996c27e5b4f77b9ae400de19",
+      "candidateSourceSha256": "dd1dffedf07b5e5fc3ef7ea8d0f3a4185b02b985065a44f133032c208437355e",
+      "bunVersion": "1.4.2",
+      "nativeReceiptSha256": "16d3cb0fc8b3f51dd9bd62fd2d164417dcd9b3f301c239c903072c4a14eca2bb",
+      "turns": {
+        "first": {
+          "sessionSha256": "8d364faa70721916898448984e0da7487e6c65135aad94520a11d8a6d5015905",
+          "turnSha256": "407d6dc18d3b1d3503fc0e77c6109aa5a3c8a872becbdc82008de8299aed36c6",
+          "provider": "kiro",
+          "api": "kiro-api",
+          "model": "kiro/claude-haiku-4.5",
+          "outcome": "stop",
+          "tokenSource": "estimated"
+        },
+        "second": {
+          "sessionSha256": "40160eb7497ac5d453c93e6ad060b9fe7fc81ac1ac763f8f5f7032babd5d4b9d",
+          "turnSha256": "f12b0c9db1963b61e05d4d8006271021de89054efc3c04a181fc640be3ad3f59",
+          "provider": "kiro",
+          "api": "kiro-api",
+          "model": "kiro/claude-haiku-4.5",
+          "outcome": "stop",
+          "tokenSource": "estimated"
+        }
+      }
+    },
+    {
+      "method": "mock Builder ID",
+      "status": "passed",
+      "sourceCommit": "d00638f795f49d88996c27e5b4f77b9ae400de19",
+      "candidateSourceSha256": "dd1dffedf07b5e5fc3ef7ea8d0f3a4185b02b985065a44f133032c208437355e",
+      "bunVersion": "1.4.2",
+      "nativeReceiptSha256": "16d3cb0fc8b3f51dd9bd62fd2d164417dcd9b3f301c239c903072c4a14eca2bb",
+      "turns": {
+        "first": {
+          "sessionSha256": "0f12fbbe0d488670e4f2a5c0647070ba340e2cfafc0fc2347a316116d9c5dc5b",
+          "turnSha256": "2bd392dcb51f26a9a9989d66e23e23b2b11296bef2ab5f593f684d9c99a96a96",
+          "provider": "kiro",
+          "api": "kiro-api",
+          "model": "kiro/claude-haiku-4.5",
+          "outcome": "stop",
+          "tokenSource": "estimated"
+        },
+        "second": {
+          "sessionSha256": "2143309036253871e458177ecd739b6f8335f978715be1d5a58c87f3293bc205",
+          "turnSha256": "06c46f03be9599f4192ebf97dbaf553d152a4c659c037b4fdc864416b3403d99",
+          "provider": "kiro",
+          "api": "kiro-api",
+          "model": "kiro/claude-haiku-4.5",
+          "outcome": "stop",
+          "tokenSource": "estimated"
+        }
+      }
+    },
+    {
+      "method": "live Desktop Builder reuse",
+      "status": "passed",
+      "sourceCommit": "d00638f795f49d88996c27e5b4f77b9ae400de19",
+      "candidateSourceSha256": "a8194b2bea50ec84217c9310e23fe29959b450194de340c19a409647dd2babc2",
+      "bunVersion": "1.4.2",
+      "nativeReceiptSha256": "16d3cb0fc8b3f51dd9bd62fd2d164417dcd9b3f301c239c903072c4a14eca2bb",
+      "turns": {
+        "first": {
+          "sessionSha256": "08425161fdb0bde62ea8400f1c1a6bdd4e998c2b6bbf35b1a5e22eceff66ac2e",
+          "turnSha256": "6d217face82d4297513c8a8c1754f57e535b7708598f8e874f0a1281d1e6f0e7",
+          "provider": "kiro",
+          "api": "kiro-api",
+          "model": "auto",
+          "outcome": "stop",
+          "tokenSource": "estimated"
+        },
+        "second": {
+          "sessionSha256": "dd4aa457a114d9c1e86f7fc2b1d5440ebc02a8126cecf41137252d73879fa2e4",
+          "turnSha256": "f3295d2799081430b8197df709c623fbdeb491e1a7a754a458ac1bdcd8b2276a",
+          "provider": "kiro",
+          "api": "kiro-api",
+          "model": "auto",
+          "outcome": "stop",
+          "tokenSource": "estimated"
+        },
+        "tool": {
+          "sessionSha256": "08425161fdb0bde62ea8400f1c1a6bdd4e998c2b6bbf35b1a5e22eceff66ac2e",
+          "turnSha256": "0bb688b44ea5324e14c92d76ccc14d679f1d70570393e78c1090c20013c3703d",
+          "provider": "kiro",
+          "api": "kiro-api",
+          "model": "auto",
+          "outcome": "stop",
+          "tokenSource": "estimated"
+        }
+      }
+    },
+    {
+      "method": "live fresh Builder device authorization",
+      "status": "passed",
+      "sourceCommit": null,
+      "candidateSourceSha256": "30de7592388d80d6ae69c892dfa9cde0ba36e7e85ccd8b0e90ee46f5c72eb0cc",
+      "bunVersion": "1.4.4",
+      "nativeReceiptSha256": "2c696b96fbd1e0a16c8e4ab36d7247a7d7c0284144173bb577c8ea1d078d7f68",
+      "turns": {
+        "first": {
+          "sessionSha256": "8452ef67af7cbbb678bbc32e10ba1182402080489e7e61ffa4110f4224e7aa6d",
+          "turnSha256": "43108b79eee09d680bad23b0acd6009d171c25a65a8e713a266159da6433a092",
+          "provider": "kiro",
+          "api": "kiro-api",
+          "model": "auto",
+          "outcome": "stop",
+          "tokenSource": "estimated"
+        },
+        "second": {
+          "sessionSha256": "0ee8cc8ccf7f735e47ebfff468e6637eb1917678b9f24196b3fe021c28ba5db7",
+          "turnSha256": "de62606fef9e517b583d5ee1774e9f211c70b3f931e408a20984642e8fc4f1d3",
+          "provider": "kiro",
+          "api": "kiro-api",
+          "model": "auto",
+          "outcome": "stop",
+          "tokenSource": "estimated"
+        }
+      }
+    }
+  ],
+  "verification": {
+    "focusedKiroTests": {
+      "passed": 34,
+      "failed": 0,
+      "bunVersion": "1.4.2"
+    },
+    "affectedAiTests": {
+      "passed": 1118,
+      "skipped": 456,
+      "failed": 0,
+      "bunVersion": "1.4.2"
+    },
+    "workspaceBaseline": {
+      "codingAgentPassed": 10315,
+      "codingAgentSkipped": 565,
+      "failed": 0,
+      "bunVersion": "1.4.4"
+    },
+    "typescriptAndDocs": "passed",
+    "privateFailureEvidencePreserved": true,
+    "livePrompts": "ordinary arithmetic and README lookup"
+  },
+  "unverified": [
+    "live corporate SSO",
+    "Opus 5.5 access"
+  ],
+  "privacyScannerReport": "https://github.com/f5-sales-demo/docs-control/issues/2609",
+  "uiFlow": {
+    "connectionChoices": [
+      "Kiro Desktop \u2014 AWS Builder ID",
+      "Kiro CLI \u2014 AWS Builder ID",
+      "AWS Builder ID",
+      "Company SSO"
+    ],
+    "connectedActions": [
+      "Use recommended model",
+      "Browse models",
+      "Done"
+    ],
+    "activationScopes": [
+      "Use in this conversation",
+      "Save as default",
+      "Assign to role"
+    ],
+    "renderedCheckpoints": "retained privately"
+  }
+}

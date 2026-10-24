@@ -858,6 +858,17 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		await logger.time("awaitLiteLLMDiscovery", () => modelRegistry.awaitBackgroundRefresh());
 	}
 
+	// Kiro's service default (including "auto") is account/profile scoped and
+	// arrives through dynamic discovery. Resolve it before any startup fallback.
+	if (
+		!hasExplicitModel &&
+		[settings.getModelRole("default"), existingSession.models.default].some(
+			value => value && parseModelString(value)?.provider === "kiro",
+		)
+	) {
+		await modelRegistry.awaitBackgroundRefresh();
+		await modelRegistry.refreshProvider("kiro", "online-if-uncached");
+	}
 	const defaultRoleSpec = logger.time("resolveDefaultModelRole", () =>
 		resolveModelRoleValue(settings.getModelRole("default"), modelRegistry.getAvailable(), {
 			settings,

@@ -19,7 +19,8 @@ describe("extensions discovery", () => {
 	});
 
 	const discoverForTest = async (configuredPaths: string[] = []) => {
-		const result = await discoverAndLoadExtensions(configuredPaths, tempDir.path());
+		// Discover fixture plugins without loading the developer's installed integrations.
+		const result = await discoverAndLoadExtensions(configuredPaths, tempDir.path(), undefined, [], tempDir.path());
 		return {
 			...result,
 			extensions: filterUserExtensions(result.extensions),

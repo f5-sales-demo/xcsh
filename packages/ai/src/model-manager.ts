@@ -28,6 +28,8 @@ export interface ModelsDevFallback<TApi extends Api = Api, TPayload = unknown> {
 export interface ModelManagerOptions<TApi extends Api = Api, TModelsDevPayload = unknown> {
 	/** Provider id used for static lookup and cache namespacing. */
 	providerId: Provider;
+	/** Credential/profile-specific namespace; model routing still uses providerId. */
+	cacheNamespace?: string;
 	/** Optional static list override. When omitted, bundled models.json is used. */
 	staticModels?: readonly Model<TApi>[];
 	/** Optional override for the cache database path. Default: <agent-dir>/models.db. */
@@ -98,7 +100,7 @@ export async function resolveProviderModels<TApi extends Api = Api, TModelsDevPa
 	const staticModels = normalizeModelList<TApi>(
 		options.staticModels ?? getBundledModels(options.providerId as GeneratedProvider),
 	);
-	const cache = readModelCache<TApi>(options.providerId, ttlMs, now, dbPath);
+	const cache = readModelCache<TApi>(options.cacheNamespace ?? options.providerId, ttlMs, now, dbPath);
 	const dynamicFetcher = options.fetchDynamicModels;
 	const hasDynamicFetcher = typeof dynamicFetcher === "function";
 	const hasAuthoritativeCache = (cache?.authoritative ?? false) || !hasDynamicFetcher;
@@ -129,13 +131,13 @@ export async function resolveProviderModels<TApi extends Api = Api, TModelsDevPa
 	if (shouldFetchFromNetwork) {
 		if (dynamicFetchSucceeded) {
 			const snapshotModels = mergeDynamicModels(mergeModelSources(staticModels, modelsDevModels), dynamicModels);
-			writeModelCache(options.providerId, now(), snapshotModels, true, dbPath);
+			writeModelCache(options.cacheNamespace ?? options.providerId, now(), snapshotModels, true, dbPath);
 		} else {
 			// Dynamic fetch failed — update cache with a non-authoritative snapshot so
 			// stale state remains visible while retry backoff still applies.
-			const latestCache = readModelCache<TApi>(options.providerId, ttlMs, now, dbPath);
+			const latestCache = readModelCache<TApi>(options.cacheNamespace ?? options.providerId, ttlMs, now, dbPath);
 			writeModelCache(
-				options.providerId,
+				options.cacheNamespace ?? options.providerId,
 				now(),
 				mergeDynamicModels(
 					mergeModelSources(staticModels, modelsDevModels),
