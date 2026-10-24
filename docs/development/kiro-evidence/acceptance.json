@@ -170,5 +170,24 @@
     "live corporate SSO",
     "Opus 5.5 access"
   ],
-  "privacyScannerReport": "https://github.com/f5-sales-demo/docs-control/issues/2609"
+  "privacyScannerReport": "https://github.com/f5-sales-demo/docs-control/issues/2609",
+  "uiFlow": {
+    "connectionChoices": [
+      "Kiro Desktop \u2014 AWS Builder ID",
+      "Kiro CLI \u2014 AWS Builder ID",
+      "AWS Builder ID",
+      "Company SSO"
+    ],
+    "connectedActions": [
+      "Use recommended model",
+      "Browse models",
+      "Done"
+    ],
+    "activationScopes": [
+      "Use in this conversation",
+      "Save as default",
+      "Assign to role"
+    ],
+    "renderedCheckpoints": "retained privately"
+  }
 }
