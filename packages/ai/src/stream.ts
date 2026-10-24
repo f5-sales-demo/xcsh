@@ -20,6 +20,7 @@ import { type GoogleOptions, streamGoogle } from "./providers/google";
 import { type GoogleGeminiCliOptions, streamGoogleGeminiCli } from "./providers/google-gemini-cli";
 import { type GoogleVertexOptions, streamGoogleVertex } from "./providers/google-vertex";
 import { isKimiModel, streamKimi } from "./providers/kimi";
+import { streamKiro } from "./providers/kiro";
 import { stream as streamMistral } from "./providers/mistral-conversations";
 import { streamOpenAICodexResponses } from "./providers/openai-codex-responses";
 import { type OpenAICompletionsOptions, streamOpenAICompletions } from "./providers/openai-completions";
@@ -207,6 +208,8 @@ export function stream<TApi extends Api>(
 
 	const api: Api = model.api;
 	switch (api) {
+		case "kiro-api":
+			return streamKiro(model as Model<"kiro-api">, context, providerOptions);
 		case "anthropic-messages":
 			return streamAnthropic(model as Model<"anthropic-messages">, context, providerOptions);
 
@@ -477,6 +480,8 @@ export function mapOptionsForApi<TApi extends Api>(
 	};
 
 	switch (model.api) {
+		case "kiro-api":
+			return { ...base, fetch: options?.fetch, timeoutMs: options?.timeoutMs } as OptionsForApi<TApi>;
 		case "pi-messages":
 			return { ...base, reasoning: options?.reasoning, toolChoice: options?.toolChoice } as OptionsForApi<TApi>;
 		case "mistral-conversations":

@@ -18,6 +18,7 @@ import {
 	googleGeminiCliModelManagerOptions,
 	googleVertexModelManagerOptions,
 	type ImageModel,
+	kiroModelManagerOptions,
 	type Model,
 	type ModelManagerOptions,
 	type ModelRefreshStrategy,
@@ -1742,6 +1743,11 @@ export class ModelRegistry {
 			createOptions: (key: string) => ModelManagerOptions<Api>;
 		}> = [
 			{
+				providerId: "kiro",
+				resolveKey: value => value,
+				createOptions: apiKey => kiroModelManagerOptions({ apiKey }),
+			},
+			{
 				providerId: "google-vertex",
 				resolveKey: value => value,
 				createOptions: apiKey => googleVertexModelManagerOptions({ apiKey }),
@@ -2632,7 +2638,11 @@ export class ModelRegistry {
 		if (this.#keylessProviders.has(model.provider)) {
 			return kNoAuth;
 		}
-		return this.authStorage.getApiKey(model.provider, sessionId, { baseUrl: model.baseUrl, modelId: model.id });
+		return this.authStorage.getApiKey(model.provider, sessionId, {
+			baseUrl: model.baseUrl,
+			modelId: model.id,
+			kiroConnection: model.kiroConnection,
+		});
 	}
 
 	/**

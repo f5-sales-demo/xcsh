@@ -12,7 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { $envExact, getAgentDbPath, logger } from "@f5-sales-demo/pi-utils";
 import { getEnvApiKey } from "./stream";
-import type { Provider } from "./types";
+import type { Model, Provider } from "./types";
 import type {
 	CredentialRankingStrategy,
 	UsageCredential,
@@ -44,6 +44,7 @@ import { loginHuggingface } from "./utils/oauth/huggingface";
 import { loginKagi } from "./utils/oauth/kagi";
 import { loginKilo } from "./utils/oauth/kilo";
 import { loginKimi } from "./utils/oauth/kimi";
+import type { KiroCredentials } from "./utils/oauth/kiro-credentials";
 import { loginLiteLLM } from "./utils/oauth/litellm";
 import { loginLmStudio } from "./utils/oauth/lm-studio";
 import { loginMiniMaxCode, loginMiniMaxCodeCn } from "./utils/oauth/minimax-code";
@@ -267,6 +268,7 @@ type UsageRequestDescriptor = {
 };
 
 type AuthApiKeyOptions = {
+	kiroConnection?: Model["kiroConnection"];
 	baseUrl?: string;
 	modelId?: string;
 };
@@ -1284,7 +1286,19 @@ export class AuthStorage {
 				break;
 			}
 		}
-		const newCredential: OAuthCredential = { type: "oauth", ...credentials };
+		const newCredential: OAuthCredential = {
+			type: "oauth",
+			...credentials,
+			...(provider === "kiro"
+				? {
+						selectedAt: Math.max(
+							Date.now(),
+							((this.#store.getLatestKiroSelection()?.credential as Partial<KiroCredentials> | undefined)
+								?.selectedAt ?? 0) + 1,
+						),
+					}
+				: {}),
+		};
 		await this.#upsertOAuthCredential(credentialProvider, newCredential);
 	}
 
@@ -1971,13 +1985,29 @@ export class AuthStorage {
 		sessionId?: string,
 		options?: AuthApiKeyOptions,
 	): Promise<string | undefined> {
-		const credentials = this.#getStoredCredentials(provider)
+		let credentials = this.#getStoredCredentials(provider)
 			.map((entry, index) => ({ credential: entry.credential, index, credentialId: entry.id }))
 			.filter(
 				(entry): entry is { credential: OAuthCredential; index: number; credentialId: number } =>
 					entry.credential.type === "oauth",
 			);
 
+		if (provider === "kiro") {
+			const binding = options?.kiroConnection;
+			const latest = binding ? undefined : this.#store.getLatestKiroSelection();
+			credentials = binding
+				? credentials.filter(entry => {
+						const c = entry.credential as OAuthCredential & Partial<KiroCredentials>;
+						return (
+							c.accountId === binding.accountId &&
+							c.profileArn === binding.profileArn &&
+							c.serviceRegion === binding.serviceRegion
+						);
+					})
+				: credentials.filter(entry => {
+						return latest && !latest.disabledCause && entry.credentialId === latest.id;
+					});
+		}
 		if (credentials.length === 0) return undefined;
 
 		const providerKey = this.#getProviderTypeKey(provider, "oauth");
@@ -2172,6 +2202,8 @@ export class AuthStorage {
 			}
 			if (!result) return undefined;
 			const updated: OAuthCredential = {
+				...selection.credential,
+				...result.newCredentials,
 				type: "oauth",
 				access: result.newCredentials.access,
 				refresh: result.newCredentials.refresh,
@@ -2425,6 +2457,12 @@ function resolveProviderCredentialIdentityKey(provider: string, identifiers: str
 
 function resolveCredentialIdentityKey(provider: string, credential: AuthCredential): string | null {
 	if (credential.type === "api_key") return null;
+	if (provider === "kiro") {
+		const c = credential as OAuthCredential & Partial<KiroCredentials>;
+		return c.accountId && c.profileArn && c.serviceRegion
+			? `account:${c.accountId}|profile:${c.profileArn}|region:${c.serviceRegion}`
+			: null;
+	}
 	return resolveProviderCredentialIdentityKey(provider, extractOAuthCredentialIdentifiers(credential));
 }
 
@@ -2836,6 +2874,17 @@ export class AuthCredentialStore {
 
 	// ─── AuthCredentialStore interface ──────────────────────────────────────
 
+	/** Keep the most recent explicit native connection selected even after it is disabled. */
+	getLatestKiroSelection(): StoredAuthCredential | undefined {
+		const row = this.#db
+			.prepare(
+				"SELECT id, provider, credential_type, data, disabled_cause, identity_key FROM auth_credentials WHERE provider = 'kiro' AND credential_type = 'oauth' ORDER BY CASE WHEN json_valid(data) THEN COALESCE(json_extract(data, '$.selectedAt'), 0) ELSE 0 END DESC, id DESC LIMIT 1",
+			)
+			.get() as AuthRow | undefined;
+		if (!row) return undefined;
+		const credential = deserializeCredential(row);
+		return credential ? toStoredAuthCredential(row, credential) : undefined;
+	}
 	listAuthCredentials(provider?: string): StoredAuthCredential[] {
 		const rows =
 			(provider

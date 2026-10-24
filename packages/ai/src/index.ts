@@ -20,6 +20,8 @@ export * from "./providers/google";
 export * from "./providers/google-gemini-cli";
 export * from "./providers/google-vertex";
 export * from "./providers/kimi";
+export * from "./providers/kiro";
+export * from "./providers/kiro-service";
 export type { OpenAICodexResponsesOptions } from "./providers/openai-codex-responses";
 export * from "./providers/openai-completions";
 export * from "./providers/openai-responses";

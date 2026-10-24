@@ -272,6 +272,14 @@ export function getLoginRecommendation(
 	const provider = canonicalizeOAuthProviderId(providerId);
 	const discovery = registry.getProviderDiscoveryState?.(provider);
 	if (discovery?.status !== "ok" || discovery.stale) return undefined;
+	if (provider === "kiro") {
+		const model = registry
+			.getAll()
+			.find(model => model.provider === provider && model.providerDefault && discovery.models.includes(model.id));
+		return model
+			? { provider, modelId: model.id, label: model.name, description: "Kiro service default" }
+			: undefined;
+	}
 	const choices = [
 		ANTHROPIC_LOGIN_MODEL_CHOICE,
 		OPENAI_CODEX_LOGIN_MODEL_CHOICE,

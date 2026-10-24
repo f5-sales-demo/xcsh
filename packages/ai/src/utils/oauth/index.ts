@@ -9,6 +9,7 @@ import { refreshGitLabDuoToken } from "./gitlab-duo";
 import { refreshAntigravityToken, refreshVertexWithAntigravityOAuth } from "./google-antigravity";
 import { refreshGoogleCloudToken } from "./google-gemini-cli";
 import { refreshKimiToken } from "./kimi";
+import { kiroOAuth } from "./kiro";
 import { metaOAuth } from "./meta";
 import { refreshOpenAICodexToken } from "./openai-codex";
 import { openRouterOAuth } from "./openrouter";
@@ -82,6 +83,7 @@ export { loginKagi } from "./kagi";
 export { loginKilo } from "./kilo";
 // Kimi Code
 export { loginKimi, refreshKimiToken } from "./kimi";
+export * from "./kiro";
 // LiteLLM (API key)
 export {
 	type LiteLLMLoginDefaults,
@@ -147,6 +149,12 @@ export { loginZai } from "./zai";
 export { loginZenMux } from "./zenmux";
 
 const builtInOAuthProviders: OAuthProviderInfo[] = [
+	{
+		id: "kiro",
+		name: "Kiro (AWS Builder ID / Company SSO)",
+		description: "Use Kiro Desktop, CLI, or a fresh native login",
+		available: true,
+	},
 	{ id: "xai", name: "xAI (Grok/X subscription)", available: true },
 	{
 		id: "anthropic",
@@ -362,6 +370,7 @@ export function registerOAuthProvider(provider: OAuthProviderInterface): void {
 export function getOAuthProvider(id: OAuthProviderId): OAuthProviderInterface | undefined {
 	const custom = customOAuthProviders.get(id);
 	if (custom) return custom;
+	if (id === "kiro") return kiroOAuth;
 	if (id === "openrouter") return openRouterOAuth;
 	if (id === "meta") return metaOAuth;
 	if (id === "xai") return xaiOAuth;
@@ -546,17 +555,19 @@ export async function getOAuthApiKey(
 		provider === "google-gemini-cli" ||
 		provider === "google-antigravity" ||
 		provider === "google-antigravity-enterprise";
-	const apiKey = needsStructuredApiKey
-		? JSON.stringify({
-				token: creds.access,
-				enterpriseUrl: creds.enterpriseUrl,
-				projectId: creds.projectId,
-				refreshToken: creds.refresh,
-				expiresAt: creds.expires,
-				email: creds.email,
-				accountId: creds.accountId,
-			})
-		: creds.access;
+	const apiKey =
+		getOAuthProvider(provider)?.getApiKey?.(creds) ??
+		(needsStructuredApiKey
+			? JSON.stringify({
+					token: creds.access,
+					enterpriseUrl: creds.enterpriseUrl,
+					projectId: creds.projectId,
+					refreshToken: creds.refresh,
+					expiresAt: creds.expires,
+					email: creds.email,
+					accountId: creds.accountId,
+				})
+			: creds.access);
 	return { newCredentials: creds, apiKey };
 }
 
