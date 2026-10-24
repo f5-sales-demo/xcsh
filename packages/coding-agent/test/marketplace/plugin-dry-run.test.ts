@@ -171,6 +171,15 @@ describe("plugin dry-run", () => {
 			Bun.spawnSync(["bun", cli, "plugin", "marketplace", "add", fixture], { cwd: repository, env: environment })
 				.exitCode,
 		).toBe(0);
+		// Keep the local upgrade fixture independent of the live built-in marketplace.
+		const marketplacesPath = join(root, ".xcsh", "marketplaces.json");
+		const marketplaces = JSON.parse(readFileSync(marketplacesPath, "utf8"));
+		const builtin = marketplaces.marketplaces.find(
+			(entry: { name: string }) => entry.name === "f5-sales-demo-marketplace",
+		);
+		expect(builtin).toBeDefined();
+		builtin.enabled = false;
+		writeFileSync(marketplacesPath, `${JSON.stringify(marketplaces)}\n`);
 		expect(
 			Bun.spawnSync(["bun", cli, "plugin", "install", "hello-plugin@test-marketplace"], {
 				cwd: repository,

@@ -159,6 +159,10 @@ describe("Terraform snapshot ingestion", () => {
 			expect(terraformHash(await readFile(path.join(root, "first.sqlite")))).toBe(
 				terraformHash(await readFile(path.join(root, "second.sqlite"))),
 			);
+			const canonicalBytes = await readFile(path.join(root, "first.sqlite"));
+			expect(canonicalBytes.readUInt32BE(24)).toBe(1);
+			expect(canonicalBytes.readUInt32BE(92)).toBe(1);
+			expect(canonicalBytes.readUInt32BE(96)).toBe(3_000_000);
 			const prepared = new Database(path.join(root, "first.sqlite"), { readonly: true });
 			expect(prepared.query("SELECT schema_version FROM property_index_provenance").get()).toEqual({
 				schema_version: 7,

@@ -8,6 +8,7 @@ import tar from "tar-stream";
 import { parse as parseYaml } from "yaml";
 import { type DocumentationPassage, githubHeadingAnchor } from "./documentation-metadata";
 import { citationLine, publicCitationForInternalUri } from "./public-citations";
+import { canonicalizeSqliteHeader } from "./sqlite-canonical";
 import { lookupTerraformAlias } from "./terraform-alias-lookup";
 import { terraformBranchChoices, terraformLeadingRoleHint, terraformRoleChoices } from "./terraform-branch-choices";
 import { verifiedChoiceEdges } from "./terraform-choice-edges";
@@ -727,6 +728,7 @@ export async function buildTerraformIndex(
 	} finally {
 		await store.close();
 	}
+	await writeFile(output, canonicalizeSqliteHeader(await readFile(output)));
 }
 
 export interface TerraformEmbeddedAssets {
