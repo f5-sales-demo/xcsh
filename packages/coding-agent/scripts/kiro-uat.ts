@@ -135,6 +135,7 @@ async function currentSessionPath(): Promise<string | undefined> {
 	return undefined;
 }
 async function launchCandidate(label: string) {
+	await wait(/╰─[^▏\n]*─╯\s*$|(?:^|\n)[^\n]*[$%❯>]\s*$/, `${label}-shell`);
 	const before = await currentSessionPath();
 	await command(["herdr", "pane", "run", pane, launch]);
 	const deadline = Date.now() + 30000;

@@ -1,0 +1,50 @@
+-desktop/agent' '/opt/homebrew/Cellar/bun@1.4.2/1.4.2/bin/bun' dev --no-exten
+sions --no-skills --no-rules
+$ bun run ensure:dependencies && bun scripts/ensure-dev-native.ts && bun --pr
+eload ./scripts/dev-vertex-credentials.ts packages/coding-agent/src/cli.ts --
+no-extensions --no-skills --no-rules
+$ bun scripts/check-installed-dependencies.ts --repair
+
+╭────────────────────────────────────────────────╮
+│ xcsh v23.9.5                                   │
+├────────────────────────────────────────────────┤
+│                    ________                    │
+│               (▒▒▒▒████████▒▒▒▒)               │
+│          (▒▒▒███████████████████▒▒▒)           │
+│       (▒▒███████████████████████████████)      │
+│     (▒██████████▒▒▒▒▒███████████████████▒)     │
+│    (▒██████████▒█████▒▒▒███▒▒▒▒▒▒▒▒▒▒▒▒▒█▒)    │
+│   (▒██████████████████████▒███████████████▒)   │
+│  (▒████████████████████████████████████████▒)  │
+│ (▒███▒▒▒███████▒▒▒▒▒████████████████████████▒) │
+│ |▒██████▒███████████████████████████████████▒| │
+│ |▒████████████████████▒▒▒▒▒▒▒▒▒▒▒███████████▒| │
+│ (▒███████████████████████████████▒▒████████▒▒) │
+│  (▒████████████████████████████████▒▒▒████▒▒)  │
+│   (▒█████████████████████████████████████▒▒)   │
+│    (▒▒███████████████▒█████████████████▒▒▒)    │
+│     (▒▒▒▒▒████████████▒▒█████████████▒▒█▒)     │
+│       (▒██▒▒▒▒▒▒▒▒▒▒████▒▒▒▒▒▒▒▒▒▒▒▒▒█▒)       │
+│          (▒▒▒███████████████████▒▒▒)           │
+│               (▒▒▒▒████████▒▒▒▒)               │
+│                                                │
+╰────────────────────────────────────────────────╯
+
+
+ Saved default: kiro/auto · reasoning inherit
+
+ ┃ What is 2 + 2? Reply with only the number.
+
+● 4
+
+ ┃ Read packages/ai/README.md using the read tool and tell me its first
+  ┃ Markdown heading.
+
+● Read packages/ai/README.md
+
+● The first Markdown heading in packages/ai/README.md is:
+
+  # @f5-sales-demo/pi-ai
+
+╭─ 2%   …es/feature/issue-5066-native-kiro-login ───────────────────────╮
+╰─ ▏                                                                      ─╯

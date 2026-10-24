@@ -35,8 +35,8 @@ separate development facility.
   full local workspace suite passed. Native exports were built/probed locally.
   The extension-discovery fixture isolates installed developer integrations;
   cross-platform checksum fixtures use the installed Homebrew GNU coreutils.
-- [ ] Source commit and Ubuntu PR delivery; hosted CI, human UX acceptance, merge
-  and task worktree cleanup.
+- [x] Validated source commits, privacy repair and source-bound native acceptance.
+- [ ] Ubuntu PR delivery; hosted CI, human UX acceptance, merge and task cleanup.
 
 The named rigor planner/auditor skills are absent from the installed catalog and
 repository. This record tracks explicit acceptance criteria, red/green evidence
@@ -51,3 +51,7 @@ preserved privately. The runner now uses an ordinary arithmetic question and a
 read-only README task. Raw identities, credentials, authorization codes, screen
 captures, transcripts and failures stay outside the worktree. Public receipts
 contain sanitized results and hashes only.
+
+Sanitized source-bound results are in `kiro-evidence/acceptance.json`. The
+privacy scanner template case is reported in docs-control issue 2609; its
+managed rules were not changed.
