@@ -6,8 +6,8 @@ at this checkpoint; the save phase publishes recoverable source and open PRs wit
 
 ## Scope and records
 
-- Native baseline issue: <https://github.com/f5-sales-demo/xcsh/issues/5070>; PR: pending publication (see issue #5070).
-- WebRTC continuation issue: <https://github.com/f5-sales-demo/xcsh/issues/5071>; PR: pending publication (see issue #5071).
+- Native baseline issue: <https://github.com/f5-sales-demo/xcsh/issues/5070>; PR: <https://github.com/f5-sales-demo/xcsh/pull/5073>.
+- WebRTC continuation issue: <https://github.com/f5-sales-demo/xcsh/issues/5071>; PR: <https://github.com/f5-sales-demo/xcsh/pull/5074>.
 - Historical reliability issue: <https://github.com/f5-sales-demo/xcsh/issues/4406> and PR:
   <https://github.com/f5-sales-demo/xcsh/pull/4408> remain open. Their full A/B/C/D acceptance matrix is unfinished.
 - Historical failed TypeScript CI: <https://github.com/f5-sales-demo/xcsh/actions/runs/36245227514.>
@@ -45,6 +45,7 @@ workstation `53e58b748ff283d0f3d8b5847ecbda36e30dd04e5548c9a7cc4a0a3fd72eefdb`. 
 
 ## Hosts, tools and ownership
 
+Resolve `<REPO_ROOT>` and the exact SSH destination from the private local control `AGENTS.md`.
 All GitHub mutations run on the Ubuntu workstation through direct SSH using the delivery route recorded in
 local control `AGENTS.md`. Verify effective Linux identity, Git identity, repository and intended object before
 writing. The canonical GitHub repository is `f5-sales-demo/xcsh`; the NUC origin is a local recovery bundle,
@@ -53,7 +54,7 @@ not GitHub. Use the installed cross-host-cli exact-argument helpers and verify s
 | Host | Role and path |
 | --- | --- |
 | Mac control workspace | Local `xcsh-recap`; sanitized handoff mirror and private evidence scripts; no Xcode |
-| Ubuntu workstation | `/data/robin-GIT/xcsh`; publication in `/data/robin-GIT/.worktrees/xcsh-native-iphone-checkpoint-20261025` and `/data/robin-GIT/.worktrees/xcsh-webrtc-phone-continuation-20261025` |
+| Ubuntu workstation | `<REPO_ROOT>/xcsh`; publication in `<REPO_ROOT>/.worktrees/xcsh-native-iphone-checkpoint-20261025` and `<REPO_ROOT>/.worktrees/xcsh-webrtc-phone-continuation-20261025` |
 | NUC | `~/GIT/xcsh-uat/.worktrees/voice-subscription-cleanroom-20261021` and `~/GIT/xcsh-uat/.worktrees/owned-phone-client-20261022`; installed qualification runtime |
 
 Repository owners review shared backend changes in `packages/coding-agent`, related AI/UI/native code and
@@ -64,8 +65,9 @@ operational responsibility, not an assigned reviewer. Protected governance files
 Current publication toolchain is declared Bun **1.4.2**, matching upstream packageManager/bootstrap and CI.
 Historical backend/client qualification used Bun **1.4.3**, with an explicit bootstrap version override.
 Those historical results do not prove current 1.4.2 validation. Use the declared Rust toolchain and a Linux
-source-matched native addon; never reuse an addon from an unrelated source tree. Node is needed by prose/hooks;
-Python is needed by documentation checks. WebRTC CI uses an isolated virtual environment with pinned aiohttp,
+source-matched native addon; never reuse an addon from an unrelated source tree. Publication qualification used Node 26.11.1, Python 3.15.0, pre-commit 3.6.2 and
+Rust nightly-2026-09-03 (rustc/cargo 1.100.0 nightly). Node supports prose/hooks; Python supports docs checks.
+The adapter requires Python 3.10 or newer and pins aiohttp 3.14.5 in its isolated environment. WebRTC CI uses an isolated virtual environment with pinned aiohttp,
 mocked RPC and no provider credentials. Bootstrap with:
 
 ```sh
@@ -130,7 +132,7 @@ That archive contains old state/units; it is recovery evidence, not permission t
 | Native physical identity | Failed: identified as ChatGPT and added unsolicited follow-up | No unchanged retry; no native voice acceptance |
 | Owned-client source | Four mocked adapter tests, browser JS build, TypeScript and commit checks passed historically | Physical iPhone Safari/Home Screen behavior pending |
 | Owned-client automated speech | xcsh identity; 426 media frames; zero startup peak; provider closure | Automated result does not accept the phone |
-| Fresh publication | In progress; see issue/PR receipts before treating save phase as complete | Source and CI only; final heads/check links in PR comments |
+| Fresh publication | Both streams: 13,934 Bun pass / 1,080 skip / 0 fail; 328 required Rust tests pass without skips; 35 docs tests pass; pre-commit, source checks, native readiness and CLI smoke pass; WebRTC additionally 4 mocked adapter tests and browser build pass | Source and CI only; final heads/check links in PR comments |
 | Physical/endurance | Two fresh owned-client calls pending, second at least 20 minutes | Human hearing/voice required; engine replacement unobserved means tested duration only |
 
 Native subscription append rejection, native identity failure, earlier full-suite failures, replacement failures,
@@ -140,6 +142,9 @@ and failed capture assessments remain private and immutable. Evidence roots incl
 `live-source-probe/owned-identity-1792674936185314206`,
 `owned-phone-runtime/automated-probe-1792676133122137057`, and
 `owned-phone-runtime/physical-window.private.json` beneath the NUC qualification root.
+Private receipt SHA256 values: source-candidate `191f3831cbdc1893916545539b19e3b9d5b714040981773a8f5d6e2905e874af`;
+artifact metadata `6b8ed1338d1658929ba5bd7d1b5a78dc0f29e3e919abc3c08534d857e8c9eb1e`;
+automated owned-client result `28424121bc8333ab2bb5f2726d3e9cc1fa7052bd67b8d429d03a0c7f620b189e`.
 Private transcripts, pairing records, QR/connection links, SDP, audio, TLS material and raw traces must stay private.
 
 ## Resume procedure
