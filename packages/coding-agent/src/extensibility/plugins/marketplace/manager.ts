@@ -481,10 +481,81 @@ export class MarketplaceManager {
 
 	// ── Install / uninstall ───────────────────────────────────────────────────
 
+	/** Inspect source and installed integrity without changing installed registries or executing hooks. */
+	async inspectPluginInstallation(name: string, marketplace: string, scope: "user" | "project") {
+		const registry = await this.#readMarketplacesRegistry();
+		const entry = getMarketplaceEntry(registry, marketplace);
+		if (!entry || !entry.enabled) throw new Error("Requested marketplace is unavailable or disabled");
+		const catalog = await this.#readCatalog(entry);
+		const plugin = catalog.plugins.find(item => item.name === name);
+		if (!plugin) throw new Error("Requested plugin is not in the marketplace catalog");
+		assertRuntimeRequirement(plugin);
+		const { dir, tempCloneRoot } = await resolvePluginSource(plugin, {
+			marketplaceClonePath: this.#resolveMarketplaceRoot(entry),
+			catalogMetadata: catalog.metadata,
+			tmpDir: os.tmpdir(),
+		});
+		try {
+			const { directoryDigest } = await import("./tree-digest");
+			const { RUNTIME_ARTIFACT_NAMES, verifyRuntimeDependencies } = await import("./runtime-dependencies");
+			const excluded = new Set([...RUNTIME_ARTIFACT_NAMES, ".git"]);
+			const sourceDigest = await directoryDigest(dir, excluded);
+			const version = await this.#resolvePluginVersion(plugin, dir);
+			const installed =
+				getInstalledPlugin(
+					await readInstalledPluginsRegistry(this.#registryPath(scope)),
+					buildPluginId(name, marketplace),
+				) ?? [];
+			let state: "missing" | "installed" | "update" | "repair-required" = "missing";
+			if (installed.length) {
+				state = "repair-required";
+				if (installed.length === 1) {
+					const current = installed[0];
+					try {
+						const stat = await fs.lstat(current.installPath);
+						const relative = path.relative(
+							await fs.realpath(this.#opts.pluginsCacheDir),
+							await fs.realpath(current.installPath),
+						);
+						if (
+							!stat.isDirectory() ||
+							stat.isSymbolicLink() ||
+							relative.startsWith("..") ||
+							path.isAbsolute(relative) ||
+							(process.getuid && stat.uid !== process.getuid())
+						)
+							throw new Error("Invalid installed cache location");
+						await verifyRuntimeDependencies(current.installPath);
+						const cachedDigest = await directoryDigest(current.installPath, excluded);
+						const snapshot = path.basename(current.installPath).match(/\+snapshot\.([a-f0-9]{16})/);
+						if (
+							snapshot &&
+							!(await directoryDigest(current.installPath, RUNTIME_ARTIFACT_NAMES)).startsWith(snapshot[1])
+						)
+							throw new Error("Installed snapshot integrity failed");
+						state = current.version === version && cachedDigest === sourceDigest ? "installed" : "update";
+					} catch {
+						/* Preserve an unverifiable cache and require explicit repair. */
+					}
+				}
+			}
+			return {
+				pluginId: buildPluginId(name, marketplace),
+				version,
+				sourceDigest,
+				state,
+				lifecycle: plugin.lifecycle,
+				installed: installed[0] ?? null,
+			};
+		} finally {
+			if (tempCloneRoot) await fs.rm(tempCloneRoot, { recursive: true, force: true });
+		}
+	}
+
 	async installPlugin(
 		name: string,
 		marketplace: string,
-		options?: { force?: boolean; scope?: "user" | "project" },
+		options?: { force?: boolean; scope?: "user" | "project"; immutable?: boolean },
 	): Promise<InstalledPluginEntry> {
 		const scope = options?.scope ?? "user";
 		const marketplaces = await this.#readMarketplacesRegistry();
@@ -494,7 +565,7 @@ export class MarketplaceManager {
 		const plan = resolvePluginDependencyNames(catalog, name);
 		for (const pluginName of plan)
 			assertRuntimeRequirement(catalog.plugins.find(plugin => plugin.name === pluginName)!);
-		const retainReplacedCache = entry.sourceType === "local";
+		const retainReplacedCache = entry.sourceType === "local" || options?.immutable === true;
 		const registryPath = this.#registryPath(scope);
 		const before = await readInstalledPluginsRegistry(registryPath);
 		const staged: InstalledPluginEntry[] = [];
@@ -507,6 +578,7 @@ export class MarketplaceManager {
 					force: pluginName === name ? options?.force : true,
 					enable: pluginName !== name,
 					cleanupExisting: false,
+					immutable: options?.immutable,
 				});
 				staged.push(result);
 			}
@@ -545,6 +617,7 @@ export class MarketplaceManager {
 			scope?: "user" | "project";
 			enable?: boolean;
 			cleanupExisting?: boolean;
+			immutable?: boolean;
 		},
 	): Promise<InstalledPluginEntry> {
 		const force = options?.force ?? false;
@@ -610,7 +683,7 @@ export class MarketplaceManager {
 		let cachePath!: string;
 		try {
 			version = await this.#resolvePluginVersion(pluginEntry, sourcePath);
-			cachePath = await (mktEntry.sourceType === "local" ? cachePluginSnapshot : cachePlugin)(
+			cachePath = await (mktEntry.sourceType === "local" || options?.immutable ? cachePluginSnapshot : cachePlugin)(
 				sourcePath,
 				this.#opts.pluginsCacheDir,
 				marketplace,

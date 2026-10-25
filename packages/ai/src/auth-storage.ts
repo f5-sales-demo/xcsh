@@ -2715,24 +2715,24 @@ export class AuthCredentialStore {
 
 	#authCredentialsTableExists(): boolean {
 		const row = this.#db
-			.prepare("SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'auth_credentials'")
+			.query("SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'auth_credentials'")
 			.get() as { present?: number } | undefined;
 		return row?.present === 1;
 	}
 
 	#readAuthSchemaVersion(): number | null {
-		const row = this.#db.prepare("SELECT version FROM auth_schema_version WHERE id = 1").get() as
+		const row = this.#db.query("SELECT version FROM auth_schema_version WHERE id = 1").get() as
 			| { version?: number }
 			| undefined;
 		return typeof row?.version === "number" ? row.version : null;
 	}
 
 	#writeAuthSchemaVersion(version: number): void {
-		this.#db.prepare("INSERT OR REPLACE INTO auth_schema_version(id, version) VALUES (1, ?)").run(version);
+		this.#db.query("INSERT OR REPLACE INTO auth_schema_version(id, version) VALUES (1, ?)").run(version);
 	}
 
 	#inferAuthSchemaVersion(): number {
-		const cols = this.#db.prepare("PRAGMA table_info(auth_credentials)").all() as Array<{ name?: string }>;
+		const cols = this.#db.query("PRAGMA table_info(auth_credentials)").all() as Array<{ name?: string }>;
 		const hasDisabledCause = cols.some(column => column.name === "disabled_cause");
 		const hasIdentityKey = cols.some(column => column.name === "identity_key");
 		const hasAccountId = cols.some(column => column.name === "account_id");
@@ -2781,7 +2781,7 @@ export class AuthCredentialStore {
 
 	#migrateAuthSchemaV0ToV1(): void {
 		const migrate = this.#db.transaction(() => {
-			const v0Cols = this.#db.prepare("PRAGMA table_info(auth_credentials)").all() as Array<{ name?: string }>;
+			const v0Cols = this.#db.query("PRAGMA table_info(auth_credentials)").all() as Array<{ name?: string }>;
 			const hasDisabled = v0Cols.some(col => col.name === "disabled");
 
 			this.#db.run("ALTER TABLE auth_credentials RENAME TO auth_credentials_v0");
@@ -2859,13 +2859,13 @@ export class AuthCredentialStore {
 
 	#backfillCredentialIdentityKeys(): void {
 		const rows = this.#db
-			.prepare(
+			.query(
 				"SELECT id, provider, credential_type, data, disabled_cause, identity_key FROM auth_credentials WHERE identity_key IS NULL ORDER BY id ASC",
 			)
 			.all() as AuthRow[];
 		if (rows.length === 0) return;
 
-		const updateIdentity = this.#db.prepare("UPDATE auth_credentials SET identity_key = ? WHERE id = ?");
+		const updateIdentity = this.#db.query("UPDATE auth_credentials SET identity_key = ? WHERE id = ?");
 		for (const row of rows) {
 			const identityKey = resolveRowCredentialIdentityKey(row.provider, row);
 			updateIdentity.run(identityKey, row.id);
@@ -2915,11 +2915,11 @@ export class AuthCredentialStore {
 				}),
 			);
 			const disabledRows = this.#db
-				.prepare(
+				.query(
 					"SELECT id, provider, credential_type, data, disabled_cause, identity_key FROM auth_credentials WHERE provider = ? AND disabled_cause = ? ORDER BY id ASC",
 				)
 				.all(provider, OPENAI_CODEX_REGRESSION_DISABLED_CAUSE) as AuthRow[];
-			const reactivate = this.#db.prepare(
+			const reactivate = this.#db.query(
 				"UPDATE auth_credentials SET disabled_cause = NULL, updated_at = strftime('%s','now') WHERE id = ? AND disabled_cause = ?",
 			);
 
@@ -3080,7 +3080,7 @@ export class AuthCredentialStore {
 
 	updateAuthCredential(id: number, credential: AuthCredential): void {
 		try {
-			const providerRow = this.#db.prepare("SELECT provider FROM auth_credentials WHERE id = ?").get(id) as
+			const providerRow = this.#db.query("SELECT provider FROM auth_credentials WHERE id = ?").get(id) as
 				| { provider?: string }
 				| undefined;
 			const provider = providerRow?.provider ?? "";
@@ -3101,7 +3101,7 @@ export class AuthCredentialStore {
 		credential: AuthCredential,
 		lease: CredentialRefreshLeaseFence,
 	): boolean {
-		const providerRow = this.#db.prepare("SELECT provider FROM auth_credentials WHERE id = ?").get(id) as
+		const providerRow = this.#db.query("SELECT provider FROM auth_credentials WHERE id = ?").get(id) as
 			| { provider?: string }
 			| undefined;
 		const provider = providerRow?.provider ?? "";
@@ -3288,6 +3288,12 @@ export class AuthCredentialStore {
 		this.#getCacheStmt.finalize();
 		this.#upsertCacheStmt.finalize();
 		this.#deleteExpiredCacheStmt.finalize();
+		this.#updateIfMatchesWithLeaseStmt.finalize();
+		this.#deleteIfMatchesWithLeaseStmt.finalize();
+		this.#acquireCredentialRefreshLeaseStmt.finalize();
+		this.#getCredentialRefreshLeaseStmt.finalize();
+		this.#renewCredentialRefreshLeaseStmt.finalize();
+		this.#releaseCredentialRefreshLeaseStmt.finalize();
 		this.#db.close();
 	}
 }

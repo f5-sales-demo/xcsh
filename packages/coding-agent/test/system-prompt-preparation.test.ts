@@ -274,10 +274,18 @@ describe("session prompt snapshot lifecycle", () => {
 		const { session } = await createSession(cwdA, sessionManager);
 		try {
 			expect(session.systemPrompt).toContain("PROMPT_RELOCATION_A");
+			const read = session.getToolByName("read");
+			if (!read) throw new Error("Expected session read tool");
+			const first = await read.execute("about-before-move", { path: "xcsh://about" });
+			expect(JSON.stringify(first.content)).toContain(cwdA);
+			expect(JSON.stringify(first.content)).toContain(os.hostname());
 			await sessionManager.moveTo(cwdB);
 			await session.refreshBaseSystemPrompt();
 			expect(session.systemPrompt).toContain("PROMPT_RELOCATION_B");
 			expect(session.systemPrompt).not.toContain("PROMPT_RELOCATION_A");
+			const second = await read.execute("about-after-move", { path: "xcsh://about" });
+			expect(JSON.stringify(second.content)).toContain(cwdB);
+			expect(JSON.stringify(second.content)).not.toContain(cwdA);
 		} finally {
 			await session.dispose();
 		}

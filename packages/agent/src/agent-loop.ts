@@ -445,6 +445,7 @@ async function runLoop(
 					config.intentTracing,
 					completedTools,
 					toolKey,
+					config.executeTool,
 				);
 				const streamingDispatch = config.model.api === "openai-codex-responses";
 				const responseController = new AbortController();
@@ -467,7 +468,9 @@ async function runLoop(
 							},
 							getToolChoice: undefined,
 							toolChoice: selectedToolChoice,
-							...(streamingDispatch ? { maxRetries: Math.max(0, 2 - recoveryAttempts) } : {}),
+							...(streamingDispatch
+								? { maxRetries: Math.max(0, (config.maxRetries ?? 2) - recoveryAttempts) }
+								: {}),
 						},
 						responseSignal,
 						stream,
@@ -537,7 +540,7 @@ async function runLoop(
 					recoveryToolChoiceServed ||= !!exactToolName(selectedToolChoice) && dispatchedResults.length > 0;
 					if (recoveryToolChoiceServed) message.interruption.toolChoiceServed = true;
 					recoveryAttempts += message.interruption.providerRetriesConsumed;
-					if (recoveryAttempts < 2) {
+					if (recoveryAttempts < (config.maxRetries ?? 2)) {
 						recoveryAttempts += 1;
 						try {
 							await recoveryBackoff(500 * recoveryAttempts, signal);
@@ -682,8 +685,14 @@ async function streamAssistantResponse(
 		// requested call is complete so truncated prose and substituted tools cannot reach state,
 		// subscribers, or execution. A provider may exhaust its output budget before emitting the
 		// call; retry that pre-invocation failure once with the exact same choice.
-		for (let attempt = 0; attempt < 2; attempt++) {
-			const attemptContext = attempt === 0 ? llmContext : forcedToolRetryContext(llmContext, requiredToolName);
+		for (let attempt = 0; attempt < (config.maxRetries === 0 ? 1 : 2); attempt++) {
+			const attemptContext =
+				attempt === 0
+					? { ...llmContext, tools: llmContext.tools?.filter(tool => tool.name === requiredToolName) }
+					: forcedToolRetryContext(
+							{ ...llmContext, tools: llmContext.tools?.filter(tool => tool.name === requiredToolName) },
+							requiredToolName,
+						);
 			const response = await logger.ttftAttr("ttft.stream-fn", () =>
 				streamFunction(config.model, attemptContext, {
 					...config,
@@ -693,23 +702,24 @@ async function streamAssistantResponse(
 				}),
 			);
 			let confirmed: AssistantMessage | undefined;
-			const buffered = await bufferAssistantResponse(
-				response,
-				config.model,
-				signal,
-				onCompletedCall
-					? async (partial, call) => {
-							confirmed = structuredClone({
-								...partial,
-								content: partial.content.filter(c => c.type !== "toolCall" || c.id === call.id),
-							});
-							await config.onAssistantCheckpoint?.(confirmed);
-							stream.push({ type: "assistant_checkpoint", message: confirmed });
-							onCompletedCall(confirmed, call);
-						}
-					: undefined,
-				requiredToolName,
-			);
+			const buffered = await bufferAssistantResponse(response, config.model, signal, undefined, requiredToolName);
+			if (onCompletedCall && buffered.message.stopReason === "error" && buffered.message.interruption) {
+				const completed = new Set(buffered.message.interruption.completedContentIndices);
+				const calls = buffered.message.content.filter(c => c.type === "toolCall");
+				if (calls.length > 0 && calls.every(call => call.name === requiredToolName)) {
+					const settled = structuredClone({
+						...buffered.message,
+						content: buffered.message.content.filter((_c, index) => completed.has(index)),
+					});
+					const settledCalls = settled.content.filter(c => c.type === "toolCall");
+					if (settledCalls.length) {
+						confirmed = settled;
+						await config.onAssistantCheckpoint?.(settled);
+						stream.push({ type: "assistant_checkpoint", message: settled });
+						for (const call of settledCalls) onCompletedCall(settled, call);
+					}
+				}
+			}
 			if (confirmed && (buffered.message.stopReason === "error" || buffered.message.stopReason === "aborted")) {
 				const failure = {
 					...buffered.message,
@@ -746,13 +756,13 @@ async function streamAssistantResponse(
 			}
 
 			const toolCalls = buffered.message.content.filter(content => content.type === "toolCall");
-			const exactInvocation = toolCalls.length === 1 && toolCalls[0]?.name === requiredToolName;
+			const exactInvocation = toolCalls.length > 0 && toolCalls.every(call => call.name === requiredToolName);
 			if (exactInvocation) {
 				if (onCompletedCall && !confirmed) {
 					const checkpoint = structuredClone(buffered.message);
 					await config.onAssistantCheckpoint?.(checkpoint);
 					stream.push({ type: "assistant_checkpoint", message: checkpoint });
-					onCompletedCall(checkpoint, toolCalls[0]);
+					for (const call of toolCalls) onCompletedCall(checkpoint, call);
 				}
 				context.messages.push(buffered.message);
 				for (const event of buffered.events) {
@@ -937,6 +947,7 @@ function createToolScheduler(
 	intentTracing?: AgentLoopConfig["intentTracing"],
 	completedTools = new Map<string, ToolResultMessage>(),
 	toolKey: (call: Extract<AssistantMessage["content"][number], { type: "toolCall" }>) => string = call => call.id,
+	executeTool?: AgentLoopConfig["executeTool"],
 ) {
 	type ToolCallContent = Extract<AssistantMessage["content"][number], { type: "toolCall" }>;
 	const advertisedTools = tools?.map(tool => ({
@@ -951,6 +962,7 @@ function createToolScheduler(
 		parameters: structuredClone(tool.parameters),
 		execute: tool.execute.bind(tool),
 		getExecutionKind: tool.getExecutionKind?.bind(tool),
+		getOperationEffect: tool.getOperationEffect?.bind(tool),
 	}));
 	const toolCalls: ToolCallContent[] = [];
 	const admitted = new Set<string>();
@@ -1108,10 +1120,11 @@ function createToolScheduler(
 						toolCalls: toolCallInfos,
 					})
 				: undefined;
-			result = await tool.execute(
+			const execute = executeTool ? executeTool.bind(undefined, tool) : tool.execute.bind(tool);
+			result = await execute(
 				toolCall.id,
 				transformToolCallArguments ? transformToolCallArguments(effectiveArgs, toolCall.name) : effectiveArgs,
-				tool.nonAbortable ? undefined : toolSignal,
+				executeTool ? toolSignal : tool.nonAbortable ? undefined : toolSignal,
 				partialResult => {
 					stream.push({
 						type: "tool_execution_update",
@@ -1123,6 +1136,7 @@ function createToolScheduler(
 				},
 				toolContext,
 			);
+			isError = result.isError === true;
 		} catch (e) {
 			result =
 				e instanceof AgentToolError

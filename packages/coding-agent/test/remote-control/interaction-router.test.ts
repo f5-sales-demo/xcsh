@@ -11,7 +11,10 @@ async function fixture() {
 	const router = new RemoteRouter("/tmp/xcsh", "fixture");
 	const calls: unknown[][] = [];
 	const sent: { client: string; event: Notification }[] = [];
-	router.notify = (client, event) => sent.push({ client, event });
+	router.notify = (client, event) => {
+		const { emittedAtMs: _emittedAtMs, ...notification } = event;
+		sent.push({ client, event: notification });
+	};
 	router.sessions.set("thread-a", {
 		thread: { id: "thread-a" },
 		requests: [question],
@@ -311,7 +314,11 @@ test("blocking publication survives resolution and reconnect until its secondary
 		(await router.handle("phone", { id: 4, method: "thread/resume", params: { threadId: "secondary" } })) as any,
 	).toMatchObject({ result: { thread: { id: "secondary" } } });
 	router.removeSession("secondary");
-	expect(sent.at(-1)?.event).toEqual({ method: "thread/closed", params: { threadId: "secondary" } });
+	expect(sent.at(-1)?.event).toEqual({
+		emittedAtMs: expect.any(Number),
+		method: "thread/closed",
+		params: { threadId: "secondary" },
+	});
 	expect(router.subscribed("phone", "secondary")).toBe(false);
 	router.dispose();
 });

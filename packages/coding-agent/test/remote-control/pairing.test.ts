@@ -43,3 +43,21 @@ test("rejects service error without leaking pairing material", async () => {
 		"Remote pairing rejected: HTTP 403",
 	);
 });
+test.each([
+	{ pairing_code: "" },
+	{ pairing_code: "synthetic\nchallenge" },
+	{ pairing_code: "x".repeat(4097) },
+	{ expires_at: "2000-01-01T00:00:00Z" },
+	{ manual_pairing_code: "unsafe\x1b[2J" },
+])("rejects invalid pairing challenge %# without leaking response material", async invalid => {
+	await expect(
+		startPairing(enrollment, async () =>
+			Response.json({
+				...enrollment,
+				pairing_code: "synthetic-opaque",
+				manual_pairing_code: null,
+				...invalid,
+			}),
+		),
+	).rejects.toThrow("Invalid pairing response");
+});

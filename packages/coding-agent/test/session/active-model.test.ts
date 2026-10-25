@@ -36,6 +36,15 @@ describe("gatewayHost", () => {
 });
 
 describe("buildActiveModelSnapshot", () => {
+	it("reports the current conversation reasoning without inferring model defaults", () => {
+		const sources = { model: fakeModel(), resolutionSource: "config" as const, roles: {}, reasoning: "high" };
+		expect(buildActiveModelSnapshot(sources)).toMatchObject({ reasoning: "high" });
+		sources.reasoning = "low";
+		expect(buildActiveModelSnapshot(sources)).toMatchObject({ reasoning: "low" });
+		expect(buildActiveModelSnapshot({ ...sources, reasoning: undefined })?.reasoning).toBe("unknown");
+		expect(buildActiveModelSnapshot({ ...sources, reasoning: "off" })?.reasoning).toBe("none");
+		expect(buildActiveModelSnapshot({ ...sources, reasoning: "private\nvalue" })?.reasoning).toBe("unknown");
+	});
 	it("returns null when no model is resolved", () => {
 		expect(buildActiveModelSnapshot({ model: undefined, resolutionSource: "config", roles: {} })).toBeNull();
 	});

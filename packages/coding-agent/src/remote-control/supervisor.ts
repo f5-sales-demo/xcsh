@@ -7,7 +7,7 @@ export interface RemoteSupervisorOptions {
 	spawnHost: (generation: number) => Promise<ProcessIdentity>;
 	probeHost: (timeoutMs: number) => Promise<boolean>;
 	isHostAlive: (record: ProcessIdentity) => Promise<boolean>;
-	stopHost: (record: ProcessIdentity, drainMs: number) => Promise<void>;
+	stopHost: (record: ProcessIdentity, drainMs: number, terminateManaged?: boolean) => Promise<void>;
 	sleep?: (milliseconds: number) => Promise<void>;
 	now?: () => number;
 	random?: () => number;
@@ -187,7 +187,7 @@ export class RemoteSupervisor {
 		const record = this.#record;
 		this.#record = undefined;
 		if (record) {
-			await this.#stopHost(record, this.#drainMs);
+			await this.#stopHost(record, this.#drainMs, true);
 			await this.#store.removeRuntime("host", record);
 		}
 		this.#snapshot.supervisorState = "stopped";

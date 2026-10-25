@@ -1,3 +1,4 @@
+import { samePluginRegistrationOwner } from "../utils/plugin-registration-owner";
 import type {
 	IntegrationDefinition,
 	IntegrationHandle,
@@ -147,7 +148,8 @@ export class IntegrationRegistry {
 			throw new Error("Invalid integration success TTL");
 		validatePlan(definition.setup);
 		const existing = this.#entries.get(definition.id);
-		if (existing && existing.owner !== owner) throw new Error(`Integration ${definition.id} is already registered`);
+		if (existing && !samePluginRegistrationOwner(existing.owner, owner))
+			throw new Error(`Integration ${definition.id} is already registered`);
 
 		let setupPlan = freezePlan(definition.setup);
 		let preparationRevision = 0;

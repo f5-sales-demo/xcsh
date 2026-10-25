@@ -340,6 +340,8 @@ export interface InternalDocsProtocolOptions {
 	machineProfileService?: MachineProfileService;
 	readonly resolveBuildInfo?: () => Promise<RuntimeBuildInfo>;
 	readonly getContextStatus?: () => ContextStatus | null;
+	/** Live process identity and session root, independent of the saved device profile. */
+	readonly getExecutionEnvironment?: () => { hostname: string; workspace: string | null };
 	/**
 	 * The model serving this session, read at render time rather than captured, so the about doc
 	 * reflects a mid-session switch instead of the model the session launched with (#2459).
@@ -365,6 +367,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	readonly scheme = "xcsh";
 	readonly #resolveBuildInfo: () => Promise<RuntimeBuildInfo>;
 	readonly #getContextStatus: (() => ContextStatus | null) | undefined;
+	readonly #getExecutionEnvironment: () => { hostname: string; workspace: string | null };
 	readonly #getActiveModel: (() => ActiveModelSnapshot | null) | undefined;
 	readonly #getContainment: (() => ContainmentStatus | null) | undefined;
 	#apiSpecResolver: ApiSpecResolver | null;
@@ -390,6 +393,8 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		this.#machineProfileService = options.machineProfileService ?? machineProfileService;
 		this.#resolveBuildInfo = options.resolveBuildInfo ?? getRuntimeBuildInfo;
 		this.#getContextStatus = options.getContextStatus;
+		this.#getExecutionEnvironment =
+			options.getExecutionEnvironment ?? (() => ({ hostname: os.hostname(), workspace: null }));
 		this.#getActiveModel = options.getActiveModel;
 		this.#getContainment = options.getContainment;
 		this.#apiSpecResolver = options.apiSpecResolver ?? null;
@@ -641,6 +646,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const entries = [
 			"- [user](xcsh://user) — local person profile; [schema](xcsh://user/schema)",
 			"- [computer](xcsh://computer) — interaction machine profile; [schema](xcsh://computer/schema)",
+			"- [plugin](xcsh://plugin) — live installed-plugin inventory and declared resources",
 			syntheticEntry,
 			changesEntry,
 			sourceEntry,
@@ -890,7 +896,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			const context = this.#getContextStatus?.() ?? null;
 			const activeModel = this.#getActiveModel?.() ?? null;
 			const containment = this.#getContainment?.() ?? null;
-			const content = renderAboutDoc(info, context, activeModel, containment);
+			const content = renderAboutDoc(info, context, activeModel, containment, this.#getExecutionEnvironment());
 			return {
 				url: url.href,
 				content,

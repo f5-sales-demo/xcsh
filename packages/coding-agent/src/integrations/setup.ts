@@ -19,6 +19,8 @@ export type SetupStepRunner = (step: IntegrationSetupStep, signal?: AbortSignal)
 export type SetupEnvironmentResolver = (name: string) => string | undefined;
 export interface SetupStepRunnerOptions {
 	readonly nonInteractiveOutput?: "inherit" | "ignore";
+	readonly cwd?: string;
+	readonly environment?: Readonly<Record<string, string | undefined>>;
 }
 
 export function describeIntegrationSetupNextAction(
@@ -100,7 +102,7 @@ export function createSetupStepRunner(
 			await installArchive(step.archive, signal, step.timeoutMs);
 			return 0;
 		}
-		const environment = { ...process.env };
+		const environment = { ...process.env, ...options.environment };
 		for (const name of step.environment ?? []) {
 			const value = resolveEnvironment(name);
 			if (value === undefined) delete environment[name];
@@ -113,6 +115,7 @@ export function createSetupStepRunner(
 		try {
 			const child = Bun.spawn([host.findExecutable(step.argv[0]) ?? step.argv[0], ...step.argv.slice(1)], {
 				env: environment,
+				cwd: options.cwd,
 				stdin: interactiveInput ? "inherit" : "ignore",
 				stdout: output,
 				stderr: output,

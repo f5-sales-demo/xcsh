@@ -50,6 +50,7 @@ export function startSessionBridge(
 				const catalog = remote.skills();
 				await peer.call("register", {
 					thread: remote.thread(),
+					voiceActive: remote.voiceActive,
 					collaborationMode: controls.getCollaborationMode?.() ?? "default",
 					publishedInteraction: remote.publishesInteractions(),
 					requests: remote.pendingRequests(),

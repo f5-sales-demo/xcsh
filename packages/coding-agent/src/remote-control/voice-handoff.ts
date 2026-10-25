@@ -99,7 +99,12 @@ export class VoiceHandoff {
 	#receivedBytes = 0;
 	constructor(
 		private readonly options: Options,
-		private readonly send: (channel: "commentary" | "speakable" | undefined, text: string) => void,
+		private readonly send: (
+			channel: "commentary" | "speakable" | undefined,
+			text: string,
+			final: boolean,
+			itemId: string,
+		) => void,
 		private readonly schedule: (callback: () => void, delay: number) => () => void = (callback, delay) => {
 			const timer = setTimeout(callback, delay);
 			return () => clearTimeout(timer);
@@ -156,18 +161,18 @@ export class VoiceHandoff {
 			item.done = true;
 			item.cancel?.();
 			item.cancel = undefined;
-			this.#flush(item, true);
+			this.#flush(item, true, update.id);
 		} else if (!item.cancel && item.buffered && item.sent < headLimit) {
 			item.cancel = this.schedule(
 				() => {
 					item!.cancel = undefined;
-					if (!this.#closed && !item!.done) this.#flush(item!, false);
+					if (!this.#closed && !item!.done) this.#flush(item!, false, update.id);
 				},
 				Math.max(0, 200 - (this.now() - item.lastFlushAt)),
 			);
 		}
 	}
-	#flush(item: Item, final: boolean): void {
+	#flush(item: Item, final: boolean, itemId: string): void {
 		const chunk = final
 			? item.buffered + (item.truncated ? marker + item.tail : "")
 			: head(item.buffered, headLimit - item.sent);
@@ -180,7 +185,7 @@ export class VoiceHandoff {
 		item.lastFlushAt = this.now();
 		const channel = handoffChannel(this.options, item.phase);
 		if (item.phase !== "commentary") this.#hasFinal = true;
-		this.send(channel, chunk);
+		this.send(channel, chunk, final, itemId);
 	}
 	finish(result: string): void {
 		if (this.#closed) return;

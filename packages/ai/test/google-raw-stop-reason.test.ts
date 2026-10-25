@@ -57,3 +57,51 @@ describe("Google raw stop reasons", () => {
 		expect(message.errorMessage).toBe("Gemini stopped with SAFETY");
 	});
 });
+
+it("retains text and finishes automatic continuation instead of treating it as a model error", async () => {
+	let requests = 0;
+	using _hook = hookFetch(() => {
+		requests++;
+		const continued = requests > 1;
+		const payload = {
+			candidates: [
+				{
+					content: { role: "model", parts: [{ text: continued ? "complete" : "partial " }] },
+					finishReason: continued ? "STOP" : "CONTINUATION",
+					...(continued ? {} : { continuationToken: "synthetic-continuation-token" }),
+				},
+			],
+		};
+		return new Response("data: " + JSON.stringify(payload) + "\n\n", {
+			headers: { "Content-Type": "text/event-stream" },
+		});
+	});
+	const message = await streamGoogle(model("google-generative-ai"), context, { apiKey: "test-api-key" }).result();
+	expect(requests).toBe(2);
+	expect(message.stopReason).toBe("stop");
+	expect(
+		message.content
+			.filter(part => part.type === "text")
+			.map(part => part.text)
+			.join(""),
+	).toBe("partial complete");
+});
+
+it("preserves a paused continuation response as incomplete text rather than an error", async () => {
+	using _hook = hookFetch(
+		() =>
+			new Response(
+				'data: {"candidates":[{"content":{"role":"model","parts":[{"text":"partial"}]},"finishReason":"CONTINUATION"}]}\n\n',
+				{ headers: { "Content-Type": "text/event-stream" } },
+			),
+	);
+	const message = await streamGoogle(model("google-generative-ai"), context, { apiKey: "test-api-key" }).result();
+	expect(message.stopReason).toBe("length");
+	expect(message.rawStopReason).toBe("CONTINUATION");
+	expect(
+		message.content
+			.filter(part => part.type === "text")
+			.map(part => part.text)
+			.join(""),
+	).toBe("partial");
+});

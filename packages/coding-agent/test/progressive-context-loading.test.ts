@@ -7,7 +7,9 @@ import { Snowflake } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import { Settings } from "../src/config/settings";
 import type { ExtensionFactory } from "../src/extensibility/extensions";
+import { applyRemotePermissionProfile } from "../src/sandbox/remote-permissions";
 import { createAgentSession } from "../src/sdk";
+import { PluginWorkflowService } from "../src/services/plugin-workflow";
 import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";
 import { buildSystemPrompt, prepareSystemPromptInputs, renderSystemPrompt } from "../src/system-prompt";
@@ -28,6 +30,64 @@ const extension: ExtensionFactory = pi => {
 describe("progressive context loading", () => {
 	const tempDirs: string[] = [];
 	const authStorages: AuthStorage[] = [];
+
+	it("SDK plugin tools retain the session approval policy through the settings facade", async () => {
+		const { session } = await create("progressive");
+		applyRemotePermissionProfile(session.settings, {
+			approvalPolicy: "on-request",
+			approvalsReviewer: "user",
+			activePermissionProfile: { id: ":workspace" },
+			sandboxPolicy: {
+				type: "workspaceWrite",
+				writableRoots: [],
+				networkAccess: false,
+				excludeTmpdirEnvVar: false,
+				excludeSlashTmp: false,
+			},
+		});
+		let installs = 0;
+		let approvals = 0;
+		const plan = {
+			plugin: "kvm",
+			marketplace: "qualification",
+			scope: "project",
+			fingerprint: "fixture",
+			changes: [{ action: "install" }],
+			dependencyPlan: [{ pluginId: "kvm@qualification", version: "1.0.0" }],
+		};
+		const service = spyOn(PluginWorkflowService, "create").mockResolvedValue({
+			plan: async () => plan,
+			install: async () => {
+				installs++;
+				return { changed: true };
+			},
+		} as any);
+		try {
+			const tool = session.agent.state.tools.find(tool => tool.name === "xcsh_plugin")!;
+			await expect(
+				tool.execute(
+					"review",
+					{ action: "install", plugin: "kvm", marketplace: "qualification" },
+					undefined,
+					undefined,
+					{
+						hasUI: true,
+						ui: {
+							select: async () => {
+								approvals++;
+								return "Decline";
+							},
+						},
+					} as any,
+				),
+			).rejects.toThrow("declined");
+			expect(approvals).toBe(1);
+			expect(installs).toBe(0);
+		} finally {
+			service.mockRestore();
+			await session.dispose();
+		}
+	});
 
 	it("uses progressive loading by default", () => {
 		expect(Settings.isolated().get("context.loadingMode")).toBe("progressive");
@@ -92,6 +152,27 @@ describe("progressive context loading", () => {
 			toolNames,
 		});
 	}
+
+	it("restored progressive sessions expose real Plan control without widening explicit tool scope", async () => {
+		const manager = SessionManager.inMemory();
+		manager.appendToolSelection(["read", "bash"]);
+		const { session } = await create("progressive", manager);
+		try {
+			expect(session.getActiveToolNames()).toContain("enter_plan_mode");
+			const control = session.agent.state.tools.find(tool => tool.name === "enter_plan_mode")!;
+			await control.execute("plan-entry", { action: "enter" });
+			expect(session.getPlanModeState()?.enabled).toBe(true);
+			expect(manager.buildSessionContext().mode).toBe("plan");
+		} finally {
+			await session.dispose();
+		}
+		const scoped = await create("progressive", SessionManager.inMemory(), ["read"]);
+		try {
+			expect(scoped.session.getActiveToolNames()).not.toContain("enter_plan_mode");
+		} finally {
+			await scoped.session.dispose();
+		}
+	});
 
 	it("starts progressive sessions with the core set and defers optional tools", async () => {
 		const { session } = await create("progressive");
@@ -445,7 +526,14 @@ describe("progressive context loading", () => {
 					parameters: tool.parameters,
 				})),
 			);
-			expect(toolJson.length).toBeLessThanOrEqual(47_000);
+			// Budget 265 bytes for Plan control and 1,000 for native plugin operations.
+			// Keep the existing optional-tool allowance; bound the new tool independently.
+			const plugin = session.agent.state.tools.find(tool => tool.name === "xcsh_plugin")!;
+			expect(
+				JSON.stringify({ name: plugin.name, description: plugin.description, parameters: plugin.parameters })
+					.length,
+			).toBeLessThanOrEqual(1_000);
+			expect(toolJson.length).toBeLessThanOrEqual(48_265);
 		} finally {
 			await session.dispose();
 		}

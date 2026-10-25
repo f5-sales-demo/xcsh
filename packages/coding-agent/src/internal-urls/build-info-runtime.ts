@@ -8,7 +8,7 @@ import containmentTemplate from "../prompts/internal-urls/containment.md" with {
 import type { ContainmentStatus } from "../sandbox/containment";
 import type { ContextStatus } from "../services/xcsh-context";
 import type { ActiveModelSnapshot } from "../session/active-model";
-import { BUILD_INFO, type BuildInfo } from "./build-info.generated";
+import { BUILD_INFO, type BuildInfo, VOICE_POLICY } from "./build-info.generated";
 
 export type BuildInfoSource = "compiled" | "live-git" | "embedded-fallback";
 
@@ -182,9 +182,12 @@ export function renderAboutDoc(
 	context: ContextStatus | null,
 	model: ActiveModelSnapshot | null,
 	containment: ContainmentStatus | null,
+	executionEnvironment: { hostname: string; workspace: string | null } | null = null,
 ): string {
 	return prompt.render(aboutTemplate, {
 		info,
+		voicePolicy: VOICE_POLICY,
+		executionEnvironment,
 		platformContext: renderPlatformContext(context, Date.now()),
 		activeModel: renderActiveModel(model),
 		containment: renderContainment(containment),

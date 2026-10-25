@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
+import { hostname } from "node:os";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { getModelEffectiveContextWindow, type Model, type Usage } from "@f5-sales-demo/pi-ai";
@@ -13,6 +14,7 @@ import {
 	type RemotePermissionProfile,
 	remotePermissionProfile,
 } from "../sandbox/remote-permissions";
+import { ContextService } from "../services/xcsh-context";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { readRecaps } from "../session/recap";
 import { coordinateSessionTitle, RESERVED_PROVISIONAL_TITLE, subscribeSessionTitle } from "../utils/title-generator";
@@ -21,11 +23,13 @@ import { updateFileHistoryItem } from "./file-changes";
 import {
 	activeToolHistoryItem,
 	assistantHistoryItem,
+	assistantPlanHistoryItems,
 	backgroundCommandCompletion,
 	completeToolHistoryItem,
 	type HistoryToolContext,
 	messageHistoryItems,
 	messageKey,
+	projectCompatibilityHistory,
 	projectHistory,
 	projectHistorySnapshot,
 	updateCommandHistoryItem,
@@ -35,9 +39,11 @@ import { RemoteInteractions } from "./interactions";
 import { getSessionVoiceHistory, type SessionVoiceHistory } from "./session-voice-history";
 import { resolveRemoteThreadId, validRemoteThreadId } from "./thread-identity";
 import { timelinePage } from "./timeline";
+import { coalesceTurnFileChanges } from "./turn-file-diff";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
 import { voiceInputText } from "./voice-input";
+import { existingCallConfig } from "./voice-protocol";
 export type SessionTarget = Pick<
 	AgentSession,
 	| "sessionId"
@@ -69,6 +75,7 @@ export type SessionTarget = Pick<
 	Partial<
 		Pick<
 			AgentSession,
+			| "setVoiceTaskIdentity"
 			| "getToolByName"
 			| "getActiveToolExecutions"
 			| "subscribeSessionTransitions"
@@ -100,6 +107,7 @@ export interface RemoteModelDescriptor {
 }
 export interface Notification {
 	id?: string;
+	emittedAtMs?: number;
 	method: string;
 	params: Record<string, unknown>;
 }
@@ -166,6 +174,7 @@ export class RemoteSession {
 	#unsubscribeDispose?: () => void;
 	#unsubscribeTitle?: () => void;
 	#unsubscribeInteractionStatus?: () => void;
+	#contextChanged = () => this.#refreshVoiceContext();
 	#interactions?: RemoteInteractions;
 	#publishedInteraction = false;
 	#effects = new Set<Promise<unknown>>();
@@ -176,6 +185,7 @@ export class RemoteSession {
 	#voiceAdmissionTail: Promise<void> = Promise.resolve();
 	#voiceHandoffsRetired = false;
 	#voice?: NativeVoice;
+	#prestartVoiceStopReported = false;
 	#requests = new Map<string, { signature: string; result: Promise<unknown> }>();
 	#configurationTail: Promise<void> = Promise.resolve();
 	#clientIds = new Map<string, string>();
@@ -186,6 +196,7 @@ export class RemoteSession {
 	#createdAt = Math.floor(Date.now() / 1000);
 	#updatedAt = this.#createdAt;
 	#itemId = "";
+	#planMessage = false;
 	#nextId = randomUUID();
 	#startedItems = new Set<string>();
 	#completedItems = new Set<string>();
@@ -198,6 +209,9 @@ export class RemoteSession {
 	#lastProviderUsage?: Usage;
 	#usageEmitted = new Set<string>();
 	#threadStatus = JSON.stringify({ type: "idle" });
+	get voiceActive(): boolean {
+		return this.#voice?.active === true;
+	}
 	get #durable(): boolean {
 		return typeof this.target.sessionManager.getBranch === "function";
 	}
@@ -217,6 +231,20 @@ export class RemoteSession {
 				approvalPolicy: "never",
 				approvalsReviewer: "user",
 				sandboxPolicy: { type: "dangerFullAccess" },
+				activePermissionProfile: null,
+			};
+		}
+		if (approvalPolicy === "never" && sandbox.type === "readOnly") {
+			const allowed = new Set(["type", "networkAccess"]);
+			if (
+				Object.keys(sandbox).some(key => !allowed.has(key)) ||
+				![undefined, false].includes(sandbox.networkAccess as undefined | false)
+			)
+				throw new ProtocolError(-32602, "Unsupported sandbox policy override");
+			return {
+				approvalPolicy: "never",
+				approvalsReviewer: "user",
+				sandboxPolicy: { type: "readOnly", networkAccess: false },
 				activePermissionProfile: null,
 			};
 		}
@@ -255,6 +283,7 @@ export class RemoteSession {
 	) {
 		initializeRemotePermissionProfile(target.settings);
 		this.#restoreIdentity();
+		ContextService.onContextChange(this.#contextChanged);
 		this.#unsubscribe = target.subscribe(event => this.#event(event));
 		if (target.userInteractions)
 			this.#interactions = new RemoteInteractions(
@@ -305,6 +334,7 @@ export class RemoteSession {
 			} else {
 				this.#epoch++;
 				this.#voice = undefined;
+				this.#prestartVoiceStopReported = false;
 				this.#active = undefined;
 				this.#promptOwnedTurnId = undefined;
 				this.#clientIds.clear();
@@ -354,6 +384,9 @@ export class RemoteSession {
 		if (message.role !== "assistant") return undefined;
 		return {
 			cwd: this.target.sessionManager.getCwd(),
+			collaborationMode:
+				this.controls.getCollaborationMode?.() ??
+				(this.target.sessionManager.buildSessionContext?.().mode === "plan" ? "plan" : "default"),
 			fileCallIds: message.content.flatMap(part =>
 				part.type === "toolCall" &&
 				getToolExecutionKind(this.target.getToolByName?.(part.name), part.arguments) === "fileChange"
@@ -374,8 +407,11 @@ export class RemoteSession {
 		const id = `${this.target.sessionId}-item-${randomUUID()}`;
 		this.#itemId = id;
 		this.#messageIds.set(messageKey(message), id);
-		for (const item of messageHistoryItems(id, message, null, this.#historyToolContext(message)))
+		this.#planMessage = this.#historyToolContext(message)?.collaborationMode === "plan";
+		for (const item of messageHistoryItems(id, message, null, this.#historyToolContext(message))) {
+			if (this.#planMessage && (item.type === "agentMessage" || item.type === "plan")) continue;
 			this.#rememberItem(item, false);
+		}
 		this.#overlayLiveHistory([this.#active]);
 	}
 	#assertCurrent(epoch = this.#epoch, allowClosing = false): void {
@@ -397,6 +433,27 @@ export class RemoteSession {
 			this.#effects.delete(pending);
 		}
 	}
+	#deferVoiceStop(): void {
+		const voice = this.#voice;
+		if (!voice) {
+			if (this.#prestartVoiceStopReported) return;
+			this.#prestartVoiceStopReported = true;
+			const epoch = this.#epoch;
+			const pending = new Promise<void>(resolve => setTimeout(resolve, 0)).then(() => {
+				if (epoch === this.#epoch && !this.#disposed && !this.#suspended && !this.#voice)
+					this.#emit("thread/realtime/closed", { reason: "requested" }, true);
+			});
+			this.#effects.add(pending);
+			void pending.finally(() => this.#effects.delete(pending));
+			return;
+		}
+		const pending = new Promise<void>(resolve => setTimeout(resolve, 0)).then(() => voice.stop());
+		this.#effects.add(pending);
+		void pending.then(
+			() => this.#effects.delete(pending),
+			() => this.#effects.delete(pending),
+		);
+	}
 
 	subscribe(listener: (event: Notification) => void): () => void {
 		this.#listeners.add(listener);
@@ -415,6 +472,7 @@ export class RemoteSession {
 		this.#unsubscribeDispose?.();
 		this.#unsubscribeTitle?.();
 		this.#unsubscribeInteractionStatus?.();
+		ContextService.offContextChange(this.#contextChanged);
 		for (const cancel of this.#cancelDelegations) cancel();
 		this.#unsubscribe();
 		this.#interactions?.close();
@@ -462,7 +520,42 @@ export class RemoteSession {
 			? { type: "active", activeFlags: waiting ? ["waitingOnUserInput"] : [] }
 			: { type: "idle" };
 	}
+	#voicePersona() {
+		const tools = (this.target.getActiveToolNames?.() ?? [])
+			.sort((left, right) => left.localeCompare(right))
+			.map(name => ({ name }));
+		let tenant: string | null | undefined;
+		try {
+			tenant = ContextService.instance.getStatus().activeContextName;
+		} catch {
+			/* Uninitialized is unknown, not empty. */
+		}
+		const snapshot = {
+			tools,
+			history: "",
+			runtime: {
+				model: this.target.model?.id,
+				provider: this.target.model?.provider,
+				reasoning: this.target.thinkingLevel,
+				host: hostname(),
+				workspace: this.target.sessionManager.getCwd(),
+				tenant,
+				taskStatus:
+					this.#threadStatusValue().type === "active"
+						? this.target.userInteractions?.waitingOnUserInput ||
+							this.target.conversationPlans?.current?.status === "pending"
+							? ("waitingOnUserInput" as const)
+							: ("running" as const)
+						: ("idle" as const),
+			},
+		};
+		return snapshot;
+	}
+	#refreshVoiceContext(): void {
+		void this.#voice?.refreshContext().catch(() => {});
+	}
 	#emitThreadStatus(runtimeStatus?: "active" | "idle"): void {
+		this.#refreshVoiceContext();
 		const status = this.#threadStatusValue(runtimeStatus === undefined ? undefined : runtimeStatus === "active");
 		const serialized = JSON.stringify(status);
 		if (this.#threadStatus === serialized) return;
@@ -589,6 +682,19 @@ export class RemoteSession {
 		return turns;
 	}
 
+	#compatibilityHistory(): Turn[] {
+		if (!this.#durable) return this.history();
+		const turns = projectCompatibilityHistory(
+			this.target.sessionId,
+			this.target.sessionManager.getBranch(),
+			Boolean(this.#active) || this.target.isStreaming,
+			this.target.sessionManager.getCwd(),
+		);
+		this.#overlayLiveHistory(turns);
+		for (const turn of turns) coalesceTurnFileChanges(turn.items);
+		return turns;
+	}
+
 	skills(): {
 		skills: Array<{
 			name: string;
@@ -687,7 +793,7 @@ export class RemoteSession {
 			agentRole: null,
 			gitInfo: null,
 			name: this.target.sessionName ?? null,
-			turns: includeTurns ? this.history() : [],
+			turns: includeTurns ? this.#compatibilityHistory() : [],
 		};
 	}
 	models(): RemoteModelDescriptor[] {
@@ -1019,7 +1125,9 @@ export class RemoteSession {
 			return {};
 		}
 		if (method === "thread/realtime/stop") {
-			await this.#voice?.stop();
+			// Return the stop result before closure/history notifications so the phone
+			// can retire its voice overlay before navigating to the durable transcript.
+			this.#deferVoiceStop();
 			return {};
 		}
 		if (method === "thread/realtime/start") {
@@ -1029,26 +1137,26 @@ export class RemoteSession {
 			if (this.#voice?.active) throw new ProtocolError(-32000, "Voice is already active");
 			await this.#voice?.stop();
 			this.#assertCurrent(epoch);
+			this.#prestartVoiceStopReported = false;
 			this.#voiceHandoffsRetired = false;
 			this.#voiceAdmissionTail = Promise.resolve();
+			let startupOutcomeReported = false;
+			// Hash application-owned user inputs before attaching. No profile or
+			// prompt text is added to Live, and later user turns are not frozen here.
+			const requestHash = (text: string) =>
+				createHash("sha256").update(text.trim().replace(/\s+/g, " ")).digest("hex");
+			const startupRequests = new Set(
+				(this.target.messages ?? [])
+					.filter(message => message.role === "user")
+					.slice(-128)
+					.map(message => requestHash(textOf(message))),
+			);
 			this.#voice = new NativeVoice({
+				isStartupHistoryRequest: text => !!text.trim() && startupRequests.has(requestHash(text)),
 				history: this.#voiceHistoryOwner.history,
 				persona: async () => {
 					this.#assertCurrent(epoch);
-					const tools = (this.target.getActiveToolNames?.() ?? [])
-						.sort((left, right) => left.localeCompare(right))
-						.map(name => ({ name }));
-					const snapshot = {
-						tools,
-						history: JSON.stringify(
-							(this.target.messages ?? [])
-								.filter(message => message.role === "user" || message.role === "assistant")
-								.map(message => ({ role: message.role, text: textOf(message) }))
-								.slice(-30),
-						),
-					};
-					this.#assertCurrent(epoch);
-					return snapshot;
+					return this.#voicePersona();
 				},
 				modeChanged: (active, instructions) =>
 					this.#effect(epoch, async () => {
@@ -1070,6 +1178,7 @@ export class RemoteSession {
 					return key;
 				},
 				emit: (name, value) => {
+					if (name === "thread/realtime/error" || name === "thread/realtime/closed") startupOutcomeReported = true;
 					if (epoch === this.#epoch) this.#emit(name, value, true);
 				},
 				records: () => {
@@ -1101,6 +1210,31 @@ export class RemoteSession {
 					return this.#delegateVoice(id, text, output);
 				},
 			});
+			if ((params.transport as { type?: unknown } | undefined)?.type === "existingCall") {
+				// Codex acknowledges admission before opening the client-created call's
+				// sideband. Readiness and asynchronous failures remain notifications.
+				existingCallConfig(params);
+				const voice = this.#voice;
+				const pending = voice.start(params).catch(async () => {
+					if (voice.closing) {
+						await voice.closing;
+						return;
+					}
+					// NativeVoice reports transport failures itself. Early startup
+					// failures must also have an observable terminal outcome.
+					if (!startupOutcomeReported && epoch === this.#epoch && !this.#disposed && !this.#suspended) {
+						this.#emit("thread/realtime/error", { message: "Could not start voice" }, true);
+						if (voice.active) await voice.stop("failed");
+						else this.#emit("thread/realtime/closed", { reason: "failed" }, true);
+					}
+				});
+				this.#effects.add(pending);
+				void pending.then(
+					() => this.#effects.delete(pending),
+					() => this.#effects.delete(pending),
+				);
+				return {};
+			}
 			await this.#voice.start(params);
 			this.#assertCurrent(epoch);
 			return {};
@@ -1159,6 +1293,7 @@ export class RemoteSession {
 				});
 			const effort = this.thread().reasoningEffort;
 			const activePermission = remotePermissionProfile(this.target.settings);
+			this.#refreshVoiceContext();
 			this.#emit("thread/settings/updated", {
 				threadSettings: {
 					cwd: this.target.sessionManager.getCwd(),
@@ -1282,7 +1417,7 @@ export class RemoteSession {
 		}
 
 		if (method === "thread/turns/list" || method === "thread/items/list") {
-			const history = this.history();
+			const history = this.#compatibilityHistory();
 			const threadId = this.target.sessionId;
 			if (method === "thread/turns/list") {
 				const view = historyItemsView(params.itemsView);
@@ -1330,7 +1465,7 @@ export class RemoteSession {
 
 			// A live terminal is already an observed writer. Like upstream loaded-thread
 			// rejoin, resume cannot replace its runtime with the phone's default config.
-			const history = this.history();
+			const history = this.#compatibilityHistory();
 			const initialTurnsPage =
 				params.initialTurnsPage == null
 					? null
@@ -1393,6 +1528,7 @@ export class RemoteSession {
 					"approvalPolicy",
 					"approvalsReviewer",
 					"sandboxPolicy",
+					"outputSchema",
 				].includes(key) &&
 				params[key] != null
 			)
@@ -1403,7 +1539,7 @@ export class RemoteSession {
 			params.input.some(item => item?.type !== "text" || typeof item.text !== "string")
 		)
 			throw new ProtocolError(-32602, "Unsupported turn input; text required");
-		if (params.model != null && params.model !== this.target.model?.id)
+		if (params.model != null && !this.#matchesModel(params.model))
 			throw new ProtocolError(-32602, "Unsupported model override; use the terminal's selected model");
 		if (params.cwd != null && params.cwd !== this.target.sessionManager.getCwd())
 			throw new ProtocolError(-32602, "Unsupported working directory override");
@@ -1425,6 +1561,8 @@ export class RemoteSession {
 			throw new ProtocolError(-32602, "Unsupported reasoning summary");
 		if (method === "turn/steer" && params.collaborationMode != null)
 			throw new ProtocolError(-32602, "Collaboration mode can only be selected when starting a turn");
+		if (method === "turn/steer" && params.outputSchema != null)
+			throw new ProtocolError(-32602, "Output schema can only be selected when starting a turn");
 		const permissionProfile = this.#parsePermissionProfile(params);
 		const collaborationMode = this.#parseCollaborationMode(params.collaborationMode);
 		this.#validateEffort(params.effort);
@@ -1483,19 +1621,21 @@ export class RemoteSession {
 		// is finished, so keep the accepted remote turn active until the promise
 		// resolves. Locally initiated turns still settle directly from agent_end.
 		this.#promptOwnedTurnId = active.id;
-		void this.target.prompt(text).then(
-			() => {
-				if (epoch === this.#epoch) this.#finish("completed", active.id);
-			},
-			() => {
-				if (epoch === this.#epoch) this.#finish("failed", active.id);
-			},
-		);
+		void this.target
+			.prompt(text, params.outputSchema == null ? undefined : { outputSchema: params.outputSchema })
+			.then(
+				() => {
+					if (epoch === this.#epoch) this.#finish("completed", active.id);
+				},
+				() => {
+					if (epoch === this.#epoch) this.#finish("failed", active.id);
+				},
+			);
 		return { turn: { ...active } };
 	}
 	#resolveModel(value: unknown): Model {
 		const current = this.target.model;
-		if (value == null || value === current?.id) {
+		if (value == null || this.#matchesModel(value, current)) {
 			if (!current) throw new ProtocolError(-32602, "No model is selected");
 			return current;
 		}
@@ -1507,6 +1647,10 @@ export class RemoteSession {
 		const selected = preferred ?? (matches.length === 1 ? matches[0] : undefined);
 		if (!selected) throw new ProtocolError(-32602, "Selected model is unavailable");
 		return selected;
+	}
+	#matchesModel(value: unknown, model = this.target.model): boolean {
+		if (typeof value !== "string" || !model) return false;
+		return value === model.id;
 	}
 	#validateEffort(effort: unknown, model = this.target.model): ThinkingLevel | undefined {
 		if (effort == null) return undefined;
@@ -1563,7 +1707,7 @@ export class RemoteSession {
 		const settings = collaboration.settings as Record<string, unknown>;
 		if (Object.keys(settings).some(key => !["model", "reasoning_effort", "developer_instructions"].includes(key)))
 			throw new ProtocolError(-32602, "Unsupported custom collaboration mode settings");
-		if (typeof settings.model !== "string" || settings.model !== model?.id)
+		if (typeof settings.model !== "string" || !this.#matchesModel(settings.model, model))
 			throw new ProtocolError(-32602, "Collaboration mode must preserve the terminal's selected model");
 		if (settings.developer_instructions != null)
 			throw new ProtocolError(-32602, "Custom collaboration instructions are not supported");
@@ -1625,6 +1769,7 @@ export class RemoteSession {
 					);
 				});
 				try {
+					this.target.setVoiceTaskIdentity?.(turnId, id);
 					await this.call(`voice:${id}`, current ? "turn/steer" : "turn/start", {
 						threadId: this.target.sessionId,
 						...(current ? { expectedTurnId: current.id } : {}),
@@ -1689,6 +1834,17 @@ export class RemoteSession {
 	}
 	#event(event: AgentSessionEvent): void {
 		if (this.#disposed || this.#boundId !== this.target.sessionId) return;
+		if (
+			[
+				"agent_start",
+				"agent_end",
+				"tool_execution_end",
+				"interaction_snapshot",
+				"plan_available",
+				"plan_resolved",
+			].includes(event.type)
+		)
+			this.#refreshVoiceContext();
 		if (event.type === "recap_created") {
 			this.#emit("thread/recap/created", { ...event.recap });
 			return;
@@ -1792,7 +1948,10 @@ export class RemoteSession {
 			this.#startedItems.add(id);
 			this.#emit("item/started", {
 				turnId: this.#active.id,
-				item: item.type === "agentMessage" && item.delivery !== "async" ? { ...item, text: "" } : { ...item },
+				item:
+					(item.type === "agentMessage" && item.delivery !== "async") || item.type === "plan"
+						? { ...item, text: "" }
+						: { ...item },
 			});
 		}
 		const index = this.#active.items.findIndex(value => value.id === id);
@@ -1804,6 +1963,22 @@ export class RemoteSession {
 			this.#emit("item/completed", { turnId: this.#active.id, item });
 		}
 	}
+	#publishPlanItem(item: Record<string, unknown>, done: boolean): void {
+		const previous = this.#active?.items.find(value => value.id === item.id);
+		const priorText = typeof previous?.text === "string" ? previous.text : "";
+		this.#rememberItem(item, false);
+		const text = String(item.text ?? "");
+		if (text.startsWith(priorText) && text.length > priorText.length)
+			this.#emit(item.type === "plan" ? "item/plan/delta" : "item/agentMessage/delta", {
+				turnId: this.#active?.id,
+				itemId: item.id,
+				delta: text.slice(priorText.length),
+			});
+		if (done) this.#rememberItem(item, true);
+	}
+	#publishPlanText(id: string, text: string, phase: string | undefined, done: boolean): void {
+		for (const item of assistantPlanHistoryItems(id, text, phase, "plan")) this.#publishPlanItem(item, done);
+	}
 	#durableEvent(event: AgentSessionEvent): void {
 		// A provider recovery can replay agent_start after the remotely owned
 		// prompt promise has settled.  That is not a new semantic turn.  Locally
@@ -1814,7 +1989,10 @@ export class RemoteSession {
 		if (event.type === "message_start" && event.message.role !== "toolResult") {
 			const id = `${this.target.sessionId}-item-${randomUUID()}`;
 			this.#messageIds.set(messageKey(event.message), id);
-			if (event.message.role === "assistant") this.#itemId = id;
+			if (event.message.role === "assistant") {
+				this.#itemId = id;
+				this.#planMessage = this.#historyToolContext(event.message)?.collaborationMode === "plan";
+			}
 		}
 		if (
 			event.type === "message_update" &&
@@ -1825,8 +2003,12 @@ export class RemoteSession {
 			if (part?.type === "text") {
 				if (!this.#itemId) this.#itemId = `${this.target.sessionId}-item-${randomUUID()}`;
 				const id = `${this.#itemId}:${update.contentIndex}`;
-				this.#rememberItem(assistantHistoryItem(id, part.text, part.phase), false);
-				if (update.type === "text_delta")
+				// Keep the plan envelope out of ordinary text deltas. Publish typed
+				// parts at text_end and reuse the same IDs at message completion.
+				if (this.#planMessage) {
+					if (update.type === "text_end") this.#publishPlanText(id, part.text, part.phase, false);
+				} else this.#rememberItem(assistantHistoryItem(id, part.text, part.phase), false);
+				if (update.type === "text_delta" && !this.#planMessage)
 					this.#emit("item/agentMessage/delta", { turnId: this.#active?.id, itemId: id, delta: update.delta });
 				this.#voiceOutput({ id, text: part.text, phase: part.phase, done: update.type === "text_end" });
 			}
@@ -1854,7 +2036,15 @@ export class RemoteSession {
 					tools,
 				});
 			this.#messageIds.delete(key);
-			for (const item of items) this.#rememberItem(item, item.status !== "inProgress");
+			for (const item of items) {
+				if (
+					this.#planMessage &&
+					message.role === "assistant" &&
+					(item.type === "plan" || item.type === "agentMessage")
+				) {
+					this.#publishPlanItem(item, true);
+				} else this.#rememberItem(item, item.status !== "inProgress");
+			}
 			if (message.role === "assistant") {
 				for (const [index, part] of message.content.entries())
 					if (part.type === "text")

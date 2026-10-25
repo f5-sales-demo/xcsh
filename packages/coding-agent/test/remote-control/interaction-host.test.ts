@@ -203,7 +203,10 @@ test.each(["scalar", "group"])(
 			await initialize();
 			await request(3, "thread/resume", { threadId: session.sessionId });
 			await waitFor(() => events.some(event => event.method === "item/tool/requestUserInput"));
-			expect(events.find(event => event.method === "item/tool/requestUserInput")).toEqual(original);
+			expect(events.find(event => event.method === "item/tool/requestUserInput")).toEqual({
+				...original,
+				emittedAtMs: expect.any(Number),
+			});
 			if (grouped) {
 				expect(original.params.questions.map((question: any) => question.id)).toEqual(["colors", "note"]);
 			}

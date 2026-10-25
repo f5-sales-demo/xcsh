@@ -25,7 +25,8 @@ async function fixture() {
 		return {};
 	};
 	phone.handle = async (_method, params) => {
-		events.push(params.event as Notification);
+		const { emittedAtMs: _emittedAtMs, ...event } = params.event as Notification;
+		events.push(event);
 		return {};
 	};
 	const waitFor = async (predicate: () => boolean) => {

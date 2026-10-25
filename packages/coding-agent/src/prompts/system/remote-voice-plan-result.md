@@ -1,0 +1,1 @@
+A complete planning review follows. Give one or two short sentences stating its outcome and important unresolved inputs, then direct the caller to the Plan card for details. Do not read the full plan aloud unless the caller explicitly requests it. Preserve stated execution and authorization limits; do not imply the plan was implemented.

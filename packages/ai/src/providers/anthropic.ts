@@ -797,7 +797,13 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 					"Anthropic stream timed out while waiting for the first event",
 				);
 				const { requestSignal } = activeAbortTracker;
-				const anthropicRequest = client.messages.create({ ...params, stream: true }, { signal: requestSignal });
+				const anthropicRequest = client.messages.create(
+					{ ...params, stream: true },
+					{
+						signal: requestSignal,
+						...(options?.maxRetries !== undefined ? { maxRetries: options.maxRetries } : {}),
+					},
+				);
 				let streamedReplayUnsafeContent = false;
 
 				// SERVER-SIDE tools (Anthropic's built-in web search) are executed by the provider,
@@ -1122,7 +1128,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 					const canRetryProviderFailure = firstTokenTime === undefined && isProviderRetryableError(streamFailure);
 					if (
 						activeAbortTracker.wasCallerAbort() ||
-						providerRetryAttempt >= PROVIDER_MAX_RETRIES ||
+						providerRetryAttempt >= (options?.maxRetries ?? PROVIDER_MAX_RETRIES) ||
 						(!canRetryTransientEnvelopeFailure && !canRetryProviderFailure)
 					) {
 						throw streamFailure;

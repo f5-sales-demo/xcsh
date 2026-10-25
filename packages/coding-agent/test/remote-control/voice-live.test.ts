@@ -24,7 +24,8 @@ test("standalone uses the single Live endpoint and session shape", () => {
 			delegation: { type: "client" },
 		},
 	});
-	expect(config.session.instructions).toContain("fixture instructions");
+	expect(config.session.instructions).not.toContain("fixture instructions");
+	expect(config.session.instructions).toContain("The caller speaks first");
 	for (const override of [
 		{ version: "v1" },
 		{ version: "v2" },
@@ -86,13 +87,16 @@ function fixture(apiKey: string | null = "standalone-fixture-key") {
 	return { voice: new NativeVoice(deps), sent, events, handlers: () => handlers };
 }
 
-test("standalone initializes Live once and forwards audio and text", async () => {
+test("standalone waits for session.started before forwarding audio and text", async () => {
 	const f = fixture();
 	const started = f.voice.start({ ...base, threadId: "thread-fixture" });
 	await Bun.sleep(0);
 	expect(f.sent[0]).toMatchObject({ type: "session.update" });
 	expect(f.events.some(event => event.method === "thread/realtime/started")).toBe(false);
 	f.handlers().message(JSON.stringify({ type: "session.updated", session: { id: "server-session" } }));
+	await Bun.sleep(0);
+	expect(f.events.some(event => event.method === "thread/realtime/started")).toBe(false);
+	f.handlers().message(JSON.stringify({ type: "session.started", session: { id: "server-session" } }));
 	await started;
 	expect(f.events).toContainEqual({
 		method: "thread/realtime/started",
@@ -100,6 +104,9 @@ test("standalone initializes Live once and forwards audio and text", async () =>
 	});
 	f.voice.appendAudio({ data: "AQID", sampleRate: 24000, numChannels: 1 });
 	expect(f.sent.at(-1)).toEqual({ type: "input_audio.append", audio: "AQID" });
+	f.voice.appendText("speak this", "assistant", true);
+	expect(f.sent.at(-1)).toEqual({ type: "input_audio.append", audio: "AQID" });
+	f.voice.appendText("Please speak this", "user");
 	f.voice.appendText("speak this", "assistant", true);
 	expect(f.sent.at(-1)).toEqual({
 		type: "session.context.append",
@@ -110,11 +117,26 @@ test("standalone initializes Live once and forwards audio and text", async () =>
 	expect(f.sent.at(-1)).toEqual({ type: "session.close" });
 });
 
-test("standalone accepts session.started as the canonical first V3 event", async () => {
+test("standalone treats documented GPT-Live session.started as ready", async () => {
 	const f = fixture();
 	const started = f.voice.start({ ...base, threadId: "thread-fixture" });
 	await Bun.sleep(0);
 	f.handlers().message(JSON.stringify({ type: "session.started", session: { id: "server-session" } }));
+	const readiness = await Promise.race([started.then(() => "ready"), Bun.sleep(50).then(() => "timeout")]);
+	await f.voice.stop();
+	await started.catch(() => {});
+	expect(readiness).toBe("ready");
+	expect(f.events).toContainEqual({
+		method: "thread/realtime/started",
+		params: { realtimeSessionId: "thread-fixture", version: "v3" },
+	});
+});
+
+test("standalone treats the documented session.created event as ready", async () => {
+	const f = fixture();
+	const started = f.voice.start({ ...base, threadId: "thread-fixture" });
+	await Bun.sleep(0);
+	f.handlers().message(JSON.stringify({ type: "session.created", session: { id: "server-session" } }));
 	await started;
 	expect(f.events).toContainEqual({
 		method: "thread/realtime/started",
@@ -127,7 +149,7 @@ test("standalone rejects malformed audio and missing API-key authentication", as
 	const f = fixture();
 	const started = f.voice.start({ ...base, threadId: "thread-fixture" });
 	await Bun.sleep(0);
-	f.handlers().message(JSON.stringify({ type: "session.updated", session: { id: "server-session" } }));
+	f.handlers().message(JSON.stringify({ type: "session.created", session: { id: "server-session" } }));
 	await started;
 	for (const audio of [null, { data: 12 }, { data: "AQID", sampleRate: -1, numChannels: 1 }])
 		expect(() => f.voice.appendAudio(audio)).toThrow("Invalid realtime audio input");

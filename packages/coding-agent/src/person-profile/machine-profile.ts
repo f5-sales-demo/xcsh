@@ -1,5 +1,5 @@
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { getConfigRootDir } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { collectMachine } from "./machine-collectors";
@@ -93,7 +93,7 @@ function validate(value: unknown): void {
 export class MachineProfileService {
 	readonly #store: PrivateProfileStore<MachineProfile>;
 	constructor(
-		readonly path = join(homedir(), ".xcsh", "computer-profile.json"),
+		readonly path = join(getConfigRootDir(), "computer-profile.json"),
 		private readonly collect = collectMachine,
 		lockTimeoutMs = 10000,
 	) {

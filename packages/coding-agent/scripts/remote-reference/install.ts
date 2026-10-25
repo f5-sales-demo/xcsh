@@ -4,7 +4,8 @@ import { loadReferenceBaseline, verifyReferenceCheckout, verifyReferenceFiles } 
 
 const [version, source] = Bun.argv.slice(2);
 const root = source && resolve(source);
-if (!version || !root) throw new Error("Usage: bun install.ts <0.153.4|0.154.0> <pristine tagged Codex checkout>");
+if (!version || !root)
+	throw new Error("Usage: bun install.ts <0.153.4|0.154.0|0.159.2> <pristine tagged Codex checkout>");
 const manifest = await loadReferenceBaseline(version);
 verifyReferenceCheckout(root, manifest);
 await verifyReferenceFiles(root, manifest);

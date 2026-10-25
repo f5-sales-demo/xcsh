@@ -11,6 +11,7 @@ Unmodified OpenAI Codex JSON schemas from commit
 - `codex-rs/app-server-protocol/schema/json/v2/ModelListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/PermissionProfileList{Params,Response}.json`
 - `codex-rs/app-server-protocol/schema/json/v2/{SkillsList,FsReadFile}Response.json`
+- `codex-rs/app-server-protocol/schema/json/v2/Fs{GetMetadata,ReadDirectory,CreateDirectory}{Params,Response}.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSettingsUpdatedNotification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSetName{Params,Response}.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadNameUpdatedNotification.json`

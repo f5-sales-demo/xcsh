@@ -220,3 +220,21 @@ async function writePackageVersion(root: string, directory: string, name: string
 async function writePackagePayload(root: string, directory: string): Promise<void> {
 	await Bun.write(path.join(root, "packages/natives/npm", directory, "native.node"), "test native payload");
 }
+
+it("validates npm alias against its own locked locator and installed version", async () => {
+	const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-alias-install-"));
+	const aliases: BunLockFile = {
+		workspaces: { "packages/coding-agent": { dependencies: { "ws-diagnostic": "npm:ws@8.21.1" } } },
+		packages: { "ws-diagnostic": ["ws@8.21.1"], ws: ["ws@8.21.3"] },
+	};
+	try {
+		await writeInstalledVersion(root, "packages/coding-agent", "ws-diagnostic", "8.21.1");
+		expect(await inspectDependencyInstall(root, aliases)).toEqual([]);
+		await writeInstalledVersion(root, "packages/coding-agent", "ws-diagnostic", "8.21.3");
+		const mismatches = await inspectDependencyInstall(root, aliases);
+		expect(mismatches).toHaveLength(1);
+		expect(mismatches[0].lockedVersions).toEqual(["8.21.1"]);
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});

@@ -52,9 +52,10 @@ function response(message: AssistantMessage): AssistantMessageEventStream {
 	return stream;
 }
 
-function createHarness(messages: AssistantMessage[], signal?: AbortSignal) {
+function createHarness(messages: AssistantMessage[], signal?: AbortSignal, streaming = false) {
 	const calls: Array<SimpleStreamOptions["toolChoice"]> = [];
 	const requestMessages: string[][] = [];
+	const requestToolNames: string[][] = [];
 	const invocations: Array<{ name: string; contextName?: string }> = [];
 	const events: AgentEvent[] = [];
 	const interceptedUpdates: string[] = [];
@@ -76,7 +77,7 @@ function createHarness(messages: AssistantMessage[], signal?: AbortSignal) {
 		tools: [tool("xcsh_context"), tool("xcsh_api")],
 	};
 	const config: AgentLoopConfig = {
-		model,
+		model: streaming ? ({ ...model, api: "openai-codex-responses" } as Model) : model,
 		convertToLlm: value => value as never,
 		onAssistantMessageEvent: message => interceptedUpdates.push(JSON.stringify(message)),
 		getToolChoice: () => {
@@ -92,6 +93,7 @@ function createHarness(messages: AssistantMessage[], signal?: AbortSignal) {
 		signal,
 		(_model: Model, requestContext, options) => {
 			calls.push(options?.toolChoice);
+			requestToolNames.push((requestContext.tools ?? []).map(tool => tool.name));
 			requestMessages.push(
 				requestContext.messages.map(message =>
 					typeof message.content === "string"
@@ -106,7 +108,7 @@ function createHarness(messages: AssistantMessage[], signal?: AbortSignal) {
 		for await (const event of stream) events.push(event);
 		return await stream.result();
 	};
-	return { calls, context, events, interceptedUpdates, invocations, requestMessages, run };
+	return { calls, context, events, interceptedUpdates, invocations, requestMessages, requestToolNames, run };
 }
 
 describe("exact named tool choice", () => {
@@ -186,4 +188,59 @@ describe("exact named tool choice", () => {
 		const aborted = result.find(message => message.role === "assistant") as AssistantMessage;
 		expect(aborted.stopReason).toBe("aborted");
 	});
+});
+
+it("accepts complete sequential calls to the required context tool without partial admission failure", async () => {
+	const harness = createHarness(
+		[
+			assistant(
+				[
+					{ type: "toolCall", id: "list", name: "xcsh_context", arguments: {} },
+					{ type: "toolCall", id: "activate", name: "xcsh_context", arguments: { name: "intended" } },
+				],
+				"toolUse",
+			),
+			assistant([{ type: "text", text: "done" }], "stop"),
+		],
+		undefined,
+		true,
+	);
+	const result = await harness.run();
+	expect(harness.invocations).toEqual([
+		{ name: "xcsh_context", contextName: undefined },
+		{ name: "xcsh_context", contextName: "intended" },
+	]);
+	expect(result.filter(m => m.role === "assistant").some(m => (m as AssistantMessage).stopReason === "error")).toBe(
+		false,
+	);
+});
+it("never admits a completed context call from a forced response containing a different tool", async () => {
+	const harness = createHarness(
+		[
+			assistant(
+				[
+					{ type: "toolCall", id: "list", name: "xcsh_context", arguments: {} },
+					{ type: "toolCall", id: "wrong", name: "xcsh_api", arguments: { name: "wrong" } },
+				],
+				"toolUse",
+			),
+		],
+		undefined,
+		true,
+	);
+	await harness.run();
+	expect(harness.invocations).toEqual([]);
+});
+
+it("forced context boundary exposes only the required tool schema", async () => {
+	const harness = createHarness([
+		assistant(
+			[{ type: "toolCall", id: "context", name: "xcsh_context", arguments: { name: "intended" } }],
+			"toolUse",
+		),
+		assistant([{ type: "text", text: "done" }], "stop"),
+	]);
+	await harness.run();
+	expect(harness.requestToolNames[0]).toEqual(["xcsh_context"]);
+	expect(harness.requestToolNames[1]).toContain("xcsh_api");
 });

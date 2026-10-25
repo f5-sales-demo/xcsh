@@ -6,9 +6,10 @@ import type { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { createAgentSession } from "../sdk";
 import { SessionManager } from "../session/session-manager";
-import { projectHistory } from "./history";
+import { projectCompatibilityHistory } from "./history";
 import { connectPeer, type LocalPeer } from "./ipc";
 import { inspectProcess, matchesProcessIdentity, type ProcessIdentity, signalVerifiedProcess } from "./lifecycle-state";
+import { initializeManagedExtensionUI } from "./managed-extension-ui";
 import type { RemoteThreadLifecycle, SessionEndpoint } from "./router";
 import { type Notification, ProtocolError, RemoteSession } from "./session";
 
@@ -187,6 +188,10 @@ async function createManagedWorkerRuntime(
 			child = spawn(command[0]!, [...command.slice(1), "remote-control", "worker", socketPath], {
 				detached: true,
 				stdio: ["ignore", log.fd, log.fd],
+				cwd:
+					typeof request.params.cwd === "string"
+						? request.params.cwd
+						: (request.record?.cwd ?? request.source?.cwd),
 				env,
 			});
 			child.unref();
@@ -267,6 +272,7 @@ function thinkingLevel(value: unknown): ThinkingLevel | undefined {
 
 export function managedSandboxPolicy(sandbox: unknown, cwd: string): Record<string, unknown> {
 	if (sandbox === "danger-full-access") return { type: "dangerFullAccess" };
+	if (sandbox === "read-only") return { type: "readOnly", networkAccess: false };
 	if (sandbox === "workspace-write") {
 		return {
 			type: "workspaceWrite",
@@ -315,31 +321,56 @@ function threadFromRecord(record: ManagedThreadRecord, turns: unknown[] = []): R
 
 export async function createManagedSessionRuntime(request: ManagedSessionRuntimeRequest): Promise<ManagedRuntime> {
 	const cwd = String(request.params.cwd ?? request.record?.cwd ?? request.source?.cwd ?? "");
-	let sessionManager: SessionManager;
-	if (request.kind === "resume") {
-		if (!request.record?.path) throw new ProtocolError(-32602, "Persisted thread is unavailable");
-		sessionManager = await SessionManager.open(request.record.path);
-	} else if (request.kind === "fork") {
-		if (!request.source?.path) throw new ProtocolError(-32602, "Fork source is unavailable");
-		sessionManager =
-			request.params.ephemeral === true
-				? await SessionManager.inMemoryForkFrom(request.source.path, cwd)
-				: await SessionManager.forkFrom(request.source.path, cwd);
-	} else {
-		sessionManager = request.params.ephemeral === true ? SessionManager.inMemory(cwd) : SessionManager.create(cwd);
-	}
+	const createSessionManager = async (): Promise<SessionManager> => {
+		if (request.kind === "resume") {
+			if (!request.record?.path) throw new ProtocolError(-32602, "Persisted thread is unavailable");
+			return SessionManager.open(request.record.path);
+		}
+		if (request.kind === "fork") {
+			if (!request.source?.path) throw new ProtocolError(-32602, "Fork source is unavailable");
+			return request.params.ephemeral === true
+				? SessionManager.inMemoryForkFrom(request.source.path, cwd)
+				: SessionManager.forkFrom(request.source.path, cwd);
+		}
+		return request.params.ephemeral === true ? SessionManager.inMemory(cwd) : SessionManager.create(cwd);
+	};
+	const sessionManager = await createSessionManager();
+	const requestedModel = request.params.model ?? request.record?.model ?? request.source?.model;
+	const requestedProvider =
+		request.params.modelProvider ?? request.record?.modelProvider ?? request.source?.modelProvider;
+	const requestedEffort = request.params.effort ?? request.record?.reasoningEffort ?? request.source?.reasoningEffort;
 	const selector =
-		typeof request.params.model === "string"
-			? `${typeof request.params.modelProvider === "string" ? `${request.params.modelProvider}/` : ""}${request.params.model}`
+		typeof requestedModel === "string"
+			? `${typeof requestedProvider === "string" ? `${requestedProvider}/` : ""}${requestedModel}`
 			: undefined;
-	const { session } = await createAgentSession({
+	// Initialize the context service before SDK bootstrap so a configured local
+	// pointer can be bound using the same source-aware path as the native CLI.
+	const { ContextService } = await import("../services/xcsh-context");
+	const { getXCSHConfigDir } = await import("@f5-sales-demo/pi-utils");
+	try {
+		ContextService.instance;
+	} catch {
+		ContextService.init(getXCSHConfigDir());
+	}
+	const { session, setToolUIContext } = await createAgentSession({
 		cwd,
 		sessionManager,
 		modelPattern: selector,
-		thinkingLevel: thinkingLevel(request.params.effort),
+		thinkingLevel: thinkingLevel(requestedEffort),
 		hasUI: true,
 		profileDiscovery: true,
 	});
+	// A phone-selected model is an execution constraint. A stale selector cannot
+	// silently become another model or a reusable alias for it.
+	if (
+		selector &&
+		(!session.model ||
+			session.model.id !== requestedModel ||
+			(typeof requestedProvider === "string" && session.model.provider !== requestedProvider))
+	) {
+		await session.dispose();
+		throw new ProtocolError(-32602, "Selected model is unavailable");
+	}
 	if (request.params.ephemeral !== true) {
 		await session.sessionManager.ensureOnDisk();
 		await session.sessionManager.flush();
@@ -353,7 +384,9 @@ export async function createManagedSessionRuntime(request: ManagedSessionRuntime
 		},
 		setModel: (model, effort) => session.setModelTemporary(model, effort),
 	});
+	initializeManagedExtensionUI(session, setToolUIContext);
 	const configure: Record<string, unknown> = { threadId: session.sessionId };
+	if (requestedEffort != null) configure.effort = requestedEffort;
 	for (const field of ["model", "effort", "serviceTier", "approvalPolicy", "approvalsReviewer", "multiAgentMode"])
 		if (request.params[field] != null) configure[field] = request.params[field];
 	if (request.params.sandbox != null) configure.sandboxPolicy = managedSandboxPolicy(request.params.sandbox, cwd);
@@ -371,9 +404,11 @@ export async function createManagedSessionRuntime(request: ManagedSessionRuntime
 				: (request.record?.threadSource ?? null),
 	});
 	let publish: (event: Notification) => void = () => {};
-	const unsubscribe = remote.subscribe(event => publish(event));
 	const endpoint: SessionEndpoint = {
 		thread: thread(),
+		get voiceActive() {
+			return remote.voiceActive;
+		},
 		models: remote.models(),
 		skills: catalog.skills,
 		skillErrors: catalog.errors,
@@ -386,6 +421,12 @@ export async function createManagedSessionRuntime(request: ManagedSessionRuntime
 			return result;
 		},
 	};
+	const unsubscribe = remote.subscribe(event => {
+		// Worker notifications include an endpoint snapshot. Keep pending requests
+		// current before sending it, including while turn/start awaits an approval.
+		endpoint.requests = remote.pendingRequests();
+		publish(event);
+	});
 	return {
 		endpoint,
 		setPublisher: listener => {
@@ -624,7 +665,9 @@ export class ManagedRemoteSessions implements RemoteThreadLifecycle {
 		if (!record?.path) throw new ProtocolError(-32602, "Thread not found");
 		const manager = await SessionManager.open(record.path);
 		const turns =
-			params.includeTurns === true ? projectHistory(record.id, manager.getBranch(), false, record.cwd) : [];
+			params.includeTurns === true
+				? projectCompatibilityHistory(record.id, manager.getBranch(), false, record.cwd)
+				: [];
 		return { thread: threadFromRecord(record, turns) };
 	}
 

@@ -59,3 +59,35 @@ test.each(["openai-responses", "openai-codex-responses"] as const)(
 		expect(tools?.[0]?.parameters.properties.facts.required).toBeUndefined();
 	},
 );
+
+test.each(["openai-responses", "openai-codex-responses"] as const)(
+	"%s awaits asynchronous payload transforms before transport",
+	async api => {
+		const base = getBundledModel("openai", "gpt-5-mini");
+		if (!base) throw new Error("Missing fixture model");
+		let transformed = false;
+		const signal = AbortSignal.abort();
+		const options = {
+			signal,
+			onPayload: async (payload: unknown) => {
+				await Bun.sleep(5);
+				transformed = true;
+				return payload;
+			},
+		};
+		if (api === "openai-responses") {
+			await streamOpenAIResponses({ ...base, api } as Model<"openai-responses">, context, {
+				apiKey: "test-key",
+				...options,
+			}).result();
+		} else {
+			const token = `aaa.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "acc_test" } })).toString("base64")}.bbb`;
+			await streamOpenAICodexResponses(
+				{ ...base, api, provider: "openai-codex" } as Model<"openai-codex-responses">,
+				context,
+				{ apiKey: token, ...options },
+			).result();
+		}
+		expect(transformed).toBe(true);
+	},
+);

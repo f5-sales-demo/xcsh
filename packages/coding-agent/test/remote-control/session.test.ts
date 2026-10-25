@@ -17,6 +17,7 @@ function fixture(
 	extensions: Partial<SessionTarget> = {},
 ) {
 	const prompts: string[] = [];
+	const promptOptions: unknown[] = [];
 	let finish = () => {};
 	let sessionName = id;
 	const settings = Settings.isolated({ "sandbox.enabled": false });
@@ -32,8 +33,9 @@ function fixture(
 		settings,
 		sessionManager: { getCwd: () => "/tmp" },
 		subscribe: () => () => {},
-		prompt: async (text: string) => {
+		prompt: async (text: string, options?: unknown) => {
 			prompts.push(text);
+			promptOptions.push(options);
 			await new Promise<void>(resolve => {
 				finish = resolve;
 			});
@@ -50,7 +52,13 @@ function fixture(
 		},
 		...extensions,
 	} as unknown as SessionTarget;
-	return { remote: new RemoteSession(target, "21.22.0", controls), prompts, finish: () => finish(), settings };
+	return {
+		remote: new RemoteSession(target, "21.22.0", controls),
+		prompts,
+		promptOptions,
+		finish: () => finish(),
+		settings,
+	};
 }
 
 test("async item starts and completes with identical full question content", async () => {
@@ -326,6 +334,32 @@ test("rejects unsupported input/model overrides before running anything", async 
 		a.remote.call("r2", "turn/start", { threadId: "a", input: [{ type: "image", url: "fixture" }] }),
 	).rejects.toThrow("Unsupported");
 	expect(a.prompts).toEqual([]);
+	a.remote.dispose();
+});
+test("turn/start forwards outputSchema for exactly the requested turn", async () => {
+	const a = fixture("output-schema");
+	const outputSchema = {
+		type: "object",
+		properties: { title: { type: "string", minLength: 1, maxLength: 36 } },
+		required: ["title"],
+		additionalProperties: false,
+	};
+	await a.remote.call("schema-turn", "turn/start", {
+		threadId: "output-schema",
+		input: [{ type: "text", text: "Generate a title" }],
+		outputSchema,
+	});
+	expect(a.prompts).toEqual(["Generate a title"]);
+	expect(a.promptOptions).toEqual([{ outputSchema }]);
+	a.finish();
+	await Bun.sleep(0);
+	await a.remote.call("plain-turn", "turn/start", {
+		threadId: "output-schema",
+		input: [{ type: "text", text: "Continue normally" }],
+	});
+	expect(a.prompts).toEqual(["Generate a title", "Continue normally"]);
+	expect(a.promptOptions).toEqual([{ outputSchema }, undefined]);
+	a.finish();
 	a.remote.dispose();
 });
 test("unsupported methods return explicit protocol errors", async () => {
@@ -678,6 +712,40 @@ test("phone settings update applies effort and truthful Ask or Full permission p
 	).rejects.toMatchObject({ code: -32602 });
 	expect(levels).toEqual(["medium"]);
 	expect(a.remote.target.model?.id).toBe("gpt-6-astra");
+	a.remote.dispose();
+});
+
+test("phone settings update preserves a network-isolated read-only permission profile", async () => {
+	const a = fixture("a");
+	const events: any[] = [];
+	a.remote.subscribe(event => events.push(event));
+	expect(
+		await a.remote.call("settings-policy-read-only", "thread/settings/update", {
+			threadId: "a",
+			approvalPolicy: "never",
+			sandboxPolicy: { type: "readOnly", networkAccess: false },
+		}),
+	).toEqual({});
+	expect(a.settings.get("sandbox.enabled")).toBe(true);
+	expect(events.at(-1)).toMatchObject({
+		method: "thread/settings/updated",
+		params: {
+			threadSettings: {
+				approvalPolicy: "never",
+				approvalsReviewer: "user",
+				sandboxPolicy: { type: "readOnly", networkAccess: false },
+				activePermissionProfile: null,
+			},
+		},
+	});
+	expect(
+		await a.remote.call("resume-read-only", "thread/resume", { threadId: "a", excludeTurns: true }),
+	).toMatchObject({
+		approvalPolicy: "never",
+		approvalsReviewer: "user",
+		sandbox: { type: "readOnly", networkAccess: false },
+		activePermissionProfile: null,
+	});
 	a.remote.dispose();
 });
 

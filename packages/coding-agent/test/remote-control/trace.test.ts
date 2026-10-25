@@ -234,3 +234,20 @@ test("separate processes can preserve cross-layer identities with an explicit ca
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("handshake cancellation remains content-free and identifiable in capture", () => {
+	expect(redactProtocolValue({ type: "cancelled", opened: false }, "fixture-salt")).toEqual({
+		type: "cancelled",
+		opened: false,
+	});
+});
+
+test("transport diagnostic retains only bounded known error codes", () => {
+	expect(redactProtocolValue({ transportErrorCode: "ECONNRESET", httpStatus: 403 }, "fixture")).toEqual({
+		transportErrorCode: "ECONNRESET",
+		httpStatus: 403,
+	});
+	expect(JSON.stringify(redactProtocolValue({ transportErrorCode: "private token" }, "fixture"))).not.toContain(
+		"private token",
+	);
+});
