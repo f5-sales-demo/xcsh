@@ -50,9 +50,29 @@ and endurance remain unfinished. Preserve workspace-write/on-request.
 
 The WebRTC prototype adds eight files under `scripts/qualification-cleanroom/owned-phone-client`:
 `USAGE.md`, `app.css`, `app.js`, `icon.png`, `index.html`, `manifest.webmanifest`, `server.py`, and
-`test_server.py`. Its publication branch additionally declares isolated aiohttp tests and invokes the four
+`test_server.py` in the original snapshot, now `tests/qualification_cleanroom/test_owned_phone_client.py`. Its publication branch additionally declares isolated aiohttp tests and invokes the four
 mocked regressions and JavaScript browser build through the existing `test:ts` CI entrypoint.
 Both PRs target main, with WebRTC dependent on the baseline. New feature development is deferred.
+
+## WebRTC compatibility requirement
+
+Future WebRTC development uses the open-source [openai/codex](https://github.com/openai/codex)
+repository as the compatibility reference and targets exactly **`gpt-live-1`**, the voice-to-voice model.
+The reference inspected for this checkpoint is
+[`970111f6cb62cc02fe36a82ea7d71b37a2889c97`](https://github.com/openai/codex/tree/970111f6cb62cc02fe36a82ea7d71b37a2889c97).
+This is an inspected source pin, not a passed compatibility qualification. On resumption, review upstream
+changes and explicitly record any replacement pin before implementing against it.
+
+Trace the reference through `codex-rs/realtime-webrtc/src/session.rs`,
+`codex-rs/codex-api/src/endpoint/realtime_call.rs`,
+`codex-rs/app-server-protocol/src/protocol/v2/realtime.rs`, and the core realtime conversation and sideband
+modules and their tests. Qualify owned call creation and SDP exchange, the host ChatGPT subscription
+authentication route, session event parsing, backend delegation, interruption and provider-confirmed closure
+against that exact revision. Keep provider credentials on the host and preserve `workspace-write/on-request`.
+Do not infer subscription-route support from generic API examples or silently substitute another model.
+The preserved historical harness contains `gpt-live-1-codex`; retain that evidence and verify the requested
+`gpt-live-1` model selection in the future candidate. No new compatibility claim, feature development,
+runtime installation or phone acceptance is authorized during this save checkpoint.
 
 ## Original baseline file inventory
 
@@ -348,11 +368,11 @@ diff replaces newer upstream source.
 - `scripts/qualification-cleanroom/nonce_origin.py`
 - `scripts/qualification-cleanroom/observer.py`
 - `scripts/qualification-cleanroom/runner.py`
-- `scripts/qualification-cleanroom/test_capture_finalization.py`
-- `scripts/qualification-cleanroom/test_nonce_origin.py`
-- `scripts/qualification-cleanroom/test_runner.py`
-- `scripts/qualification-cleanroom/test_startup_evidence.py`
-- `scripts/qualification-cleanroom/test_voice_ab.py`
+- `tests/qualification_cleanroom/test_capture_finalization.py`
+- `tests/qualification_cleanroom/test_nonce_origin.py`
+- `tests/qualification_cleanroom/test_runner.py`
+- `tests/qualification_cleanroom/test_startup_evidence.py`
+- `tests/qualification_cleanroom/test_voice_ab.py`
 - `scripts/qualification-cleanroom/voice_ab.py`
 - `scripts/qualification-cleanroom/voice_ab_capture.py`
 - `scripts/qualification-cleanroom/voice_ab_live.py`
