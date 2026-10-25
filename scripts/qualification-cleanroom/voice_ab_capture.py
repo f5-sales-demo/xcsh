@@ -1,4 +1,7 @@
 """Capture only task-owned CONNECT tunnels; no trust-store or daemon changes."""
+
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import json
@@ -6,99 +9,200 @@ import os
 import pathlib
 import pwd
 import re
-import signal
-import subprocess
 import time
+from typing import Any
+
+from qualification_exec import run_command
 
 
 class ConnectProxy:
-    def __init__(self, directory):
+    """Maintain ConnectProxy qualification state."""
+
+    def __init__(self, directory: Any) -> None:
+        """Initialize qualification state."""
         self.directory = pathlib.Path(directory)
-        self.connections = []
-        self.tasks = set()
+        self.connections: list[dict[str, Any]] = []
+        self.tasks: set[Any] = set()
+        self.errors: list[str] = []
 
-    async def start(self):
-        self.server = await asyncio.start_server(self.accept, '127.0.0.1', 0)
+    server: Any
+    port: Any
+    url: Any
+
+    async def start(self) -> Any:
+        """Perform start."""
+        self.server = await asyncio.start_server(self.accept, "127.0.0.1", 0)
         self.port = self.server.sockets[0].getsockname()[1]
-        self.url = 'http://127.0.0.1:'+str(self.port)
+        self.url = "http://127.0.0.1:" + str(self.port)
 
-    async def accept(self, reader, writer):
+    async def accept(self, reader: Any, writer: Any) -> Any:
+        """Perform accept."""
         task = asyncio.current_task()
         self.tasks.add(task)
         upstream = None
         try:
-            head = await asyncio.wait_for(reader.readuntil(b'\r\n\r\n'), 15)
-            method, target, version = head.split(b'\r\n', 1)[0].decode('ascii').split(' ')
-            host, port = target.rsplit(':', 1)
-            if method != 'CONNECT' or port != '443' or host not in ('api.openai.com', 'chatgpt.com', 'ab.chatgpt.com'):
-                raise ValueError('unexpected diagnostic tunnel destination')
+            head = await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), 15)
+            method, target, _version = (
+                head.split(b"\r\n", 1)[0].decode("ascii").split(" ")
+            )
+            host, port = target.rsplit(":", 1)
+            validate_tunnel(method, host, port)
             remote, upstream = await asyncio.open_connection(host, int(port))
-            self.connections.append(dict(atUnixNs=time.time_ns(), target=host, interface='lo',
-                                         localTuple=writer.get_extra_info('peername'),
-                                         tunnelTuple=writer.get_extra_info('sockname'),
-                                         upstreamTuple=upstream.get_extra_info('peername')))
-            writer.write(b'HTTP/1.1 200 Connection established\r\n\r\n')
+            self.connections.append(
+                {
+                    "atUnixNs": time.time_ns(),
+                    "target": host,
+                    "interface": "lo",
+                    "localTuple": writer.get_extra_info("peername"),
+                    "tunnelTuple": writer.get_extra_info("sockname"),
+                    "upstreamTuple": upstream.get_extra_info("peername"),
+                }
+            )
+            writer.write(b"HTTP/1.1 200 Connection established\r\n\r\n")
             await writer.drain()
 
-            async def forward(source, sink):
+            async def forward(source: Any, sink: Any) -> Any:
+                """Perform forward."""
                 while block := await source.read(65536):
                     sink.write(block)
                     await sink.drain()
-            pending = [asyncio.create_task(forward(reader, upstream)),
-                       asyncio.create_task(forward(remote, writer))]
+
+            pending = [
+                asyncio.create_task(forward(reader, upstream)),
+                asyncio.create_task(forward(remote, writer)),
+            ]
             try:
                 await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             finally:
-                for child in pending: child.cancel()
+                for child in pending:
+                    child.cancel()
                 await asyncio.gather(*pending, return_exceptions=True)
-        except (Exception, asyncio.CancelledError):
-            pass
+        except asyncio.CancelledError:
+            self.errors.append("CancelledError")
+            raise
+        except (OSError, ValueError, asyncio.IncompleteReadError) as error:
+            self.errors.append(type(error).__name__)
         finally:
             writer.close()
-            if upstream: upstream.close()
+            if upstream:
+                upstream.close()
             self.tasks.discard(task)
 
-    async def close(self):
+    async def close(self) -> Any:
+        """Perform close."""
         self.server.close()
         await self.server.wait_closed()
-        for task in list(self.tasks): task.cancel()
+        for task in list(self.tasks):
+            task.cancel()
         await asyncio.gather(*list(self.tasks), return_exceptions=True)
-        (self.directory/'connections.private.json').write_text(json.dumps(self.connections, indent=2)+'\n')
+        (self.directory / "connection-errors.private.json").write_text(
+            json.dumps(self.errors) + "\n"
+        )
+        (self.directory / "connections.private.json").write_text(
+            json.dumps(self.connections, indent=2) + "\n"
+        )
 
 
 class PacketCapture:
-    async def start(self, directory, port=None, interface='lo', name='tunnels', capture_filter=None):
+    """Maintain PacketCapture qualification state."""
+
+    directory: Any
+    path: Any
+    interface: Any
+    name: Any
+    armed_at: Any
+    proc: Any
+    prefix: Any
+
+    async def start(
+        self,
+        directory: Any,
+        port: Any = None,
+        interface: Any = "lo",
+        name: Any = "tunnels",
+        capture_filter: Any = None,
+    ) -> Any:
+        """Perform start."""
         self.directory = pathlib.Path(directory)
-        self.path = self.directory/(name+'.private.pcap')
+        self.path = self.directory / (name + ".private.pcap")
         self.interface = interface
         self.name = name
         self.armed_at = time.time_ns()
         self.proc = await asyncio.create_subprocess_exec(
-            'sudo', '-n', 'tcpdump', '-Z', pwd.getpwuid(os.getuid()).pw_name,
-            '-i', interface, '-s', '0', '-U', '--immediate-mode',
-            '-w', str(self.path), *(capture_filter or ['tcp','port',str(port)]),
-            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE, start_new_session=True)
-        self.prefix = await asyncio.wait_for(self.proc.stderr.readline(), 10)
+            "sudo",
+            "-n",
+            "tcpdump",
+            "-Z",
+            pwd.getpwuid(os.getuid()).pw_name,
+            "-i",
+            interface,
+            "-s",
+            "0",
+            "-U",
+            "--immediate-mode",
+            "-w",
+            str(self.path),
+            *(capture_filter or ["tcp", "port", str(port)]),
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+            start_new_session=True,
+        )
+        stream = self.proc.stderr
+        if stream is None:
+            message = "Packet collector has no stderr stream"
+            raise RuntimeError(message)
+        self.prefix = await asyncio.wait_for(stream.readline(), 10)
         # A collector is armed only after tcpdump reports its interface.
-        while b'listening on' not in self.prefix:
-            line = await asyncio.wait_for(self.proc.stderr.readline(), 10)
-            if not line: raise RuntimeError('packet collector failed before arm')
+        while b"listening on" not in self.prefix:
+            line = await asyncio.wait_for(stream.readline(), 10)
+            if not line:
+                message = "packet collector failed before arm"
+                raise RuntimeError(message)
             self.prefix += line
 
-    async def close(self):
+    async def close(self) -> Any:
+        """Perform close."""
         if self.proc.returncode is None:
-            subprocess.run(['sudo', '-n', 'kill', '-INT', '--', '-'+str(self.proc.pid)], check=True)
+            run_command(
+                ["/usr/bin/sudo", "-n", "kill", "-INT", "--", "-" + str(self.proc.pid)],
+                check=True,
+            )
         _, output = await asyncio.wait_for(self.proc.communicate(), 10)
-        log = (self.prefix+output).decode(errors='replace')
-        (self.directory/(self.name+'-tcpdump.private.log')).write_text(log)
+        log = (self.prefix + output).decode(errors="replace")
+        (self.directory / (self.name + "-tcpdump.private.log")).write_text(log)
         # tcpdump drops privileges; restore only this owned capture's permissions.
-        subprocess.run(['sudo', '-n', 'chown', str(os.getuid())+':'+str(os.getgid()), str(self.path)], check=True)
+        run_command(
+            [
+                "/usr/bin/sudo",
+                "-n",
+                "chown",
+                str(os.getuid()) + ":" + str(os.getgid()),
+                str(self.path),
+            ],
+            check=True,
+        )
         self.path.chmod(0o600)
-        drops = re.search(r'(\d+) packets dropped by kernel', log)
-        packets = re.search(r'(\d+) packets captured', log)
-        return dict(interface=self.interface, snaplen=0, armedAtUnixNs=self.armed_at,
-                    complete=self.proc.returncode == 0 and bool(drops and packets),
-                    drops=int(drops[1]) if drops else None,
-                    packets=int(packets[1]) if packets else None,
-                    sha256=hashlib.sha256(self.path.read_bytes()).hexdigest(),
-                    encrypted=True, phoneRequestVisible=False)
+        drops = re.search(r"(\d+) packets dropped by kernel", log)
+        packets = re.search(r"(\d+) packets captured", log)
+        return {
+            "interface": self.interface,
+            "snaplen": 0,
+            "armedAtUnixNs": self.armed_at,
+            "complete": self.proc.returncode == 0 and bool(drops and packets),
+            "drops": int(drops[1]) if drops else None,
+            "packets": int(packets[1]) if packets else None,
+            "sha256": hashlib.sha256(self.path.read_bytes()).hexdigest(),
+            "encrypted": True,
+            "phoneRequestVisible": False,
+        }
+
+
+def validate_tunnel(method: str, host: str, port: str) -> None:
+    """Reject tunnels outside the declared diagnostic provider destinations."""
+    if (
+        method != "CONNECT"
+        or port != "443"
+        or host not in ("api.openai.com", "chatgpt.com", "ab.chatgpt.com")
+    ):
+        message = "unexpected diagnostic tunnel destination"
+        raise ValueError(message)

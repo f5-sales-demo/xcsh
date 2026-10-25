@@ -10,7 +10,7 @@ at this checkpoint; the save phase publishes recoverable source and open PRs wit
 - WebRTC continuation issue: <https://github.com/f5-sales-demo/xcsh/issues/5071>; PR: <https://github.com/f5-sales-demo/xcsh/pull/5074>.
 - Historical reliability issue: <https://github.com/f5-sales-demo/xcsh/issues/4406> and PR:
   <https://github.com/f5-sales-demo/xcsh/pull/4408> remain open. Their full A/B/C/D acceptance matrix is unfinished.
-- Historical failed TypeScript CI: <https://github.com/f5-sales-demo/xcsh/actions/runs/36245227514.>
+- Historical failed TypeScript CI: <https://github.com/f5-sales-demo/xcsh/actions/runs/36245227514>.
   Skipped downstream jobs in that run are not passes.
 
 Both publication PRs target `main` because current CI triggers PR validation for `main`.
@@ -19,6 +19,26 @@ Review the eight original client files plus CI integration separately using the 
 These PRs stay in draft status because repository automation enables auto-merge on non-draft PRs.
 Do not enable auto-merge, merge, release, replace installed runtime, revoke pairing, or run further phone
 acceptance as part of this save phase. CI success does not establish physical acceptance.
+
+## WebRTC compatibility requirement
+
+Future WebRTC development uses the open-source [openai/codex](https://github.com/openai/codex)
+repository as the compatibility reference and targets exactly **`gpt-live-1`**, the voice-to-voice model.
+The reference inspected for this checkpoint is
+[`970111f6cb62cc02fe36a82ea7d71b37a2889c97`](https://github.com/openai/codex/tree/970111f6cb62cc02fe36a82ea7d71b37a2889c97).
+This is an inspected source pin, not a passed compatibility qualification. On resumption, review upstream
+changes and explicitly record any replacement pin before implementing against it.
+
+Trace the reference through `codex-rs/realtime-webrtc/src/session.rs`,
+`codex-rs/codex-api/src/endpoint/realtime_call.rs`,
+`codex-rs/app-server-protocol/src/protocol/v2/realtime.rs`, and the core realtime conversation and sideband
+modules and their tests. Qualify owned call creation and SDP exchange, the host ChatGPT subscription
+authentication route, session event parsing, backend delegation, interruption and provider-confirmed closure
+against that exact revision. Keep provider credentials on the host and preserve `workspace-write/on-request`.
+Do not infer subscription-route support from generic API examples or silently substitute another model.
+The preserved historical harness contains `gpt-live-1-codex`; retain that evidence and verify the requested
+`gpt-live-1` model selection in the future candidate. No new compatibility claim, feature development,
+runtime installation or phone acceptance is authorized during this save checkpoint.
 
 ## Source and recovery
 
@@ -31,7 +51,9 @@ The original policy repair is `26654ad51167a65428afb8bbff1db81938ab44ec`, subscr
 `678f4c47fc069d6e4da000e09017b3d3fe06b27b`, and client implementation
 `7f80692424fe4ac4e6a6f4bd9c6ca16bbbd0178a`. Reconciliation starts at main
 `f1d9af37538cfd0ab61dfdaab9a2314b25d337e4`; original revisions remain independently recoverable.
-Final publication commit and check receipts are in PR comments to avoid updating this file for its own CI commit.
+Latest published lint failure before cleanup: <https://github.com/f5-sales-demo/xcsh/actions/runs/40228165644>.
+Ruff, formatting, Mypy and Pylint failed on qualification Python; skipped dependent work was not passed.
+The failure log remains private. Final publication commit and check receipts are in PR comments to avoid updating this file for its own CI commit.
 See [the full integration inventory](docs/iphone-integration-checkpoint.md) for shared backend ownership and scope.
 
 Exact originals are retained privately as `refs/recovery/iphone-checkpoint-20261025/native-baseline` and
@@ -90,7 +112,10 @@ bun run ci:test:smoke
 ```
 
 The WebRTC adapter regressions and browser JavaScript build run automatically through `bun run test:ts`,
-the existing CI entrypoint. Exact current command outputs and failed-run logs are retained privately under
+the existing CI entrypoint. Native qualification tests also run there through `scripts/run-qualification-tests.ts`,
+using isolated pytest 8.4.2. Cleanup qualification passed 40 native tests and four adapter regressions;
+all four Python lint/type checks passed. Final full-suite and GitHub results are recorded in PR comments. Python tests live in `tests/qualification_cleanroom/`; the WebRTC adapter test is
+`test_owned_phone_client.py`. Exact current command outputs and failed-run logs are retained privately under
 `~/xcsh-publication-20261025/`; latest commit/check receipts are published in each PR.
 
 ## Installed provenance and permissions
@@ -132,7 +157,7 @@ That archive contains old state/units; it is recovery evidence, not permission t
 | Native physical identity | Failed: identified as ChatGPT and added unsolicited follow-up | No unchanged retry; no native voice acceptance |
 | Owned-client source | Four mocked adapter tests, browser JS build, TypeScript and commit checks passed historically | Physical iPhone Safari/Home Screen behavior pending |
 | Owned-client automated speech | xcsh identity; 426 media frames; zero startup peak; provider closure | Automated result does not accept the phone |
-| Fresh publication | Both streams: 13,934 Bun pass / 1,080 skip / 0 fail; 328 required Rust tests pass without skips; 35 docs tests pass; pre-commit, source checks, native readiness and CLI smoke pass; WebRTC additionally 4 mocked adapter tests and browser build pass | Source and CI only; final heads/check links in PR comments |
+| Publication validation before Python cleanup | Both streams: 13,934 Bun pass / 1,080 skip / 0 fail; 328 required Rust tests pass without skips; 35 docs tests pass; pre-commit, source checks, native readiness and CLI smoke pass; WebRTC additionally 4 mocked adapter tests and browser build pass | Source and CI only; final heads/check links in PR comments |
 | Physical/endurance | Two fresh owned-client calls pending, second at least 20 minutes | Human hearing/voice required; engine replacement unobserved means tested duration only |
 
 Native subscription append rejection, native identity failure, earlier full-suite failures, replacement failures,
@@ -161,7 +186,8 @@ Private transcripts, pairing records, QR/connection links, SDP, audio, TLS mater
 5. Read runtime/service/client manifests privately. Verify `/proc/<PID>/exe`, executable SHA256, source revision,
    service ownership, registered host, pairing, workspace and permissions independently. A default CLI symlink,
    source checkout, HTTP response or readiness event does not prove installed provenance or speech acceptance.
-6. Continue only the selected development stream under fresh explicit scope. For a failed physical case,
+6. For WebRTC, follow the compatibility requirement above, pin upstream source, and qualify `gpt-live-1`
+   on the host subscription route before requesting physical acceptance. Continue only the selected development stream under fresh explicit scope. For a failed physical case,
    implement a changed hypothesis/candidate and validate it before arming fresh captures. Automate inventories,
    transcripts and backend receipts; ask humans only for phone hands, eyes and voice. Preserve all failure evidence.
 7. For future owned-client acceptance, require two fresh captured read-only phone calls, second at least 20 minutes,

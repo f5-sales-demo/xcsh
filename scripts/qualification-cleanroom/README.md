@@ -27,7 +27,7 @@ the requested nonce and fixture identity in both the response and correlated
 logs, plus verified CE and load-balancer identities. If nginx proxies to the
 loopback origin, use nginx's access log for the CE source address.
 
-Run `python3 -m unittest test_runner test_nonce_origin` in this directory.
+Run `python3 -m unittest discover -s tests/qualification_cleanroom -t .` from the repository root.
 
 This is a harness foundation. Full KVM case materialization, dependency-aware
 seal reuse, and final-repetition aggregation remain required. The campaign
@@ -43,3 +43,6 @@ missing footers, missing history, and wrong artifacts remain failed evidence.
 `voice_ab.py` evaluates matched ABBA contracts and never grants phone acceptance.
 Stock TLS remains encrypted; only the separate diagnostic connector may log
 TLS keys. All evidence and cloned configuration must remain owner-only.
+
+Future WebRTC continuation follows [the pinned openai/codex and gpt-live-1 requirement](../../docs/iphone-integration-checkpoint.md#webrtc-compatibility-requirement).
+The original prototype remains preserved; source qualification and physical acceptance are separate gates.
