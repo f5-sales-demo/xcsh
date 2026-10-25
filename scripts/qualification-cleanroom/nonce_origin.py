@@ -43,7 +43,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
-        self.wfile.write(raw)
         print(
             json.dumps(
                 {"event": "request", **body, "sourceIp": self.client_address[0]}
@@ -51,6 +50,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             file=self.server.log_stream,
             flush=True,
         )
+        # A completed response must have its matching owned-workload log already recorded.
+        self.wfile.write(raw)
 
     def log_message(self, *_: Any) -> Any:
         """Perform log message."""
