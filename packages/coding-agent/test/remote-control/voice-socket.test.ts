@@ -96,3 +96,70 @@ test("native voice socket delivers text frames and reports transport closure", a
 		server.stop(true);
 	}
 });
+
+test("stopping voice cancels a pending websocket handshake without late failure", async () => {
+	const abort = new AbortController();
+	const gate = Promise.withResolvers<void>();
+	let requested = false;
+	const events: any[] = [];
+	const server = Bun.serve({
+		hostname: "127.0.0.1",
+		port: 0,
+		async fetch() {
+			requested = true;
+			await gate.promise;
+			return new Response(null, { status: 403 });
+		},
+	});
+	try {
+		const pending = openVoiceSocket(
+			`ws://127.0.0.1:${server.port}`,
+			{},
+			handlers,
+			{
+				record: (layer, direction, message) => events.push({ layer, direction, message }),
+				close() {},
+				invalidate() {},
+			},
+			abort.signal,
+		);
+		while (!requested) await Bun.sleep(1);
+		abort.abort();
+		const outcome = await Promise.race([
+			pending.then(
+				() => "opened",
+				error => error.message,
+			),
+			Bun.sleep(100).then(() => "still connecting"),
+		]);
+		expect(outcome).toBe("Realtime connection cancelled");
+		expect(events.filter(e => e.message.type === "cancelled")).toHaveLength(1);
+	} finally {
+		gate.resolve();
+		server.stop(true);
+	}
+});
+
+test("a pre-cancelled handshake never creates a connection and closes its capture", async () => {
+	const abort = new AbortController();
+	abort.abort();
+	const events: unknown[] = [];
+	let capturesClosed = 0;
+	await expect(
+		openVoiceSocket(
+			"ws://127.0.0.1:1",
+			{},
+			handlers,
+			{
+				record: (_layer, _direction, message) => events.push(message),
+				close: () => {
+					capturesClosed++;
+				},
+				invalidate() {},
+			},
+			abort.signal,
+		),
+	).rejects.toThrow("Realtime connection cancelled");
+	expect(events).toEqual([{ type: "cancelled", opened: false }]);
+	expect(capturesClosed).toBe(1);
+});

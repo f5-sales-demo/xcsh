@@ -53,6 +53,10 @@ export class PersonProfileTool implements AgentTool<typeof schema> {
 	readonly label = "Person profile";
 	readonly description = prompt.render(personProfileToolTemplate);
 	readonly parameters = schema;
+	getOperationEffect(args: unknown): "readOnly" | "mutation" {
+		const action = (args as { action?: string })?.action;
+		return ["get", "status", "sources"].includes(action ?? "") ? "readOnly" : "mutation";
+	}
 	constructor(private readonly session: ToolSession) {}
 	async execute(
 		_id: string,

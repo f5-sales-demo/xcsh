@@ -235,6 +235,8 @@ export const SETTINGS_SCHEMA = {
 
 	extensions: { type: "array", default: EMPTY_STRING_ARRAY },
 
+	"marketplace.preferredCatalog": { type: "string", default: undefined },
+
 	"marketplace.autoUpdate": {
 		type: "enum",
 		values: ["off", "notify", "auto"] as const,

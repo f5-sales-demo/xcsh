@@ -2,6 +2,7 @@
  * No transport abstraction - calls streamSimple via the loop.
  */
 import {
+	type Api,
 	type AssistantMessage,
 	type AssistantMessageEvent,
 	type CursorExecHandlers,
@@ -196,6 +197,8 @@ export interface AgentOptions {
 
 export interface AgentPromptOptions {
 	toolChoice?: ToolChoice;
+	/** JSON Schema that constrains only this prompt's assistant text output. */
+	outputSchema?: unknown;
 	/**
 	 * Raw provider "server tool" specs to append to THIS turn's request `tools`
 	 * (e.g. Anthropic's `{type:"web_search_20250305", name:"web_search", max_uses:N}`).
@@ -215,9 +218,20 @@ export function composeOnPayload(
 	base: SimpleStreamOptions["onPayload"] | undefined,
 	serverTools: Record<string, unknown>[] | undefined,
 	final: SimpleStreamOptions["onPayload"] | undefined = undefined,
+	outputSchema: unknown = undefined,
+	api: Api | undefined = undefined,
 ): SimpleStreamOptions["onPayload"] | undefined {
 	const hasServerTools = Array.isArray(serverTools) && serverTools.length > 0;
-	if (!base && !hasServerTools && !final) return undefined;
+	const hasOutputSchema = outputSchema != null;
+	if (
+		hasOutputSchema &&
+		api !== "openai-responses" &&
+		api !== "openai-codex-responses" &&
+		api !== "azure-openai-responses" &&
+		api !== "openai-completions"
+	)
+		throw new Error(`Output schemas are not supported by provider API ${api ?? "unknown"}`);
+	if (!base && !hasServerTools && !final && !hasOutputSchema) return undefined;
 	return async (payload, model) => {
 		let p = payload;
 		if (base) {
@@ -227,6 +241,22 @@ export function composeOnPayload(
 		if (hasServerTools && p && typeof p === "object") {
 			const params = p as { tools?: unknown[] };
 			params.tools = [...(params.tools ?? []), ...serverTools];
+		}
+		if (hasOutputSchema) {
+			if (!p || typeof p !== "object" || Array.isArray(p))
+				throw new Error("Cannot apply an output schema to a non-object provider payload");
+			const params = p as Record<string, unknown>;
+			const format = { type: "json_schema", name: "xcsh_turn_output", strict: true, schema: outputSchema };
+			if (api === "openai-responses" || api === "openai-codex-responses" || api === "azure-openai-responses") {
+				const text =
+					params.text && typeof params.text === "object" && !Array.isArray(params.text) ? params.text : {};
+				params.text = { ...(text as Record<string, unknown>), format };
+			} else if (api === "openai-completions") {
+				params.response_format = {
+					type: "json_schema",
+					json_schema: { name: format.name, strict: format.strict, schema: format.schema },
+				};
+			}
 		}
 		if (final) {
 			const replaced = await final(p, model);
@@ -279,6 +309,8 @@ export class Agent {
 	#repetitionPenalty?: number;
 	#serviceTier?: ServiceTier;
 	#maxRetryDelayMs?: number;
+	maxRetries?: number;
+	executeTool?: AgentLoopConfig["executeTool"];
 	#getToolContext?: (toolCall?: ToolCallContext) => AgentToolContext | undefined;
 	#cursorExecHandlers?: CursorExecHandlers;
 	#cursorOnToolResult?: CursorToolResultHandler;
@@ -854,6 +886,8 @@ export class Agent {
 				providerSessionState: this.#providerSessionState,
 				thinkingBudgets: this.#thinkingBudgets,
 				maxRetryDelayMs: this.#maxRetryDelayMs,
+				maxRetries: this.maxRetries,
+				executeTool: this.executeTool,
 				kimiApiFormat: this.#kimiApiFormat,
 				preferWebsockets: this.#preferWebsockets,
 				convertToLlm: this.#convertToLlm,
@@ -870,6 +904,8 @@ export class Agent {
 					this.#onFinalPayload
 						? (payload, payloadModel) => this.#onFinalPayload?.(payload, payloadModel ?? model)
 						: undefined,
+					options?.outputSchema,
+					model.api,
 				),
 				getApiKey: this.getApiKey,
 				getToolContext: this.#getToolContext,

@@ -3,6 +3,13 @@ import { ProtocolError } from "./session";
 import { handoffOptions } from "./voice-handoff";
 export const voices = ["juniper", "maple", "spruce", "ember", "vale", "breeze", "arbor", "sol", "cove"];
 export const defaultVoice = "cove";
+/** First-party discovery schema; advertising this catalogue does not enable V2 execution. */
+export const voiceCatalogue = {
+	v1: voices,
+	v2: ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"],
+	defaultV1: defaultVoice,
+	defaultV2: "marin",
+};
 /** Codex's iPhone contract currently sends and requires this literal at the RPC boundary. */
 export const CODEX_LIVE_VERSION = "v3";
 export function requireLiveVersion(value: unknown): void {
@@ -96,9 +103,11 @@ export type VoiceEvent =
 	  }
 	| { kind: "error" };
 export type VoiceEventRejection = "invalidEnvelope" | "invalidPayload" | "unknownType";
+export type VoiceEventDisposition = "handled" | "observed" | "rejected";
 export interface VoiceEventDecode {
 	event: VoiceEvent | null;
 	eventType: string;
+	disposition: VoiceEventDisposition;
 	rejection?: VoiceEventRejection;
 }
 function object(value: unknown): Record<string, any> | null {
@@ -106,6 +115,7 @@ function object(value: unknown): Record<string, any> | null {
 }
 const knownEventTypes = new Set([
 	"error",
+	"session.created",
 	"session.started",
 	"session.updated",
 	"input_audio_buffer.speech_started",
@@ -115,17 +125,86 @@ const knownEventTypes = new Set([
 	"turn.done",
 	"delegation.created",
 	"output_audio.delta",
+	"session.input_audio.append",
+	"session.output_audio.delta",
+	"session.usage.updated",
+	"turn.created",
+	"turn.delta",
+	"delegation.context.appended",
+	"session.instructions.appended",
+	"session.context.appended",
 ]);
 function diagnosticEventType(value: unknown): string {
 	return typeof value === "string" && /^[a-zA-Z0-9._/-]{1,128}$/.test(value) ? value : "invalid";
 }
-export function inspectVoiceEvent(input: unknown): VoiceEventDecode {
+function validOptionalMilliseconds(value: unknown): boolean {
+	return value == null || (typeof value === "number" && Number.isFinite(value) && value >= 0);
+}
+function observedLiveEvent(type: string, value: Record<string, any>): boolean {
+	if (type === "session.input_audio.append") return typeof value.audio === "string";
+	if (type === "session.output_audio.delta")
+		return (
+			typeof value.delta === "string" &&
+			validOptionalMilliseconds(value.start_ms) &&
+			validOptionalMilliseconds(value.end_ms)
+		);
+	if (type === "session.usage.updated")
+		return object(value.usage) !== null && (value.usage_limit == null || object(value.usage_limit) !== null);
+	if (type === "turn.created") {
+		const turn = object(value.turn);
+		return (
+			typeof turn?.id === "string" &&
+			turn.id.length > 0 &&
+			typeof turn.role === "string" &&
+			validOptionalMilliseconds(turn.start_ms) &&
+			validOptionalMilliseconds(turn.end_ms) &&
+			(turn.transcript == null || typeof turn.transcript === "string")
+		);
+	}
+	if (type === "turn.delta")
+		return (
+			typeof value.turn_id === "string" &&
+			value.turn_id.length > 0 &&
+			typeof value.delta === "string" &&
+			validOptionalMilliseconds(value.start_ms) &&
+			validOptionalMilliseconds(value.end_ms)
+		);
+	if (type === "session.context.appended")
+		return (
+			typeof value.start_ms === "number" &&
+			Number.isFinite(value.start_ms) &&
+			value.start_ms >= 0 &&
+			typeof value.end_ms === "number" &&
+			Number.isFinite(value.end_ms) &&
+			value.end_ms >= value.start_ms
+		);
+	if (type === "session.instructions.appended")
+		return (
+			(value.client_event_id == null ||
+				(typeof value.client_event_id === "string" && value.client_event_id.length > 0)) &&
+			typeof value.start_ms === "number" &&
+			validOptionalMilliseconds(value.start_ms) &&
+			typeof value.end_ms === "number" &&
+			validOptionalMilliseconds(value.end_ms) &&
+			value.end_ms >= value.start_ms
+		);
+	if (type === "delegation.context.appended")
+		return (
+			typeof value.delegation_item_id === "string" &&
+			value.delegation_item_id.length > 0 &&
+			validOptionalMilliseconds(value.start_ms) &&
+			validOptionalMilliseconds(value.end_ms)
+		);
+	return false;
+}
+export function inspectVoiceEvent(input: unknown, options: { sideband?: boolean } = {}): VoiceEventDecode {
 	const p = object(input);
-	if (!p || typeof p.type !== "string") return { event: null, eventType: "invalid", rejection: "invalidEnvelope" };
+	if (!p || typeof p.type !== "string")
+		return { event: null, eventType: "invalid", disposition: "rejected", rejection: "invalidEnvelope" };
 	const eventType = diagnosticEventType(p.type);
 	let event: VoiceEvent | null = null;
 	if (p.type === "error") event = { kind: "error" };
-	else if (p.type === "session.started" || p.type === "session.updated") {
+	else if (p.type === "session.created" || p.type === "session.started" || p.type === "session.updated") {
 		const session = object(p.session);
 		event = typeof session?.id === "string" ? { kind: "sessionUpdated", id: session.id } : null;
 	} else if (p.type === "input_audio_buffer.speech_started") event = { kind: "transcriptBoundary", role: "user" };
@@ -166,10 +245,14 @@ export function inspectVoiceEvent(input: unknown): VoiceEventDecode {
 		event = { kind: "delegation", id: item.id, text };
 	} else if (p.type === "output_audio.delta" && typeof p.audio === "string")
 		event = { kind: "audio", data: p.audio, sampleRate: 24000, numChannels: 1 };
-	if (event) return { event, eventType };
+	else if (p.type === "session.output_audio.delta" && typeof p.delta === "string" && !options.sideband)
+		event = { kind: "audio", data: p.delta, sampleRate: 24000, numChannels: 1 };
+	if (event) return { event, eventType, disposition: "handled" };
+	if (observedLiveEvent(p.type, p)) return { event: null, eventType, disposition: "observed", rejection: undefined };
 	return {
 		event: null,
 		eventType,
+		disposition: "rejected",
 		rejection: knownEventTypes.has(p.type) ? "invalidPayload" : "unknownType",
 	};
 }

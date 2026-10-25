@@ -27,6 +27,8 @@ export interface ActiveModelSnapshot {
 	/** Host of the model's base URL. Host only, never a full URL — see `gatewayHost()`. */
 	readonly gatewayHost: string;
 	readonly contextWindow: number;
+	/** Selected conversation effort; unknown when the live session has not supplied it. */
+	readonly reasoning?: string;
 	readonly resolutionSource: ModelResolutionSource;
 	/** Plain-language gloss on `resolutionSource`, so the doc explains itself. */
 	readonly resolutionSourceNote: string;
@@ -58,6 +60,7 @@ export function gatewayHost(baseUrl: string | undefined): string {
 
 export interface ActiveModelSources {
 	readonly model: Model | undefined;
+	readonly reasoning?: string;
 	readonly resolutionSource: ModelResolutionSource;
 	readonly roles: { smol?: string; slow?: string; plan?: string };
 }
@@ -74,6 +77,14 @@ export function buildActiveModelSnapshot(sources: ActiveModelSources): ActiveMod
 
 	return {
 		id: model.id,
+		reasoning:
+			sources.reasoning === "off"
+				? "none"
+				: ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra", "inherit"].includes(
+							sources.reasoning ?? "",
+						)
+					? sources.reasoning
+					: "unknown",
 		name: model.name,
 		provider: String(model.provider),
 		api: String(model.api),

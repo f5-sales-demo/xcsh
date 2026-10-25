@@ -1,4 +1,4 @@
-import { type ChildProcess, execFile } from "node:child_process";
+import { type ChildProcess, execFile, execFileSync } from "node:child_process";
 import { isAbsolute, normalize } from "node:path";
 import { type Notification, ProtocolError } from "./session";
 
@@ -13,6 +13,24 @@ const PHONE_BASH_PRIVILEGED_COMMAND = [
 	"-c",
 	PHONE_COMMAND_WRAPPER,
 ] as const;
+
+let userNamespaceAvailable: boolean | undefined;
+
+function supportsUnprivilegedUserNamespace(): boolean {
+	if (userNamespaceAvailable !== undefined) return userNamespaceAvailable;
+	try {
+		// Probe only a fixed, content-free command before selecting a launcher. Never retry user work.
+		execFileSync("/usr/bin/bwrap", ["--unshare-user", "--ro-bind", "/", "/", "--clearenv", "--", "/bin/true"], {
+			timeout: 1_000,
+			stdio: "ignore",
+			env: { PATH: "/usr/bin:/bin" },
+		});
+		userNamespaceAvailable = true;
+	} catch {
+		userNamespaceAvailable = false;
+	}
+	return userNamespaceAvailable;
+}
 
 function isPrintOnlyScript(script: string): boolean {
 	if (!/^printf[ \t]+/.test(script) || Buffer.byteLength(script) > 256) return false;
@@ -113,7 +131,8 @@ export class RemoteCommandExec {
 			!policy ||
 			typeof policy !== "object" ||
 			Array.isArray(policy) ||
-			(policy as Record<string, unknown>).networkAccess !== false ||
+			typeof (policy as Record<string, unknown>).networkAccess !== "boolean" ||
+			(readOnly && (policy as Record<string, unknown>).networkAccess !== false) ||
 			(workspaceWrite &&
 				(allowedCwd === "/" ||
 					!Array.isArray((policy as Record<string, unknown>).writableRoots) ||
@@ -152,7 +171,9 @@ export class RemoteCommandExec {
 							Number.isSafeInteger(p.outputBytesCap) &&
 							p.outputBytesCap >= 0 &&
 							p.outputBytesCap <= 8 * 1024 * 1024),
-					network: (policy as Record<string, unknown> | undefined)?.networkAccess === false,
+					network:
+						typeof (policy as Record<string, unknown> | undefined)?.networkAccess === "boolean" &&
+						(!readOnly || (policy as Record<string, unknown>).networkAccess === false),
 					roots:
 						!workspaceWrite ||
 						(Array.isArray((policy as Record<string, unknown>).writableRoots) &&
@@ -193,6 +214,16 @@ export class RemoteCommandExec {
 		const workspaceInTmp = allowedCwd === "/tmp" || allowedCwd.startsWith("/tmp/");
 		if (sandboxed && (process.platform !== "linux" || process.getuid?.() == null || process.getgid?.() == null))
 			throw new ProtocolError(-32602, "Command sandbox is unavailable");
+		// AppArmor may forbid setuid after entering Bubblewrap. Where unprivileged user namespaces work,
+		// relinquish privileges before creating the namespace; retain the privileged mount setup elsewhere.
+		const dropBeforeNamespace = sandboxed && supportsUnprivilegedUserNamespace();
+		const dropPrivileges = [
+			`--reuid=${process.getuid?.()}`,
+			`--regid=${process.getgid?.()}`,
+			"--clear-groups",
+			"--no-new-privs",
+			"--bounding-set=-all",
+		];
 		const file = sandboxed ? "/usr/bin/systemd-run" : "/bin/sh";
 		const args = sandboxed
 			? [
@@ -202,11 +233,15 @@ export class RemoteCommandExec {
 					"--pipe",
 					"--collect",
 					"--property=RuntimeMaxSec=20s",
+					// Keep Bash expressions and literal argv out of systemd environment expansion.
+					"--expand-environment=false",
 					"--",
 					"/usr/bin/sudo",
 					"-n",
+					...(dropBeforeNamespace ? ["/usr/bin/setpriv", ...dropPrivileges] : []),
 					"/usr/bin/bwrap",
-					"--unshare-net",
+					...(dropBeforeNamespace ? ["--unshare-user"] : []),
+					...((policy as Record<string, unknown>).networkAccess === false ? ["--unshare-net"] : []),
 					"--unshare-pid",
 					"--ro-bind",
 					"/",
@@ -214,7 +249,12 @@ export class RemoteCommandExec {
 					"--tmpfs",
 					"/run/user",
 					...(workspaceWrite
-						? [...(workspaceInTmp ? [] : ["--tmpfs", "/tmp"]), "--bind", allowedCwd, allowedCwd]
+						? [
+								...(workspaceInTmp ? [] : ["--tmpfs", "/tmp", "--chmod", "1777", "/tmp"]),
+								"--bind",
+								allowedCwd,
+								allowedCwd,
+							]
 						: []),
 					"--dev",
 					"/dev",
@@ -234,12 +274,7 @@ export class RemoteCommandExec {
 					env.LANG ?? "C.UTF-8",
 					...(workspaceWrite ? ["--setenv", "TMPDIR", workspaceInTmp ? allowedCwd : "/tmp"] : []),
 					"--",
-					"/usr/bin/setpriv",
-					`--reuid=${process.getuid?.()}`,
-					`--regid=${process.getgid?.()}`,
-					"--clear-groups",
-					"--no-new-privs",
-					"--bounding-set=-all",
+					...(dropBeforeNamespace ? [] : ["/usr/bin/setpriv", ...dropPrivileges]),
 					...(workspaceWrite ? command : ["/bin/sh", "-c", command[2], ...command.slice(3)]),
 				]
 			: ["-c", command[2], ...command.slice(3)];

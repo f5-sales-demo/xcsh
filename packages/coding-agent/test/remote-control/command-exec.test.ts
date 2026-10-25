@@ -143,7 +143,7 @@ const workspaceSandboxAvailable =
 test.skipIf(!workspaceSandboxAvailable)(
 	"selected-folder workspace command can write only inside its isolated project",
 	async () => {
-		const root = await mkdtemp(join(process.env.XCSH_WORKSPACE_TEST_ROOT ?? tmpdir(), "xcsh-phone-workspace-"));
+		const root = await mkdtemp(join(process.env.XCSH_WORKSPACE_TEST_ROOT ?? "/var/tmp", "xcsh-phone-workspace-"));
 		const selected = join(root, "project");
 		const outside = join(root, "outside");
 		await mkdir(selected);
@@ -199,6 +199,22 @@ test.skipIf(!workspaceSandboxAvailable)(
 			expect((await stat(inside)).isFile()).toBe(true);
 			expect(events.at(-1)?.method).toBe("command/exec/outputDelta");
 			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0done");
+			// The privileged launcher must relinquish its identity and every capability before the command runs.
+			expect(
+				await router.handle(
+					"phone",
+					request(14, "id -u; id -g; grep -E '^(CapEff|CapPrm|CapBnd|NoNewPrivs):' /proc/self/status", inside),
+				),
+			).toMatchObject({ result: { exitCode: 0 } });
+			const privileges = events
+				.filter(event => event.params.processId === "workspace-14" && event.params.stream === "stdout")
+				.map(event => Buffer.from(String(event.params.deltaBase64), "base64").toString())
+				.join("");
+			expect(privileges).toStartWith(`\0${process.getuid?.()}\n${process.getgid?.()}\n`);
+			for (const field of ["CapEff", "CapPrm", "CapBnd"]) {
+				expect(privileges).toMatch(new RegExp(`${field}:\\s+0{16}`));
+			}
+			expect(privileges).toMatch(/NoNewPrivs:\s+1/);
 			const hostNetwork = await readlink("/proc/self/ns/net");
 			expect(await router.handle("phone", request(6, "readlink /proc/self/ns/net", inside))).toMatchObject({
 				result: { exitCode: 0 },
@@ -215,6 +231,20 @@ test.skipIf(!workspaceSandboxAvailable)(
 				),
 			).toMatchObject({ result: { exitCode: 0 } });
 			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0isolated");
+			const temporaryFile = request(
+				12,
+				'path=$(mktemp /tmp/xcsh-sandbox-fixture.XXXXXXXXXX) || exit; printf temporary > "$path"; cat "$path"; rm "$path"',
+				inside,
+			);
+			expect(await router.handle("phone", temporaryFile)).toMatchObject({ result: { exitCode: 0 } });
+			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0temporary");
+			const literalExpansion = request(
+				13,
+				`git_environment=(GIT_LITERAL_PATHSPECS=1); env "\${git_environment[@]}" /bin/sh -c 'printf "%s" "$GIT_LITERAL_PATHSPECS"'`,
+				inside,
+			);
+			expect(await router.handle("phone", literalExpansion)).toMatchObject({ result: { exitCode: 0 } });
+			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0" + "1");
 			const largeScript = "printf compact".padEnd(13_793, " ");
 			const largeRequest = request(8, largeScript, inside);
 			largeRequest.params.command.push("one", "two", "three", "four", "five", "six");
@@ -240,9 +270,21 @@ test.skipIf(!workspaceSandboxAvailable)(
 					() => false,
 				),
 			).toBe(false);
-			const networkAttempt = request(4, 'printf blocked > "$1"', inside);
+			const networkAttempt = request(4, 'printf network > "$1"; readlink /proc/self/ns/net', inside);
 			networkAttempt.params.sandboxPolicy = { ...policy, networkAccess: true };
-			expect(await router.handle("phone", networkAttempt)).toMatchObject({ error: { code: -32602 } });
+			expect(await router.handle("phone", networkAttempt)).toMatchObject({ result: { exitCode: 0 } });
+			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toContain(hostNetwork);
+			const networkOutsideAttempt = request(11, 'printf blocked > "$1"', outside);
+			networkOutsideAttempt.params.sandboxPolicy = { ...policy, networkAccess: true };
+			expect(await router.handle("phone", networkOutsideAttempt)).toMatchObject({
+				result: { exitCode: expect.any(Number) },
+			});
+			expect(
+				await stat(outside).then(
+					() => true,
+					() => false,
+				),
+			).toBe(false);
 			const extraRootAttempt = request(5, 'printf blocked > "$1"', outside);
 			extraRootAttempt.params.sandboxPolicy = { ...policy, writableRoots: [outside] };
 			expect(await router.handle("phone", extraRootAttempt)).toMatchObject({ error: { code: -32602 } });

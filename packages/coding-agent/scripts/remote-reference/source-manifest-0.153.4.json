@@ -37,6 +37,12 @@
     "codex-rs/codex-api/src/endpoint/realtime_websocket/protocol_frameless_bidi.rs": "faa6826b1884ccceb564e8bb6bd60048f7900ffcc5b50fcacbd840b03a173515",
     "codex-rs/codex-api/src/endpoint/realtime_websocket/protocol_v1.rs": "9ee5ac9d9ddd2963bd5ab2359fa55e93d6c41d9405712ea9d8947885fba5faf1",
     "codex-rs/codex-api/src/endpoint/realtime_websocket/protocol_v2.rs": "fd9f61fd400066e3109f0786b4d4d13c086b4813ee7aa0085e3fbc93c186f02b",
-    "codex-rs/codex-api/src/lib.rs": "ef31a528a67cfa4bd11445e5e2e2f29d147c763b1e9fb73b43d5a60003be1a29"
+    "codex-rs/codex-api/src/lib.rs": "ef31a528a67cfa4bd11445e5e2e2f29d147c763b1e9fb73b43d5a60003be1a29",
+    "codex-rs/app-server-protocol/schema/json/v2/FsGetMetadataParams.json": "382bbf3a8b5c7e8cb16a1a29f853ce49c2904e563325e33a9e41dcbf632dab5e",
+    "codex-rs/app-server-protocol/schema/json/v2/FsGetMetadataResponse.json": "b8355f112eda37d7ff25ad0eda7dae912dba695961855c5cb8444a7f867d66c2",
+    "codex-rs/app-server-protocol/schema/json/v2/FsReadDirectoryParams.json": "c4ca6cdc129d70375fe638c723c1b1bb07a9716101525970cf77bf7560fec657",
+    "codex-rs/app-server-protocol/schema/json/v2/FsReadDirectoryResponse.json": "2cfb28c3c1ab1487f6b778f4d76871e3a9f590597bdf0da502cc41b202269dbc",
+    "codex-rs/app-server-protocol/schema/json/v2/FsCreateDirectoryParams.json": "405fd718ebafe7f47ffd82c86540ab4af663659c737ea2b25acd3e04a1bc94ea",
+    "codex-rs/app-server-protocol/schema/json/v2/FsCreateDirectoryResponse.json": "a658fbd34d5e3d6300bcb7015f10fc1764aa8aca3088abc79af9caa2e848e527"
   }
 }

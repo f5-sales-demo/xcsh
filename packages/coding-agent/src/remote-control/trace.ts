@@ -56,6 +56,7 @@ const protocolValues = new Set([
 	"malformed",
 	"binary",
 	"timeout",
+	"cancelled",
 	"error",
 	"initialize",
 	"initialized",
@@ -116,6 +117,11 @@ export function redactProtocolValue(value: unknown, salt: string): unknown {
 		if (/id$/.test(name) && (typeof value === "string" || typeof value === "number"))
 			return { $ref: createHash("sha256").update(salt).update(JSON.stringify(value)).digest("hex").slice(0, 24) };
 		if (typeof value === "string") {
+			if (
+				name === "transporterrorcode" &&
+				/^(?:E[A-Z0-9_]{1,40}|CERT_[A-Z0-9_]{1,40}|ERR_TLS_[A-Z0-9_]{1,40})$/.test(value)
+			)
+				return value;
 			if (name === "target" && (value === "client" || value === "server")) return value;
 			if (name === "method" && protocolMethods.has(value)) return value;
 			if (protocolKeys.has(name) && (protocolValues.has(value) || (value.length <= 160 && protocolName.test(value))))

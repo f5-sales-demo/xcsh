@@ -47,6 +47,7 @@ import { CursorExecHandlers } from "./cursor";
 import { ProfileBuilder } from "./person-profile/builder";
 import { type MachineProfileService, machineProfileService } from "./person-profile/machine-profile";
 import { type PersonProfileService, personProfileService } from "./person-profile/service";
+import { bindRemotePermissionSettings } from "./sandbox/remote-permissions";
 import { currentContextExecution } from "./services/context-execution";
 import { asyncQuestionsSupported } from "./tools/question-eligibility";
 import "./discovery";
@@ -953,6 +954,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		},
 	});
 
+	bindRemotePermissionSettings(toolSettings, settings);
+
 	let preparedSystemPromptInputs =
 		options.preparedSystemPromptInputs ??
 		(await logger.time("prepareSystemPromptInputs", prepareSystemPromptInputs, {
@@ -1074,6 +1077,21 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		const profileService = options.personProfileService ?? personProfileService;
 		const deviceService = options.machineProfileService ?? machineProfileService;
 		const toolSession: ToolSession = {
+			reloadPluginTools: async () => {
+				if (!session.extensionRunner) return;
+				const loaded = await discoverAndLoadExtensions(
+					[],
+					session.sessionManager.getCwd(),
+					undefined,
+					[],
+					os.homedir(),
+					settings,
+				);
+				if (loaded.errors.length) throw new Error("Installed plugin extensions could not be loaded");
+				await session.extensionRunner.reloadExtensions(loaded.extensions, loaded.runtime);
+				await session.refreshExtensionTools();
+			},
+			adoptActivatedContext: name => session.adoptActivatedContext(name),
 			getModel: () => agent?.state.model ?? model,
 			getUserInteractions: () => session.userInteractions,
 			getInteractionIdentity: itemId => session.getInteractionIdentity(itemId),
@@ -1118,6 +1136,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			getModelString: () => (hasExplicitModel && model ? formatModelString(model) : undefined),
 			getActiveModelString,
 			getPlanModeState: () => session.getPlanModeState(),
+			enterPlanMode: () => session.enterPlanModeFromTool(),
 			getCompactContext: () => session.formatCompactContext(),
 			getTodoPhases: () => session.getTodoPhases(),
 			setTodoPhases: phases => session.setTodoPhases(phases),
@@ -1196,6 +1215,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			new InternalDocsProtocolHandler({
 				personProfileService: profileService,
 				machineProfileService: deviceService,
+				getExecutionEnvironment: () => ({ hostname: os.hostname(), workspace: getEffectivePromptCwd() }),
 				getContextStatus: () => {
 					try {
 						return contextServiceRef?.instance?.getStatus() ?? null;
@@ -1215,6 +1235,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				getActiveModel: () =>
 					buildActiveModelSnapshot({
 						model: session?.model,
+						reasoning: session?.thinkingLevel,
 						resolutionSource: session?.modelResolutionSource ?? "config",
 						roles: {
 							smol: settings.getModelRole("smol"),
@@ -1739,6 +1760,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		);
 		const requestedActiveToolNames = normalizedRequested;
 		const progressiveCoreToolNames = [
+			"enter_plan_mode",
 			"read",
 			"grep",
 			"find",
@@ -1748,6 +1770,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			"write",
 			"xcsh_api",
 			"xcsh_context",
+			"xcsh_plugin",
 			"search_tool_bm25",
 			"request_user_input_async",
 		];

@@ -139,6 +139,23 @@ describe("resolveSessionFence", () => {
 		expect(fenceVerdict(resolveSessionFence(workspace, askB)!, target, "write")).toBe("deny");
 	});
 
+	it("keeps a remote read-only session readable without granting writes", () => {
+		const { mine, theirs } = tenants("remote-read-only");
+		const settings = Settings.isolated({ "sandbox.enabled": false });
+		applyRemotePermissionProfile(settings, {
+			approvalPolicy: "never",
+			approvalsReviewer: "user",
+			sandboxPolicy: { type: "readOnly", networkAccess: false },
+			activePermissionProfile: null,
+		});
+
+		const fence = resolveSessionFence(mine, settings)!;
+		expect(fenceVerdict(fence, path.join(mine, "source.ts"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(mine, "source.ts"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(theirs, "source.ts"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(theirs, "source.ts"), "write")).toBe("deny");
+	});
+
 	it("reuses the fence for an identical configuration", () => {
 		const { mine, shared } = tenants("cached");
 		const first = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }));

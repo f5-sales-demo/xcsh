@@ -46,6 +46,24 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		tempDir.removeSync();
 	});
 
+	it("active voice preserves selected executor after a rejected test outcome", async () => {
+		modelRegistry.getAvailable = () => [{ provider: "openai", id: "gpt-5.6-terra" }] as any;
+		let switches = 0;
+		session.setModelRoutingSwitch = async () => {
+			switches++;
+		};
+		session.agent.continue = async () => {};
+		session.restoreRoutingState({ currentTier: "utility" });
+		session.setRealtimeMode(true, {});
+		session.recordRoutingOutcome({
+			status: "rejected",
+			evidence: [{ kind: "test_failure", summary: "Synthetic failure" }],
+			safeToContinue: true,
+		});
+		await session.waitForIdle();
+		expect(switches).toBe(0);
+	});
+
 	it("should step escalation sequentially when safeToContinue is true", async () => {
 		modelRegistry.getAvailable = () => [{ provider: "openai", id: "gpt-5.6-terra" }] as any;
 		modelRegistry.getApiKey = async () => "mock-key";

@@ -1,0 +1,1 @@
+Product pronunciation: xcsh is "ek-see-shell", IPA /ɛk siː ʃɛl/. Never say its letters. The phonetic spelling in backend prose is the product name. Keep written branding xcsh. Exact quoted values, code and identifiers remain unchanged.

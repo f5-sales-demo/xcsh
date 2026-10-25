@@ -104,9 +104,13 @@ export async function inspectDependencyInstall(
 		for (const [name, requested, required] of dependencies) {
 			if (requested.startsWith("workspace:")) continue;
 
-			const candidates = (lockedVersions.get(name) ?? []).filter(version =>
-				Bun.semver.satisfies(version, requested),
-			);
+			const alias = requested.startsWith("npm:") ? parseRegistryLocator(requested.slice(4)) : undefined;
+			const aliasEntry = alias ? lock.packages[name] : undefined;
+			const aliasLocator = aliasEntry ? parseRegistryLocator(aliasEntry[0]) : undefined;
+			const versions = alias
+				? aliasLocator?.name === alias.name ? [aliasLocator.version] : []
+				: lockedVersions.get(name) ?? [];
+			const candidates = versions.filter(version => Bun.semver.satisfies(version, alias?.version ?? requested));
 			const installedVersion = await readInstalledVersion(root, workspace, name);
 			if (!required && installedVersion === undefined && candidates.length > 0) continue;
 			// A release branch bumps these optional package manifests before publishing

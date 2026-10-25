@@ -8,7 +8,6 @@ import { prompt } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import template from "../prompts/tools/xcsh-context.md" with { type: "text" };
-import { isRemoteAsk } from "../sandbox/remote-permissions";
 import { ContextError, ContextService } from "../services/xcsh-context";
 import type { ToolSession } from "./index";
 
@@ -28,6 +27,10 @@ export class XcshContextTool implements AgentTool<typeof schema> {
 	readonly concurrency = "exclusive";
 	readonly description = prompt.render(template);
 	readonly parameters = schema;
+	getOperationEffect(args: unknown): "readOnly" | "mutation" {
+		const action = (args as { action?: string })?.action;
+		return ["list", "status"].includes(action ?? "") ? "readOnly" : "mutation";
+	}
 	constructor(private readonly session: ToolSession) {}
 
 	async execute(
@@ -35,7 +38,7 @@ export class XcshContextTool implements AgentTool<typeof schema> {
 		args: Static<typeof schema>,
 		signal?: AbortSignal,
 		_onUpdate?: AgentToolUpdateCallback,
-		context?: AgentToolContext,
+		_context?: AgentToolContext,
 	): Promise<AgentToolResult<unknown>> {
 		if (!Value.Check(schema, args) || (args.action === "activate" && !args.name)) {
 			throw new Error("Invalid context operation; activation requires a saved context name");
@@ -62,15 +65,14 @@ export class XcshContextTool implements AgentTool<typeof schema> {
 			}
 			if (args.action === "activate") {
 				const target = service.prepareActivation(args.name!);
-				if (isRemoteAsk(this.session.settings)) {
-					if (!context?.hasUI || !context.ui) throw new ContextError("Context selection approval unavailable");
-					const choice = await context.ui.select(
-						`Apply context ${target.name}: ${target.apiUrl}, namespace ${target.namespace}. Subsequent requests use this tenant and its effective credential.`,
-						["Allow once", "Decline"],
-						{ signal },
-					);
+				if (service.isCurrentActivation?.(target, this.session.cwd)) {
+					await service.validateToken({ timeoutMs: 5000 });
 					guard();
-					if (choice !== "Allow once") throw new ContextError("Context selection declined");
+					if (!service.isCurrentActivation(target, this.session.cwd))
+						throw new ContextError("Context changed during validation");
+					const status = { ...service.getStatus(), workspace: this.session.cwd };
+					if (status.authStatus === "connected") this.session.adoptActivatedContext?.(target.name);
+					return { content: [{ type: "text", text: JSON.stringify(status) }], details: status };
 				}
 				await service.activate(target.name, { revision: target.revision, beforeCommit: guard });
 				await service.validateToken({ timeoutMs: 5000 });
@@ -79,8 +81,9 @@ export class XcshContextTool implements AgentTool<typeof schema> {
 				if (service.getStatus().activeContextName !== target.name) {
 					throw new ContextError("Context changed during validation; inspect status before querying resources");
 				}
+				if (service.getStatus().authStatus === "connected") this.session.adoptActivatedContext?.(target.name);
 			}
-			const status = service.getStatus();
+			const status = { ...service.getStatus(), workspace: this.session.cwd };
 			return { content: [{ type: "text", text: JSON.stringify(status) }], details: status };
 		} catch (error) {
 			if (error instanceof ContextError) throw error;

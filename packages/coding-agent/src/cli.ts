@@ -191,6 +191,12 @@ export function runCli(argv: string[]): Promise<void> {
 	return run({ bin: APP_NAME, version: VERSION, argv: runArgv, commands, help: showHelp });
 }
 
+if (process.env.XCSH_SMOKE_TEST_VOICE_POLICY === "1") {
+	const { runVoicePolicySmoke } = await import("./voice-policy-smoke");
+	process.stdout.write(`${await runVoicePolicySmoke()}\n`);
+	process.exit(0);
+}
+
 if (process.env.XCSH_SMOKE_TEST_SPECS === "1") {
 	const specMod = require("./internal-urls/api-spec-index.generated") as { API_SPEC_INDEX?: { domains?: unknown[] } };
 	const catalogMod = require("./internal-urls/api-catalog-index.generated") as {

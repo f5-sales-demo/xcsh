@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { VoiceDependencies } from "../../src/remote-control/voice";
 import { VoiceHistory } from "../../src/remote-control/voice-history";
 
 function fixture(sessionId: string | null = "voice-1") {
@@ -208,11 +209,43 @@ test.each(["existingCall", "webrtc"] as const)(
 	async transport => {
 		const { NativeVoice } = await import("../../src/remote-control/voice");
 		const f = fixture(null);
-		const deps = {
+		const deps: VoiceDependencies = {
 			history: f.history,
 			createCall: async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" }),
 			authenticate: async () => ({ accessToken: "fixture", accountId: "123456789012" }),
-			open: async () => ({ send: () => {}, close: () => {}, bufferedAmount: 0 }),
+			open: async (_url, _headers, handlers) => {
+				queueMicrotask(() =>
+					handlers.message(JSON.stringify({ type: "session.created", session: { id: "fixture-session" } })),
+				);
+				return {
+					send: data => {
+						if (JSON.parse(data).type === "session.instructions.append")
+							queueMicrotask(() =>
+								handlers.message(
+									JSON.stringify({
+										type: "session.instructions.appended",
+										client_event_id: JSON.parse(data).event_id,
+										start_ms: 0,
+										end_ms: 1,
+									}),
+								),
+							);
+						if (JSON.parse(data).type === "session.context.append")
+							queueMicrotask(() =>
+								handlers.message(
+									JSON.stringify({
+										type: "session.context.appended",
+
+										start_ms: performance.now(),
+										end_ms: performance.now() + 1,
+									}),
+								),
+							);
+					},
+					close: () => {},
+					bufferedAmount: 0,
+				};
+			},
 			emit: (method: string, params: Record<string, unknown>) => {
 				f.events.push({ method, ...params });
 			},

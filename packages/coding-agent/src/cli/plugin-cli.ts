@@ -235,9 +235,10 @@ export async function runPluginCommand(cmd: PluginCommandArgs): Promise<void> {
 export async function loadIntegrationHandles(
 	home: string = os.homedir(),
 	cwd: string = process.cwd(),
+	settings?: { get(key: string): unknown },
 ): Promise<IntegrationHandle<unknown>[]> {
 	await preloadPluginRoots(home, cwd);
-	const loaded = await discoverAndLoadExtensions([], cwd, undefined, [], home);
+	const loaded = await discoverAndLoadExtensions([], cwd, undefined, [], home, settings);
 	if (loaded.errors.length) throw new Error(`Unable to load ${loaded.errors.length} plugin extension(s)`);
 	return loaded.extensions.flatMap(extension => [...extension.integrations.values()]);
 }

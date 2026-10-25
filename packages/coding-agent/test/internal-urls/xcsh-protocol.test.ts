@@ -294,3 +294,31 @@ describe("xcsh:// root index (new routes advertised)", () => {
 		expect(resource.content).toContain("[fleet](xcsh://fleet)");
 	});
 });
+
+it("about resolves the live execution host separately from a saved device and relocated workspace", async () => {
+	let current = { hostname: "demo-host-a", workspace: "/tmp/demo-project-a" };
+	let profileReads = 0;
+	const router = new InternalUrlRouter();
+	router.register(
+		new InternalDocsProtocolHandler({
+			resolveBuildInfo: async () => injectedInfo(),
+			getExecutionEnvironment: () => current,
+			machineProfileService: {
+				get: async () => {
+					profileReads++;
+					throw new Error("Saved profile must not supply the execution host");
+				},
+			} as never,
+		}),
+	);
+	const first = await router.resolve("xcsh://about");
+	expect(first.content).toContain("**Execution hostname:** `demo-host-a`");
+	expect(first.content).toContain("**Session workspace:** `/tmp/demo-project-a`");
+	current = { hostname: "demo-host-b", workspace: "/tmp/demo-project-b" };
+	const second = await router.resolve("xcsh://about");
+	expect(second.content).toContain("**Execution hostname:** `demo-host-b`");
+	expect(second.content).toContain("**Session workspace:** `/tmp/demo-project-b`");
+	expect(second.content).not.toContain("`demo-host-a`");
+	expect(second.content).not.toContain("`/tmp/demo-project-a`");
+	expect(profileReads).toBe(0);
+});

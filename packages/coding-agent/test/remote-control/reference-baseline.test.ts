@@ -39,3 +39,15 @@ test("malformed manifests and mismatched artifact hashes fail closed", async () 
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("latest frozen Codex reference retains exact source, tag and observation file pins", async () => {
+	const pinned = await loadReferenceBaseline("0.159.2");
+	expect(pinned).toMatchObject({
+		tag: "rust-v0.159.2",
+		tagObject: "8b9fa496bbf2c47aebd62e85a080b9a522a455b5",
+		sourceCommit: "ff6aec96948b70d94983af2641a6b67c94faeff5",
+	});
+	expect(Object.keys(pinned.files)).toContain(
+		"codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs",
+	);
+});

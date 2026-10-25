@@ -4,6 +4,7 @@
 
 - **Model:** `{{model.id}}`{{#if model.name}} ({{model.name}}){{/if}}
 - **Provider:** `{{model.provider}}`
+- **Reasoning effort:** `{{#if model.reasoning}}{{model.reasoning}}{{else}}unknown{{/if}}`
 - **API:** `{{model.api}}`
 - **Gateway host:** {{#if model.gatewayHost}}`{{model.gatewayHost}}`{{else}}unknown{{/if}}
 - **Context window:** {{model.contextWindow}} tokens
@@ -26,6 +27,8 @@ Report this as `unknown`. Do not guess.
 This section is **authoritative** for which model is answering, and it is read live: after a
 mid-session model switch (`Ctrl+P`, a role cycle, or a context promotion) it reflects the new model,
 not the one this session launched with.
+The reasoning effort is the live conversation selection, independent of the model identifier.
+When it is unknown, report that instead of inferring a model default.
 
 Do **not** shell out to `xcsh -p` to find out which model you are. That spawns a *new* session, which
 resolves its own default and may pick a different model — it answers a question about a different

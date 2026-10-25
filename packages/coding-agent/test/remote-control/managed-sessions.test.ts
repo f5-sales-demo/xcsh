@@ -46,6 +46,10 @@ const cliPath = resolve(import.meta.dir, "../../src/cli.ts");
 
 test("phone sandbox modes translate to the bounded internal permission contract", () => {
 	expect(managedSandboxPolicy("danger-full-access", "/fixture/project")).toEqual({ type: "dangerFullAccess" });
+	expect(managedSandboxPolicy("read-only", "/fixture/project")).toEqual({
+		type: "readOnly",
+		networkAccess: false,
+	});
 	expect(managedSandboxPolicy("workspace-write", "/fixture/project")).toEqual({
 		type: "workspaceWrite",
 		writableRoots: ["/fixture/project"],
@@ -53,7 +57,7 @@ test("phone sandbox modes translate to the bounded internal permission contract"
 		excludeTmpdirEnvVar: false,
 		excludeSlashTmp: false,
 	});
-	for (const unsupported of ["read-only", "dangerFullAccess", {}, 1]) {
+	for (const unsupported of ["dangerFullAccess", {}, 1]) {
 		expect(() => managedSandboxPolicy(unsupported, "/fixture/project")).toThrow(
 			"Unsupported sandbox policy override",
 		);
@@ -116,6 +120,34 @@ test("cold reads, archive, unarchive and delete preserve exact durable files", a
 		const sessionDir = join(root, "durable");
 		const manager = SessionManager.create(cwd, sessionDir);
 		manager.appendMessage({ role: "user", content: [{ type: "text", text: "fixture" }], timestamp: 1 });
+		manager.appendCustomEntry("remote-realtime", {
+			kind: "voiceTimeline",
+			item: { type: "realtimeSessionStarted", id: "voice-start", realtimeSessionId: "voice-one" },
+		});
+		manager.appendCustomEntry("remote-realtime", {
+			kind: "voiceTimeline",
+			item: {
+				type: "transcriptSegment",
+				id: "voice-user",
+				realtimeSessionId: "voice-one",
+				role: "user",
+				text: "spoken request",
+			},
+		});
+		manager.appendCustomEntry("remote-realtime", {
+			kind: "voiceTimeline",
+			item: {
+				type: "transcriptSegment",
+				id: "voice-assistant",
+				realtimeSessionId: "voice-one",
+				role: "assistant",
+				text: "spoken response",
+			},
+		});
+		manager.appendCustomEntry("remote-realtime", {
+			kind: "voiceTimeline",
+			item: { type: "realtimeSessionClosed", id: "voice-close", realtimeSessionId: "voice-one" },
+		});
 		await manager.ensureOnDisk();
 		await manager.flush();
 		const path = manager.getSessionFile()!;
@@ -144,7 +176,11 @@ test("cold reads, archive, unarchive and delete preserve exact durable files", a
 		await initial.close();
 		const sessions = await new ManagedRemoteSessions(root, cwd, { sessionsRoot: root }).initialize();
 		const read = (await sessions.read(thread.id, { includeTurns: true })) as any;
-		expect(read.thread.turns).toHaveLength(1);
+		expect(read.thread.turns).toHaveLength(2);
+		expect(read.thread.turns[1].items).toMatchObject([
+			{ type: "userMessage", content: [{ type: "text", text: "spoken request" }] },
+			{ type: "agentMessage", text: "spoken response" },
+		]);
 		await sessions.archive(thread.id);
 		expect(sessions.counts()).toEqual({ total: 0, loaded: 0, archived: 1 });
 		const archived = sessions.list()[0] as any;
@@ -153,7 +189,7 @@ test("cold reads, archive, unarchive and delete preserve exact durable files", a
 		expect((await stat(String(archived.path).slice(0, -6))).isDirectory()).toBe(true);
 		const archivedRead = (await sessions.read(thread.id, { includeTurns: true })) as any;
 		expect(archivedRead.thread).toMatchObject({ id: thread.id, archived: true });
-		expect(archivedRead.thread.turns).toHaveLength(1);
+		expect(archivedRead.thread.turns).toHaveLength(2);
 
 		const restored = await sessions.unarchive(thread.id);
 		expect(restored).toMatchObject({ id: thread.id, archived: false, path });
@@ -282,7 +318,7 @@ test("the CLI worker keeps a durable session alive while the host-side catalog i
 	}
 }, 30_000);
 
-test("the real managed worker accepts the phone thread/start sandbox contract", async () => {
+test("the real managed worker accepts the phone read-only ephemeral thread/start contract", async () => {
 	const agentDir = await mkdtemp(join(tmpdir(), "xcsh-managed-phone-start-"));
 	const cwd = await mkdtemp(join(tmpdir(), "xcsh-managed-phone-cwd-"));
 	const root = join(agentDir, "remote-control");
@@ -321,9 +357,9 @@ test("the real managed worker accepts the phone thread/start sandbox contract", 
 			model: "voice-model1",
 			modelProvider: "fixture-provider",
 			approvalPolicy: "never",
-			approvalsReviewer: "user",
-			sandbox: "danger-full-access",
-			ephemeral: false,
+			sandbox: "read-only",
+			ephemeral: true,
+			allowProviderModelFallback: true,
 			historyMode: "paginated",
 			dynamicTools: [],
 			config: {
@@ -338,8 +374,193 @@ test("the real managed worker accepts the phone thread/start sandbox contract", 
 			thread: { id: threadId, cwd },
 			approvalPolicy: "never",
 			approvalsReviewer: "user",
-			sandbox: { type: "dangerFullAccess" },
+			sandbox: { type: "readOnly", networkAccess: false },
 		});
+	} finally {
+		await sessions.close(true);
+		await rm(agentDir, { recursive: true, force: true });
+		await rm(cwd, { recursive: true, force: true });
+	}
+}, 30_000);
+
+test("the real managed worker rejects an unavailable explicit phone model without fallback", async () => {
+	const agentDir = await mkdtemp(join(tmpdir(), "xcsh-managed-phone-stale-model-"));
+	const cwd = await mkdtemp(join(tmpdir(), "xcsh-managed-phone-stale-model-cwd-"));
+	const root = join(agentDir, "remote-control");
+	await writeFile(
+		join(agentDir, "models.json"),
+		JSON.stringify({
+			providers: {
+				"fixture-provider": {
+					baseUrl: "http://127.0.0.1:1/v1",
+					api: "openai-completions",
+					auth: "none",
+					models: [
+						{
+							id: "voice-model1",
+							name: "Voice fixture",
+							reasoning: true,
+							input: ["text"],
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+							contextWindow: 128000,
+							maxTokens: 8192,
+						},
+					],
+				},
+			},
+		}),
+		{ mode: 0o600 },
+	);
+	const sessions = await new ManagedRemoteSessions(root, cwd, {
+		workerCommand: [process.execPath, cliPath],
+		workerEnv: { ...process.env, PI_CODING_AGENT_DIR: agentDir },
+	});
+	try {
+		await sessions.initialize();
+		await expect(
+			sessions.start({
+				cwd,
+				model: "stale-phone-model",
+				modelProvider: "stale-provider",
+				effort: "high",
+				approvalPolicy: "never",
+				approvalsReviewer: "user",
+				sandbox: "danger-full-access",
+				ephemeral: false,
+				historyMode: "paginated",
+				dynamicTools: [],
+				config: {
+					"realtime.version": "v3",
+					"features.realtime_conversation": true,
+					"features.concurrent_reasoning_summaries": true,
+				},
+			}),
+		).rejects.toMatchObject({ code: -32602, message: "Selected model is unavailable" });
+		expect(sessions.counts()).toEqual({ total: 0, loaded: 0, archived: 0 });
+		const selected = await sessions.start({
+			cwd,
+			model: "voice-model1",
+			modelProvider: "fixture-provider",
+			effort: "high",
+		});
+		const selectedId = String(selected.thread.id);
+		await sessions.close(true);
+		const sameSelection = new ManagedRemoteSessions(root, cwd, {
+			workerCommand: [process.execPath, cliPath],
+			workerEnv: { ...process.env, PI_CODING_AGENT_DIR: agentDir },
+		});
+		try {
+			await sameSelection.initialize();
+			expect((await sameSelection.resume(selectedId))?.thread).toMatchObject({
+				model: "voice-model1",
+				modelProvider: "fixture-provider",
+				reasoningEffort: "high",
+			});
+		} finally {
+			await sameSelection.close(true);
+		}
+		for (const extension of ["json", "yml", "yaml"]) await rm(join(agentDir, `models.${extension}`), { force: true });
+		await writeFile(join(agentDir, "models.json"), JSON.stringify({ providers: {} }));
+		const reopened = new ManagedRemoteSessions(root, cwd, {
+			workerCommand: [process.execPath, cliPath],
+			workerEnv: { ...process.env, PI_CODING_AGENT_DIR: agentDir },
+		});
+		try {
+			await reopened.initialize();
+			await expect(reopened.resume(selectedId)).rejects.toMatchObject({
+				code: -32602,
+				message: "Selected model is unavailable",
+			});
+			expect(reopened.counts()).toEqual({ total: 1, loaded: 0, archived: 0 });
+		} finally {
+			await reopened.close(true);
+		}
+	} finally {
+		await sessions.close(true);
+		await rm(agentDir, { recursive: true, force: true });
+		await rm(cwd, { recursive: true, force: true });
+	}
+}, 30_000);
+
+test("an unavailable explicit phone model cannot silently select the configured smol role", async () => {
+	const agentDir = await mkdtemp(join(tmpdir(), "xcsh-managed-phone-tool-fallback-"));
+	const cwd = await mkdtemp(join(tmpdir(), "xcsh-managed-phone-tool-fallback-cwd-"));
+	const root = join(agentDir, "remote-control");
+	await writeFile(
+		join(agentDir, "models.json"),
+		JSON.stringify({
+			providers: {
+				"default-provider": {
+					baseUrl: "http://127.0.0.1:1/v1",
+					api: "openai-completions",
+					auth: "none",
+					models: [
+						{
+							id: "text-only-default",
+							name: "Text-only default",
+							reasoning: false,
+							input: ["text"],
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+							contextWindow: 16_384,
+							maxTokens: 2_048,
+							compat: { supportsToolChoice: false },
+						},
+					],
+				},
+				"tool-provider": {
+					baseUrl: "http://127.0.0.1:1/v1",
+					api: "openai-completions",
+					auth: "none",
+					models: [
+						{
+							id: "tool-fallback",
+							name: "Tool fallback",
+							reasoning: true,
+							input: ["text"],
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+							contextWindow: 128_000,
+							maxTokens: 8_192,
+						},
+					],
+				},
+			},
+		}),
+		{ mode: 0o600 },
+	);
+	await writeFile(
+		join(agentDir, "config.yml"),
+		"modelRoles:\n  default: default-provider/text-only-default\n  smol: tool-provider/tool-fallback:low\n",
+		{ mode: 0o600 },
+	);
+	const sessions = await new ManagedRemoteSessions(root, cwd, {
+		workerCommand: [process.execPath, cliPath],
+		workerEnv: {
+			...process.env,
+			PI_CODING_AGENT_DIR: agentDir,
+		},
+	});
+	try {
+		await sessions.initialize();
+		await expect(
+			sessions.start({
+				cwd,
+				model: "stale-phone-model",
+				modelProvider: "stale-provider",
+				effort: "high",
+				approvalPolicy: "never",
+				approvalsReviewer: "user",
+				sandbox: "danger-full-access",
+				ephemeral: false,
+				historyMode: "paginated",
+				dynamicTools: [],
+				config: {
+					"realtime.version": "v3",
+					"features.realtime_conversation": true,
+					"features.concurrent_reasoning_summaries": true,
+				},
+			}),
+		).rejects.toMatchObject({ code: -32602, message: "Selected model is unavailable" });
+		expect(sessions.counts()).toEqual({ total: 0, loaded: 0, archived: 0 });
 	} finally {
 		await sessions.close(true);
 		await rm(agentDir, { recursive: true, force: true });
