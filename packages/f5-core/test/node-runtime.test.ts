@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -57,3 +57,49 @@ for (const format of ["esm", "cjs"] as const) {
 		}
 	}, 20000);
 }
+
+test("standalone package declarations support Node ESM and CommonJS consumers", () => {
+	const directory = mkdtempSync(path.join(os.tmpdir(), "xcsh-node-core-types-"));
+	try {
+		const packageDirectory = path.join(directory, "node_modules/@f5-sales-demo/xcsh-f5-core");
+		mkdirSync(path.join(packageDirectory, "dist"), { recursive: true });
+		copyFileSync(new URL("../package.json", import.meta.url), path.join(packageDirectory, "package.json"));
+		for (const name of ["index.d.ts", "index.d.cts"]) {
+			const declarations = readFileSync(new URL(`../dist/${name}`, import.meta.url), "utf8");
+			expect(declarations).not.toContain("@f5-sales-demo/pi-resource-management");
+			writeFileSync(path.join(packageDirectory, "dist", name), declarations);
+		}
+		const consumer = `import { F5Core, getCapabilities, type CoreHost } from "@f5-sales-demo/xcsh-f5-core";
+const host: CoreHost = {
+getContext: () => ({active:true,workspaceId:"workspace",contextId:"context",revision:"1",apiUrl:"https://example.invalid",namespace:"default"}),
+getCredentials: async () => ({apiToken:"synthetic-credential"}),
+approve: async plan => ({approved:false,planHash:plan.hash}),persist: async () => {},
+};
+new F5Core(host).dispose(); getCapabilities();`;
+		for (const extension of ["mts", "cts"]) writeFileSync(path.join(directory, `consumer.${extension}`), consumer);
+		const compiler = path.resolve(import.meta.dir, "../../../node_modules/.bin/tsgo");
+		for (const resolution of ["Node16", "NodeNext"]) {
+			const result = Bun.spawnSync(
+				[
+					compiler,
+					"--noEmit",
+					"--strict",
+					"--module",
+					resolution,
+					"--moduleResolution",
+					resolution,
+					"--target",
+					"ES2022",
+					"consumer.mts",
+					"consumer.cts",
+				],
+				{ cwd: directory, stdout: "pipe", stderr: "pipe", timeout: 15000 },
+			);
+			expect(result.stdout.toString()).toBe("");
+			expect(result.stderr.toString()).toBe("");
+			expect(result.exitCode).toBe(0);
+		}
+	} finally {
+		rmSync(directory, { recursive: true, force: true });
+	}
+}, 20000);

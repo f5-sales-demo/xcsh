@@ -111,3 +111,8 @@ this package does not bypass it or select ordinary chat as a substitute.
 Approval entries include the exact redacted writable configuration for create
 and update, and the observed configuration for delete. Hosts must display this
 review material alongside the plan hash and changes before approving it.
+
+Public ESM and CommonJS declarations are bundled from the same implementation
+and can be consumed under Node16 or NodeNext module resolution. The monorepo
+uses a source mapping for this package so fresh checkout type checks do not
+require a build first.

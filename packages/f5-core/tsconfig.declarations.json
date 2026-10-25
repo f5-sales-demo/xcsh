@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "paths": {
+      "@f5-sales-demo/pi-resource-management": ["../resource-management/src/index.ts"]
+    }
+  }
+}
