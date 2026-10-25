@@ -88,6 +88,7 @@
         "@f5-sales-demo/pi-resource-management": "workspace:*",
         "@f5-sales-demo/pi-tui": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
+        "@f5-sales-demo/xcsh-f5-core": "workspace:*",
         "@f5-sales-demo/xcsh-stats": "workspace:*",
         "@mozilla/readability": "^0.6",
         "@resvg/resvg-wasm": "2.6.2",
@@ -112,6 +113,16 @@
         "@xterm/addon-unicode11": "0.9.0",
         "handlebars": "^4.7",
         "marked": "18.0.11",
+      },
+    },
+    "packages/f5-core": {
+      "name": "@f5-sales-demo/xcsh-f5-core",
+      "version": "23.9.5",
+      "dependencies": {
+        "@f5-sales-demo/pi-resource-management": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
       },
     },
     "packages/natives": {
@@ -402,6 +413,8 @@
     "@f5-sales-demo/xcsh": ["@f5-sales-demo/xcsh@workspace:packages/coding-agent"],
 
     "@f5-sales-demo/xcsh-chat-ui": ["@f5-sales-demo/xcsh-chat-ui@workspace:packages/chat-ui"],
+
+    "@f5-sales-demo/xcsh-f5-core": ["@f5-sales-demo/xcsh-f5-core@workspace:packages/f5-core"],
 
     "@f5-sales-demo/xcsh-office-pane": ["@f5-sales-demo/xcsh-office-pane@workspace:packages/office-pane"],
 

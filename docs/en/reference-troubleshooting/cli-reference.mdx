@@ -19,8 +19,16 @@ The installed `xcsh <COMMAND> --help` output is the command-line interface (CLI)
 | Interfaces | `chrome`, `chrome-host`, `office`, `herdr` |
 | Repository | `commit`, `grievances` |
 | Maintenance | `self-update` |
+| Editor metadata | `f5-core` |
 
 `search` also answers to `q`. `update -f` names a resource manifest; executable checks and updates use `self-update`.
+
+`xcsh f5-core capabilities --json` reports the versioned editor-enrichment
+contract and exact bundled specification hash. `xcsh f5-core discover --json`
+returns the indexed resource kinds. Both are credential-free and start no agent.
+The CLI advertises discovery only; it does not advertise delegated mutation
+execution. An editor keeps its bundled core when the CLI is absent, fails, or
+reports an incompatible contract.
 
 `xcsh self-update --check` is read-only and reports the installation channel. Homebrew,
 apt, npm, Bun, Windows installer, and direct MDM installations retain ownership:

@@ -53,6 +53,7 @@ if (Bun.stringWidth("\x1b[0m\x1b]8;;\x07") !== 0) {
 process.title = APP_NAME;
 
 const commands: CommandEntry[] = [
+	{ name: "f5-core", load: () => import("./commands/f5-core").then(m => m.default) },
 	{ name: "context", load: () => import("./commands/context").then(m => m.default) },
 	{ name: "request", load: () => import("./commands/request").then(m => m.default) },
 	{ name: "blindfold", load: () => import("./commands/blindfold").then(m => m.default) },

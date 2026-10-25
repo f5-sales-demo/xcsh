@@ -89,7 +89,8 @@
 		"markit-ai": "0.5.3",
 		"puppeteer": "25.10.0",
 		"tar-stream": "3.1.7",
-		"yaml": "2.9.0"
+		"yaml": "2.9.0",
+		"@f5-sales-demo/xcsh-f5-core": "workspace:*"
 	},
 	"devDependencies": {
 		"@tobilu/qmd": "2.8.3",

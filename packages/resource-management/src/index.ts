@@ -1,9 +1,11 @@
 export { parseExportArgs, parseResourceArgs } from "./arg-parser";
+export { createCatalogKindResolver, type ValidationCatalogCategory } from "./catalog-kind-resolver";
 export type { KindDefaultsMetadata } from "./defaults-metadata";
 export { buildFilterFromMetadata, buildMinimalExportFilter } from "./defaults-metadata";
 export { DEFAULTS_METADATA } from "./defaults-metadata.generated";
 export { computeResourceDiff, formatDiff } from "./diff-engine";
 export { ManifestFileError, readManifestFiles } from "./file-reader";
+export * from "./immutable-selection";
 export { createKindResolver, KindResolutionError } from "./kind-resolver";
 export type { ExportedManifest, ManifestOutputFormat, MinimalExportFilter } from "./manifest-export";
 export { applyMinimalExportFilter, formatManifestOutput, toManifest, toManifestList } from "./manifest-export";
@@ -18,7 +20,7 @@ export {
 	formatResourceDetail,
 	formatResourceList,
 } from "./output-formatter";
-export { FetchTransport, ResourceClient } from "./resource-client";
+export { computeManifestDiff, FetchTransport, ResourceClient } from "./resource-client";
 export type {
 	ApiSpecDomainEntry,
 	ApiSpecDomainResource,
