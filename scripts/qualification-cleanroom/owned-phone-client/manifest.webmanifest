@@ -1,0 +1,11 @@
+{
+  "id": "/",
+  "name": "xcsh — Your technical coworker",
+  "short_name": "xcsh",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#10191d",
+  "theme_color": "#10191d",
+  "icons": [{ "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+}

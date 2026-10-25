@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10191d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="xcsh">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icon.png">
+  <link rel="stylesheet" href="/app.css">
+  <title>xcsh</title>
+</head>
+<body>
+  <main>
+    <img class="logo" src="/icon.png" alt="xcsh" width="80" height="80">
+    <h1>Your technical coworker.</h1>
+    <p class="account">Uses your xcsh host’s ChatGPT subscription.</p>
+    <form id="connect" hidden>
+      <label for="link">Private connection link</label>
+      <input id="link" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+      <button type="submit">Connect</button>
+    </form>
+    <p id="status" role="status" aria-live="polite">Connecting…</p>
+    <p id="timer" aria-label="Call duration" hidden>00:00</p>
+    <button id="start" disabled>Start call</button>
+    <button id="stop" hidden>End call</button>
+    <button id="copy" class="secondary" hidden>Copy connection link</button>
+    <p id="install">Copy your connection link, then use Safari’s Share → Add to Home Screen. If the installed app asks for a link, paste it.</p>
+    <audio id="speaker" autoplay playsinline></audio>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
