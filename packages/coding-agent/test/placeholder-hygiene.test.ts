@@ -13,8 +13,11 @@
 
 import { describe, expect, it } from "bun:test";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { gunzipSync } from "node:zlib";
+import { SPECIFICATION_BASE64, SPECIFICATION_SHA256 } from "../../f5-core/src/api-spec-index.generated";
 import { countAcmePlaceholderOccurrences } from "../scripts/sanitize-generated-content";
 
 const REPO_ROOT = path.resolve(import.meta.dir, "../../..");
@@ -52,12 +55,12 @@ const BINARY_EXTENSIONS = new Set([
 	".woff2",
 	".zip",
 ]);
-// The QMD BM25 index is a deterministic compressed SQLite payload encoded as source text.
-// Lexical placeholder strings inside it are not readable catalog content, so scan only
-// human-readable generated artifacts for placeholder hygiene.
+// Compressed payloads can contain random lexical matches in their base64 encoding.
+// The specification payload is decoded and checked separately below.
 const OPAQUE_GENERATED_ARTIFACTS = new Set([
 	"packages/coding-agent/src/internal-urls/terraform-index.generated.ts",
 	"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts",
+	"packages/f5-core/src/api-spec-index.generated.ts",
 ]);
 // This guard invokes `git grep` over the full tracked index. Under the 10-worker CI suite it can
 // briefly contend with other index-heavy guards and native builds. Keep the deadline bounded, but
@@ -121,16 +124,31 @@ describe("placeholder hygiene", () => {
 		expect(text).toContain("_acme-challenge");
 	});
 
-	it("exempts only the opaque compressed QMD index payload", () => {
+	it("exempts only reviewed opaque compressed payloads", () => {
 		expect([...OPAQUE_GENERATED_ARTIFACTS]).toEqual([
 			"packages/coding-agent/src/internal-urls/terraform-index.generated.ts",
 			"packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts",
+			"packages/f5-core/src/api-spec-index.generated.ts",
 		]);
 		const qmdIndex = fs.readFileSync(
 			path.join(REPO_ROOT, "packages/coding-agent/src/internal-urls/api-catalog-qmd-index.generated.ts"),
 			"utf8",
 		);
 		expect(qmdIndex).toContain("gzipBase64:");
+	});
+
+	it("checks the decoded pinned core specification and preserves RFC 8555 vocabulary", () => {
+		const bytes = gunzipSync(Buffer.from(SPECIFICATION_BASE64, "base64"), {
+			maxOutputLength: 256 * 1024 * 1024,
+		});
+		expect(createHash("sha256").update(bytes).digest("hex")).toBe(SPECIFICATION_SHA256);
+		const text = bytes.toString("utf8");
+		expect(countAcmePlaceholderOccurrences(text)).toBe(0);
+		expect(text).toContain("_acme-challenge");
+		const offenders = [...text.matchAll(CONTACT_EMAIL_RE)].filter(
+			match => !RESERVED_EMAIL_DOMAINS.has(match[1].toLowerCase()),
+		);
+		expect(offenders).toEqual([]);
 	});
 
 	it("the spec-index generator sanitises its output, so regeneration cannot reintroduce the placeholder", () => {
