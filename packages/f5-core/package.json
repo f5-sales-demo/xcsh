@@ -13,10 +13,10 @@
 		"node": ">=22"
 	},
 	"main": "./dist/index.cjs",
-	"types": "./dist/index.d.ts",
+	"types": "./src/index.ts",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
+			"types": "./src/index.ts",
 			"bun": "./src/index.ts",
 			"import": "./dist/index.js",
 			"require": "./dist/index.cjs",
