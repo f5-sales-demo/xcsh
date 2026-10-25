@@ -147,6 +147,7 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 		private readonly runtime: IExtensionRuntime,
 		private readonly cwd: string,
 		public readonly events: EventBus,
+		readonly settings?: ExtensionContext["settings"],
 	) {
 		const registrant = extension.resolvedPath;
 		integrationRegistry.unregisterOwner(registrant);
@@ -375,6 +376,7 @@ async function loadExtension(
 	cwd: string,
 	eventBus: EventBus,
 	runtime: IExtensionRuntime,
+	settings?: ExtensionContext["settings"],
 ): Promise<{ extension: Extension | null; error: string | null }> {
 	const resolvedPath = resolvePath(extensionPath, cwd);
 
@@ -396,6 +398,7 @@ async function loadExtension(
 			runtime,
 			cwd,
 			eventBus,
+			settings,
 		);
 		await factory(api);
 
@@ -417,6 +420,7 @@ export async function loadExtensionFromFactory(
 	eventBus: EventBus,
 	runtime: IExtensionRuntime,
 	name = "<inline>",
+	settings?: ExtensionContext["settings"],
 ): Promise<Extension> {
 	const extension = createExtension(name, name);
 	const api = new ConcreteExtensionAPI(
@@ -425,6 +429,7 @@ export async function loadExtensionFromFactory(
 		runtime,
 		cwd,
 		eventBus,
+		settings,
 	);
 	await factory(api);
 	return extension;
@@ -442,6 +447,7 @@ export async function loadExtensions(
 	cwd: string,
 	eventBus?: EventBus,
 	bundledExtensionNames: readonly string[] = [],
+	settings?: ExtensionContext["settings"],
 ): Promise<LoadExtensionsResult> {
 	const extensions: Extension[] = [];
 	const errors: Array<{ path: string; error: string }> = [];
@@ -449,7 +455,7 @@ export async function loadExtensions(
 	const runtime = new ExtensionRuntime();
 
 	for (const extPath of paths) {
-		const { extension, error } = await loadExtension(extPath, cwd, resolvedEventBus, runtime);
+		const { extension, error } = await loadExtension(extPath, cwd, resolvedEventBus, runtime, settings);
 
 		if (error) {
 			errors.push({ path: extPath, error });
@@ -465,7 +471,7 @@ export async function loadExtensions(
 
 	if (bundledExtensionNames.length > 0) {
 		const allow = new Set(bundledExtensionNames);
-		await loadBundledExtensions(result, cwd, resolvedEventBus, name => !allow.has(name));
+		await loadBundledExtensions(result, cwd, resolvedEventBus, name => !allow.has(name), settings);
 	}
 
 	return result;
@@ -624,11 +630,19 @@ async function loadBundledExtensions(
 	cwd: string,
 	eventBus: EventBus,
 	isDisabled: (name: string) => boolean,
+	settings?: ExtensionContext["settings"],
 ): Promise<void> {
 	for (const { name, factory } of BUNDLED_EXTENSIONS) {
 		if (isDisabled(name)) continue;
 		try {
-			const extension = await loadExtensionFromFactory(factory, cwd, eventBus, result.runtime, `bundled:${name}`);
+			const extension = await loadExtensionFromFactory(
+				factory,
+				cwd,
+				eventBus,
+				result.runtime,
+				`bundled:${name}`,
+				settings,
+			);
 			result.extensions.unshift(extension);
 		} catch (err) {
 			result.errors.push({
@@ -645,6 +659,7 @@ export async function discoverAndLoadExtensions(
 	eventBus?: EventBus,
 	disabledExtensionIds: string[] = [],
 	pluginHome: string = os.homedir(),
+	settings?: ExtensionContext["settings"],
 ): Promise<LoadExtensionsResult> {
 	// Plugin lifecycle operations can change the registry while this process is
 	// running. Rebuild the synchronous plugin-root view before consuming it so
@@ -777,8 +792,12 @@ export async function discoverAndLoadExtensions(
 	}
 
 	const resolvedEventBus = eventBus ?? new EventBus();
-	const result = await logger.time("ext:loadLoop", () => loadExtensions(allPaths, cwd, resolvedEventBus));
+	const result = await logger.time("ext:loadLoop", () =>
+		loadExtensions(allPaths, cwd, resolvedEventBus, [], settings),
+	);
 	result.errors.push(...marketplaceDiagnostics);
-	await logger.time("ext:loadBundled", () => loadBundledExtensions(result, cwd, resolvedEventBus, isDisabledName));
+	await logger.time("ext:loadBundled", () =>
+		loadBundledExtensions(result, cwd, resolvedEventBus, isDisabledName, settings),
+	);
 	return result;
 }

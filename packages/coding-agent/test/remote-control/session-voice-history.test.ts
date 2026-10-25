@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
 import { type AssistantMessage, getBundledModel } from "@f5-sales-demo/pi-ai";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
@@ -210,4 +213,98 @@ test("queued backing notifications retain their captured payload", async () => {
 	await pending;
 	expect(forwarded).toMatchObject({ item: { text: "Captured" } });
 	await manager.close();
+});
+
+test("voice-only history is durable before a model assistant message exists", async () => {
+	const directory = await mkdtemp(join(tmpdir(), "xcsh-voice-history-"));
+	const manager = SessionManager.create(directory, directory);
+	const target = {
+		sessionId: manager.getSessionId(),
+		sessionManager: manager,
+	} as unknown as import("../../src/remote-control/session").SessionTarget;
+	try {
+		const owner = getSessionVoiceHistory(target);
+		const events: Array<{ method: string; params: Record<string, unknown> }> = [];
+		const unsubscribe = owner.subscribe((method, params) => events.push({ method, params }));
+		const history = owner.history;
+		await history.start("voice-only");
+		await history.transcript("user", "First spoken turn", true);
+		await history.transcript("assistant", "First spoken reply", true);
+		await history.close(false);
+		await history.drain();
+		owner.dispatch("thread/realtime/closed", { reason: "requested" }, () => {});
+		unsubscribe();
+		await manager.flush();
+		expect(events.filter(event => !event.method.startsWith("thread/realtime/"))).toMatchObject([
+			{ method: "turn/started" },
+			{ method: "item/started", params: { item: { type: "userMessage" } } },
+			{ method: "item/completed", params: { item: { type: "userMessage" } } },
+			{ method: "item/started", params: { item: { type: "agentMessage" } } },
+			{ method: "item/completed", params: { item: { type: "agentMessage" } } },
+			{ method: "turn/completed" },
+		]);
+
+		const sessionFile = manager.getSessionFile();
+		expect(sessionFile).toBeDefined();
+		const reopened = await SessionManager.open(sessionFile!, directory);
+		try {
+			const roles = reopened
+				.getBranch()
+				.flatMap(entry =>
+					entry.type === "custom" &&
+					entry.customType === "remote-realtime" &&
+					(entry.data as any)?.item?.type === "transcriptSegment"
+						? [(entry.data as any).item.role]
+						: [],
+				);
+			expect(roles).toEqual(["user", "assistant"]);
+		} finally {
+			await reopened.close();
+		}
+	} finally {
+		await manager.close();
+		await rm(directory, { recursive: true, force: true });
+	}
+});
+
+test("completed voice turns publish before realtime closure so a voice-first client keeps the active thread", async () => {
+	const manager = SessionManager.inMemory();
+	const target = {
+		sessionId: "voice-close-order",
+		sessionManager: manager,
+		isStreaming: false,
+	} as unknown as import("../../src/remote-control/session").SessionTarget;
+	const owner = getSessionVoiceHistory(target);
+	const events: Array<{ method: string; params: Record<string, unknown> }> = [];
+	const unsubscribe = owner.subscribe((method, params) => events.push({ method, params }));
+	try {
+		await owner.history.start("voice-only");
+		await owner.history.transcript("user", "First spoken turn", true);
+		await owner.history.transcript("assistant", "First spoken reply", true);
+		await owner.history.close(false);
+		await owner.history.drain();
+
+		expect(events.filter(event => !event.method.startsWith("thread/realtime/")).map(event => event.method)).toEqual([
+			"turn/started",
+			"item/started",
+			"item/completed",
+			"item/started",
+			"item/completed",
+			"turn/completed",
+		]);
+		owner.dispatch("thread/realtime/closed", { reason: "requested" }, params =>
+			events.push({ method: "thread/realtime/closed", params }),
+		);
+
+		const methods = events.map(event => event.method);
+		const closed = methods.lastIndexOf("thread/realtime/closed");
+		const turnStarted = methods.lastIndexOf("turn/started");
+		const turnCompleted = methods.lastIndexOf("turn/completed");
+		expect(closed).toBeGreaterThan(-1);
+		expect(turnStarted).toBeLessThan(closed);
+		expect(turnCompleted).toBeGreaterThan(turnStarted);
+	} finally {
+		unsubscribe();
+		await manager.close();
+	}
 });

@@ -330,3 +330,85 @@ test("voice-first replay crosses a real managed worker with a deterministic real
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("managed worker snapshots track active voice across readiness, host reattach, and stop", async () => {
+	const root = await mkdtemp(join(tmpdir(), "xcsh-managed-voice-status-"));
+	const socket = join(root, "worker.sock");
+	let voiceActive = false;
+	let publish: ((event: { method: string; params: Record<string, unknown> }) => void) | undefined;
+	const thread = { id: "voice-status-thread", cwd: root, status: { type: "idle" } };
+	const worker = await startManagedSessionWorker(socket, {
+		createRuntime: async () => ({
+			endpoint: {
+				thread,
+				get voiceActive() {
+					return voiceActive;
+				},
+				call: async (_identity, method) => {
+					if (method === "thread/realtime/start") {
+						voiceActive = true;
+						publish?.({ method: "thread/realtime/started", params: { threadId: thread.id } });
+					} else if (method === "thread/realtime/stop") {
+						voiceActive = false;
+						publish?.({ method: "thread/realtime/closed", params: { threadId: thread.id, reason: "requested" } });
+					}
+					return {};
+				},
+			},
+			setPublisher: listener => {
+				publish = listener;
+			},
+			close: async () => {},
+		}),
+	});
+	let first: Awaited<ReturnType<typeof connectPeer>> | undefined;
+	let replacement: Awaited<ReturnType<typeof connectPeer>> | undefined;
+	try {
+		first = await connectPeer(socket);
+		const startedSnapshots: any[] = [];
+		first.handle = async (method, params) => {
+			if (method === "worker/event") startedSnapshots.push(params.endpoint);
+			return { ack: params.seq };
+		};
+		const initial = (await first.call("worker/initialize", {
+			request: { kind: "start", params: { cwd: root } },
+		})) as any;
+		expect(initial.endpoint.voiceActive).toBe(false);
+		const start = (await first.call("worker/sessionCall", {
+			identity: "phone-voice-start",
+			method: "thread/realtime/start",
+			params: { threadId: thread.id },
+		})) as any;
+		expect(start.endpoint.voiceActive).toBe(true);
+		for (let attempt = 0; attempt < 100 && startedSnapshots.length === 0; attempt++) await Bun.sleep(1);
+		expect(startedSnapshots).toHaveLength(1);
+		expect(startedSnapshots[0].voiceActive).toBe(true);
+		first.close();
+		replacement = await connectPeer(socket);
+		const stoppedSnapshots: any[] = [];
+		replacement.handle = async (method, params) => {
+			if (method === "worker/event") stoppedSnapshots.push(params.endpoint);
+			return { ack: params.seq };
+		};
+		const reattached = (await replacement.call("worker/describe", {})) as any;
+		expect(reattached.endpoint.voiceActive).toBe(true);
+		const stop = (await replacement.call("worker/sessionCall", {
+			identity: "phone-voice-stop",
+			method: "thread/realtime/stop",
+			params: { threadId: thread.id },
+		})) as any;
+		expect(stop.endpoint.voiceActive).toBe(false);
+		for (let attempt = 0; attempt < 100 && stoppedSnapshots.length === 0; attempt++) await Bun.sleep(1);
+		expect(stoppedSnapshots).toHaveLength(1);
+		expect(stoppedSnapshots[0].voiceActive).toBe(false);
+		replacement.close();
+		replacement = await connectPeer(socket);
+		const closed = (await replacement.call("worker/describe", {})) as any;
+		expect(closed.endpoint.voiceActive).toBe(false);
+	} finally {
+		first?.close();
+		replacement?.close();
+		await worker.close();
+		await rm(root, { recursive: true, force: true });
+	}
+});

@@ -187,9 +187,28 @@ test("real voice state and history settle on the old session before switching", 
 		onmessage?: (event: { data: string }) => void;
 		constructor() {
 			socket = this;
-			queueMicrotask(() => this.onopen?.());
+			queueMicrotask(() => {
+				this.onopen?.();
+				queueMicrotask(() =>
+					this.onmessage?.({
+						data: JSON.stringify({ type: "session.created", session: { id: "fixture-session" } }),
+					}),
+				);
+			});
 		}
-		send() {}
+		send(data: string) {
+			if (JSON.parse(data).type === "session.context.append")
+				queueMicrotask(() =>
+					this.onmessage?.({
+						data: JSON.stringify({
+							type: "session.context.appended",
+
+							start_ms: performance.now(),
+							end_ms: performance.now() + 1,
+						}),
+					}),
+				);
+		}
 		close() {}
 	}
 	const websocket = spyOn(globalThis as any, "WebSocket").mockImplementation((() => new Socket()) as any);

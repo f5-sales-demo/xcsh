@@ -56,7 +56,7 @@ export function standaloneVoiceConfig(params: Record<string, unknown>, persona: 
 			audio: { output: { voice } },
 			delegation: {
 				type: "client",
-				...(typeof params.delegationAckFiller === "boolean" ? { ack_filler: params.delegationAckFiller } : {}),
+				ack_filler: params.delegationAckFiller === true,
 			},
 			...(items.length
 				? {

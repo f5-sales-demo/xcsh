@@ -1437,3 +1437,122 @@ it("retains served forced choice through later empty interruption exhaustion", a
 	expect(terminal.message).toMatchObject({ stopReason: "error", interruption: { toolChoiceServed: true } });
 	expect(terminal.toolResults).toHaveLength(0);
 });
+
+it("explicit zero retry allowance prevents provider and agent recovery", async () => {
+	const model = { ...createModel(), api: "openai-codex-responses" as const };
+	const allowances: Array<number | undefined> = [];
+	const stream = agentLoop(
+		[createUserMessage("Synthetic interruption")],
+		{ systemPrompt: "Synthetic", messages: [], tools: [] },
+		{ model, convertToLlm: identityConverter, maxRetries: 0 },
+		undefined,
+		(_model, _context, options) => {
+			allowances.push(options?.maxRetries);
+			const response = new MockAssistantStream();
+			const failure = {
+				...createAssistantMessage([], "error"),
+				api: model.api,
+				interruption: {
+					transport: "sse" as const,
+					classification: "socket_closed" as const,
+					providerRetriesConsumed: allowances.length === 1 ? 1 : 0,
+					completedContentIndices: [],
+				},
+				errorMessage: "Synthetic socket interruption",
+			};
+			queueMicrotask(() => response.push({ type: "error", reason: "error", error: failure }));
+			return response;
+		},
+	);
+	const events: AgentEvent[] = [];
+	for await (const event of stream) events.push(event);
+	expect(allowances).toEqual([0]);
+	expect(events.filter(e => e.type === "agent_end")).toHaveLength(1);
+	expect(events.filter(e => e.type === "turn_end")).toHaveLength(1);
+});
+
+it("session executor sees cancellation for a nonabortable read without aborting the tool", async () => {
+	const controller = new AbortController();
+	let observed = false;
+	const model = createModel();
+	const stream = agentLoop(
+		[createUserMessage("Synthetic")],
+		{
+			systemPrompt: "Synthetic",
+			messages: [],
+			tools: [
+				{
+					name: "read_fixture",
+					label: "Read",
+					description: "Synthetic",
+					parameters: Type.Object({}),
+					nonAbortable: true,
+					async execute() {
+						return { content: [] };
+					},
+				},
+			],
+		},
+		{
+			model,
+			convertToLlm: identityConverter,
+			executeTool: async (_tool, _id, _args, signal) => {
+				controller.abort();
+				observed = signal?.aborted === true;
+				controller.abort();
+				return { content: [] };
+			},
+		},
+		controller.signal,
+		() => {
+			const out = new MockAssistantStream();
+			const message = createAssistantMessage(
+				[{ type: "toolCall", id: "read-op", name: "read_fixture", arguments: {} }],
+				"toolUse",
+			);
+			queueMicrotask(() => out.push({ type: "done", reason: "toolUse", message }));
+			return out;
+		},
+	);
+	for await (const _event of stream) {
+	}
+	expect(observed).toBe(true);
+});
+
+it("returned tool failures remain errors in execution events and durable messages", async () => {
+	let requests = 0;
+	const loop = agentLoop(
+		[createUserMessage("Synthetic")],
+		{
+			systemPrompt: "Synthetic",
+			messages: [],
+			tools: [
+				{
+					name: "fixture",
+					label: "Fixture",
+					description: "Fixture",
+					parameters: Type.Object({}),
+					execute: async () => ({ content: [{ type: "text", text: "Denied" }], isError: true }),
+				},
+			],
+		},
+		{ model: createModel(), convertToLlm: identityConverter },
+		undefined,
+		() => {
+			const out = new MockAssistantStream();
+			const message =
+				requests++ === 0
+					? createAssistantMessage(
+							[{ type: "toolCall", id: "failed-call", name: "fixture", arguments: {} }],
+							"toolUse",
+						)
+					: createAssistantMessage([{ type: "text", text: "Failed" }]);
+			queueMicrotask(() => out.push({ type: "done", reason: message.stopReason as "stop" | "toolUse", message }));
+			return out;
+		},
+	);
+	const events: AgentEvent[] = [];
+	for await (const event of loop) events.push(event);
+	expect(events.find(e => e.type === "tool_execution_end")).toMatchObject({ isError: true });
+	expect((await loop.result()).find(m => m.role === "toolResult")).toMatchObject({ isError: true });
+});

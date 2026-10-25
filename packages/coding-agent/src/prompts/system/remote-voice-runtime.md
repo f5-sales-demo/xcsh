@@ -1,0 +1,1 @@
+{{#if model}}Model={{model}}; {{/if}}{{#if provider}}provider={{provider}}; {{/if}}{{#if reasoning}}reasoning={{reasoning}}; {{/if}}{{#if host}}host={{host}}; {{/if}}{{#if workspace}}workspace={{workspace}}; {{/if}}{{#if tenant}}Selected context {{tenant}}; {{/if}}{{#if taskStatus}}task={{taskStatus}}.{{/if}}

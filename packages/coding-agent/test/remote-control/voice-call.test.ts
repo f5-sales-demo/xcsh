@@ -37,15 +37,15 @@ test("native WebRTC v3 uses the pinned subscription call route, session shape an
 			],
 		},
 	});
-	expect(body.session.instructions).toContain("fixture instructions");
-	expect(body.session.instructions).toContain("## Reference Pronunciations");
+	expect(body.session.instructions).not.toContain("fixture instructions");
+	expect(body.session.instructions).toContain("The caller speaks first");
 	expect(result).toEqual({ sdp: "v=0\r\nfixture-answer", callId: "rtc_example" });
 });
 test("call configuration preserves startup context and rejects malformed or excessive initial history", () => {
 	expect(
 		voiceCallConfig({ ...params, includeStartupContext: true }, { ...persona, history: "session-specific context" })
 			.session.instructions,
-	).toContain("session-specific context");
+	).not.toContain("session-specific context");
 	for (const override of [
 		{ version: "v2" },
 		{ initialItems: [{ role: "tool", text: "private" }] },
@@ -76,4 +76,75 @@ test("call answers require SDP and a pinned call identifier", async () => {
 		await expect(
 			createVoiceCall(voiceCallConfig(params, persona), auth, {}, (async () => response) as unknown as typeof fetch),
 		).rejects.toThrow();
+});
+
+test("captured Codex creation-field rejection exposes only its known field without replaying", async () => {
+	let requests = 0;
+	await expect(
+		createVoiceCall(voiceCallConfig(params, persona), auth, {}, (async () => {
+			requests++;
+			return Response.json(
+				{ detail: "Field `session.model` is not allowed for this Codex realtime session" },
+				{ status: 400 },
+			);
+		}) as unknown as typeof fetch),
+	).rejects.toThrow("HTTP 400; rejected field session.model");
+	expect(requests).toBe(1);
+});
+
+test("unrecognized and excessive creation errors never expose response content", async () => {
+	for (const detail of [
+		"fixture-secret",
+		"Field `session.fixture-secret` is not allowed for this Codex realtime session",
+		`${"x".repeat(5000)}fixture-secret`,
+	]) {
+		let message = "";
+		try {
+			await createVoiceCall(voiceCallConfig(params, persona), auth, {}, (async () =>
+				Response.json({ detail }, { status: 400 })) as unknown as typeof fetch);
+		} catch (error) {
+			message = String(error);
+		}
+		expect(message).toContain("HTTP 400");
+		expect(message).not.toContain("fixture-secret");
+		expect(message).not.toContain("rejected field");
+	}
+});
+
+test("NativeVoice preserves the safe creation-field diagnostic at the notification boundary", async () => {
+	const { NativeVoice } = await import("../../src/remote-control/voice");
+	const emitted: string[] = [];
+	let requests = 0;
+	const voice = new NativeVoice({
+		authenticate: async () => auth,
+		persona: async () => persona,
+		createCall: async (config, subscription, headers) =>
+			createVoiceCall(config, subscription, headers, (async () => {
+				requests++;
+				return Response.json(
+					{ detail: "Field `session.model` is not allowed for this Codex realtime session" },
+					{ status: 400 },
+				);
+			}) as unknown as typeof fetch),
+		record: async () => {},
+		records: () => [],
+		emit: (method, params) => {
+			if (method === "thread/realtime/error") emitted.push((params as { message: string }).message);
+		},
+		delegate: async () => {
+			throw new Error("No backend work permitted");
+		},
+	});
+	try {
+		await expect(voice.start(params)).rejects.toThrow("rejected field session.model");
+		expect(emitted.some(message => message.includes("rejected field session.model"))).toBe(true);
+		expect(requests).toBe(1);
+	} finally {
+		await voice.stop();
+	}
+});
+
+test("host-created calls disable acknowledgment filler by default", () => {
+	expect(voiceCallConfig(params, persona).session.delegation.ack_filler).toBe(false);
+	expect(voiceCallConfig({ ...params, delegationAckFiller: true }, persona).session.delegation.ack_filler).toBe(true);
 });

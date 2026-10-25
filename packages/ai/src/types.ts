@@ -479,6 +479,8 @@ export interface AssistantMessage {
 		requestedModel: string;
 		responseModel?: string;
 		responseModelSource?: "response-body" | "response-header";
+		responseReasoningEffort?: string;
+		responseReasoningEffortSource?: "response-body";
 		upstreamProvider?: string;
 		upstreamProviderSource?: "response-body" | "response-header";
 	};

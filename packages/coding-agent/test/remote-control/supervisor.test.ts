@@ -42,14 +42,16 @@ test("an exited host is replaced once and increments the restart count", async (
 	let spawns = 0;
 	let alive = true;
 	let stops = 0;
+	let terminateManaged: boolean | undefined;
 	const supervisor = new RemoteSupervisor({
 		store: new LifecycleStore(root),
 		generation: 5,
 		spawnHost: async generation => processRecord(3000 + ++spawns, generation),
 		probeHost: async () => true,
 		isHostAlive: async () => alive,
-		stopHost: async () => {
+		stopHost: async (_record, _drainMs, terminate) => {
 			stops++;
+			terminateManaged = terminate;
 		},
 		sleep: async () => {},
 		random: () => 0,
@@ -59,6 +61,7 @@ test("an exited host is replaced once and increments the restart count", async (
 	expect(await supervisor.checkHost()).toBe("restarted");
 	expect(spawns).toBe(2);
 	expect(stops).toBe(1);
+	expect(terminateManaged).not.toBe(true);
 	expect((await supervisor.status()).restartCount).toBe(1);
 });
 
@@ -161,20 +164,23 @@ test("intentional shutdown drains and leaves both processes stopped", async () =
 	const root = await mkdtemp("/tmp/xcsh-supervisor-stop-");
 	cleanup.push(root);
 	let stops = 0;
+	let terminateManaged: boolean | undefined;
 	const supervisor = new RemoteSupervisor({
 		store: new LifecycleStore(root),
 		generation: 9,
 		spawnHost: async generation => processRecord(6001, generation),
 		probeHost: async () => true,
 		isHostAlive: async () => true,
-		stopHost: async () => {
+		stopHost: async (_record, _drainMs, terminate) => {
 			stops++;
+			terminateManaged = terminate;
 		},
 		sleep: async () => {},
 	});
 	await supervisor.ensureHost();
 	await supervisor.shutdown();
 	expect(stops).toBe(1);
+	expect(terminateManaged).toBe(true);
 	expect(await new LifecycleStore(root).readRuntime("host")).toBeUndefined();
 	expect(await supervisor.status()).toMatchObject({ supervisorState: "stopped", hostState: "stopped" });
 });

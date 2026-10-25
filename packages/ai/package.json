@@ -43,22 +43,22 @@
 		"generate-models": "bun scripts/generate-models.ts"
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "0.124.0",
-		"@aws-sdk/client-bedrock-runtime": "3.1127.0",
+		"@anthropic-ai/sdk": "0.135.0",
+		"@aws-sdk/client-bedrock-runtime": "3.1152.0",
 		"@bufbuild/protobuf": "2.14.1",
 		"@f5-sales-demo/pi-utils": "workspace:*",
-		"@google/genai": "2.21.0",
+		"@google/genai": "2.30.0",
 		"@sinclair/typebox": "0.34.52",
 		"@smithy/node-http-handler": "4.12.1",
 		"ajv": "^8.20",
 		"ajv-formats": "^3.0",
-		"google-auth-library": "10.9.1",
-		"openai": "7.19.0",
+		"google-auth-library": "11.3.1",
+		"openai": "7.39.0",
 		"partial-json": "^0.1",
 		"zod": "4.5.4"
 	},
 	"devDependencies": {
-		"@types/bun": "1.4.2"
+		"@types/bun": "1.4.3"
 	},
 	"engines": {
 		"bun": ">=1.4.2"

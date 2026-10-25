@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "revision": "236871e881123f1f902261c444bd66519c956793",
-  "fingerprint": "56a13da2d339df9a64f9fe42e1c27e7b40e3104727b73fe27c2b9b88ce91b532",
+  "revision": "1e24555507846fac2b2193d3fd53520583cd78e2",
+  "fingerprint": "8b937cc28c26b362399ca31cf3674614dd7e884dcf5141473d3690d1e50a27c7",
   "counts": {
-    "total": 244,
+    "total": 245,
     "components": 102,
-    "integrations": 142
+    "integrations": 143
   },
   "audits": [
     {
@@ -460,7 +460,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "reports",
-      "sha256": "92406c80d3c38ae065dd2b04db31dbed5a668ba8f8f81da372774319ef9919d0",
+      "sha256": "aabded7dd45a210c23a51bea93d9da575a0a5c4681bdb929b83dc53a7dc2a3fe",
       "exports": [
         "ExtensionRuntime",
         "ExtensionRuntimeNotInitializedError",
@@ -830,6 +830,7 @@
         "packages/coding-agent/test/marketplace/slash-install-parser.test.ts",
         "packages/coding-agent/test/mcp-removal-contract.test.ts",
         "packages/coding-agent/test/prompt-templates.test.ts",
+        "packages/coding-agent/test/remote-control/pairing-slash.test.ts",
         "packages/coding-agent/test/remote-control/slash.test.ts",
         "packages/coding-agent/test/slash-command-discovery.test.ts",
         "packages/coding-agent/test/slash-command-parity-ledger.test.ts",
@@ -839,8 +840,7 @@
         "packages/coding-agent/test/slash-commands/browser.test.ts",
         "packages/coding-agent/test/slash-commands/btw.test.ts",
         "packages/coding-agent/test/slash-commands/copy.test.ts",
-        "packages/coding-agent/test/slash-commands/exit.test.ts",
-        "packages/coding-agent/test/slash-commands/fast.test.ts"
+        "packages/coding-agent/test/slash-commands/exit.test.ts"
       ],
       "classification": "packages/coding-agent/src/extensibility/slash-commands.ts is individually classified as runtime-lifecycle in the extensions domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1603,9 +1603,12 @@
         "packages/coding-agent/test/modes/components/session-selector-mouse.test.ts",
         "packages/coding-agent/test/modes/components/session-selector-readability.test.ts",
         "packages/coding-agent/test/python-execution-outcome.test.ts",
+        "packages/coding-agent/test/remote-control/lifecycle-uat-controller.test.ts",
+        "packages/coding-agent/test/remote-control/live-routing-qualification.test.ts",
         "packages/coding-agent/test/remote-control/trace-assembler.test.ts",
         "packages/coding-agent/test/remote-control/trace.test.ts",
         "packages/coding-agent/test/remote-control/voice-diagnostics.test.ts",
+        "packages/coding-agent/test/remote-control/voice-uat-controller.test.ts",
         "packages/coding-agent/test/sanitize-error-message.test.ts",
         "packages/coding-agent/test/selector-contextual-bindings.test.ts",
         "packages/coding-agent/test/tools/vim.test.ts"
@@ -2804,6 +2807,7 @@
         "packages/coding-agent/test/plugin-dashboard-interactions.test.ts",
         "packages/coding-agent/test/regression-guard.test.ts",
         "packages/coding-agent/test/remote-control/input-preparation.test.ts",
+        "packages/coding-agent/test/remote-control/voice-result-fidelity.test.ts",
         "packages/coding-agent/test/remote-control/voice.test.ts",
         "packages/coding-agent/test/scripts/extension-capabilities-regression.test.ts",
         "packages/coding-agent/test/status-line-git-segment.test.ts",
@@ -2830,6 +2834,7 @@
       "persistenceSignals": [],
       "directTests": [
         "packages/coding-agent/test/marketplace/cache.test.ts",
+        "packages/coding-agent/test/plugin-cache-owner-reload.test.ts",
         "packages/coding-agent/test/prompt-templates.test.ts",
         "packages/coding-agent/test/scripts/release-staged-guard.test.ts",
         "packages/coding-agent/test/scripts/run-rs-task.test.ts",
@@ -4415,11 +4420,34 @@
       "classification": "packages/coding-agent/src/modes/utils/ui-helpers.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
+      "source": "packages/coding-agent/src/remote-control/pairing-presentation.ts",
+      "kind": "integration",
+      "ownership": "runtime-lifecycle",
+      "domain": "core",
+      "sha256": "ed2b9be99a10145eb0787f9ab9ba6a2111886b75f70bbd90368a3cee0197cff5",
+      "exports": [
+        "PairingDisplay",
+        "pairingUrl",
+        "presentRemoteResult",
+        "showTerminalPairing"
+      ],
+      "interactionSignals": [
+        "render",
+        "keyboard-input",
+        "async-progress"
+      ],
+      "persistenceSignals": [],
+      "directTests": [
+        "packages/coding-agent/test/remote-control/pairing-presentation.test.ts"
+      ],
+      "classification": "packages/coding-agent/src/remote-control/pairing-presentation.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
       "source": "packages/coding-agent/src/sdk.ts",
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "d35a82743f0c8350f99d8a4cdddf8efd13a1a12168230681f2a3700d2bb0cad3",
+      "sha256": "4ec53bdeb79deed81a6288edddff9ef13a21d3f904c831b87fba2a03ad6c4105",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -4585,7 +4613,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "879f4115fb88601ec5157fa837c57aa10258a03aa7ac782742561ee072ca933f",
+      "sha256": "9320c725b90827a54f31efed60107f6b612dbfd6f559c79973cb3886f5da46e2",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",
@@ -4605,6 +4633,7 @@
         "packages/coding-agent/test/input-controller-background.test.ts",
         "packages/coding-agent/test/marketplace/interactive-refresh.test.ts",
         "packages/coding-agent/test/mcp-removal-contract.test.ts",
+        "packages/coding-agent/test/remote-control/pairing-slash.test.ts",
         "packages/coding-agent/test/remote-control/slash.test.ts",
         "packages/coding-agent/test/slash-command-discovery.test.ts",
         "packages/coding-agent/test/slash-command-tui-inventory.test.ts",
@@ -4617,8 +4646,7 @@
         "packages/coding-agent/test/slash-commands/login.test.ts",
         "packages/coding-agent/test/slash-commands/plugin-setup.test.ts",
         "packages/coding-agent/test/slash-commands/reload-plugins.test.ts",
-        "packages/coding-agent/test/slash-commands/route.test.ts",
-        "packages/coding-agent/test/slash-commands/session.test.ts"
+        "packages/coding-agent/test/slash-commands/route.test.ts"
       ],
       "classification": "packages/coding-agent/src/slash-commands/builtin-registry.ts is individually classified as reviewed-mutation-adapter in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -4915,6 +4943,7 @@
         "packages/coding-agent/test/agent-session-concurrent.test.ts",
         "packages/coding-agent/test/agent-session-eager-todo.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
+        "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-turn-phase.test.ts",
         "packages/coding-agent/test/agent-session-user-shortcut-hooks.test.ts",
         "packages/coding-agent/test/args.test.ts",
@@ -4930,8 +4959,7 @@
         "packages/coding-agent/test/browser/host-profiles.test.ts",
         "packages/coding-agent/test/cli-output-pipe.test.ts",
         "packages/coding-agent/test/code-presentation-source.test.ts",
-        "packages/coding-agent/test/code-presentation-terminal.test.ts",
-        "packages/coding-agent/test/component-boundary-contract.test.ts"
+        "packages/coding-agent/test/code-presentation-terminal.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/bash.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5076,10 +5104,10 @@
         "packages/coding-agent/test/browser/bridge-cert.test.ts",
         "packages/coding-agent/test/browser/host-profiles.test.ts",
         "packages/coding-agent/test/browser/provider.test.ts",
+        "packages/coding-agent/test/bundled-codex-reasoning.test.ts",
         "packages/coding-agent/test/cli/read-cli.test.ts",
         "packages/coding-agent/test/compaction-provider-boundary.test.ts",
-        "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/context-cli.test.ts"
+        "packages/coding-agent/test/compaction.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/fetch.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5088,7 +5116,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "3456812d3b01fc0bc3b99ae9750cde78fe32093622cf566aa11717ae30d1b9e8",
+      "sha256": "1e120191802c19410fdb3b89f7a7ae0dd85d97614ccd5d180c8e8254ec2209c6",
       "exports": [
         "FindOperations",
         "FindTool",
@@ -5131,7 +5159,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "ba6b7e61ef9cf37827dc1cb3b4f0fe8e0e5b49f6369aa2e23fb6f6b14fef121d",
+      "sha256": "32ef2759c41c3dc44e2c29d1c07025edfb794449cab3fcac87a0ae6ea3be7c01",
       "exports": [
         "GrepTool",
         "GrepToolDetails",
@@ -5159,13 +5187,13 @@
         "packages/coding-agent/test/native-host.int.test.ts",
         "packages/coding-agent/test/placeholder-hygiene.test.ts",
         "packages/coding-agent/test/progressive-context-loading.test.ts",
+        "packages/coding-agent/test/remote-control/command-exec.test.ts",
         "packages/coding-agent/test/routing-delegation.test.ts",
         "packages/coding-agent/test/sandbox-check.test.ts",
         "packages/coding-agent/test/sandbox-command-operands.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
-        "packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts",
-        "packages/coding-agent/test/scripts/homebrew-formula.test.ts"
+        "packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/grep.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5293,7 +5321,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "1b2d73a4b72aa200cc49be539cfd0780fa0f2cfa08b314b7f8b14bcb7f3638eb",
+      "sha256": "4901662930fe494ebcada85e6c5286acf5b106d88e89eeef39ef85e6ab45fde9",
       "exports": [
         "ReadTool",
         "ReadToolDetails",
@@ -5314,6 +5342,7 @@
         "packages/coding-agent/test/agent-session-handoff.test.ts",
         "packages/coding-agent/test/agent-session-new-session-todos.test.ts",
         "packages/coding-agent/test/agent-session-openai-responses-replay.test.ts",
+        "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-routing-profile.test.ts",
         "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
         "packages/coding-agent/test/agent-session-routing-turn.test.ts",
@@ -5324,8 +5353,7 @@
         "packages/coding-agent/test/async-job-manager.test.ts",
         "packages/coding-agent/test/auto-config-read.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
-        "packages/coding-agent/test/autocomplete-max-visible.test.ts",
-        "packages/coding-agent/test/autoresearch-state.test.ts"
+        "packages/coding-agent/test/autocomplete-max-visible.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/read.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5498,6 +5526,7 @@
         "packages/coding-agent/test/boxed-gutter-integration.test.ts",
         "packages/coding-agent/test/chat-handler-slash-commands.test.ts",
         "packages/coding-agent/test/chat-handler-web-search.test.ts",
+        "packages/coding-agent/test/codex-interaction-source.test.ts",
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/connected-provider-reload.test.ts",
         "packages/coding-agent/test/core/chunk-tree.test.ts",
@@ -5507,8 +5536,7 @@
         "packages/coding-agent/test/discovery/agent-fields.test.ts",
         "packages/coding-agent/test/extension-dashboard.test.ts",
         "packages/coding-agent/test/herdr-terminal.test.ts",
-        "packages/coding-agent/test/host-software.test.ts",
-        "packages/coding-agent/test/input-controller-clipboard-review.test.ts"
+        "packages/coding-agent/test/host-software.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/review.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -5921,6 +5949,7 @@
         "packages/coding-agent/test/mcp-removal-contract.test.ts",
         "packages/coding-agent/test/prompt-action-autocomplete.test.ts",
         "packages/coding-agent/test/prompt-templates.test.ts",
+        "packages/coding-agent/test/remote-control/pairing-slash.test.ts",
         "packages/coding-agent/test/session-manager/move-to.test.ts",
         "packages/coding-agent/test/slash-command-discovery.test.ts",
         "packages/coding-agent/test/slash-commands.test.ts",
@@ -5930,8 +5959,7 @@
         "packages/coding-agent/test/slash-commands/exit.test.ts",
         "packages/coding-agent/test/slash-commands/force.test.ts",
         "packages/coding-agent/test/slash-commands/login.test.ts",
-        "packages/coding-agent/test/slash-commands/plugin-setup.test.ts",
-        "packages/coding-agent/test/slash-commands/reload-plugins.test.ts"
+        "packages/coding-agent/test/slash-commands/plugin-setup.test.ts"
       ],
       "classification": "packages/tui/src/autocomplete.ts is individually classified as runtime-lifecycle in the reports domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6390,9 +6418,9 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/chrome-cli.test.ts",
         "packages/coding-agent/test/cli/flag-spec.test.ts",
+        "packages/coding-agent/test/codex-interaction-source.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
+        "packages/coding-agent/test/context-completion.test.ts"
       ],
       "classification": "packages/tui/src/components/table.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6486,6 +6514,7 @@
         "packages/coding-agent/test/agent-session-compaction.test.ts",
         "packages/coding-agent/test/agent-session-force-tool-choice.test.ts",
         "packages/coding-agent/test/agent-session-handoff.test.ts",
+        "packages/coding-agent/test/agent-session-retry-fallback.test.ts",
         "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
         "packages/coding-agent/test/agent-session-routing-turn.test.ts",
         "packages/coding-agent/test/async-job-cancellation.test.ts",
@@ -6501,8 +6530,7 @@
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/host-software.test.ts",
         "packages/coding-agent/test/interaction-parity.test.ts",
-        "packages/coding-agent/test/internal-urls/console-field-metadata.test.ts",
-        "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts"
+        "packages/coding-agent/test/internal-urls/console-field-metadata.test.ts"
       ],
       "classification": "packages/tui/src/events.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6527,6 +6555,7 @@
         "packages/coding-agent/test/file-mentions.test.ts",
         "packages/coding-agent/test/fuzzy.test.ts",
         "packages/coding-agent/test/model-resolver.test.ts",
+        "packages/coding-agent/test/remote-control/file-search.test.ts",
         "packages/coding-agent/test/tools.test.ts",
         "packages/tui/test/autocomplete.test.ts"
       ],

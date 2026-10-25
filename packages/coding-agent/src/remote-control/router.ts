@@ -3,12 +3,15 @@ import { isAbsolute, join, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import type { InteractionIdentity } from "../session/user-interactions";
 import { PHONE_COMMAND_WRAPPER, RemoteCommandExec } from "./command-exec";
+import { RemoteConfig } from "./config-write";
 import { loadedThreadList, threadList } from "./discovery";
+import { RemoteFileSearch } from "./file-search";
+import { folderPickerRequest } from "./folder-picker";
 import { type InteractionRequest, validateInteractionRequests } from "./interactions";
 import { collaborationModeResponse, configResponse, modelResponse } from "./metadata";
 import { RemoteProcesses } from "./process";
 import { type Notification, ProtocolError, type RemoteModelDescriptor } from "./session";
-import { voices } from "./voice-protocol";
+import { voiceCatalogue } from "./voice-protocol";
 
 export interface AsyncInteractionRegistration {
 	requestId: string;
@@ -146,6 +149,7 @@ function initializeCapabilities(value: unknown): InitializeCapabilities {
 }
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
+	voiceActive?: boolean;
 	collaborationMode?: "plan" | "default";
 	publishedInteraction?: boolean;
 	asyncInteractions?: AsyncInteractionRegistration[];
@@ -180,6 +184,11 @@ export interface RemoteThreadLifecycle {
 	close?: () => void | Promise<void>;
 }
 
+export interface RemoteTaskSettings {
+	models: RemoteModelDescriptor[];
+	defaults?: { model: string; modelProvider: string; reasoningEffort: string };
+}
+
 const lifecycleResponseFields = [
 	"thread",
 	"model",
@@ -210,12 +219,18 @@ export class RemoteRouter {
 	notify: (client: string, event: Notification) => void = () => {};
 	#currentSessionId: string | undefined;
 	#managed = new Set<string>();
+	#remoteConfig: RemoteConfig;
 	#publishedInteractions = new Set<string>();
 	#currentSession(): SessionEndpoint | undefined {
 		return (
 			(this.#currentSessionId ? this.sessions.get(this.#currentSessionId) : undefined) ??
 			[...this.sessions].find(([id]) => !this.#managed.has(id))?.[1]
 		);
+	}
+	async #hostTaskSettings(): Promise<RemoteTaskSettings | undefined> {
+		const terminal = this.#currentSession();
+		// Managed chats must not narrow the host catalog when workers load or unload.
+		return terminal && !this.#managed.has(String(terminal.thread.id)) ? undefined : this.taskSettings?.();
 	}
 	#visibleSessions(): SessionEndpoint[] {
 		if (!this.#currentSessionId) {
@@ -297,8 +312,10 @@ export class RemoteRouter {
 		(client, event) => this.#emit(client, event),
 		cwd => this.#visibleThreads().some(thread => thread.cwd === cwd),
 	);
+	#fileSearch = new RemoteFileSearch((client, event) => this.#emit(client, event));
 	#commands = new RemoteCommandExec((client, event) => this.#emit(client, event));
 	dispose(): void {
+		this.#fileSearch.close();
 		this.#commands.close();
 		this.#processes.close();
 		this.#clients.clear();
@@ -313,12 +330,16 @@ export class RemoteRouter {
 	#notificationOptOuts = new Map<string, Set<string>>();
 	#delivered = new Map<string, Map<string, string>>();
 	#lifecycleNotifications = new Map<string, Map<string, string>>();
+	#notificationTimes = new WeakMap<Notification, number>();
 	constructor(
 		private readonly home: string,
 		private readonly version: string,
 		private readonly lifecycle?: RemoteThreadLifecycle,
 		private readonly preferredPrimaryId?: string,
-	) {}
+		private readonly taskSettings?: () => Promise<RemoteTaskSettings>,
+	) {
+		this.#remoteConfig = new RemoteConfig(home);
+	}
 	isInitialized(client: string): boolean {
 		return this.#clients.has(client);
 	}
@@ -359,7 +380,14 @@ export class RemoteRouter {
 				return;
 			delivered.set(key, fingerprint);
 		}
-		this.notify(client, event);
+		// Match the App Server notification envelope without mutating the stored
+		// request/event identity. One source event keeps one timestamp across fanout.
+		let emittedAtMs = event.emittedAtMs ?? this.#notificationTimes.get(event);
+		if (emittedAtMs === undefined) {
+			emittedAtMs = Date.now();
+			this.#notificationTimes.set(event, emittedAtMs);
+		}
+		this.notify(client, { ...event, emittedAtMs });
 	}
 	replayThreadSettings(client: string, threadId: string, response: unknown): void {
 		if (!this.subscribed(client, threadId) || !response || typeof response !== "object" || Array.isArray(response))
@@ -408,6 +436,7 @@ export class RemoteRouter {
 		});
 	}
 	close(client: string): void {
+		this.#fileSearch.close(client);
 		this.#commands.close(client);
 		this.#clients.delete(client);
 		this.#experimental.delete(client);
@@ -817,6 +846,9 @@ export class RemoteRouter {
 						if (!this.lifecycle) throw new ProtocolError(-32000, "Managed remote sessions are unavailable");
 						const cwd = await this.#startCwd(params);
 						const requestedModel = typeof params.model === "string" ? params.model : undefined;
+						const bootstrap = await this.#hostTaskSettings();
+						const saved = bootstrap ? await this.#remoteConfig.read(bootstrap) : undefined;
+						const selectedDefault = saved?.config.model ?? bootstrap?.defaults?.model;
 						const inferredProvider =
 							typeof params.modelProvider === "string"
 								? undefined
@@ -828,15 +860,41 @@ export class RemoteRouter {
 										.find(
 											thread => thread.model === requestedModel && typeof thread.modelProvider === "string",
 										)?.modelProvider);
+						const bootstrapProvider =
+							typeof params.modelProvider === "string"
+								? undefined
+								: (inferredProvider ?? bootstrap?.models.find(model => model.id === requestedModel)?.provider);
+						if (bootstrap && requestedModel && !bootstrapProvider && typeof params.modelProvider !== "string")
+							throw new ProtocolError(-32602, "Selected model is unavailable; refresh task settings");
 						const startParams: Record<string, unknown> = {
 							...params,
 							cwd,
-							...(inferredProvider ? { modelProvider: inferredProvider } : {}),
+							...(bootstrapProvider ? { modelProvider: bootstrapProvider } : {}),
+							...(params.effort == null &&
+							bootstrap?.defaults &&
+							(!requestedModel || requestedModel === selectedDefault)
+								? { effort: saved?.config.model_reasoning_effort ?? bootstrap.defaults.reasoningEffort }
+								: {}),
+							...(!requestedModel && bootstrap?.defaults
+								? {
+										model: saved?.config.model ?? bootstrap.defaults.model,
+										modelProvider: saved?.config.model_provider ?? bootstrap.defaults.modelProvider,
+									}
+								: {}),
+							...(saved && params.approvalPolicy == null && saved.values.approval_policy
+								? { approvalPolicy: saved.values.approval_policy }
+								: {}),
+							...(saved && params.approvalsReviewer == null && saved.values.approvals_reviewer
+								? { approvalsReviewer: saved.values.approvals_reviewer }
+								: {}),
+							...(saved && params.sandbox == null && saved.values.sandbox_mode
+								? { sandbox: saved.values.sandbox_mode }
+								: {}),
 						};
 						// Phone clients retain a selected model across host restarts, but the wire
 						// protocol carries no provider. A model outside the current live catalog
 						// cannot be resolved safely, so use the host's configured default.
-						if (requestedModel && typeof params.modelProvider !== "string" && !inferredProvider)
+						if (requestedModel && typeof params.modelProvider !== "string" && !bootstrapProvider)
 							delete startParams.model;
 						const endpoint = await this.lifecycle.start(startParams);
 						const lifecycle = await this.#lifecycleResponse(client, id!, endpoint, false);
@@ -1001,11 +1059,34 @@ export class RemoteRouter {
 										);
 										return matching.length === 1 ? matching[0].thread : undefined;
 									})();
-						result = configResponse(thread, params.includeLayers === true);
+						const bootstrap = await this.#hostTaskSettings();
+						const view = configResponse(thread ?? bootstrap?.defaults, params.includeLayers === true);
+						const saved = await this.#remoteConfig.read(bootstrap);
+						const hasSaved = Object.keys(saved.values).length > 0;
+						const layer = {
+							name: { type: "user", file: this.#remoteConfig.filePath, profile: null },
+							version: saved.version,
+						};
+						result = {
+							...view,
+							config: { ...view.config, ...(hasSaved && bootstrap ? saved.config : {}) },
+							origins: hasSaved ? Object.fromEntries(Object.keys(saved.values).map(key => [key, layer])) : {},
+							...(params.includeLayers === true
+								? { layers: hasSaved ? [{ ...layer, config: saved.config, disabledReason: null }] : [] }
+								: {}),
+						};
 						break;
 					}
+					case "config/batchWrite":
+					case "config/value/write":
+						result = await this.#remoteConfig.write(
+							params,
+							await this.#hostTaskSettings(),
+							request.method === "config/batchWrite",
+						);
+						break;
 					case "thread/realtime/listVoices":
-						result = { voices };
+						result = { voices: voiceCatalogue };
 						break;
 					case "model/list":
 						if (params.cursor != null) throw new ProtocolError(-32602, "Unsupported model cursor");
@@ -1017,7 +1098,17 @@ export class RemoteRouter {
 							// client receives a non-empty, selectable catalog.
 							const threads =
 								sessions.length > 0 ? sessions.map(session => session.thread) : (this.lifecycle?.list() ?? []);
-							result = modelResponse(threads, catalog);
+							const bootstrap = await this.#hostTaskSettings();
+							const saved = bootstrap ? await this.#remoteConfig.read(bootstrap) : undefined;
+							const selected =
+								saved && Object.keys(saved.values).length > 0
+									? [{ model: saved.config.model }]
+									: threads.length > 0
+										? threads
+										: bootstrap?.defaults
+											? [bootstrap.defaults]
+											: [];
+							result = modelResponse(selected, bootstrap?.models ?? catalog);
 						}
 						break;
 					case "permissionProfile/list": {
@@ -1105,6 +1196,21 @@ export class RemoteRouter {
 						};
 						break;
 					}
+					case "fuzzyFileSearch/sessionStart":
+					case "fuzzyFileSearch/sessionUpdate":
+					case "fuzzyFileSearch/sessionStop":
+						result = await this.#fileSearch.call(
+							client,
+							request.method,
+							params,
+							this.#visibleSessions().flatMap(s => (typeof s.thread.cwd === "string" ? [s.thread.cwd] : [])),
+						);
+						break;
+					case "fs/getMetadata":
+					case "fs/readDirectory":
+					case "fs/createDirectory":
+						result = await folderPickerRequest(request.method, params);
+						break;
 					case "fs/readFile": {
 						if (
 							typeof params.path !== "string" ||
@@ -1115,7 +1221,16 @@ export class RemoteRouter {
 						const owner = this.#visibleSessions().find(session =>
 							session.skills?.some(skill => skill.path === params.path),
 						);
-						if (!owner) throw new ProtocolError(-32602, "File is not an advertised live-session skill");
+						if (!owner) {
+							const { readWorkspaceFile } = await import("./workspace-file-read");
+							result = await readWorkspaceFile(
+								params.path,
+								this.#visibleSessions().flatMap(session =>
+									typeof session.thread.cwd === "string" ? [session.thread.cwd] : [],
+								),
+							);
+							break;
+						}
 						result = await owner.call(JSON.stringify([client, "skill-read", id]), "session/skills/read", {
 							threadId: owner.thread.id,
 							path: params.path,

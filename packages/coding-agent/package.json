@@ -64,7 +64,9 @@
 		"prepack": "bun scripts/generate-docs-index.ts && bun scripts/generate-api-spec-index.ts && bun scripts/generate-api-catalog-qmd-index.ts && bun scripts/generate-build-info.ts && bun scripts/generate-console-catalog.ts && bun scripts/generate-console-field-metadata.ts && bun scripts/generate-terraform-documentation-index.ts",
 		"generate-template": "bun scripts/generate-template.ts",
 		"check-workflow-field-coverage": "bun scripts/check-workflow-field-coverage.ts",
-		"generate-terraform-documentation-index": "bun scripts/generate-terraform-documentation-index.ts"
+		"generate-terraform-documentation-index": "bun scripts/generate-terraform-documentation-index.ts",
+		"voice-uat": "bun scripts/voice-uat-controller.ts",
+		"lifecycle-uat": "bun scripts/lifecycle-uat-controller.ts"
 	},
 	"dependencies": {
 		"@agentclientprotocol/sdk": "1.4.0",
@@ -83,21 +85,27 @@
 		"chalk": "6.0.0",
 		"diff": "^9.0",
 		"fflate": "0.8.3",
-		"google-auth-library": "10.9.1",
+		"google-auth-library": "11.3.1",
 		"linkedom": "0.18.13",
 		"lru-cache": "11.5.2",
 		"markit-ai": "0.5.3",
 		"puppeteer": "25.10.0",
+		"qrcode": "1.5.4",
 		"tar-stream": "3.1.7",
+		"ws": "8.21.1",
+		"ws-diagnostic": "npm:ws@8.21.1",
 		"yaml": "2.9.0"
 	},
 	"devDependencies": {
 		"@tobilu/qmd": "2.8.3",
-		"@types/bun": "1.4.2",
+		"@types/bun": "1.4.3",
+		"@types/qrcode": "1.5.6",
 		"@types/tar-stream": "3.1.4",
+		"@types/ws": "8.18.1",
 		"@xterm/addon-unicode11": "0.9.0",
 		"handlebars": "^4.7",
-		"marked": "18.0.11"
+		"marked": "18.0.11",
+		"jsqr": "1.4.0"
 	},
 	"engines": {
 		"bun": ">=1.4.2"

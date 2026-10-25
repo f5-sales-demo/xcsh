@@ -52,26 +52,21 @@ export function parseControlMsg(raw: unknown): ControlMsg | null {
 	return null;
 }
 
-/** Parse a plain `major.minor.patch` version into a numeric tuple, or null. */
-function parseSemver(v: string | null | undefined): [number, number, number] | null {
-	if (typeof v !== "string") return null;
-	const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(v.trim());
-	if (!m) return null;
-	return [Number(m[1]), Number(m[2]), Number(m[3])];
+/** Strict SemVer validation, including prerelease and build identifiers. */
+function validSemver(value: string | null | undefined): value is string {
+	if (typeof value !== "string") return false;
+	const core = "(0|[1-9][0-9]*)";
+	const prerelease = "(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)";
+	const build = "[0-9A-Za-z-]+";
+	return new RegExp(
+		`^${core}\\.${core}\\.${core}(?:-${prerelease}(?:\\.${prerelease})*)?(?:\\+${build}(?:\\.${build})*)?$`,
+	).test(value);
 }
 
-/** True iff `ourVersion` is a valid version strictly greater than a valid
- * `runningVersion` — the trigger to replace an older manager. Fails closed
- * (false) on equal/newer/any-unparseable input, so we never downgrade or flap. */
+/** Replace only a strictly older valid manager, including prerelease candidates. */
 export function shouldSupersede(runningVersion: string | null, ourVersion: string): boolean {
-	const a = parseSemver(runningVersion);
-	const b = parseSemver(ourVersion);
-	if (!a || !b) return false;
-	for (let i = 0; i < 3; i++) {
-		if (b[i] > a[i]) return true;
-		if (b[i] < a[i]) return false;
-	}
-	return false; // equal
+	if (!validSemver(runningVersion) || !validSemver(ourVersion)) return false;
+	return Bun.semver.order(ourVersion, runningVersion) > 0;
 }
 
 /** Serialize the manager liveness record for `~/.xcsh/manager.json`. */

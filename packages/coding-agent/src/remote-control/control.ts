@@ -51,27 +51,30 @@ const startupManager = () =>
 	);
 async function refreshState(state: HostState): Promise<Enrollment> {
 	const storage = await AuthStorage.create(getAgentDbPath());
+	let auth: Awaited<ReturnType<typeof loadRemoteSubscription>>;
 	try {
 		await storage.reload();
-		const enrollment = await refreshRemoteHost(
-			{
-				name: state.name,
-				installationId: state.installationId,
-				version: VERSION,
-				os: process.platform,
-				arch: process.arch === "x64" ? "x86_64" : "aarch64",
-			},
-			await loadRemoteSubscription(storage, `xcsh-remote-${state.installationId}`),
-			state.enrollment,
-		);
-		Object.assign(state.enrollment, enrollment);
-		// Preserve a concurrent disable decision while updating the token.
-		const current = await readState();
-		await writeState({ ...state, enabled: current?.enabled ?? state.enabled });
-		return enrollment;
+		auth = await loadRemoteSubscription(storage, `xcsh-remote-${state.installationId}`);
 	} finally {
 		storage.close();
 	}
+	// The request needs only the selected credential snapshot, not an open database.
+	const enrollment = await refreshRemoteHost(
+		{
+			name: state.name,
+			installationId: state.installationId,
+			version: VERSION,
+			os: process.platform,
+			arch: process.arch === "x64" ? "x86_64" : "aarch64",
+		},
+		auth,
+		state.enrollment,
+	);
+	Object.assign(state.enrollment, enrollment);
+	// Preserve a concurrent disable decision while updating the token.
+	const current = await readState();
+	await writeState({ ...state, enabled: current?.enabled ?? state.enabled });
+	return enrollment;
 }
 async function readState(): Promise<HostState | undefined> {
 	const file = Bun.file(statePath());
@@ -129,10 +132,11 @@ async function waitForProcessExit(pid: number, generation: number, timeoutMs: nu
 async function stopManagedHost(
 	record: NonNullable<Awaited<ReturnType<LifecycleStore["readRuntime"]>>>,
 	drainMs: number,
+	terminateManaged = false,
 ): Promise<void> {
 	let peer: Awaited<ReturnType<typeof connectPeer>> | undefined;
 	try {
-		const terminateManaged = (await readState())?.enabled === false;
+		terminateManaged ||= (await readState())?.enabled === false;
 		peer = await connectPeer(remoteSocketPath());
 		await peer.call("drain", { timeoutMs: drainMs, terminateManaged }, drainMs + 5_000);
 	} catch {
@@ -379,6 +383,7 @@ export async function remoteStatus(): Promise<Record<string, unknown>> {
 			enabled: state?.enabled ?? false,
 			relay: "stopped",
 			liveSessions: 0,
+			activeVoiceSessions: 0,
 			managedSessions: 0,
 			loadedManagedSessions: 0,
 			archivedManagedSessions: 0,
@@ -504,6 +509,14 @@ export async function runRemoteControl(action: string, options: RemoteControlOpt
 	if (action === "supervisor") {
 		await runSupervisor();
 		return undefined;
+	}
+	if (action === "quiesce") {
+		const store = lifecycleStore();
+		const supervisor = await store.readRuntime("supervisor");
+		const requested = await requestSupervisorShutdown();
+		if (requested && supervisor && !(await waitForProcessExit(supervisor.pid, supervisor.generation, 85_000)))
+			throw new Error("The xcsh remote supervisor did not stop after a graceful shutdown request");
+		return { stopped: requested };
 	}
 	if (action !== "enable" && action !== "restart")
 		throw new Error("Unsupported remote action in the interoperability preview");

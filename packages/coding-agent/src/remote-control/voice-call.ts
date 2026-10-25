@@ -6,6 +6,42 @@ import { handoffOptions } from "./voice-handoff";
 import type { VoicePersonaSnapshot } from "./voice-persona";
 import { voicePersonaInstructions } from "./voice-persona";
 import { defaultVoice, requireLiveVersion, voiceInstructions, voices } from "./voice-protocol";
+
+async function rejectedCreationField(response: Response): Promise<string | null> {
+	if (!response.body) return null;
+	const reader = response.body.getReader();
+	try {
+		const chunks: Uint8Array[] = [];
+		let size = 0;
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			size += value.byteLength;
+			if (size > 4096) return null;
+			chunks.push(value);
+		}
+		const bytes = new Uint8Array(size);
+		let offset = 0;
+		for (const chunk of chunks) {
+			bytes.set(chunk, offset);
+			offset += chunk.byteLength;
+		}
+		const detail = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)).detail;
+		if (typeof detail !== "string") return null;
+		// Report only known field names from the captured provider rejection.
+		// Never expose arbitrary server text or retry an ambiguous creation.
+		return (
+			/^Field `session\.(model|instructions|audio\.output\.voice|delegation|initial_items)` is not allowed for this Codex realtime session$/.exec(
+				detail,
+			)?.[1] ?? null
+		);
+	} catch {
+		return null;
+	} finally {
+		await reader.cancel().catch(() => {});
+		reader.releaseLock();
+	}
+}
 export function voiceCallConfig(params: Record<string, unknown>, persona: VoicePersonaSnapshot) {
 	voiceInstructions(params);
 	handoffOptions(params);
@@ -57,7 +93,7 @@ export function voiceCallConfig(params: Record<string, unknown>, persona: VoiceP
 			audio: { output: { voice } },
 			delegation: {
 				type: "client",
-				...(typeof params.delegationAckFiller === "boolean" ? { ack_filler: params.delegationAckFiller } : {}),
+				ack_filler: params.delegationAckFiller === true,
 			},
 			...(initialItems.length
 				? {
@@ -102,8 +138,12 @@ export async function createVoiceCall(
 		throw new ProtocolError(-32000, "Native realtime call transport failed");
 	}
 	if (!response.ok) {
-		await response.body?.cancel();
-		throw new ProtocolError(-32000, `Native realtime call failed (HTTP ${response.status})`);
+		const field = response.status === 400 ? await rejectedCreationField(response) : null;
+		if (response.status !== 400) await response.body?.cancel();
+		throw new ProtocolError(
+			-32000,
+			`Native realtime call failed (HTTP ${response.status}${field ? `; rejected field session.${field}` : ""})`,
+		);
 	}
 	const location = response.headers.get("location")?.split("?")[0] ?? "";
 	const callId = location

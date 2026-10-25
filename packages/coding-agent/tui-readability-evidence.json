@@ -522,24 +522,24 @@
       "daa20080"
     ],
     "packages/coding-agent/src/tools/find.ts": [
-      "3456812d",
-      "3b01fc0b",
-      "c3b99ae9",
-      "750cde78",
-      "fe320936",
-      "22cf566a",
-      "a11717ae",
-      "30d1b9e8"
+      "1e120191",
+      "802c1941",
+      "0fdb3b89",
+      "f7a7ae0d",
+      "d85d9761",
+      "4ccd5d18",
+      "0c8e8254",
+      "ec2209c6"
     ],
     "packages/coding-agent/src/tools/grep.ts": [
-      "ba6b7e61",
-      "ef9cf378",
-      "27dc1cb3",
-      "b4f0fe8e",
-      "0e5b49f6",
-      "369aa2e2",
-      "3fb6f6b1",
-      "4fef121d"
+      "32ef2759",
+      "c41c3dc4",
+      "4e2c29d1",
+      "c07025ed",
+      "fb794449",
+      "cab3fcac",
+      "87a0ae6e",
+      "a3be7c01"
     ],
     "packages/coding-agent/src/tools/json-tree.ts": [
       "32373954",
@@ -2277,31 +2277,31 @@
     },
     {
       "file": "packages/coding-agent/src/tools/find.ts",
-      "line": 377,
+      "line": 378,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
     {
       "file": "packages/coding-agent/src/tools/find.ts",
-      "line": 430,
+      "line": 431,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
     {
       "file": "packages/coding-agent/src/tools/find.ts",
-      "line": 432,
+      "line": 433,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
     {
       "file": "packages/coding-agent/src/tools/grep.ts",
-      "line": 634,
+      "line": 635,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
     {
       "file": "packages/coding-agent/src/tools/grep.ts",
-      "line": 738,
+      "line": 739,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },

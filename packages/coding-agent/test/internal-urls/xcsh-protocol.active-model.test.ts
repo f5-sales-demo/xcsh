@@ -23,6 +23,13 @@ async function readAbout(handler: InternalDocsProtocolHandler): Promise<string> 
 }
 
 describe("xcsh://about active model", () => {
+	test("reasoning selection refreshes independently of the selected model", async () => {
+		let current = { ...snapshot("fixture-model"), reasoning: "high" };
+		const handler = new InternalDocsProtocolHandler({ getActiveModel: () => current });
+		expect(await readAbout(handler)).toContain("**Reasoning effort:** `high`");
+		current = { ...current, reasoning: "low" };
+		expect(await readAbout(handler)).toContain("**Reasoning effort:** `low`");
+	});
 	test("renders the snapshot the getter returns", async () => {
 		const handler = new InternalDocsProtocolHandler({ getActiveModel: () => snapshot("claude-opus-5") });
 		const content = await readAbout(handler);

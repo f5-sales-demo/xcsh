@@ -24,6 +24,34 @@ describe("XcshApiTool", () => {
 		}
 		await fs.rm(cacheDir, { recursive: true, force: true });
 	});
+	it("voice-owned API retries share one budget without nested HTTP attempts", async () => {
+		const { VoiceToolRetry } = await import("../src/session/voice-tool-retry");
+		const ledger = new VoiceToolRetry();
+		let requests = 0;
+		const original = globalThis.fetch;
+		globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+			if (init?.method === "GET") requests++;
+			return new Response("Synthetic unavailable", { status: 503 });
+		}) as typeof fetch;
+		try {
+			const env: Record<string, string> = {};
+			const tool = new XcshApiTool(mockSession(env), cacheDir);
+			Object.assign(env, { XCSH_API_URL: "https://api.example.test", XCSH_API_TOKEN: "synthetic-token" });
+			const args = {
+				method: "GET" as const,
+				path: "/api/config/namespaces/default/example_objects/example",
+				expandDiscovery: false,
+			};
+			const result = await ledger.run("api-one", tool.getOperationEffect(args), () => tool.execute("api-one", args));
+			expect(result.isError).toBe(true);
+			expect(requests).toBe(2);
+			await ledger.run("api-two", tool.getOperationEffect(args), () => tool.execute("api-two", args));
+			expect(requests).toBe(3);
+		} finally {
+			globalThis.fetch = original;
+		}
+	});
+
 	it("has correct name and label", () => {
 		const tool = new XcshApiTool(mockSession());
 		expect(tool.name).toBe("xcsh_api");

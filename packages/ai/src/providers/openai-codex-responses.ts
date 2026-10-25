@@ -450,6 +450,10 @@ function resetOutputState(output: AssistantMessage): void {
 	output.usage = createEmptyUsage();
 	output.stopReason = "stop";
 	delete output.providerFailureCode;
+	if (output.responseAttribution) {
+		delete output.responseAttribution.responseReasoningEffort;
+		delete output.responseAttribution.responseReasoningEffortSource;
+	}
 }
 
 function removeTransientBlockIndices(output: AssistantMessage): void {
@@ -853,7 +857,7 @@ async function openCodexSseTransport(
 			body,
 			state,
 			attempt.signal,
-			retryFetch,
+			retryFetch ? (options?.maxRetries ?? true) : false,
 		);
 	} catch (error) {
 		attempt.abort();
@@ -1386,6 +1390,21 @@ function handleOutputItemDone(
 	void model;
 }
 
+/** Record only provider-reported effort; never infer it from the selected request. */
+function recordResponseReasoning(output: AssistantMessage, response: unknown): void {
+	const effort = (response as { reasoning?: { effort?: unknown } } | undefined)?.reasoning?.effort;
+	if (
+		typeof effort !== "string" ||
+		!["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(effort)
+	)
+		return;
+	output.responseAttribution = {
+		...(output.responseAttribution ?? { requestedModel: output.model }),
+		responseReasoningEffort: effort,
+		responseReasoningEffortSource: "response-body",
+	};
+}
+
 function handleResponseCreated(
 	model: Model<"openai-codex-responses">,
 	output: AssistantMessage,
@@ -1403,6 +1422,7 @@ function handleResponseCreated(
 			responseModelSource: "response-body",
 		};
 	}
+	recordResponseReasoning(output, response);
 	const state = runtime.websocketState;
 	if (
 		runtime.transport === "websocket" &&
@@ -1476,6 +1496,7 @@ function handleResponseCompleted(
 		};
 	}
 
+	recordResponseReasoning(output, response);
 	const state = runtime.websocketState;
 	if (
 		runtime.transport === "websocket" &&
@@ -1821,7 +1842,7 @@ async function tryRetryCodexProviderError(
 	if (
 		!isRetryableCodexProviderError(error) ||
 		context.output.content.length > 0 ||
-		runtime.providerRetryAttempt >= CODEX_MAX_RETRIES ||
+		runtime.providerRetryAttempt >= (context.options?.maxRetries ?? CODEX_MAX_RETRIES) ||
 		context.options?.signal?.aborted
 	) {
 		return false;
@@ -2613,7 +2634,7 @@ async function openCodexSseEventStream(
 	body: RequestBody,
 	state: CodexWebSocketSessionState | undefined,
 	signal?: AbortSignal,
-	retryFetch = true,
+	retryFetch: boolean | number = true,
 ): Promise<AsyncGenerator<Record<string, unknown>>> {
 	const headers = createCodexHeaders(requestHeaders, accountId, apiKey, sessionId, "sse", state);
 	logCodexDebug("codex request", {
@@ -2770,14 +2791,24 @@ function getRetryDelayMs(
 	return { delay: CODEX_RETRY_DELAY_MS * (attempt + 1), serverProvided: false };
 }
 
-async function fetchWithRetry(url: string, init: RequestInit, signal?: AbortSignal, retry = true): Promise<Response> {
+async function fetchWithRetry(
+	url: string,
+	init: RequestInit,
+	signal?: AbortSignal,
+	retry: boolean | number = true,
+): Promise<Response> {
 	let attempt = 0;
 	let rateLimitTimeSpent = 0;
+	const retryLimit = typeof retry === "number" ? Math.max(0, retry) : retry ? CODEX_MAX_RETRIES : 0;
 	while (true) {
 		try {
 			signal?.throwIfAborted();
 			const response = await fetch(url, { ...init, signal: signal ?? init.signal });
-			if (!retry || !CODEX_RETRYABLE_STATUS.has(response.status)) {
+			if (
+				!retry ||
+				(typeof retry === "number" && attempt >= retryLimit) ||
+				!CODEX_RETRYABLE_STATUS.has(response.status)
+			) {
 				return response;
 			}
 			if (signal?.aborted) return response;
@@ -2799,7 +2830,7 @@ async function fetchWithRetry(url: string, init: RequestInit, signal?: AbortSign
 			}
 			await abortableSleep(delay, signal);
 		} catch (error) {
-			if (!retry || attempt >= CODEX_MAX_RETRIES || signal?.aborted) {
+			if (attempt >= retryLimit || signal?.aborted) {
 				throw error;
 			}
 			const delay = CODEX_RETRY_DELAY_MS * (attempt + 1);
@@ -3016,7 +3047,7 @@ function convertTools(tools: Tool[]): Array<{
 	strict?: boolean;
 }> {
 	return tools.map(tool => {
-		const strict = !!(!NO_STRICT && tool.strict);
+		const strict = !NO_STRICT && tool.strict !== false;
 		const baseParameters = tool.parameters as unknown as Record<string, unknown>;
 		const { schema: parameters, strict: effectiveStrict } = adaptSchemaForStrict(baseParameters, strict);
 		return {
@@ -3024,7 +3055,7 @@ function convertTools(tools: Tool[]): Array<{
 			name: tool.name,
 			description: tool.description || "",
 			parameters,
-			...(effectiveStrict ? { strict: true } : tool.strict === false ? { strict: false } : {}),
+			strict: effectiveStrict,
 		};
 	});
 }

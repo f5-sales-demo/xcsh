@@ -15,8 +15,18 @@ This document is the authoritative answer when the user asks about xcsh itself.
 - Built from dirty tree: {{#if info.dirty}}yes{{else}}no{{/if}}
 - PR that shipped this version: {{#if info.prNumber}}#{{info.prNumber}}{{else}}unknown (resolve via gh if needed){{/if}}
 - Provenance source: `{{info.source}}` (resolved at {{info.resolvedAt}})
+- Embedded voice policy: version `{{voicePolicy.version}}`, SHA-256 `{{voicePolicy.sha256}}`
 - API discovery ranking: Bun SQLite BM25 over a build-generated offline index (`@tobilu/qmd@2.8.3` at build time)
 
+{{#if executionEnvironment}}
+## Execution environment
+
+- **Execution hostname:** `{{executionEnvironment.hostname}}`
+- **Session workspace:** {{#if executionEnvironment.workspace}}`{{executionEnvironment.workspace}}`{{else}}unknown{{/if}}
+
+These values describe the running xcsh process and this session. The workspace is a project directory, not a machine name. Saved machine-profile facts are separate observations and may describe another device or an earlier state. The model gateway host identifies the provider service, not this computer.
+
+{{/if}}
 {{{platformContext}}}{{{activeModel}}}{{{containment}}}## Source of truth
 
 - Repository: {{info.repoUrl}}
@@ -75,6 +85,10 @@ SE specialization: F5 XC API integration (xcsh_api, api-catalog, api-spec),
 F5 XC federated product docs (llms.txt hierarchy),
 F5 XC console browser automation (catalog_workflow_runner, xcsh://console/ workflow catalog),
 SE-specific subagents (deal-analyst, status-operator, cli-operator, github-ops).
+
+For installed plugins and their declared resources, read `xcsh://plugin` first.
+Its live inventory is authoritative; marketplace catalogs and cached directories
+do not establish availability. An empty inventory means no plugins are installed.
 
 ## What to do when asked about xcsh itself
 

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { Settings } from "../src/config/settings";
-import { captureContextExecution, runWithContextExecution } from "../src/services/context-execution";
+import {
+	adoptActivatedContextExecution,
+	captureContextExecution,
+	captureNextContextExecution,
+	currentContextExecution,
+	runWithContextExecution,
+} from "../src/services/context-execution";
 
 describe("context execution admission", () => {
 	it("keeps delayed tools, retries and descendants on A while new admissions use B", async () => {
@@ -42,5 +48,28 @@ describe("context execution admission", () => {
 			expect(env.XCSH_NAMESPACE).toBe("team-a");
 		}
 		expect(Object.isFrozen(admitted.environment)).toBe(true);
+	});
+});
+
+it("verified activation advances its caller while an admitted descendant retains the original tenant", async () => {
+	const settings = Settings.isolated({
+		"bash.environment": { XCSH_CONTEXT_NAME: "a", XCSH_API_TOKEN: "synthetic-a" },
+	});
+	const original = captureContextExecution(settings);
+	await runWithContextExecution(original, async () => {
+		const release = Promise.withResolvers<void>();
+		const descendant = runWithContextExecution(captureContextExecution(settings), async () => {
+			await release.promise;
+			return currentContextExecution();
+		});
+		settings.override("bash.environment", { XCSH_CONTEXT_NAME: "b", XCSH_API_TOKEN: "synthetic-b" });
+		expect(currentContextExecution()).toBe(original);
+		const next = captureNextContextExecution(settings);
+		adoptActivatedContextExecution(next);
+		expect(currentContextExecution()).toBe(next);
+		expect(settings.get("bash.environment").XCSH_CONTEXT_NAME).toBe("b");
+		release.resolve();
+		expect(await descendant).toBe(original);
+		expect(original.environment.XCSH_API_TOKEN).toBe("synthetic-a");
 	});
 });

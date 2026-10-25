@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { NativeVoice, type VoiceDependencies } from "../../src/remote-control/voice";
 import { voiceDelegation } from "../../src/remote-control/voice-delegation";
+import { VoiceHistory } from "../../src/remote-control/voice-history";
 
 const start = {
 	transport: { type: "existingCall", callId: "fixture-call" },
@@ -8,7 +9,7 @@ const start = {
 	outputModality: "audio",
 	includeStartupContext: false,
 };
-function fixture() {
+function fixture(withHistory = false) {
 	const connections: {
 		handlers: Parameters<NonNullable<VoiceDependencies["open"]>>[2];
 		sent: any[];
@@ -21,7 +22,18 @@ function fixture() {
 	const authorization: string[] = [];
 	let authentications = 0;
 	let rejectOpen: Error | undefined;
+	let autoReady = true;
+	const history = withHistory
+		? new VoiceHistory(
+				"fixture-session",
+				async record => {
+					records.push(record);
+				},
+				() => {},
+			)
+		: undefined;
 	const voice = new NativeVoice({
+		history,
 		authenticate: async () => ({ accessToken: `fixture-${++authentications}`, accountId: "example-voice-account" }),
 		open: async (url, headers, handlers) => {
 			expect(url).toBe("wss://api.openai.com/v1/live/fixture-call");
@@ -29,11 +41,57 @@ function fixture() {
 			if (rejectOpen) throw rejectOpen;
 			const connection = { handlers, sent: [] as any[], failSend: false, closed: 0 };
 			connections.push(connection);
+			if (autoReady)
+				queueMicrotask(() =>
+					handlers.message(JSON.stringify({ type: "session.created", session: { id: "fixture-session" } })),
+				);
 			return {
 				bufferedAmount: 0,
 				send: data => {
+					if (JSON.parse(data).type === "session.instructions.append") {
+						const event = {
+							type: "session.instructions.appended",
+							client_event_id: JSON.parse(data).event_id,
+							start_ms: 0,
+							end_ms: 1,
+						};
+						queueMicrotask(() => handlers.message(JSON.stringify(event)));
+						return;
+					}
+					if (
+						JSON.parse(data).type === "session.update" &&
+						JSON.stringify(JSON.parse(data).session) ===
+							JSON.stringify({ delegation: { type: "client", ack_filler: false } })
+					) {
+						queueMicrotask(() =>
+							handlers.message(JSON.stringify({ type: "session.updated", session: { id: "fixture-session" } })),
+						);
+						return;
+					}
 					if (connection.failSend) throw new Error("disconnected");
-					connection.sent.push(JSON.parse(data));
+					if (!(JSON.parse(data).type === "session.instructions.append")) connection.sent.push(JSON.parse(data));
+					if (JSON.parse(data).type === "session.instructions.append")
+						queueMicrotask(() =>
+							handlers.message(
+								JSON.stringify({
+									type: "session.instructions.appended",
+									client_event_id: JSON.parse(data).event_id,
+									start_ms: 0,
+									end_ms: 1,
+								}),
+							),
+						);
+					if (JSON.parse(data).type === "session.context.append")
+						queueMicrotask(() =>
+							handlers.message(
+								JSON.stringify({
+									type: "session.context.appended",
+
+									start_ms: performance.now(),
+									end_ms: performance.now() + 1,
+								}),
+							),
+						);
 				},
 				close: () => {
 					connection.closed++;
@@ -61,6 +119,9 @@ function fixture() {
 		reject: (error: Error | undefined) => {
 			rejectOpen = error;
 		},
+		autoReady: (value: boolean) => {
+			autoReady = value;
+		},
 	};
 }
 async function reconnected(f: ReturnType<typeof fixture>) {
@@ -82,6 +143,28 @@ const delegation = {
 		content: [{ type: "input_text", text: "work" }],
 	},
 };
+
+test("an existing-call sideband drains queued context after socket reattachment without a new session event", async () => {
+	const f = fixture();
+	try {
+		await f.voice.start(start);
+		f.autoReady(false);
+		f.connections[0].handlers.closed();
+		f.voice.appendText("queued during reattachment");
+		await reconnected(f);
+		await Bun.sleep(0);
+		expect(f.connections[1].sent).toEqual([
+			{ type: "session.context.append", content: [{ type: "input_text", text: "queued during reattachment" }] },
+		]);
+		expect(f.records).toContainEqual(expect.objectContaining({ stage: "sideband-reconnect", connected: true }));
+		f.connections[1].handlers.message(JSON.stringify(delegation));
+		await Bun.sleep(0);
+		expect(f.delegated).toEqual([voiceDelegation("work", "user: work")]);
+		expect(f.events.filter(e => e.method === "thread/realtime/started")).toHaveLength(1);
+	} finally {
+		await f.voice.stop();
+	}
+});
 
 test("v3 sideband reattaches the same call with refreshed auth and ignores stale socket events", async () => {
 	const f = fixture();
@@ -139,6 +222,8 @@ test("failed outbound context survives reconnect while successful chunks are not
 	try {
 		await f.voice.start(start);
 		f.voice.appendText("already delivered");
+		await Bun.sleep(0);
+		expect(f.connections[0].sent.map(e => e.content?.[0]?.text)).toContain("already delivered");
 		f.connections[0].failSend = true;
 		f.voice.appendText("a".repeat(750));
 		await reconnected(f);
@@ -193,7 +278,39 @@ test("stopping during a pending recovery handshake closes the late socket withou
 		authenticate: async () => ({ accessToken: "fixture", accountId: "example-voice-account" }),
 		open: async (_url, _headers, next) => {
 			handlers = next;
-			if (++opens === 1) return { bufferedAmount: 0, send: () => {}, close: () => {} };
+			if (++opens === 1) {
+				queueMicrotask(() =>
+					next.message(JSON.stringify({ type: "session.created", session: { id: "fixture-session" } })),
+				);
+				return {
+					bufferedAmount: 0,
+					send: data => {
+						if (JSON.parse(data).type === "session.instructions.append")
+							queueMicrotask(() =>
+								next.message(
+									JSON.stringify({
+										type: "session.instructions.appended",
+										client_event_id: JSON.parse(data).event_id,
+										start_ms: 0,
+										end_ms: 1,
+									}),
+								),
+							);
+						if (JSON.parse(data).type === "session.context.append")
+							queueMicrotask(() =>
+								next.message(
+									JSON.stringify({
+										type: "session.context.appended",
+
+										start_ms: performance.now(),
+										end_ms: performance.now() + 1,
+									}),
+								),
+							);
+					},
+					close: () => {},
+				};
+			}
 			return new Promise(resolve => {
 				resolveOpen = resolve;
 			});
@@ -272,4 +389,32 @@ test("temporary reconnect failures have a finite retry budget", async () => {
 	expect(f.authorization).toHaveLength(4);
 	expect(f.events.filter(e => e.method === "thread/realtime/error")).toHaveLength(1);
 	expect(f.records.filter(e => e.stage === "sideband-reconnect").map(e => e.attempt)).toEqual([1, 2, 3]);
+});
+
+// Captured 1006 followed by HTTP 404 retained the transcripts but mislabeled
+// the final timeline item as ended. Recovery must preserve failure evidence.
+test.each([404, 410])("lost call HTTP %i persists failed closure and partial speech without replay", async status => {
+	const f = fixture(true);
+	await f.voice.start(start);
+	f.connections[0].handlers.message(
+		JSON.stringify({ type: "input_transcript.added", item: { text: "Which workspace?" } }),
+	);
+	await Bun.sleep(0);
+	f.connections[0].handlers.message(
+		JSON.stringify({
+			type: "output_transcript.added",
+			item: { id: "speech", text: "The workspace folder" },
+		}),
+	);
+	await Bun.sleep(0);
+	f.reject(new Error(`HTTP ${status}`));
+	f.connections[0].handlers.closed();
+	await Bun.sleep(300);
+	await f.voice.closing;
+	const items = f.records.filter(r => r.kind === "voiceTimeline").map(r => r.item as any);
+	expect(items.filter(i => i.type === "realtimeSessionClosed")).toHaveLength(1);
+	expect(items.at(-1)).toMatchObject({ type: "realtimeSessionClosed", outcome: "failed" });
+	expect(items.some(i => i.type === "transcriptSegment" && i.text === "The workspace folder")).toBe(true);
+	expect(f.delegated).toEqual([]);
+	expect(f.events.at(-1)).toEqual({ method: "thread/realtime/closed", params: { reason: "transportClosed" } });
 });

@@ -75,6 +75,15 @@ describe("parseControlMsg", () => {
 // #1874: version-aware supersede — a NEWER binary replaces an older running
 // manager; equal/newer/malformed never supersede (fail closed, no flapping).
 describe("shouldSupersede", () => {
+	it("orders prerelease candidates without downgrading a stable manager", () => {
+		expect(shouldSupersede("1.0.0", "23.6.2-cleanroom.1")).toBe(true);
+		expect(shouldSupersede("23.6.2-cleanroom.1", "23.6.2-cleanroom.2")).toBe(true);
+		expect(shouldSupersede("23.6.2-cleanroom.2", "23.6.2-cleanroom.1")).toBe(false);
+		expect(shouldSupersede("23.6.2-cleanroom.1", "23.6.2")).toBe(true);
+		expect(shouldSupersede("23.6.2", "23.6.2-cleanroom.1")).toBe(false);
+		expect(shouldSupersede("23.6.2+build.1", "23.6.2+build.2")).toBe(false);
+		expect(shouldSupersede("23.6.2-cleanroom.01", "23.6.2")).toBe(false);
+	});
 	it("true only when ourVersion is strictly greater", () => {
 		expect(shouldSupersede("19.56.2", "19.58.1")).toBe(true);
 		expect(shouldSupersede("19.58.0", "19.58.1")).toBe(true);

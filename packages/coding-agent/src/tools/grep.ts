@@ -95,6 +95,7 @@ async function materializeInternalContent(
 
 export class GrepTool implements AgentTool<typeof grepSchema, GrepToolDetails> {
 	readonly name = "grep";
+	getOperationEffect = () => "readOnly" as const;
 	readonly label = "Grep";
 	readonly description: string;
 	readonly parameters = grepSchema;

@@ -54,4 +54,41 @@ describe("composeOnPayload", () => {
 		expect(seen).toEqual([out]);
 		expect(seen).toEqual([{ tools: [{ name: "fromBase" }, { name: "serverTool" }], transformed: true }]);
 	});
+
+	it("applies a JSON schema to only the requested Responses API payload", async () => {
+		const outputSchema = {
+			type: "object",
+			properties: { title: { type: "string" } },
+			required: ["title"],
+			additionalProperties: false,
+		};
+		const withSchema = composeOnPayload(undefined, undefined, undefined, outputSchema, "openai-codex-responses");
+		const constrained = (await withSchema?.({ text: { verbosity: "low" } })) as Record<string, any>;
+		expect(constrained).toEqual({
+			text: {
+				verbosity: "low",
+				format: { type: "json_schema", name: "xcsh_turn_output", strict: true, schema: outputSchema },
+			},
+		});
+
+		const nextTurn = composeOnPayload(undefined, undefined);
+		expect(nextTurn).toBeUndefined();
+	});
+
+	it("uses the Chat Completions response_format envelope", async () => {
+		const outputSchema = { type: "object", properties: {}, additionalProperties: false };
+		const withSchema = composeOnPayload(undefined, undefined, undefined, outputSchema, "openai-completions");
+		expect(await withSchema?.({})).toEqual({
+			response_format: {
+				type: "json_schema",
+				json_schema: { name: "xcsh_turn_output", strict: true, schema: outputSchema },
+			},
+		});
+	});
+
+	it("rejects output schemas synchronously for unsupported provider APIs", () => {
+		expect(() => composeOnPayload(undefined, undefined, undefined, {}, "anthropic-messages")).toThrow(
+			"Output schemas are not supported by provider API anthropic-messages",
+		);
+	});
 });

@@ -284,6 +284,419 @@ describe("AgentSession retry fallback", () => {
 		]);
 	});
 
+	it.each([false, true])(
+		"unclassified voice failure preserves selected model without automatic replay when call closed=%s",
+		async closeDuringTurn => {
+			const primary = getBundledModel("openai", "gpt-4o-mini")!;
+			const fallback = getBundledModel("openai", "gpt-4o")!;
+			const requested: string[] = [];
+			let attempts = 0;
+			let activeSession: AgentSession;
+			const agent = new Agent({
+				getApiKey: provider => `${provider}-test-key`,
+				initialState: { model: primary, systemPrompt: "Synthetic", tools: [], messages: [] },
+				streamFn: model => {
+					requested.push(`${model.provider}/${model.id}`);
+					const out = new MockAssistantStream();
+					queueMicrotask(() => {
+						attempts++;
+						if (attempts === 1) {
+							if (closeDuringTurn) activeSession.setRealtimeMode(false, {});
+							const error = createAssistantMessage(model, {
+								stopReason: "error",
+								errorMessage: "overloaded_error: provider returned error 503",
+							});
+							out.push({ type: "start", partial: error });
+							out.push({ type: "error", reason: "error", error });
+						} else {
+							const message = createAssistantMessage(model, {
+								text: "Recovered on selected model",
+								stopReason: "stop",
+							});
+							out.push({ type: "done", reason: "stop", message });
+						}
+					});
+					return out;
+				},
+			});
+			const settings = Settings.isolated({
+				"compaction.enabled": false,
+				"retry.baseDelayMs": 1,
+				"retry.fallbackChains": { default: [`${fallback.provider}/${fallback.id}`] },
+			});
+			settings.setModelRole("default", `${primary.provider}/${primary.id}`);
+			session = activeSession = new AgentSession({
+				agent,
+				sessionManager: SessionManager.inMemory(),
+				settings,
+				modelRegistry,
+			});
+			session.setRealtimeMode(true, {});
+			await session.prompt("Synthetic voice request");
+			await session.waitForIdle();
+			expect(requested).toEqual([`${primary.provider}/${primary.id}`]);
+			expect(session.model?.id).toBe(primary.id);
+		},
+	);
+
+	it("voice retries one exact classified read and preserves completed mutation effects", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini")!;
+		let writes = 0;
+		let reads = 0;
+		let requests = 0;
+		const allowances: (number | undefined)[] = [];
+		const write: AgentTool = {
+			name: "synthetic_write",
+			label: "Write",
+			description: "Synthetic",
+			parameters: Type.Object({}),
+			getOperationEffect: () => "mutation",
+			async execute() {
+				writes++;
+				return { content: [{ type: "text", text: "written" }] };
+			},
+		};
+		const read: AgentTool = {
+			name: "synthetic_read",
+			label: "Read",
+			description: "Synthetic",
+			parameters: Type.Object({}),
+			getOperationEffect: () => "readOnly",
+			async execute() {
+				reads++;
+				if (reads === 1) throw Object.assign(new Error("Synthetic failed read"), { code: "EIO" });
+				return { content: [{ type: "text", text: "read" }] };
+			},
+		};
+		const agent = new Agent({
+			getApiKey: () => "synthetic-key",
+			initialState: { model, systemPrompt: "Synthetic", tools: [write, read], messages: [] },
+			streamFn: (m, _context, options) => {
+				allowances.push(options?.maxRetries);
+				const out = new MockAssistantStream();
+				queueMicrotask(() => {
+					const message = createAssistantMessage(m, {
+						text: requests++ ? "verified" : undefined,
+						stopReason: "stop",
+					});
+					if (requests === 1) {
+						message.content = [
+							{ type: "toolCall", id: "write-op", name: write.name, arguments: {} },
+							{ type: "toolCall", id: "read-op", name: read.name, arguments: {} },
+						];
+						message.stopReason = "toolUse";
+					}
+					out.push({ type: "done", reason: message.stopReason as "stop" | "toolUse", message });
+				});
+				return out;
+			},
+		});
+		session = new AgentSession({
+			agent,
+			settings: Settings.isolated({ "compaction.enabled": false }),
+			sessionManager: SessionManager.inMemory(),
+			modelRegistry,
+		});
+		session.setRealtimeMode(true, {});
+		await session.prompt("Synthetic voice operation");
+		await session.waitForIdle();
+		expect(writes).toBe(1);
+		expect(reads).toBe(2);
+		expect(allowances).toEqual([0, 0]);
+		const operations = session.sessionManager
+			.getEntries()
+			.filter(e => e.type === "custom" && e.customType === "voice-operation")
+			.map(e => (e as any).data);
+		expect(operations.filter(e => e.effect === "readOnly" && e.outcome === "completed")).toHaveLength(1);
+		expect(operations.filter(e => e.effect === "mutation" && e.outcome === "completed")).toHaveLength(1);
+	});
+
+	it("voice context change after a failed read prevents retry on a new target", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini")!;
+		let writes = 0;
+		let reads = 0;
+		let requests = 0;
+		const admittedContexts: unknown[] = [];
+		const allowances: (number | undefined)[] = [];
+		const write: AgentTool = {
+			name: "synthetic_write",
+			label: "Write",
+			description: "Synthetic",
+			parameters: Type.Object({}),
+			getOperationEffect: () => "mutation",
+			async execute() {
+				writes++;
+				return { content: [{ type: "text", text: "written" }] };
+			},
+		};
+		const read: AgentTool = {
+			name: "synthetic_read",
+			label: "Read",
+			description: "Synthetic",
+			parameters: Type.Object({}),
+			getOperationEffect: () => "readOnly",
+			async execute() {
+				reads++;
+				admittedContexts.push(session!.settings.get("bash.environment").XCSH_CONTEXT_NAME);
+				if (reads === 1) {
+					session!.settings.override("bash.environment", { XCSH_CONTEXT_NAME: "example-partners" });
+					throw Object.assign(new Error("Synthetic failed read"), { code: "EIO" });
+				}
+				return { content: [{ type: "text", text: "read" }] };
+			},
+		};
+		const agent = new Agent({
+			getApiKey: () => "synthetic-key",
+			initialState: { model, systemPrompt: "Synthetic", tools: [write, read], messages: [] },
+			streamFn: (m, _context, options) => {
+				allowances.push(options?.maxRetries);
+				const out = new MockAssistantStream();
+				queueMicrotask(() => {
+					const message = createAssistantMessage(m, {
+						text: requests++ ? "verified" : undefined,
+						stopReason: "stop",
+					});
+					if (requests === 1) {
+						message.content = [
+							{ type: "toolCall", id: "write-op", name: write.name, arguments: {} },
+							{ type: "toolCall", id: "read-op", name: read.name, arguments: {} },
+						];
+						message.stopReason = "toolUse";
+					}
+					out.push({ type: "done", reason: message.stopReason as "stop" | "toolUse", message });
+				});
+				return out;
+			},
+		});
+		session = new AgentSession({
+			agent,
+			settings: Settings.isolated({
+				"compaction.enabled": false,
+				"bash.environment": { XCSH_CONTEXT_NAME: "original-context" },
+			}),
+			sessionManager: SessionManager.inMemory(),
+			modelRegistry,
+		});
+		session.setRealtimeMode(true, {});
+		await session.prompt("Synthetic voice operation");
+		await session.waitForIdle();
+		expect(writes).toBe(1);
+		expect(reads).toBe(1);
+		expect(admittedContexts).toEqual(["original-context"]);
+		expect(session.settings.get("bash.environment").XCSH_CONTEXT_NAME).toBe("example-partners");
+		expect(allowances).toEqual([0, 0]);
+		const operations = session.sessionManager
+			.getEntries()
+			.filter(e => e.type === "custom" && e.customType === "voice-operation")
+			.map(e => (e as any).data);
+		expect(operations.filter(e => e.effect === "readOnly" && e.outcome === "failed")).toHaveLength(1);
+		expect(operations.filter(e => e.effect === "mutation" && e.outcome === "completed")).toHaveLength(1);
+	});
+
+	it("voice task restores a persisted spent retry without repeating the failed read", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini")!;
+		let writes = 0;
+		let reads = 0;
+		let requests = 0;
+		const allowances: (number | undefined)[] = [];
+		const write: AgentTool = {
+			name: "synthetic_write",
+			label: "Write",
+			description: "Synthetic",
+			parameters: Type.Object({}),
+			getOperationEffect: () => "mutation",
+			async execute() {
+				writes++;
+				return { content: [{ type: "text", text: "written" }] };
+			},
+		};
+		const read: AgentTool = {
+			name: "synthetic_read",
+			label: "Read",
+			description: "Synthetic",
+			parameters: Type.Object({}),
+			getOperationEffect: () => "readOnly",
+			async execute() {
+				reads++;
+				if (reads === 1) throw Object.assign(new Error("Synthetic failed read"), { code: "EIO" });
+				return { content: [{ type: "text", text: "read" }] };
+			},
+		};
+		const agent = new Agent({
+			getApiKey: () => "synthetic-key",
+			initialState: { model, systemPrompt: "Synthetic", tools: [write, read], messages: [] },
+			streamFn: (m, _context, options) => {
+				allowances.push(options?.maxRetries);
+				const out = new MockAssistantStream();
+				queueMicrotask(() => {
+					const message = createAssistantMessage(m, {
+						text: requests++ ? "verified" : undefined,
+						stopReason: "stop",
+					});
+					if (requests === 1) {
+						message.content = [
+							{ type: "toolCall", id: "write-op", name: write.name, arguments: {} },
+							{ type: "toolCall", id: "read-op", name: read.name, arguments: {} },
+						];
+						message.stopReason = "toolUse";
+					}
+					out.push({ type: "done", reason: message.stopReason as "stop" | "toolUse", message });
+				});
+				return out;
+			},
+		});
+		session = new AgentSession({
+			agent,
+			settings: Settings.isolated({ "compaction.enabled": false }),
+			sessionManager: SessionManager.inMemory(),
+			modelRegistry,
+		});
+		session.sessionManager.appendCustomEntry("voice-operation", {
+			kind: "voiceRetryReserved",
+			taskId: "synthetic-task",
+		});
+		session.setVoiceTaskIdentity("synthetic-task", "synthetic-delegation");
+		session.setRealtimeMode(true, {});
+		await session.prompt("Synthetic voice operation");
+		await session.waitForIdle();
+		expect(writes).toBe(1);
+		expect(reads).toBe(1);
+		expect(allowances).toEqual([0, 0]);
+		const operations = session.sessionManager
+			.getEntries()
+			.filter(e => e.type === "custom" && e.customType === "voice-operation")
+			.map(e => (e as any).data);
+		expect(operations.filter(e => e.effect === "readOnly" && e.outcome === "failed")).toHaveLength(1);
+		expect(operations.filter(e => e.effect === "mutation" && e.outcome === "completed")).toHaveLength(1);
+	});
+
+	it("voice task corrections persist increasing revisions on the same task", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini")!;
+		const agent = new Agent({ initialState: { model, tools: [], messages: [] } });
+		session = new AgentSession({
+			agent,
+			sessionManager: SessionManager.inMemory(),
+			settings: Settings.isolated(),
+			modelRegistry,
+		});
+		session.setVoiceTaskIdentity("task-fixture", "delegation-one");
+		session.setVoiceTaskIdentity("task-fixture", "delegation-two");
+		session.setVoiceTaskIdentity("task-fixture", "delegation-two");
+		const records = session.sessionManager
+			.getEntries()
+			.filter(e => e.type === "custom" && e.customType === "voice-operation")
+			.map(e => (e as any).data)
+			.filter(e => e.kind === "voiceTaskDelegation");
+		expect(records).toMatchObject([
+			{ taskId: "task-fixture", delegationId: "delegation-one", revision: 1 },
+			{ taskId: "task-fixture", delegationId: "delegation-two", revision: 2, supersedes: "delegation-one" },
+		]);
+	});
+
+	it("reordered mutation arguments retain one operation identity", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini")!;
+		const tool: AgentTool = {
+			name: "synthetic_mutation",
+			label: "Write",
+			description: "Synthetic",
+			parameters: Type.Object({}),
+			getOperationEffect: () => "mutation",
+			execute: async () => ({ content: [] }),
+		};
+		const agent = new Agent({
+			initialState: { model, tools: [], messages: [] },
+			getApiKey: () => "synthetic-key",
+			streamFn: m => {
+				const out = new MockAssistantStream();
+				queueMicrotask(() =>
+					out.push({
+						type: "done",
+						reason: "stop",
+						message: createAssistantMessage(m, { text: "synthetic result", stopReason: "stop" }),
+					}),
+				);
+				return out;
+			},
+		});
+		session = new AgentSession({
+			agent,
+			sessionManager: SessionManager.inMemory(),
+			settings: Settings.isolated(),
+			modelRegistry,
+		});
+		session.setRealtimeMode(true, {});
+		await session.prompt("Synthetic").catch(() => {});
+		const invoke = (args: any) => agent.executeTool!(tool, "operation", args, undefined, undefined, undefined);
+		await invoke({ a: 1, b: { x: 2, y: 3 } });
+		await expect(invoke({ b: { y: 3, x: 2 }, a: 1 })).rejects.toThrow("already admitted");
+	});
+
+	it("active voice does not invoke automatic executor routing", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini")!;
+		let evaluated = 0;
+		const agent = new Agent({
+			getApiKey: () => "synthetic-key",
+			initialState: { model, systemPrompt: "Synthetic", tools: [], messages: [] },
+			streamFn: m => {
+				const out = new MockAssistantStream();
+				queueMicrotask(() =>
+					out.push({
+						type: "done",
+						reason: "stop",
+						message: createAssistantMessage(m, { text: "selected model result", stopReason: "stop" }),
+					}),
+				);
+				return out;
+			},
+		});
+		const settings = Settings.isolated({ "compaction.enabled": false, "routing.mode": "auto" });
+		settings.setModelRole("default", `${model.provider}/${model.id}`);
+		session = new AgentSession({ agent, settings, sessionManager: SessionManager.inMemory(), modelRegistry });
+		session.routingCoordinator.evaluateTurn = async () => {
+			evaluated++;
+			throw new Error("Automatic routing must not run in voice");
+		};
+		session.setRealtimeMode(true, {});
+		await session.prompt("Synthetic voice request");
+		await session.waitForIdle();
+		expect(evaluated).toBe(0);
+		expect(session.model?.id).toBe(model.id);
+	});
+
+	it("typed turn after voice closure resumes automatic executor routing", async () => {
+		const model = getBundledModel("openai", "gpt-4o-mini")!;
+		let evaluated = 0;
+		const agent = new Agent({
+			getApiKey: () => "synthetic-key",
+			initialState: { model, systemPrompt: "Synthetic", tools: [], messages: [] },
+			streamFn: m => {
+				const out = new MockAssistantStream();
+				queueMicrotask(() =>
+					out.push({
+						type: "done",
+						reason: "stop",
+						message: createAssistantMessage(m, { text: "done", stopReason: "stop" }),
+					}),
+				);
+				return out;
+			},
+		});
+		const settings = Settings.isolated({ "compaction.enabled": false, "routing.mode": "auto" });
+		settings.setModelRole("default", `${model.provider}/${model.id}`);
+		session = new AgentSession({ agent, settings, sessionManager: SessionManager.inMemory(), modelRegistry });
+		session.routingCoordinator.evaluateTurn = async () => {
+			evaluated++;
+			throw new Error("Synthetic routing boundary");
+		};
+		session.setRealtimeMode(true, {});
+		await session.prompt("Synthetic voice request");
+		await session.waitForIdle();
+		expect(evaluated).toBe(0);
+		session.setRealtimeMode(false, {});
+		await expect(session.prompt("Synthetic typed request")).rejects.toThrow("Synthetic routing boundary");
+		expect(evaluated).toBe(1);
+	});
+
 	it("auto-retries preserved OpenAI first-event timeout errors", async () => {
 		const model = getBundledModel("openai", "gpt-4o-mini");
 		if (!model) {

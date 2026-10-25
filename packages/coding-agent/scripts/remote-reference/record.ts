@@ -13,7 +13,7 @@ if (
 	!/^[a-z0-9-]{1,64}$/.test(scenario)
 ) {
 	throw new Error(
-		"Usage: bun record.ts <0.153.4|0.154.0> <private-socket-path> <private-jsonl-path> <scenario> <codex-artifact> <artifact-sha256>",
+		"Usage: bun record.ts <0.153.4|0.154.0|0.159.2> <private-socket-path> <private-jsonl-path> <scenario> <codex-artifact> <artifact-sha256>",
 	);
 }
 const manifest = await loadReferenceBaseline(version);

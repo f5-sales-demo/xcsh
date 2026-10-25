@@ -165,6 +165,7 @@ test("a published hidden session delivers questions registered after its async i
 	);
 	expect(events).toContainEqual({
 		id: "ask-request",
+		emittedAtMs: expect.any(Number),
 		method: "item/tool/requestUserInput",
 		params: expect.objectContaining({ threadId: "secondary", isBlocking: false }),
 	});
@@ -1422,7 +1423,12 @@ test("phone skill bootstrap exposes the live terminal catalog and acknowledges p
 			},
 		}),
 	).toEqual({ id: 2, result: {} });
-	expect(notifications).toEqual([{ client: "phone", event: { method: "skills/changed", params: {} } }]);
+	expect(notifications).toEqual([
+		{
+			client: "phone",
+			event: { emittedAtMs: expect.any(Number), method: "skills/changed", params: {} },
+		},
+	]);
 	expect(await router.handle("phone", { id: 3, method: "skills/list", params: { cwds: ["/tmp/alpha"] } })).toEqual({
 		id: 3,
 		result: {
@@ -1519,5 +1525,61 @@ test("voice transition unsubscribe returns the pinned status and leaves the term
 	}
 	expect(router.sessions.has("fixture")).toBe(true);
 	expect(router.subscribed("phone", "fixture")).toBe(false);
+	router.dispose();
+});
+test("voice-only notification handoff carries ordered emission timestamps without a history read", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "fixture");
+	const notifications: Array<{ method: string; emittedAtMs?: number }> = [];
+	router.registerSession("voice-only", {
+		thread: { id: "voice-only", name: "Voice only", turns: [], updatedAt: 1 },
+		call: async () => ({ thread: { id: "voice-only" } }),
+	});
+	router.notify = (_client, event) => notifications.push(event);
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	await router.handle("phone", { id: 2, method: "thread/resume", params: { threadId: "voice-only" } });
+
+	const realtimeSessionId = "voice-session";
+	const transcript = (id: string, role: "user" | "assistant", text: string) => ({
+		id,
+		realtimeSessionId,
+		type: "transcriptSegment",
+		role,
+		text,
+	});
+	const first = transcript("voice-user-one", "user", "First question");
+	const second = transcript("voice-assistant-one", "assistant", "First answer");
+	for (const event of [
+		{ method: "thread/realtime/item/started", params: { threadId: "voice-only", item: { ...first, text: "" } } },
+		{
+			method: "thread/realtime/item/transcript/delta",
+			params: { threadId: "voice-only", itemId: first.id, delta: first.text },
+		},
+		{ method: "thread/realtime/item/completed", params: { threadId: "voice-only", item: first } },
+		{ method: "thread/realtime/item/started", params: { threadId: "voice-only", item: { ...second, text: "" } } },
+		{
+			method: "thread/realtime/item/transcript/delta",
+			params: { threadId: "voice-only", itemId: second.id, delta: second.text },
+		},
+		{ method: "thread/realtime/item/completed", params: { threadId: "voice-only", item: second } },
+		{ method: "thread/realtime/closed", params: { threadId: "voice-only", reason: "requested" } },
+	])
+		router.publish(event);
+
+	expect(notifications.map(event => event.method)).toEqual([
+		"thread/realtime/item/started",
+		"thread/realtime/item/transcript/delta",
+		"thread/realtime/item/completed",
+		"thread/realtime/item/started",
+		"thread/realtime/item/transcript/delta",
+		"thread/realtime/item/completed",
+		"thread/realtime/closed",
+	]);
+	const timestamps = notifications.map(event => event.emittedAtMs);
+	expect(timestamps.every(value => typeof value === "number" && Number.isFinite(value))).toBe(true);
+	expect(timestamps).toEqual([...timestamps].sort((left, right) => left! - right!));
 	router.dispose();
 });

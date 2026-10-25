@@ -118,7 +118,12 @@ test("host keeps additional live owners hidden from phone discovery and promotes
 		expect(await control.call("status", {})).toMatchObject({ liveSessions: 0 });
 		await a.call("register", { thread: { id: "a", name: "A", createdAt: 2, updatedAt: 1, turns: [] } });
 		await b.call("register", { thread: { id: "b", name: "B", createdAt: 1, updatedAt: 1, turns: [] } });
-		expect(await control.call("status", {})).toMatchObject({ liveSessions: 2 });
+		expect(await control.call("status", {})).toMatchObject({ liveSessions: 2, activeVoiceSessions: 0 });
+		await a.call("register", {
+			thread: { id: "a", name: "A", createdAt: 2, updatedAt: 1, turns: [] },
+			voiceActive: true,
+		});
+		expect(await control.call("status", {})).toMatchObject({ liveSessions: 2, activeVoiceSessions: 1 });
 		const result = await host.router.sessions.get("a")?.call("r", "turn/start", { threadId: "a" });
 		expect(result).toMatchObject({ owner: "a", params: { identity: "r" } });
 		expect(
@@ -205,6 +210,7 @@ test("host replays active thread settings after a resume response", async () => 
 			{
 				afterResponse: true,
 				event: {
+					emittedAtMs: expect.any(Number),
 					method: "thread/settings/updated",
 					params: {
 						threadId: "fixture",

@@ -1,6 +1,7 @@
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { SessionEntry, SessionToolExecution } from "../session/session-manager";
 import { updateFileHistoryItem } from "./file-changes";
+import { coalesceTurnFileChanges } from "./turn-file-diff";
 
 export interface HistoryTurn {
 	id: string;
@@ -49,6 +50,53 @@ export function newHistoryTurn(id: string, status = "completed"): HistoryTurn {
 export function assistantHistoryItem(id: string, text: string, phase: string | undefined = "final_answer") {
 	return { type: "agentMessage", id, text, phase, memoryCitation: null, delivery: null, questions: null };
 }
+export function assistantPlanHistoryItems(
+	id: string,
+	text: string,
+	phase?: string,
+	mode: "plan" | "default" = "default",
+): Record<string, unknown>[] {
+	if (mode !== "plan") return [assistantHistoryItem(id, text, phase)];
+	const items: Record<string, unknown>[] = [];
+	let fence = "";
+	let start = -1;
+	let body = -1;
+	let offset = 0;
+	let plainStart = 0;
+	let planIndex = 0;
+	for (const line of text.match(/[^\n]*\n|[^\n]+$/gu) ?? []) {
+		const value = line.trim();
+		const marker = /^(`{3,}|~{3,})/u.exec(value)?.[1];
+		if (marker) {
+			if (!fence) fence = marker;
+			else if (marker[0] === fence[0] && marker.length >= fence.length) fence = "";
+		} else if (!fence && value === "<proposed_plan>" && start < 0) {
+			start = offset;
+			body = offset + line.length;
+		} else if (!fence && value === "</proposed_plan>" && start >= 0) {
+			const markdown = text.slice(body, offset).trim();
+			if (markdown) {
+				if (start > plainStart)
+					items.push(
+						assistantHistoryItem(
+							planIndex === 0 ? id : `${id}:text:${planIndex}`,
+							text.slice(plainStart, start),
+							phase,
+						),
+					);
+				items.push({ type: "plan", id: `${id}:plan:${planIndex++}`, text: markdown });
+				plainStart = offset + line.length;
+			}
+			start = -1;
+		}
+		offset += line.length;
+	}
+	if (!items.length) return [assistantHistoryItem(id, text, phase)];
+	if (plainStart < text.length)
+		items.push(assistantHistoryItem(`${id}:text:${planIndex}`, text.slice(plainStart), phase));
+	return items;
+}
+
 export function messageKey(message: AgentMessage): string {
 	return JSON.stringify([
 		message.role === "hookMessage" ? "custom" : message.role,
@@ -60,6 +108,7 @@ export interface HistoryToolContext {
 	cwd: string;
 	commandCallIds: string[];
 	fileCallIds?: string[];
+	collaborationMode?: "plan" | "default";
 }
 function commandHistoryItem(id: string, command: string, cwd: string): Record<string, unknown> {
 	return {
@@ -311,7 +360,8 @@ export function messageHistoryItems(
 	}
 	if (message.role !== "assistant") return [];
 	return message.content.flatMap((part, index): Record<string, unknown>[] => {
-		if (part.type === "text" && part.text) return [assistantHistoryItem(`${id}:${index}`, part.text, part.phase)];
+		if (part.type === "text" && part.text)
+			return assistantPlanHistoryItems(`${id}:${index}`, part.text, part.phase, tools?.collaborationMode);
 		if (part.type === "toolCall") {
 			if (Array.isArray(tools?.fileCallIds) && tools.fileCallIds.includes(part.id))
 				return [{ type: "fileChange", id: `${id}:tool:${part.id}`, changes: [], status: "inProgress" }];
@@ -357,6 +407,223 @@ export function projectHistory(
 ): HistoryTurn[] {
 	return projectHistorySnapshot(threadId, entries, running, cwd).turns;
 }
+
+type CaptionRole = "user" | "assistant";
+interface CaptionSegment {
+	id: string;
+	realtimeSessionId: string;
+	role: CaptionRole;
+	text: string;
+	position: number;
+}
+interface CaptionGroup {
+	position: number;
+	realtimeSessionId: string;
+	segments: CaptionSegment[];
+}
+interface CanonicalCaption {
+	turn: HistoryTurn;
+	turnPosition: number;
+	itemPosition: number;
+	itemIndex: number;
+	role: CaptionRole;
+	text: string;
+	used: boolean;
+}
+
+function captionText(item: Record<string, unknown>): { role: CaptionRole; text: string } | undefined {
+	if (item.type === "agentMessage" && typeof item.text === "string") return { role: "assistant", text: item.text };
+	if (item.type !== "userMessage" || !Array.isArray(item.content)) return;
+	const text = item.content
+		.flatMap(part =>
+			part && typeof part === "object" && (part as Record<string, unknown>).type === "text"
+				? [String((part as Record<string, unknown>).text ?? "")]
+				: [],
+		)
+		.join("\n");
+	return { role: "user", text };
+}
+
+function captionKey(role: CaptionRole, text: string): string {
+	return JSON.stringify([role, text.trim().replace(/\s+/gu, " ")]);
+}
+
+function captionHistoryItem(segment: CaptionSegment): Record<string, unknown> {
+	const id = `voice-transcript-${segment.id}`;
+	return segment.role === "assistant"
+		? assistantHistoryItem(id, segment.text)
+		: {
+				type: "userMessage",
+				id,
+				clientId: null,
+				content: [{ type: "text", text: segment.text, text_elements: [] }],
+			};
+}
+
+/**
+ * Project persisted voice captions into ordinary turns for clients that hydrate
+ * only through thread/turns/list and thread/items/list. The canonical timeline
+ * stays unchanged for clients that consume thread/timeline/list.
+ */
+export function projectCompatibilityHistory(
+	threadId: string,
+	entries: readonly SessionEntry[],
+	running = false,
+	cwd = "",
+): HistoryTurn[] {
+	const snapshot = projectHistorySnapshot(threadId, entries, running, cwd);
+	const turns = snapshot.turns.map(turn => ({ ...turn, items: turn.items.map(item => structuredClone(item)) }));
+	const turnPositions = new Map(
+		snapshot.timeline.flatMap(row =>
+			row.entry.type === "turnStarted" ? [[row.entry.turnId, row.entry.position] as const] : [],
+		),
+	);
+	const itemPositions = new Map(
+		snapshot.timeline.flatMap(row =>
+			row.entry.type === "item" ? [[String(row.entry.item.id), row.entry.position] as const] : [],
+		),
+	);
+	const canonical: CanonicalCaption[] = [];
+	for (const turn of turns)
+		turn.items.forEach((item, itemIndex) => {
+			const caption = captionText(item);
+			if (caption?.text.trim())
+				canonical.push({
+					turn,
+					turnPosition: turnPositions.get(turn.id) ?? Number.MAX_SAFE_INTEGER,
+					itemPosition: itemPositions.get(String(item.id)) ?? Number.MAX_SAFE_INTEGER,
+					itemIndex,
+					...caption,
+					used: false,
+				});
+		});
+
+	const groups: CaptionGroup[] = [];
+	let group: CaptionGroup | undefined;
+	const sessionBounds = new Map<string, { start: number; end: number }>();
+	for (const row of snapshot.timeline) {
+		if (row.entry.type !== "realtime") continue;
+		const item = row.entry.item;
+		if (item.type === "realtimeSessionStarted" && typeof item.realtimeSessionId === "string") {
+			sessionBounds.set(item.realtimeSessionId, { start: row.entry.position, end: Number.MAX_SAFE_INTEGER });
+			group = undefined;
+			continue;
+		}
+		if (item.type === "realtimeSessionClosed" && typeof item.realtimeSessionId === "string") {
+			const bounds = sessionBounds.get(item.realtimeSessionId);
+			if (bounds) bounds.end = row.entry.position;
+			group = undefined;
+			continue;
+		}
+		if (
+			item.type !== "transcriptSegment" ||
+			typeof item.id !== "string" ||
+			typeof item.realtimeSessionId !== "string" ||
+			(item.role !== "user" && item.role !== "assistant") ||
+			typeof item.text !== "string" ||
+			!item.text.trim()
+		)
+			continue;
+		if (!group || item.role === "user" || group.realtimeSessionId !== item.realtimeSessionId) {
+			group = { position: row.entry.position, realtimeSessionId: item.realtimeSessionId, segments: [] };
+			groups.push(group);
+		}
+		group.segments.push({
+			id: item.id,
+			realtimeSessionId: item.realtimeSessionId,
+			role: item.role,
+			text: item.text,
+			position: row.entry.position,
+		});
+	}
+
+	const before = new Map<string, Map<number, Record<string, unknown>[]>>();
+	const after = new Map<string, Map<number, Record<string, unknown>[]>>();
+	const insert = (
+		collection: Map<string, Map<number, Record<string, unknown>[]>>,
+		turnId: string,
+		index: number,
+		item: Record<string, unknown>,
+	) => {
+		let byIndex = collection.get(turnId);
+		if (!byIndex) {
+			byIndex = new Map();
+			collection.set(turnId, byIndex);
+		}
+		let items = byIndex.get(index);
+		if (!items) {
+			items = [];
+			byIndex.set(index, items);
+		}
+		items.push(item);
+	};
+	const synthetic: Array<{ position: number; sequence: number; turn: HistoryTurn }> = [];
+	for (const [sequence, candidate] of groups.entries()) {
+		const bounds = sessionBounds.get(candidate.realtimeSessionId);
+		const matches = candidate.segments.map(segment => {
+			const key = captionKey(segment.role, segment.text);
+			let best: CanonicalCaption | undefined;
+			for (const value of canonical) {
+				if (
+					value.used ||
+					captionKey(value.role, value.text) !== key ||
+					!bounds ||
+					// A voice assistant message can be appended to the preceding inferred
+					// text turn before the delayed user caption arrives. Its item position,
+					// rather than that older turn's start, determines whether it belongs to
+					// this realtime session.
+					value.itemPosition < bounds.start ||
+					value.turnPosition > bounds.end ||
+					value.itemPosition > segment.position
+				)
+					continue;
+				if (
+					!best ||
+					Math.abs(value.turnPosition - segment.position) < Math.abs(best.turnPosition - segment.position)
+				)
+					best = value;
+			}
+			if (best) best.used = true;
+			return best;
+		});
+		const anchor = matches.find(Boolean);
+		if (anchor) {
+			for (const [index, segment] of candidate.segments.entries()) {
+				if (matches[index]) continue;
+				const item = captionHistoryItem(segment);
+				const next = matches.slice(index + 1).find(match => match?.turn.id === anchor.turn.id);
+				const previous = matches.slice(0, index).findLast(match => match?.turn.id === anchor.turn.id);
+				if (next) insert(before, anchor.turn.id, next.itemIndex, item);
+				else if (previous) insert(after, anchor.turn.id, previous.itemIndex, item);
+				else if (segment.role === "user") insert(before, anchor.turn.id, 0, item);
+				else insert(after, anchor.turn.id, Math.max(0, anchor.turn.items.length - 1), item);
+			}
+			continue;
+		}
+		const turn = newHistoryTurn(`voice-turn-${candidate.segments[0]!.id}`);
+		turn.items.push(...candidate.segments.map(captionHistoryItem));
+		synthetic.push({ position: candidate.position, sequence, turn });
+	}
+
+	for (const turn of turns) {
+		coalesceTurnFileChanges(turn.items);
+		const original = turn.items;
+		turn.items = [];
+		for (const [index, item] of original.entries()) {
+			turn.items.push(...(before.get(turn.id)?.get(index) ?? []), item, ...(after.get(turn.id)?.get(index) ?? []));
+		}
+	}
+	return [
+		...turns.map((turn, sequence) => ({
+			position: turnPositions.get(turn.id) ?? Number.MAX_SAFE_INTEGER,
+			sequence,
+			turn,
+		})),
+		...synthetic,
+	]
+		.sort((left, right) => left.position - right.position || left.sequence - right.sequence)
+		.map(value => value.turn);
+}
 export function projectHistorySnapshot(
 	threadId: string,
 	entries: readonly SessionEntry[],
@@ -382,9 +649,13 @@ export function projectHistorySnapshot(
 			},
 		});
 	};
+	// Streaming providers can persist a result before the finalized assistant call.
+	// Match those facts only to the exact call in this branch; never infer from tool names.
+	const earlyResults = new Map<string, Extract<SessionEntry, { type: "message" }>>();
 	const tools = new Map<string, Record<string, unknown>>();
 	const toolTurns = new Map<string, string>();
 	const jobs = new Map<string, BackgroundCommand>();
+	let collaborationMode: "plan" | "default" = "default";
 	let current: HistoryTurn | undefined;
 	let explicit = false;
 	let continuingTools = false;
@@ -393,6 +664,7 @@ export function projectHistorySnapshot(
 	for (const [index, entry] of entries.entries()) {
 		const position = index + 1;
 		const ms = Date.parse(entry.timestamp);
+		if (entry.type === "mode_change") collaborationMode = entry.mode === "plan" ? "plan" : "default";
 		if (
 			entry.type === "custom" &&
 			entry.customType === "remote-realtime" &&
@@ -503,6 +775,7 @@ export function projectHistorySnapshot(
 			cwd: identity?.tools?.cwd ?? (entry.type === "message" ? entry.toolExecution?.cwd : undefined) ?? cwd,
 			commandCallIds: identity?.tools?.commandCallIds ?? [],
 			fileCallIds: identity?.tools?.fileCallIds,
+			collaborationMode: identity?.tools?.collaborationMode ?? collaborationMode,
 		});
 		if (projectedItems.length === 0 && message.role !== "assistant" && message.role !== "toolResult") continue;
 		const opensTurn =
@@ -530,10 +803,17 @@ export function projectHistorySnapshot(
 					if (item) {
 						tools.set(part.id, item);
 						toolTurns.set(part.id, current.id);
+						const early = earlyResults.get(part.id);
+						if (early?.message.role === "toolResult") {
+							Object.assign(item, completeToolHistoryItem(item, early.message, early.toolExecution));
+							earlyResults.delete(part.id);
+						}
 					}
 				}
 		if (message.role === "toolResult") {
 			const item = tools.get(message.toolCallId);
+			if (!item && entry.type === "message") earlyResults.set(message.toolCallId, entry);
+
 			if (item) {
 				const completed = completeToolHistoryItem(
 					item,
@@ -565,8 +845,18 @@ export function projectHistorySnapshot(
 			current.durationMs = Math.max(0, ms - startMs);
 		}
 	}
-	for (const value of turns)
-		if (value.status === "inProgress" && (!running || value !== turns.at(-1))) value.status = "interrupted";
+	for (const value of turns) {
+		if (value.status !== "inProgress" || (running && value === turns.at(-1))) continue;
+		// No durable completion exists and no live owner is running this turn.
+		// Stopped execution cannot establish cancellation or the action outcome.
+		value.status = "failed";
+		value.error = {
+			message:
+				"Execution stopped without a recorded completion. The action outcome is unknown. Check authoritative state before retrying.",
+			codexErrorInfo: null,
+			additionalDetails: null,
+		};
+	}
 	if (current && !explicit && current.status !== "inProgress") inferredEnds.push({ turn: current, ...lastMessage });
 	for (const value of inferredEnds) complete(value.turn, value.position, value.sourceId);
 	return { turns, timeline, jobs };

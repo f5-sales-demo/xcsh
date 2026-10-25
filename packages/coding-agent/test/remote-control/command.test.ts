@@ -92,7 +92,8 @@ test("isolated CLI exercises every management action without ambient remote stat
 
 		for (const [args, message] of [
 			[["enable"], "Remote enrollment requires a selected xcsh ChatGPT subscription"],
-			[["pair"], "Enable xcsh remote control first"],
+			[["pair", "--json"], "Enable xcsh remote control first"],
+			[["pair"], "QR pairing requires an interactive terminal"],
 			[["clients"], "Enroll an xcsh remote host before managing its clients"],
 			[["revoke", "fixture-client"], "Enroll an xcsh remote host before managing its clients"],
 		] as const) {

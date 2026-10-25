@@ -10,14 +10,22 @@
  * This ensures cache paths cannot be crafted to escape the cache directory.
  */
 
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import * as nodeFs from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 import { isEnoent } from "@f5-sales-demo/pi-utils";
-
+import {
+	inspectRuntimeDependencies,
+	prepareRuntimeDependencies,
+	RUNTIME_ARTIFACT_NAMES,
+	verifyRuntimeDependencies,
+} from "./runtime-dependencies";
+import { directoryDigest } from "./tree-digest";
 import { isValidNameSegment } from "./types";
+
+const pluginTreeDigest = (root: string) => directoryDigest(root, RUNTIME_ARTIFACT_NAMES);
 
 // Reject anything that could be used for path traversal or shell injection in
 // version strings. Only printable, unambiguous characters are allowed.
@@ -77,7 +85,11 @@ export async function cachePlugin(
 	// This prevents destroying an active install if fs.cp fails mid-copy.
 	const stagingPath = `${targetPath}.staging-${process.pid}-${randomUUID()}`;
 	try {
-		await fs.cp(sourcePath, stagingPath, { recursive: true });
+		await fs.cp(sourcePath, stagingPath, {
+			recursive: true,
+			filter: source => !RUNTIME_ARTIFACT_NAMES.has(path.basename(source)),
+		});
+		await prepareRuntimeDependencies(stagingPath);
 		await fs.rm(targetPath, { recursive: true, force: true });
 		await fs.rename(stagingPath, targetPath);
 	} catch (err) {
@@ -89,42 +101,6 @@ export async function cachePlugin(
 	return targetPath;
 }
 
-async function pluginTreeDigest(root: string): Promise<string> {
-	const hash = createHash("sha256");
-	const visit = async (directory: string, prefix = ""): Promise<void> => {
-		const entries = await fs.readdir(directory, { withFileTypes: true });
-		entries.sort((left, right) => left.name.localeCompare(right.name));
-		for (const entry of entries) {
-			const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-			const absolute = path.join(directory, entry.name);
-			const stat = await fs.lstat(absolute);
-			hash
-				.update(relative)
-				.update("\0")
-				.update((stat.mode & 0o777).toString(8))
-				.update("\0");
-			if (entry.isDirectory()) {
-				hash.update("directory\0");
-				await visit(absolute, relative);
-			} else if (entry.isFile()) {
-				hash
-					.update("file\0")
-					.update(await fs.readFile(absolute))
-					.update("\0");
-			} else if (entry.isSymbolicLink()) {
-				hash
-					.update("symlink\0")
-					.update(await fs.readlink(absolute))
-					.update("\0");
-			} else {
-				throw new Error(`Unsupported plugin source entry: ${relative}`);
-			}
-		}
-	};
-	await visit(root);
-	return hash.digest("hex");
-}
-
 /** Cache a local development source without ever replacing a path an active process may still use. */
 export async function cachePluginSnapshot(
 	sourcePath: string,
@@ -134,10 +110,14 @@ export async function cachePluginSnapshot(
 	version: string,
 ): Promise<string> {
 	const sourceDigest = await pluginTreeDigest(sourcePath);
-	const snapshotVersion = `${version}+snapshot.${sourceDigest.slice(0, 16)}`;
+	const runtimeDependencies = await inspectRuntimeDependencies(sourcePath);
+	const snapshotVersion = `${version}+snapshot.${sourceDigest.slice(0, 16)}${runtimeDependencies ? ".deps1" : ""}`;
 	const targetPath = getCachedPluginPath(cacheDir, marketplace, pluginName, snapshotVersion);
 	try {
-		if ((await pluginTreeDigest(targetPath)) === sourceDigest) return targetPath;
+		if ((await pluginTreeDigest(targetPath)) === sourceDigest) {
+			await verifyRuntimeDependencies(targetPath);
+			return targetPath;
+		}
 		throw new Error(`Plugin cache snapshot collision: ${targetPath}`);
 	} catch (error) {
 		if (!isEnoent(error)) throw error;
@@ -146,10 +126,16 @@ export async function cachePluginSnapshot(
 	await fs.mkdir(cacheDir, { recursive: true });
 	const stagingPath = `${targetPath}.staging-${process.pid}-${randomUUID()}`;
 	try {
-		await fs.cp(sourcePath, stagingPath, { recursive: true });
+		await fs.cp(sourcePath, stagingPath, {
+			recursive: true,
+			filter: source => !RUNTIME_ARTIFACT_NAMES.has(path.basename(source)),
+		});
 		if ((await pluginTreeDigest(stagingPath)) !== sourceDigest) {
 			throw new Error("Plugin source changed while its immutable cache snapshot was being created");
 		}
+		await prepareRuntimeDependencies(stagingPath);
+		if ((await pluginTreeDigest(stagingPath)) !== sourceDigest)
+			throw new Error("Plugin dependency preparation changed the immutable source tree");
 		try {
 			await fs.rename(stagingPath, targetPath);
 		} catch (error) {
@@ -158,6 +144,7 @@ export async function cachePluginSnapshot(
 			if ((await pluginTreeDigest(targetPath)) !== sourceDigest) {
 				throw new Error(`Plugin cache snapshot collision: ${targetPath}`);
 			}
+			await verifyRuntimeDependencies(targetPath);
 		}
 	} finally {
 		await fs.rm(stagingPath, { recursive: true, force: true }).catch(() => {});

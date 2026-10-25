@@ -38,6 +38,7 @@ import { theme } from "../modes/theme/theme";
 import type { InteractiveModeContext } from "../modes/types";
 import { reviewClipboardAction } from "../modes/utils/clipboard-action";
 import { personProfileService } from "../person-profile/service";
+import { validatePairing } from "../remote-control/pairing";
 import { resolveRemoteThreadId } from "../remote-control/thread-identity";
 import { createContextEnv } from "../services/context-env";
 import { ContextService } from "../services/xcsh-context";
@@ -726,7 +727,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			{ name: "enable", description: "Establish the remote connection" },
 			{ name: "restart", description: "Restart the remote connection" },
 			{ name: "disable", description: "Stop the remote connection" },
-			{ name: "pair", description: "Create a phone pairing code" },
+			{ name: "pair", description: "Show a phone pairing QR and manual fallback" },
 			{ name: "clients", description: "List paired remote clients" },
 			{ name: "revoke", description: "Revoke one client", usage: "<client-id>" },
 		],
@@ -756,9 +757,21 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								}
 							: {},
 				)) as Record<string, unknown> | undefined;
-				if (action === "pair" && result && typeof result.manual_pairing_code === "string")
-					runtime.ctx.showStatus(`Remote pairing code: ${result.manual_pairing_code}`);
-				else if (action === "clients" && Array.isArray(result?.data))
+				if (action === "pair" && result) {
+					const { PairingDisplay } = await import("../remote-control/pairing-presentation");
+					validatePairing(result);
+					await runtime.ctx.showHookCustom<void>(
+						(ui, _theme, _keys, done) =>
+							new PairingDisplay(
+								result,
+								() => done(),
+								() => ui.terminal.rows,
+								Date.now,
+								() => ui.requestRender(),
+							),
+						{ overlay: true, fullscreen: true },
+					);
+				} else if (action === "clients" && Array.isArray(result?.data))
 					runtime.ctx.showStatus(
 						result.data.length
 							? result.data.map(client => String((client as Record<string, unknown>).clientId)).join("\n")
