@@ -9,7 +9,7 @@ export async function runOwnedPhoneTests(): Promise<number> {
 	const commands = [
 		["python3", "-m", "venv", environment],
 		[python, "-m", "pip", "install", "--disable-pip-version-check", "-r", join(adapter, "requirements-test.txt")],
-		[python, "-m", "unittest", "discover", "-s", adapter, "-p", "test_server.py", "-v"],
+		[python, "-m", "unittest", "tests.qualification_cleanroom.test_owned_phone_client", "-v"],
 		["bun", "build", join(adapter, "app.js"), "--target=browser", `--outfile=${join(environment, "app.js")}`],
 	];
 	for (const command of commands) {

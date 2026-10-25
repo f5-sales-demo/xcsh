@@ -32,3 +32,8 @@ No physical phone test, runtime replacement or pairing revocation belongs to thi
 `bun run test:ts` runs the four mocked adapter regressions and browser build through the existing CI
 entrypoint. Its isolated virtual environment installs `requirements-test.txt`; no live host configuration
 or provider credentials are needed. Use `bun scripts/run-owned-phone-tests.ts` for the same focused checks.
+
+The adapter regressions now live in `tests/qualification_cleanroom/test_owned_phone_client.py`.
+Its isolated test environment pins aiohttp 3.14.5 and pytest 8.4.2. Future implementation must follow the
+[pinned openai/codex compatibility requirement](../../../docs/iphone-integration-checkpoint.md#webrtc-compatibility-requirement)
+and target exactly `gpt-live-1`; compatibility qualification remains pending.
