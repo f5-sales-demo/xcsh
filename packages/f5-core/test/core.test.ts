@@ -412,3 +412,41 @@ test("secret values cannot corrupt generated plan control identifiers", async ()
 	expect(plan.binding).toBe(binding.id);
 	expect((await f.core.execute(binding, plan.id)).success).toBe(true);
 });
+
+test("approval plans contain the exact reviewable configuration without exposing private values", async () => {
+	const f = fixture(),
+		binding = await f.core.bind("conversation-a");
+	const input = {
+		...manifest(),
+		metadata: { ...manifest().metadata, annotations: { "test-secret": "synthetic-private-value" } },
+	};
+	const create = await f.core.plan(binding, "create", [input]);
+	const configuration = create.entries[0]!.configuration!;
+	expect(configuration.spec).toEqual(input.spec);
+	expect(configuration.metadata).toMatchObject({ name: input.metadata.name, namespace: "default" });
+	expect(JSON.stringify(create)).not.toContain("synthetic-private-value");
+	expect(JSON.stringify(create)).not.toContain("synthetic-credential");
+	expect(Object.isFrozen(configuration)).toBe(true);
+	let reviewed = false;
+	f.setApproval(async plan => {
+		expect(plan).toBe(create);
+		expect(plan.entries[0]!.configuration).toEqual(configuration);
+		reviewed = true;
+		return { approved: true, planHash: plan.hash };
+	});
+	await f.core.execute(binding, create.id);
+	expect(reviewed).toBe(true);
+	expect(f.requests.find(request => request.method === "POST")!.body).toMatchObject({
+		metadata: input.metadata,
+		spec: input.spec,
+	});
+	const update = await f.core.plan(binding, "update", [
+		{ ...input, spec: { ...input.spec, domains: ["updated.invalid"] } },
+	]);
+	expect(update.entries[0]!.configuration!.spec).toMatchObject({ domains: ["updated.invalid"] });
+	const deletion = await f.core.plan(binding, "delete", [input]);
+	expect(deletion.entries[0]!.configuration).toBeUndefined();
+	expect(deletion.entries[0]!.existingConfiguration!.spec).toEqual(input.spec);
+	expect(JSON.stringify(deletion)).not.toContain("synthetic-private-value");
+	f.core.dispose();
+});

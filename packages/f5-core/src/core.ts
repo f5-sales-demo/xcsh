@@ -498,6 +498,7 @@ export class F5Core {
 				namespace: bound.snapshot.namespace,
 				action: changes && !changes.hasDifferences ? "unchanged" : action,
 				...(changes ? { changes } : {}),
+				...(action === "delete" ? { existingConfiguration: current.body! } : { configuration: body }),
 			};
 			bound.redactor.collect(current.body);
 			entries.push(freezeJson({ manifest, resolved, view, currentHash: exists ? digest(current.body) : null }));

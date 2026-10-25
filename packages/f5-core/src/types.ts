@@ -28,6 +28,10 @@ export interface PlanEntry {
 	readonly namespace: string;
 	readonly action: "create" | "update" | "delete" | "unchanged";
 	readonly changes?: ResourceDiff;
+	/** Exact proposed writable body, with secrets represented by binding-scoped references. */
+	readonly configuration?: Readonly<Record<string, unknown>>;
+	/** Observed object being deleted, with the same private-value redaction. */
+	readonly existingConfiguration?: Readonly<Record<string, unknown>>;
 }
 export interface ValidatedPlan {
 	readonly schemaVersion: 1;

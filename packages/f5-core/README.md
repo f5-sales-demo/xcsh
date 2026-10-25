@@ -107,3 +107,7 @@ the matching shared resource implementation. Publication, merge, production
 VSIX acceptance in both editors, and marketplace acceptance remain separate
 gates under xcsh #5072 and vscode-xcsh #1708. The Kiro routing gate is unresolved;
 this package does not bypass it or select ordinary chat as a substitute.
+
+Approval entries include the exact redacted writable configuration for create
+and update, and the observed configuration for delete. Hosts must display this
+review material alongside the plan hash and changes before approving it.
