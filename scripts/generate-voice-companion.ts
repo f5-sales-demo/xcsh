@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 const root = resolve(import.meta.dir, "..");
 const input = resolve(root, "packages/chat-ui/src/voice/standalone/companion-entry.ts");
-const output = resolve(root, "packages/coding-agent/src/browser/voice-companion.generated.js");
+const output = resolve(root, "packages/coding-agent/src/browser/voice-companion.generated.min.js");
 const hash = createHash("sha256");
 const sourceRoot = resolve(root, "packages/chat-ui/src");
 const files = [...new Bun.Glob("**/*.{ts,tsx,js}").scanSync({ cwd: sourceRoot, onlyFiles: true })].sort();

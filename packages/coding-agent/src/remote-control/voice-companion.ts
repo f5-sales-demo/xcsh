@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import type { ServerWebSocket } from "bun";
 import { isVoiceRequest, type VoiceFrame } from "../../../chat-ui/src/voice/contract";
 import { LOCALIP_HOST, resolveBridgeTls } from "../browser/bridge-cert";
-import clientSource from "../browser/voice-companion.generated.js" with { type: "text" };
+import clientSource from "../browser/voice-companion.generated.min.js" with { type: "text" };
 import { SelectedChatVoice } from "./selected-chat-voice";
 import type { SessionTarget } from "./session";
 

@@ -116,5 +116,5 @@ const manifest = {
 await Bun.write(join(output, "xcsh-voice-package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 await Bun.write(
 	join(output, "qualification.json"),
-	`${JSON.stringify({ source, target: inventory.target, application, manifestSha256: digest(await Bun.file(join(output, "xcsh-voice-package.json")).bytes()), physicalAcceptance: "untested" }, null, 2)}\n`,
+	`${JSON.stringify({ source, target: inventory.target, application, manifestSha256: digest(await Bun.file(join(output, "xcsh-voice-package.json")).bytes()), buildMode: "voice-development", releaseEligible: false, licensedVertexClientEmbedded: false, physicalAcceptance: "untested" }, null, 2)}\n`,
 );

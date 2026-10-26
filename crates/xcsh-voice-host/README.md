@@ -7,7 +7,7 @@ controls. See [UPSTREAM.md](UPSTREAM.md) for adaptations and
 for current behavior, qualification and remaining physical gates. The inherited
 foundation text describes its original scope, rather than xcsh acceptance.
 
-# Private voice helper foundation
+## Inherited helper foundation
 
 `codex-voice-host` establishes the inherited-pipe lifecycle for the proposed
 bundled voice process and owns WebRTC negotiation and opt-in local devices.

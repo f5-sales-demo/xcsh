@@ -1,3 +1,4 @@
+import { projectSystemAlsa } from "./prepare-system-alsa";
 import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -182,7 +183,7 @@ export async function prepareVoiceRuntime(repo = resolve(import.meta.dir, ".."))
 	if (process.platform === "linux") {
 		const child = Bun.spawn([pkgConfig, "--variable=pcfiledir", "alsa"], { stdout: "pipe", stderr: "pipe" });
 		systemPc = (await new Response(child.stdout).text()).trim();
-		if ((await child.exited) !== 0) throw new Error("ALSA development metadata is required for Linux native voice");
+		if ((await child.exited) !== 0) systemPc = await projectSystemAlsa(cache);
 	}
 	return {
 		root,

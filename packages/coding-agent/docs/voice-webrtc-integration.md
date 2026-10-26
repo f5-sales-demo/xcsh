@@ -51,10 +51,18 @@ interaction announcement receipts require further synthetic calibration and phys
 
 ## Native package and isolated settings
 
+Qualification produces explicitly labeled voice-development artifacts without
+embedding licensed Corporate Vertex client inputs. Ordinary release builds retain
+their licensed-input gate. Backend model selection remains with AgentSession;
+runtime authentication is a separate requirement.
+
 Build Mac arm64 artifacts on the approved CI runner. Do not invoke Xcode or build native
 artifacts on the managed Mac. Linux x64 artifacts require their own runtime qualification.
 
 The runtime preparation script verifies pinned source, archives, SDK and runtime inventories.
+When Linux has its ALSA runtime but lacks development metadata, it projects that
+existing OS library into a cache with verified architecture, version and byte hash.
+The pre-generated Rust FFI requires no privilege change or system package install.
 Assembly binds the helper build identity to the application source, refuses an existing output
 path, validates runtime bytes and copies hash-verified upstream notices and licenses. The
 packaged-helper verification additionally checks architecture and runtime provenance,

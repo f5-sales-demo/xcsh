@@ -44,7 +44,7 @@ declare module "turndown-plugin-gfm" {
 }
 
 // This generated browser bundle is imported with Bun type: text.
-declare module "*voice-companion.generated.js" {
+declare module "*voice-companion.generated.min.js" {
 	const content: string;
 	export default content;
 }
