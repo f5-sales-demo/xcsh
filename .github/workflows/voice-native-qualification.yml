@@ -32,6 +32,14 @@ jobs:
           bun-version: 1.4.2
       - name: Bootstrap declared worktree
         run: bash scripts/ci-bun-install.sh
+      - name: Prepare pinned native source inputs
+        run: bun scripts/voice-native-inputs.ts "$RUNNER_TEMP/voice-native-inputs"
+      - name: Upload verified native source inputs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: voice-source-inputs-${{ github.sha }}
+          path: ${{ runner.temp }}/voice-native-inputs/
+          if-no-files-found: error
       - name: Generate canonical pinned indexes
         run: |
           bun --cwd=packages/coding-agent run generate-documentation-index
@@ -63,6 +71,7 @@ jobs:
       EXPECTED_ARCH: ${{ matrix.arch }}
       GITHUB_TOKEN: ${{ github.token }}
       XCSH_DOCUMENTATION_INDEX_MODE: prebuilt
+      XCSH_VOICE_NATIVE_INPUTS: ${{ runner.temp }}/voice-native-inputs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -87,6 +96,11 @@ jobs:
           fi
       - name: Bootstrap declared worktree
         run: bash scripts/ci-bun-install.sh
+      - name: Download verified native source inputs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: voice-source-inputs-${{ github.sha }}
+          path: ${{ runner.temp }}/voice-native-inputs/
       - name: Download canonical documentation inputs
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:

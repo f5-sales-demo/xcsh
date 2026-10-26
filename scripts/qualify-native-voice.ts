@@ -49,6 +49,7 @@ await run(
 		"scripts/verify-voice-source.test.ts",
 		"scripts/voice-macho.test.ts",
 		"scripts/voice-cargo-target.test.ts",
+		"scripts/voice-native-inputs.test.ts",
 	],
 	"assembly-rejections",
 );

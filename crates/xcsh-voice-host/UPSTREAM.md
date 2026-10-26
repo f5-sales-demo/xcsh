@@ -63,3 +63,8 @@ Qualification schedules Linux before Mac with one active platform job after
 repeated hosted arm64 acquisition cancellations. Both platform checks remain
 required. This changes CI scheduling, retaining native ABI, source pin and
 deployment target; runner and artifact receipts determine qualification.
+
+Native builders consume hash-verified pinned source files and archives prepared
+once on Ubuntu CI after a Mac archive transport failure. Each builder validates
+all hashes again before compiling. The original URLs, archive digests and Codex
+pin remain unchanged; this adapts input transport without replacing dependencies.

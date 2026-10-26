@@ -1,3 +1,4 @@
+import { voiceInputBytes } from "./voice-native-inputs";
 import { projectSystemAlsa } from "./prepare-system-alsa";
 import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
@@ -73,13 +74,14 @@ export async function prepareVoiceRuntime(repo = resolve(import.meta.dir, ".."))
 	if (!root) {
 		root = join(cache, `attempt-${Date.now()}-${process.pid}`);
 		await mkdir(root, { recursive: true });
+		const inputs = Bun.env.XCSH_VOICE_NATIVE_INPUTS;
 		for (const [path, digest] of Object.entries(references.files)) {
-			const response = await fetch(`https://raw.githubusercontent.com/openai/codex/${LIVE_REFERENCE}/${path}`, {
-				signal: AbortSignal.timeout(30_000),
-			});
-			if (!response.ok) throw new Error(`Pinned source fetch failed: ${path}`);
-			const bytes = new Uint8Array(await response.arrayBuffer());
-			if (hash(bytes) !== digest) throw new Error(`Pinned source hash mismatch: ${path}`);
+			const bytes = await voiceInputBytes(
+				path,
+				`https://raw.githubusercontent.com/openai/codex/${LIVE_REFERENCE}/${path}`,
+				digest,
+				inputs ? join(inputs, path) : undefined,
+			);
 			await mkdir(dirname(join(root, path)), { recursive: true });
 			await Bun.write(join(root, path), bytes);
 		}
@@ -89,11 +91,12 @@ export async function prepareVoiceRuntime(repo = resolve(import.meta.dir, ".."))
 			sources: { name: string; url: string; archive: string; sha256: string }[];
 		};
 		for (const source of sources.sources) {
-			const response = await fetch(source.url, { signal: AbortSignal.timeout(60_000) });
-			if (!response.ok) throw new Error(`Native archive fetch failed: ${source.name}`);
-			const bytes = new Uint8Array(await response.arrayBuffer());
-			if (bytes.length > 64 * 1024 * 1024 || hash(bytes) !== source.sha256)
-				throw new Error(`Native archive hash mismatch: ${source.name}`);
+			const bytes = await voiceInputBytes(
+				source.name,
+				source.url,
+				source.sha256,
+				inputs ? join(inputs, "archives", source.archive) : undefined,
+			);
 			await Bun.write(join(archives, source.archive), bytes);
 		}
 		const python = await executable("python3");
