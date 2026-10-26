@@ -32,4 +32,8 @@ jobs:
         with:
           bun-version: "1.4.2"
       - name: Check Gemini CLI and Claude Code versions
-        run: bun scripts/check-spoofed-versions.ts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          bun test scripts/check-spoofed-versions.test.ts
+          bun scripts/check-spoofed-versions.ts
