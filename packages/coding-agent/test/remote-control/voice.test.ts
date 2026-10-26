@@ -47,6 +47,11 @@ function fixture(records: Record<string, unknown>[] = [], diagnostics?: VoiceDia
 			);
 			return {
 				send: data => {
+					if (JSON.parse(data).type === "session.close") {
+						handlers.message(
+							JSON.stringify({ type: "session.closed", usage: { seconds: 1 }, reason: "close_requested" }),
+						);
+					}
 					if (JSON.parse(data).type === "session.instructions.append") {
 						const event = {
 							type: "session.instructions.appended",
@@ -212,7 +217,9 @@ test.each([...phoneRecall.scenarios, phoneDelegation.scenario])(
 		const sdp = expectedMethods.indexOf("thread/realtime/sdp");
 		if (started >= 0 && sdp === started + 1)
 			expectedMethods.splice(started, 2, "thread/realtime/sdp", "thread/realtime/started");
-		expect(f.events.map(event => event.method)).toEqual(expectedMethods);
+		expect(f.events.filter(event => !event.method.startsWith("xcsh/")).map(event => event.method)).toEqual(
+			expectedMethods,
+		);
 		const completed = f.records.filter(record => record.kind === "voiceTimeline");
 		expect(completed).toHaveLength(4);
 		const handoff = f.events.find(event => event.method === "thread/realtime/itemAdded")?.params.item as
@@ -1040,13 +1047,13 @@ test("WebRTC creates the native call, forwards answer SDP and attaches without o
 		transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
 	});
 	expect(created).toBe(true);
-	expect(f.events.map(event => event.method)).toEqual([
+	expect(f.events.filter(event => !event.method.startsWith("xcsh/")).map(event => event.method)).toEqual([
 		"thread/realtime/item/started",
 		"thread/realtime/item/completed",
 		"thread/realtime/sdp",
 		"thread/realtime/started",
 	]);
-	expect(f.events[2].params.sdp).toBe("v=0\r\nfixture-answer");
+	expect(f.events.find(event => event.method === "thread/realtime/sdp")!.params.sdp).toBe("v=0\r\nfixture-answer");
 	expect(
 		f.sent.filter(
 			(event: any) =>
@@ -1140,6 +1147,7 @@ test("requested transcript-tail flushing submits unpromoted speech once after vo
 	f.receive({ type: "turn.done", turn: { role: "user", transcript: "Please update the fixture." } });
 	f.voice.stop();
 	f.voice.stop();
+	await f.voice.closing;
 	await Bun.sleep(0);
 	expect(f.delegated).toHaveLength(1);
 	expect(f.delegated[0]).toContain("Please update the fixture.");

@@ -12,6 +12,7 @@ import {
 import { Loader, Markdown, padding, Spacer, Text, visibleWidth } from "@f5-sales-demo/pi-tui";
 import { APP_NAME, formatDuration, isEnoent, Snowflake, setProjectDir, setShellPwd, t } from "@f5-sales-demo/pi-utils";
 import { $ } from "bun";
+import type { VoiceAction } from "../../../../chat-ui/src/voice/contract";
 import { reset as resetCapabilities } from "../../capability";
 import { clearXcshPluginRootsCache } from "../../discovery/helpers";
 import { getCustomSharePath, loadCustomShare } from "../../export/custom-share";
@@ -40,6 +41,7 @@ import type { InteractiveModeContext } from "../../modes/types";
 import { extractLastLink } from "../../modes/utils/copy-targets";
 import { buildHotkeysMarkdown } from "../../modes/utils/hotkeys-markdown";
 import { buildToolsMarkdown } from "../../modes/utils/tools-markdown";
+import { SelectedChatVoice } from "../../remote-control/selected-chat-voice";
 import type { AsyncJobSnapshotItem } from "../../session/agent-session";
 import type { AuthStorage } from "../../session/auth-storage";
 import type { NewSessionOptions } from "../../session/session-manager";
@@ -106,6 +108,7 @@ type ManualCompactionTarget =
 	  };
 
 export class CommandController {
+	#voice?: SelectedChatVoice;
 	#clearingMemory = false;
 	#exportingSession = false;
 	#fetchingUsage = false;
@@ -526,6 +529,44 @@ export class CommandController {
 		} finally {
 			this.#sharingSession = false;
 		}
+	}
+
+	async handleVoiceCommand(text: string): Promise<void> {
+		const args = text.trim().split(/\s+/),
+			command = args[1];
+		this.#voice ??= new SelectedChatVoice(this.ctx.session, frame => {
+			if (frame.method === "xcsh/voice/companion" && typeof frame.params.url === "string")
+				this.ctx.showStatus(`Voice companion: ${frame.params.url}`);
+			if (frame.method === "xcsh/voice/error")
+				this.ctx.showError("Voice stopped. Check the current call before trying again.");
+			if (frame.method === "xcsh/voice/audioState" && typeof frame.params.state === "string")
+				this.ctx.showStatus(frame.params.state);
+		});
+		if (!command) {
+			this.ctx.showStatus(
+				"Voice: start, stop, mute, unmute, pause, resume, interrupt, devices or companion. Capture starts after activation.",
+			);
+			return;
+		}
+		if (command === "start") {
+			this.ctx.showStatus("Connecting voice");
+			try {
+				await this.#voice.startNative(args.includes("--takeover"));
+			} catch {
+				this.ctx.showError("Native audio is unavailable. Check the qualified package or choose /voice companion.");
+			}
+			return;
+		}
+		if (!["companion", "stop", "mute", "unmute", "pause", "resume", "interrupt", "devices"].includes(command)) {
+			this.ctx.showError("Unknown voice control.");
+			return;
+		}
+		await this.#voice.handle({
+			type: "voice_request",
+			requestId: crypto.randomUUID(),
+			chatId: this.ctx.session.sessionId,
+			action: command as VoiceAction,
+		});
 	}
 
 	handleMediaCommand(text: string): void {

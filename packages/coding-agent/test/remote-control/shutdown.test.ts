@@ -94,6 +94,11 @@ test("voice stop acknowledges the RPC and replays durable turns before closure",
 			});
 		}
 		send(data: string) {
+			if (JSON.parse(data).type === "session.close") {
+				this.onmessage?.({
+					data: JSON.stringify({ type: "session.closed", usage: { seconds: 1 }, reason: "close_requested" }),
+				});
+			}
 			const frame = JSON.parse(data);
 			if (frame.type === "session.context.append" && frame.content?.[0]?.text?.startsWith("You are xcsh"))
 				queueMicrotask(() =>
@@ -229,6 +234,11 @@ test.each(["direct", "bridge"])(
 				});
 			}
 			send(data: string) {
+				if (JSON.parse(data).type === "session.close") {
+					this.onmessage?.({
+						data: JSON.stringify({ type: "session.closed", usage: { seconds: 1 }, reason: "close_requested" }),
+					});
+				}
 				const frame = JSON.parse(data);
 				if (frame.type === "session.context.append" && frame.content?.[0]?.text?.startsWith("You are xcsh"))
 					queueMicrotask(() =>

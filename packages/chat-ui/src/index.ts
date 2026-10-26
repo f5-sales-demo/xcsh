@@ -109,3 +109,7 @@ export type {
 	ToolItem,
 	ToolUseBlock,
 } from "./types";
+export { BrowserVoiceClient, type BrowserVoiceSnapshot, type VoiceTransport } from "./voice/browser-client";
+export { isVoiceFrame, isVoiceRequest, type VoiceFrame, type VoiceRequest, type VoiceState } from "./voice/contract";
+export { VoiceCompanionControl } from "./voice/VoiceCompanionControl";
+export { VoiceControls } from "./voice/VoiceControls";

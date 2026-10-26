@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "1e24555507846fac2b2193d3fd53520583cd78e2",
-  "fingerprint": "8b937cc28c26b362399ca31cf3674614dd7e884dcf5141473d3690d1e50a27c7",
+  "revision": "c536cea4667d71456352ce853d22dce6b46cf950",
+  "fingerprint": "fa4745db740c5a133af3aecb5eceeb80b0cc3d4eb11971e8a2028ffedf000767",
   "counts": {
     "total": 245,
     "components": 102,
@@ -3235,7 +3235,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "a4ccddb349142076cc5704339db0536ab93a79f1cb9d22da38b1c50b5dc5e8c2",
+      "sha256": "26446dcd56c16c9f787d4b2da16d3da2991355cbe6a71782f511567769f193fb",
       "exports": [
         "CommandController",
         "renderProviderSection",
@@ -3764,7 +3764,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "5ae4526affad1d31072fd01de642240f43e7e5eb9731407e4ceb411446f0d13f",
+      "sha256": "2b077d5cc173455be5dd8fd292cf9c094e2339aea6b5441b3ca80107f4f5d295",
       "exports": [
         "InteractiveMode",
         "InteractiveModeOptions",
@@ -3898,7 +3898,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "19b2f93d201c8afc37e97d2470f026fcc1b87837fbd65037da0062fa63717c27",
+      "sha256": "968ce86833167c4868c217effdacf073c7fb922d28b0f04749f8d45929ccca29",
       "exports": [
         "PendingExtensionRequest",
         "requestRpcEditor",
@@ -3922,7 +3922,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "219b02fa385c1e583bfb8d977f630b6c0ca70dc6b65edb13fa07adb7b64b2be5",
+      "sha256": "c446844c069240a27ae4aa42f2b5e9526ef46adb5f0706fe3db2cf21261596bd",
       "exports": [
         "RpcCommand",
         "RpcCommandType",
@@ -4212,7 +4212,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "4c12ce8bc4b74c680c066c8f654f51b04bb0b724ad74c808fadef992cad7c878",
+      "sha256": "ba1be6f6ed316bafbecb55405adc678d47f001a5c56f3419d0890df02aaa699f",
       "exports": [
         "CompactionQueuedMessage",
         "InteractiveModeContext",
@@ -4613,7 +4613,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "9320c725b90827a54f31efed60107f6b612dbfd6f559c79973cb3886f5da46e2",
+      "sha256": "c4f7e9eb738195c9fd93d7e1f28c8bcbad97f20182b5f399e849f06d126c810a",
       "exports": [
         "BUILTIN_SLASH_COMMAND_DEFS",
         "BuiltinSlashCommand",

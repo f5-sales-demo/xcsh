@@ -82,6 +82,19 @@ export declare class MacAppearanceObserver {
   stop(): void
 }
 
+export declare class NativeVoiceAudio {
+  static start(options: NativeVoicePackageOptions): Promise<NativeVoiceAudio>
+  get offerSdp(): string
+  applyAnswer(sdp: string): Promise<void>
+  mute(muted: boolean): void
+  suppressOutput(suppressed: boolean): void
+  microphonePeak(): number
+  speakerPeak(): number
+  takeError(): string | null
+  audioState(): NativeVoiceAudioState
+  stop(): void
+}
+
 /**
  * Long-lived cross-platform power assertion.
  *
@@ -1059,6 +1072,20 @@ export declare function matchesKittySequence(data: string, expectedCodepoint: nu
  * Returns true only when the byte sequence maps to the exact key identifier.
  */
 export declare function matchesLegacySequence(data: string, keyName: string): boolean
+
+export interface NativeVoiceAudioState {
+  applied: boolean
+  microphoneMuted: boolean
+  speakerSuppressed: boolean
+  microphonePeak: number
+  speakerPeak: number
+}
+
+export interface NativeVoicePackageOptions {
+  packageDir: string
+  buildCommit: string
+  manifestSha256: string
+}
 
 /** Parsed Kitty keyboard protocol sequence result for a Kitty input sequence. */
 export interface ParsedKittyResult {

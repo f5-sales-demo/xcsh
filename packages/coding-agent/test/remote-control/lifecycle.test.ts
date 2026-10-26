@@ -197,6 +197,11 @@ test("real voice state and history settle on the old session before switching", 
 			});
 		}
 		send(data: string) {
+			if (JSON.parse(data).type === "session.close") {
+				this.onmessage?.({
+					data: JSON.stringify({ type: "session.closed", usage: { seconds: 1 }, reason: "close_requested" }),
+				});
+			}
 			if (JSON.parse(data).type === "session.context.append")
 				queueMicrotask(() =>
 					this.onmessage?.({
@@ -690,4 +695,39 @@ test("disposal rejects new input immediately and drains owned preparation before
 	expect(closed).toEqual([oldId]);
 	expect(session.sessionId).toBe(oldId);
 	await expect(session.prompt("After close")).rejects.toThrow("closing");
+});
+
+test("rejected takeover retains the existing voice for owner cleanup", async () => {
+	const { session, remote } = await fixture();
+	const { NativeVoice } = await import("../../src/remote-control/voice");
+	const started: object[] = [],
+		stopped: object[] = [];
+	const activeDescriptor = Object.getOwnPropertyDescriptor(NativeVoice.prototype, "active")!;
+	Object.defineProperty(NativeVoice.prototype, "active", { ...activeDescriptor, get: () => true });
+	cleanup.push(() => Object.defineProperty(NativeVoice.prototype, "active", activeDescriptor));
+	vi.spyOn(NativeVoice.prototype, "start").mockImplementation(async function (this: InstanceType<typeof NativeVoice>) {
+		started.push(this);
+	});
+	vi.spyOn(NativeVoice.prototype, "stop").mockImplementation(async function (this: InstanceType<typeof NativeVoice>) {
+		stopped.push(this);
+	});
+	const params = {
+		threadId: session.sessionId,
+		version: "v3",
+		outputModality: "audio",
+		includeStartupContext: false,
+		transport: { type: "existingCall", callId: "fixture" },
+		xcshVoice: { clientId: "panel-a" },
+	};
+	await remote.call("first-voice", "thread/realtime/start", params);
+	expect(started).toHaveLength(1);
+	await expect(
+		remote.call("stale-takeover", "thread/realtime/start", {
+			...params,
+			xcshVoice: { clientId: "panel-b", takeoverRevision: 999 },
+		}),
+	).rejects.toThrow("takeover");
+	await remote.call("stop-original", "thread/realtime/stop", { threadId: session.sessionId });
+	await new Promise(resolve => setTimeout(resolve, 20));
+	expect(stopped).toContain(started[0]);
 });

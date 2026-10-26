@@ -21,6 +21,7 @@ async function fixture(
 	const delegated: string[] = [];
 	const records: Record<string, any>[] = [];
 	const deps: VoiceDependencies = {
+		closureTimeoutMs: 20,
 		authenticate: async () => ({ accessToken: "synthetic-token", accountId: "example-account" }),
 		persona: async () => snapshot(),
 		createCall: async () => ({ callId: "synthetic-owned-call", sdp: "v=0\r\nsynthetic-answer" }),

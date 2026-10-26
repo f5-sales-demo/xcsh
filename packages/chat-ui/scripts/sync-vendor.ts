@@ -54,6 +54,8 @@ export function listSourceFiles(srcDir: string = SRC_DIR): string[] {
 		for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
 			const full = path.join(dir, entry.name);
 			if (entry.isDirectory()) {
+				// Standalone companion entry points are bundled by xcsh, outside the reusable vendor surface.
+				if (entry.name === "standalone") continue;
 				walk(full);
 			} else if (
 				(/\.(?:tsx?|js|LICENSE)$/.test(entry.name) || entry.name === "LICENSE.code-presentation") &&

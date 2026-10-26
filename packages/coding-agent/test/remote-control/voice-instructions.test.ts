@@ -19,6 +19,7 @@ function fixture() {
 		events: string[] = [];
 	let authenticated = 0;
 	const deps: VoiceDependencies = {
+		closureTimeoutMs: 20,
 		authenticate: async () => {
 			authenticated++;
 			return { accessToken: "fixture-key", accountId: "example-voice-account" };

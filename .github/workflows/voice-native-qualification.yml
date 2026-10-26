@@ -1,0 +1,62 @@
+name: GPT-Live native qualification
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'packages/natives/**'
+      - 'packages/chat-ui/src/voice/**'
+      - 'packages/coding-agent/src/remote-control/**'
+      - 'scripts/*voice*'
+      - '.github/workflows/voice-native-qualification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: voice-native-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: x64
+          - os: macos-14
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      EXPECTED_ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.15'
+      - name: Verify native target and install build prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(bun -p 'process.arch')" = "$EXPECTED_ARCH"
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get update
+            sudo apt-get install -y libasound2-dev cmake ninja-build pkg-config clang
+          else
+            brew install cmake ninja pkg-config
+          fi
+      - name: Bootstrap declared worktree
+        run: bash scripts/ci-bun-install.sh
+      - name: Qualify immutable native package
+        run: bun scripts/qualify-native-voice.ts
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: voice-native-${{ matrix.arch }}-${{ runner.os }}-${{ github.sha }}
+          path: voice-qualified-artifacts/
+          if-no-files-found: error

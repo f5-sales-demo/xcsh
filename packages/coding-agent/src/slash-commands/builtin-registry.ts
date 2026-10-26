@@ -1003,6 +1003,18 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		},
 	},
 	{
+		name: "voice",
+		description: "Voice for the selected chat",
+		allowArgs: true,
+		subcommands: ["start", "companion", "stop", "mute", "unmute", "pause", "resume", "interrupt", "devices"].map(
+			name => ({ name, description: `Voice ${name}` }),
+		),
+		handle: async (command, runtime) => {
+			runtime.ctx.editor.setText("");
+			await runtime.ctx.handleVoiceCommand(command.text);
+		},
+	},
+	{
 		name: "media",
 		description: "Control rich-media playback",
 		subcommands: [

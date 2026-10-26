@@ -13,6 +13,7 @@ function fixture() {
 	const calls: Record<string, string>[] = [];
 	const connections: { headers: Record<string, string>; handlers: VoiceHandlers }[] = [];
 	const deps: VoiceDependencies = {
+		closureTimeoutMs: 20,
 		authenticate: async () => ({ accessToken: "fixture-key", accountId: "example-voice-account" }),
 		createCall: async (_config, _auth, headers) => {
 			calls.push(headers);

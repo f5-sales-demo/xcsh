@@ -29,6 +29,7 @@ import type { TodoPhase } from "../../tools/todo-write";
 // ============================================================================
 
 export type RpcCommand =
+	| (import("../../../../chat-ui/src/voice/contract").VoiceRequest & { id?: string })
 	| { id?: string; type: "interaction_snapshot"; after?: number }
 	| {
 			id?: string;

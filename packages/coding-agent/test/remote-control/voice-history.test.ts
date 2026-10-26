@@ -212,6 +212,7 @@ test.each(["existingCall", "webrtc"] as const)(
 		const deps: VoiceDependencies = {
 			history: f.history,
 			createCall: async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" }),
+			closureTimeoutMs: 20,
 			authenticate: async () => ({ accessToken: "fixture", accountId: "123456789012" }),
 			open: async (_url, _headers, handlers) => {
 				queueMicrotask(() =>

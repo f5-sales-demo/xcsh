@@ -10,6 +10,7 @@ import {
 	runWithContextExecution,
 } from "../services/context-execution";
 import { coordinateSessionTitle } from "../utils/title-generator";
+import { voiceChatContext } from "./voice-chat-context";
 import { canonicalVoiceArguments } from "./voice-operation-retry";
 import { VoiceToolRetry } from "./voice-tool-retry";
 /**
@@ -1030,7 +1031,12 @@ export class AgentSession {
 		});
 		this.addDisposeHook(
 			this.agent.setContextMessagesProvider(messages =>
-				this.isDisposing ? [] : this.#realtimeContext.messages(this.sessionId, messages),
+				this.isDisposing
+					? []
+					: [
+							...this.#realtimeContext.messages(this.sessionId, messages),
+							...voiceChatContext(this.sessionManager.getBranch(), messages),
+						],
 			),
 		);
 	}

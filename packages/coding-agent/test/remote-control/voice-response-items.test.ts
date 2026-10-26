@@ -12,6 +12,7 @@ function fixture(options: Record<string, unknown> = {}, transport = "existingCal
 	let receive = (_data: string) => {};
 	let authenticated = 0;
 	const deps: VoiceDependencies = {
+		closureTimeoutMs: 20,
 		authenticate: async () => {
 			authenticated++;
 			return { accessToken: "fixture-key", accountId: "example-voice-account" };

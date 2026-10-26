@@ -6,7 +6,7 @@ const params = {
 	transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
 	outputModality: "audio",
 	includeStartupContext: false,
-	model: "gpt-live-1-codex",
+	model: "gpt-live-1",
 	voice: "cove",
 	prompt: "fixture instructions",
 	initialItems: [{ role: "assistant", text: "fixture context" }],
@@ -30,7 +30,7 @@ test("native WebRTC v3 uses the pinned subscription call route, session shape an
 	expect(body).toMatchObject({
 		sdp: params.transport.sdp,
 		session: {
-			model: "gpt-live-1-codex",
+			model: "gpt-live-1",
 			delegation: { type: "client" },
 			initial_items: [
 				{ type: "message", role: "assistant", content: [{ type: "output_text", text: "fixture context" }] },
@@ -116,6 +116,7 @@ test("NativeVoice preserves the safe creation-field diagnostic at the notificati
 	const emitted: string[] = [];
 	let requests = 0;
 	const voice = new NativeVoice({
+		closureTimeoutMs: 20,
 		authenticate: async () => auth,
 		persona: async () => persona,
 		createCall: async (config, subscription, headers) =>
@@ -147,4 +148,9 @@ test("NativeVoice preserves the safe creation-field diagnostic at the notificati
 test("host-created calls disable acknowledgment filler by default", () => {
 	expect(voiceCallConfig(params, persona).session.delegation.ack_filler).toBe(false);
 	expect(voiceCallConfig({ ...params, delegationAckFiller: true }, persona).session.delegation.ack_filler).toBe(true);
+});
+
+test("owned calls use exactly gpt-live-1 and reject alternate model configuration", () => {
+	expect(voiceCallConfig({ ...params, model: undefined }, persona).session.model).toBe("gpt-live-1");
+	expect(() => voiceCallConfig({ ...params, model: "gpt-live-1-codex" }, persona)).toThrow();
 });

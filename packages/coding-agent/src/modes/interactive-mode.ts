@@ -1133,6 +1133,9 @@ export class InteractiveMode implements InteractiveModeContext {
 		return this.#commandController.handleOpenCommand(args);
 	}
 
+	handleVoiceCommand(text: string): Promise<void> {
+		return this.#commandController.handleVoiceCommand(text);
+	}
 	handleMediaCommand(text: string): void {
 		this.#commandController.handleMediaCommand(text);
 	}

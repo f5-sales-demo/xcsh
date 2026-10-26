@@ -11,6 +11,7 @@
  * - Extension UI: Extension UI requests are emitted, client responds with extension_ui_response
  */
 import { $env, readJsonl, Snowflake, setLocale, VERSION } from "@f5-sales-demo/pi-utils";
+import { isVoiceRequest } from "../../../../chat-ui/src/voice/contract";
 import type {
 	ExtensionUIContext,
 	ExtensionUIDialogOptions,
@@ -33,6 +34,7 @@ import {
 } from "../../media/transport";
 import { type Theme, theme } from "../../modes/theme/theme";
 import { referencesEventFor } from "../../references";
+import { SelectedChatVoice } from "../../remote-control/selected-chat-voice";
 import type { AgentSession } from "../../session/agent-session";
 import { mapContextStatus, runWelcomeChecks } from "../components/welcome-checks";
 import type {
@@ -530,11 +532,16 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 		if (refs) output(refs);
 	});
 
+	const voice = new SelectedChatVoice(session, frame => output(frame));
 	// Handle a single command
 	const handleCommand = async (command: RpcCommand): Promise<RpcResponse> => {
 		const id = command.id;
 
 		switch (command.type) {
+			case "voice_request":
+				if (!isVoiceRequest(command)) return error(id, "voice_request", "Invalid voice request");
+				await voice.handle(command);
+				return success(id, command.type);
 			case "interaction_snapshot":
 				return success(id, command.type, {
 					sessionId: session.sessionId,
@@ -904,6 +911,7 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 			await extensionRunner.emit({ type: "session_shutdown" });
 		}
 
+		await voice.close();
 		process.exit(0);
 	}
 

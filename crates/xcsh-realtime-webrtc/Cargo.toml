@@ -1,0 +1,24 @@
+[package]
+name = "xcsh-realtime-webrtc"
+version.workspace = true
+edition.workspace = true
+license = "Apache-2.0"
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = "1.0"
+futures = "0.3"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+tokio = { version = "=1.53.1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+tracing = "0.1"
+codex-utils-pty = { git = "https://github.com/openai/codex", rev = "970111f6cb62cc02fe36a82ea7d71b37a2889c97" }
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+libc = "0.2"

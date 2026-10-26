@@ -8243,6 +8243,225 @@
     },
     {
       "surface": {
+        "id": "/voice",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "command"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice <arguments>",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "typed-arguments",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice companion",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice devices",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice interrupt",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice mute",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice pause",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice resume",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice start",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice stop",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
+        "id": "/voice unmute",
+        "source": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+        "kind": "subcommand",
+        "parent": "/voice"
+      },
+      "status": "required",
+      "adapter": null,
+      "reviewPolicy": null,
+      "states": [],
+      "tests": [],
+      "persistence": [],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Unverified. Source discovery is not implementation or acceptance evidence."
+      ]
+    },
+    {
+      "surface": {
         "id": "dialog:packages/coding-agent/src/autoresearch/dashboard.ts:custom:1",
         "source": "packages/coding-agent/src/autoresearch/dashboard.ts",
         "kind": "extension-dialog"

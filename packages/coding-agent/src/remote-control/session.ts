@@ -41,6 +41,8 @@ import { resolveRemoteThreadId, validRemoteThreadId } from "./thread-identity";
 import { timelinePage } from "./timeline";
 import { coalesceTurnFileChanges } from "./turn-file-diff";
 import type { NativeVoice } from "./voice";
+import { type VoiceApproval, VoiceApprovalGate } from "./voice-approval";
+import { type VoiceLease, voiceCoordinatorFor } from "./voice-coordinator";
 import type { VoiceOutputUpdate } from "./voice-handoff";
 import { voiceInputText } from "./voice-input";
 import { existingCallConfig } from "./voice-protocol";
@@ -185,6 +187,15 @@ export class RemoteSession {
 	#voiceAdmissionTail: Promise<void> = Promise.resolve();
 	#voiceHandoffsRetired = false;
 	#voice?: NativeVoice;
+	#voiceSpeechMuted = false;
+	#voiceSpeechPaused = false;
+	#voiceApprovals = new VoiceApprovalGate(
+		() => this.#speechApprovals(),
+		(id, value) => this.#respondSpeech(id, value),
+	);
+	#voiceLease?: VoiceLease;
+	#voiceStartRevision = 0;
+	#voiceClientId = `attachment:${randomUUID()}`;
 	#prestartVoiceStopReported = false;
 	#requests = new Map<string, { signature: string; result: Promise<unknown> }>();
 	#configurationTail: Promise<void> = Promise.resolve();
@@ -311,7 +322,18 @@ export class RemoteSession {
 					if (event.id !== undefined) this.#publishedInteraction = true;
 					for (const listener of this.#listeners) listener(event);
 				},
-				(request, callId) => this.#voice?.mirrorText(voiceInputText(request, callId)),
+				(request, callId) => {
+					this.#voice?.mirrorText(voiceInputText(request, callId, this.#voice?.ownedCall));
+					const approval = this.#speechApprovals().find(
+						item => item.requestId === request.id && item.eligible && !item.secret,
+					);
+					if (this.#voice?.ownedCall && approval)
+						this.#emit("xcsh/voice/interaction", {
+							requestId: approval.requestId,
+							revision: approval.revision,
+							title: approval.title,
+						});
+				},
 				() => {
 					void this.target.abort();
 				},
@@ -1124,22 +1146,53 @@ export class RemoteSession {
 			if (!stored) throw new ProtocolError(-32000, "Could not set thread name");
 			return {};
 		}
+		if (method === "xcsh/voice/control") {
+			if (params.action === "mute") this.#voiceSpeechMuted = true;
+			if (params.action === "pause") this.#voiceSpeechPaused = true;
+			if (params.action === "resume") this.#voiceSpeechPaused = false;
+			if (params.action === "unmute") this.#voiceSpeechMuted = false;
+			if (["mute", "pause", "interrupt"].includes(String(params.action))) this.#voiceApprovals.reset();
+			return { accepted: true };
+		}
+		if (method === "xcsh/voice/playback") {
+			if (
+				!this.#voice?.ownedCall ||
+				typeof params.announcementId !== "string" ||
+				!Number.isSafeInteger(params.announcementRevision)
+			)
+				return { accepted: false };
+			return {
+				accepted: this.#voiceApprovals.playbackCompleted(
+					params.announcementId,
+					Number(params.announcementRevision),
+				),
+			};
+		}
 		if (method === "thread/realtime/stop") {
+			this.#voiceApprovals.reset();
+			this.#voiceStartRevision++;
 			// Return the stop result before closure/history notifications so the phone
 			// can retire its voice overlay before navigating to the durable transcript.
 			this.#deferVoiceStop();
 			return {};
 		}
 		if (method === "thread/realtime/start") {
+			const startRevision = ++this.#voiceStartRevision;
 			const { NativeVoice } = await import("./voice");
 			const { loadRemoteSubscription } = await import("./auth");
 			this.#assertCurrent(epoch);
-			if (this.#voice?.active) throw new ProtocolError(-32000, "Voice is already active");
-			await this.#voice?.stop();
+			const coordinator = voiceCoordinatorFor(this.target, this.#boundId);
+			const metadata = params.xcshVoice as { clientId?: unknown; takeoverRevision?: unknown } | undefined;
+			if (
+				metadata &&
+				(typeof metadata.clientId !== "string" ||
+					(metadata.takeoverRevision !== undefined && !Number.isSafeInteger(metadata.takeoverRevision)))
+			)
+				throw new ProtocolError(-32602, "Invalid audio ownership request");
+			if (this.#voice?.active && metadata?.takeoverRevision === undefined)
+				throw new ProtocolError(-32000, "Voice is already active; explicit takeover is required");
+			if (!this.#voice?.active) await this.#voice?.stop();
 			this.#assertCurrent(epoch);
-			this.#prestartVoiceStopReported = false;
-			this.#voiceHandoffsRetired = false;
-			this.#voiceAdmissionTail = Promise.resolve();
 			let startupOutcomeReported = false;
 			// Hash application-owned user inputs before attaching. No profile or
 			// prompt text is added to Live, and later user turns are not frozen here.
@@ -1151,7 +1204,23 @@ export class RemoteSession {
 					.slice(-128)
 					.map(message => requestHash(textOf(message))),
 			);
-			this.#voice = new NativeVoice({
+			let lease: VoiceLease | undefined;
+			const voice = new NativeVoice({
+				completedTranscript: (role, text) => {
+					this.#assertCurrent(epoch);
+					if (role === "assistant") {
+						this.#voiceApprovals.assistantCompleted(text);
+						return false;
+					}
+					if (this.#voiceSpeechPaused && /^resume[.!]?$/i.test(text.trim())) {
+						this.#voiceSpeechPaused = false;
+						this.#emit("xcsh/voice/control", { action: "resume" });
+						return true;
+					}
+					const accepted = !this.#voiceSpeechMuted && this.#voiceApprovals.callerCompleted(text, role, true);
+					if (accepted) this.#emit("xcsh/voice/interactionReceipt", { accepted: true, source: "speech" });
+					return accepted;
+				},
 				isStartupHistoryRequest: text => !!text.trim() && startupRequests.has(requestHash(text)),
 				history: this.#voiceHistoryOwner.history,
 				persona: async () => {
@@ -1178,6 +1247,12 @@ export class RemoteSession {
 					return key;
 				},
 				emit: (name, value) => {
+					if (
+						name === "thread/realtime/closed" &&
+						lease &&
+						((params.transport as { type?: unknown } | undefined)?.type !== "webrtc" || voice.closureConfirmed)
+					)
+						coordinator.release(lease);
 					if (name === "thread/realtime/error" || name === "thread/realtime/closed") startupOutcomeReported = true;
 					if (epoch === this.#epoch) this.#emit(name, value, true);
 				},
@@ -1210,11 +1285,41 @@ export class RemoteSession {
 					return this.#delegateVoice(id, text, output);
 				},
 			});
+			try {
+				lease = await coordinator.acquire(
+					typeof metadata?.clientId === "string" ? metadata.clientId : this.#voiceClientId,
+					async () => {
+						await voice.stop("requested");
+						if (
+							(params.transport as { type?: unknown } | undefined)?.type === "webrtc" &&
+							!voice.closureConfirmed
+						)
+							throw new ProtocolError(
+								-32000,
+								"Previous provider call closure is unconfirmed; reconcile before replacement",
+							);
+					},
+					metadata?.takeoverRevision as number | undefined,
+				);
+				if (startRevision !== this.#voiceStartRevision) {
+					coordinator.release(lease);
+					throw new ProtocolError(-32000, "Voice activation was stopped before admission");
+				}
+				this.#assertCurrent(epoch);
+				this.#voice = voice;
+				this.#voiceLease = lease;
+				this.#prestartVoiceStopReported = false;
+				this.#voiceHandoffsRetired = false;
+				this.#voiceAdmissionTail = Promise.resolve();
+				this.#emit("xcsh/voice/owner", { ...lease });
+			} catch (error) {
+				if (lease && this.#voice !== voice) coordinator.release(lease);
+				throw error;
+			}
 			if ((params.transport as { type?: unknown } | undefined)?.type === "existingCall") {
 				// Codex acknowledges admission before opening the client-created call's
 				// sideband. Readiness and asynchronous failures remain notifications.
 				existingCallConfig(params);
-				const voice = this.#voice;
 				const pending = voice.start(params).catch(async () => {
 					if (voice.closing) {
 						await voice.closing;
@@ -1235,7 +1340,12 @@ export class RemoteSession {
 				);
 				return {};
 			}
-			await this.#voice.start(params);
+			try {
+				await voice.start(params);
+			} catch (error) {
+				if (!voice.active && !voice.closing && lease) coordinator.release(lease);
+				throw error;
+			}
 			this.#assertCurrent(epoch);
 			return {};
 		}
@@ -1723,7 +1833,101 @@ export class RemoteSession {
 		await this.#effect(epoch, () => this.controls.setCollaborationMode!(selection.mode));
 		this.#applyEffort(selection.reasoningEffort);
 	}
+	#speechApprovals(): VoiceApproval[] {
+		const pending = this.target.userInteractions?.pending() ?? [];
+		const revision = this.target.userInteractions?.snapshot().revision ?? 0;
+		const wire = this.#interactions?.pending() ?? [];
+		const plan = this.target.conversationPlans?.current;
+		if (!pending.length && plan?.status === "pending")
+			return [
+				{
+					chatId: this.#boundId,
+					workspace: this.target.sessionManager.getCwd(),
+					requestId: plan.id,
+					revision: plan.revision,
+					title:
+						plan.markdown
+							.split(/\r?\n/)
+							.find(line => line.trim())
+							?.replace(/^#+\s*/, "") ?? "Current plan",
+					secret: false,
+					eligible: true,
+					kind: "plan",
+					identity: JSON.stringify(plan),
+				},
+			];
+		return pending.map(request => {
+			const incoming = wire.find(item => item.id === request.id);
+			const questions = request.inputQuestions;
+			const question = questions?.length === 1 ? questions[0] : undefined;
+			const approval =
+				incoming &&
+				["item/commandExecution/requestApproval", "item/fileChange/requestApproval"].includes(incoming.method);
+			const options = question?.options?.map(option => option.label) ?? request.options;
+			const secret = request.isSecret === true || questions?.some(item => item.isSecret) === true;
+			return {
+				chatId: this.#boundId,
+				workspace: this.target.sessionManager.getCwd(),
+				requestId: request.id,
+				revision,
+				title: question?.question ?? request.title,
+				secret,
+				eligible:
+					pending.length === 1 &&
+					!secret &&
+					(approval === true ||
+						(!!incoming && (!questions || questions.length === 1)) ||
+						(request.delivery === "async" && !!request.identity)),
+				kind: approval ? ("approval" as const) : options?.length ? ("select" as const) : ("input" as const),
+				options,
+				identity: JSON.stringify({ identity: request.identity, wire: incoming, request }),
+			};
+		});
+	}
+	#respondSpeech(id: string, value: string): boolean {
+		const plan = this.target.conversationPlans?.current;
+		if (
+			plan?.id === id &&
+			plan.status === "pending" &&
+			["implement", "fresh", "stay"].includes(value) &&
+			this.target.decidePlan
+		) {
+			const operation = this.target.decidePlan(id, value as "implement" | "fresh" | "stay");
+			const admitted = this.target.conversationPlans?.current?.status === "resolved";
+			// Keep the workflow outside the voice event queue; a fresh-context decision closes that queue.
+			void operation.then(
+				result =>
+					this.#emit("xcsh/voice/interactionReceipt", {
+						...result,
+						source: "speech",
+						phase: "workflow",
+						requestId: id,
+					}),
+				() => this.#emit("xcsh/voice/error", { message: "The plan decision requires review in the app" }),
+			);
+			return admitted;
+		}
+		const request = this.target.userInteractions?.pending().find(item => item.id === id);
+		const incoming = this.#interactions?.pending().find(item => item.id === id);
+		if (!request || request.isSecret || request.inputQuestions?.some(item => item.isSecret)) return false;
+		if (request.delivery === "async" && request.identity)
+			return (
+				this.target.userInteractions?.respondExternal(id, `voice:${randomUUID()}`, value, request.identity) === true
+			);
+		if (!incoming) return false;
+		if (incoming.method !== "item/tool/requestUserInput")
+			return this.#interactions?.respond(id, { decision: value }).accepted === true;
+		const questionId = request.inputQuestions?.length === 1 ? request.inputQuestions[0]!.id : id;
+		return this.#interactions?.respond(id, { answers: { [questionId]: { answers: [value] } } }).accepted === true;
+	}
+
 	#delegateVoice(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string> {
+		if (
+			/^(yes|no|approve|decline|deny)[.!]?$/i.test(text.trim()) &&
+			(this.target.userInteractions?.pending().length ?? 0) > 0
+		)
+			return Promise.resolve("The current request needs a verified spoken decision or a decision in the app.");
+
 		return new Promise((resolve, reject) => {
 			const admit = async () => {
 				if (this.#voiceHandoffsRetired) {
@@ -1858,6 +2062,19 @@ export class RemoteSession {
 			return;
 		}
 		if (event.type === "plan_available" || event.type === "plan_resolved") {
+			if (event.type === "plan_available" && this.#voice?.ownedCall) {
+				const request = this.#speechApprovals()[0];
+				if (request?.kind === "plan") {
+					this.#voice.mirrorText(
+						`Current plan title: ${request.title}. The available decisions are implement in this chat, clear context and implement, or stay in Plan mode.`,
+					);
+					this.#emit("xcsh/voice/interaction", {
+						requestId: request.requestId,
+						revision: request.revision,
+						title: request.title,
+					});
+				}
+			}
 			this.#emit("xcsh/interaction/plan", { contract: "xcsh.interaction.v1", event });
 			this.#emitThreadStatus();
 			return;

@@ -52,3 +52,5 @@ pub mod shell;
 pub mod task;
 pub mod text;
 pub(crate) mod utils;
+
+pub mod voice;

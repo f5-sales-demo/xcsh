@@ -11,8 +11,10 @@ import { traceFromEnvironment } from "./trace-runtime";
 import { VoiceAudioEvidence } from "./voice-audio-evidence";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
 import { VoiceCaptionBranding } from "./voice-caption-branding";
+import { evaluateVoiceContract, type VoiceCreationEvidence } from "./voice-contract-evidence";
 import { voiceDelegation } from "./voice-delegation";
 import { type VoiceDiagnosticRuntime, voiceDiagnosticRuntimeFromEnvironment } from "./voice-diagnostics";
+import { VoiceFinalization } from "./voice-finalization";
 import {
 	type HandoffPhase,
 	handoffChannel,
@@ -48,6 +50,8 @@ import { isSniffAnnotation, StartupAssistantPolicy } from "./voice-startup-polic
 export interface VoiceDependencies {
 	/** Shared by successive calls attached to one backing session. */
 	history?: VoiceHistory;
+	closureTimeoutMs?: number;
+	completedTranscript?(role: "user" | "assistant", text: string): Promise<boolean> | boolean;
 	authenticate(): Promise<SubscriptionAuth>;
 	authenticateApiKey?(): Promise<string | undefined>;
 	createCall?: typeof createVoiceCall;
@@ -140,6 +144,16 @@ function safeConnectionError(error: unknown): string {
 	return `Native realtime connection failed${status ? ` (HTTP ${status}${field ? `; rejected field ${field}` : ""})` : ""}`;
 }
 export class NativeVoice {
+	#ownedCreation?: VoiceCreationEvidence;
+	#answeredInteraction?: string;
+	get ownedCall(): boolean {
+		return !!this.#ownedCreation;
+	}
+	#finalization = new VoiceFinalization();
+	#closureConfirmed = false;
+	get closureConfirmed(): boolean {
+		return this.#closureConfirmed;
+	}
 	#startupPolicy = new StartupAssistantPolicy({ callerFirst: true });
 	#acknowledgmentControlPending = false;
 	#callerTurnOpen = false;
@@ -317,6 +331,21 @@ export class NativeVoice {
 					undefined,
 					this.#abort.signal,
 				);
+				this.#ownedCreation = {
+					requestedModel: callConfig.session.model,
+					route: "chatgpt-subscription",
+					status: 201,
+					returnedCallId: call.callId,
+					attachedCallId: call.callId,
+					fallbackApplied: false,
+					configurationOverridden: false,
+					routeTraced: true,
+				};
+				await this.deps.record({
+					kind: "voiceContractEvidence",
+					...evaluateVoiceContract({ creation: this.#ownedCreation }),
+				});
+				this.deps.emit("xcsh/voice/call", { providerCallId: call.callId });
 				if (this.#state !== "opening") throw new Error("Voice stopped during call creation");
 				await this.deps.record({
 					kind: "voiceDiagnostic",
@@ -541,7 +570,7 @@ export class NativeVoice {
 		const failed = reason === "failed" || reason === "transportClosed";
 		this.#state = "closed";
 		this.#handoff?.close();
-		this.#epoch++;
+		if (!this.#ownedCreation) this.#epoch++;
 		clearTimeout(this.#reconnectTimer);
 		clearInterval(this.#workStatusTimer);
 		this.#outbound = [];
@@ -552,7 +581,7 @@ export class NativeVoice {
 
 		this.#sessionReady?.reject(new Error("Voice stopped during session initialization"));
 		this.#sessionReady = undefined;
-		this.#abort.abort();
+		if (!this.#ownedCreation) this.#abort.abort();
 		const endInstructions = this.#modeUpdates
 			.catch(() => {})
 			.then(async () => {
@@ -562,13 +591,32 @@ export class NativeVoice {
 				this.deps.emit("thread/realtime/error", { message: "Could not apply voice end instructions" });
 			});
 		this.#socket = undefined;
-		if (socket) {
+		const finalization =
+			this.#ownedCreation && socket
+				? this.#finalization
+						.close(
+							() => socket.send(JSON.stringify({ type: "session.close" })),
+							() => {
+								this.#epoch++;
+								this.#abort.abort();
+								socket.close();
+							},
+							this.deps.closureTimeoutMs,
+						)
+						.then(async receipt => {
+							this.#closureConfirmed = receipt.confirmed;
+							await this.deps.record({ kind: "voiceProviderClosure", ...receipt });
+							this.deps.emit("xcsh/voice/closure", { ...receipt });
+						})
+				: Promise.resolve();
+		if (socket && !this.#ownedCreation) {
 			try {
 				if (reason === "requested" || failed) socket.send(JSON.stringify({ type: "session.close" }));
 			} catch {}
 			socket.close();
 		}
 		this.#closing = Promise.all([
+			finalization,
 			this.#chain,
 			endInstructions,
 			this.#diagnosticsTail,
@@ -626,6 +674,7 @@ export class NativeVoice {
 					if (this.#epoch === epoch) this.#receive(data);
 				},
 				closed: () => {
+					if (this.#epoch === epoch && this.#state === "closed") this.#finalization.lost();
 					if (this.#epoch === epoch) this.#transportLost();
 				},
 			},
@@ -848,6 +897,17 @@ export class NativeVoice {
 		});
 	}
 	#receive(data: string): void {
+		if (this.#ownedCreation && Buffer.byteLength(data) <= 1_048_576) {
+			try {
+				if (this.#finalization.observe(JSON.parse(data))) {
+					this.#closureConfirmed = true;
+					if (this.active) void this.stop("providerClosed");
+					return;
+				}
+			} catch {
+				/* The normal parser preserves malformed input diagnostics. */
+			}
+		}
 		if (!this.active) return;
 		const bytes = Buffer.byteLength(data);
 		if (this.#seen.size >= 8192 || bytes > 1_048_576 || this.#pendingBytes + this.#openingBytes + bytes > 2_097_152) {
@@ -1056,6 +1116,15 @@ export class NativeVoice {
 			}
 
 			const model = (input as { session?: { model?: unknown } }).session?.model;
+			if (this.#ownedCreation && model !== undefined) {
+				this.#ownedCreation.providerModel = typeof model === "string" ? model : "invalid-model-echo";
+				const evidence = evaluateVoiceContract({ creation: this.#ownedCreation });
+				this.#diagnosticsTail = this.#diagnosticsTail
+					.then(() => this.deps.record({ kind: "voiceContractEvidence", ...evidence }))
+					.catch(() => {});
+				if (evidence.modelEcho === "conflicting")
+					this.#fail("The provider returned conflicting voice model evidence");
+			}
 			if (typeof model === "string" && /^gpt-[a-zA-Z0-9._-]{1,120}$/.test(model)) {
 				this.#diagnosticsTail = this.#diagnosticsTail
 					.then(() =>
@@ -1224,11 +1293,19 @@ export class NativeVoice {
 				this.deps.emit("thread/realtime/transcript/delta", { role: "assistant", delta: finalCaption.delta });
 			}
 			await this.#history?.transcript(event.role, captionText, event.done);
+			if (event.done && this.#ownedCreation && (await this.deps.completedTranscript?.(event.role, captionText)))
+				this.#answeredInteraction = captionText.trim().toLowerCase();
+
 			if (!this.active) return;
 			this.deps.emit(`thread/realtime/transcript/${event.done ? "done" : "delta"}`, {
 				role: event.role,
 				[event.done ? "text" : "delta"]: captionText,
 			});
+			return;
+		}
+		if (this.#answeredInteraction && event.text.trim().toLowerCase() === this.#answeredInteraction) {
+			this.#answeredInteraction = undefined;
+			await this.deps.record({ kind: "voiceInteractionDelegation", outcome: "already-resolved-no-submission" });
 			return;
 		}
 		const key = this.#key("delegation", event.id);

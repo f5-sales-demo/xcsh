@@ -2,6 +2,7 @@
 
 import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
+import { LIVE_MODEL } from "./voice-contract-evidence";
 import { handoffOptions } from "./voice-handoff";
 import type { VoicePersonaSnapshot } from "./voice-persona";
 import { voicePersonaInstructions } from "./voice-persona";
@@ -65,15 +66,9 @@ export function voiceCallConfig(params: Record<string, unknown>, persona: VoiceP
 		initialItems.reduce((bytes, item) => bytes + Buffer.byteLength(item.text), 0) > 32768
 	)
 		throw new ProtocolError(-32602, "Invalid or excessive realtime initial history");
-	const model = params.model ?? "gpt-live-1-codex",
+	const model = params.model ?? LIVE_MODEL,
 		voice = params.voice ?? defaultVoice;
-	if (
-		typeof model !== "string" ||
-		!model ||
-		model.length > 256 ||
-		typeof voice !== "string" ||
-		!voices.includes(voice)
-	)
+	if (model !== LIVE_MODEL || typeof voice !== "string" || !voices.includes(voice))
 		throw new ProtocolError(-32602, "Invalid realtime model or voice");
 	if (params.prompt != null && (typeof params.prompt !== "string" || Buffer.byteLength(params.prompt) > 262_144))
 		throw new ProtocolError(-32602, "Invalid realtime instructions");
@@ -137,7 +132,7 @@ export async function createVoiceCall(
 	} catch {
 		throw new ProtocolError(-32000, "Native realtime call transport failed");
 	}
-	if (!response.ok) {
+	if (response.status !== 201) {
 		const field = response.status === 400 ? await rejectedCreationField(response) : null;
 		if (response.status !== 400) await response.body?.cancel();
 		throw new ProtocolError(

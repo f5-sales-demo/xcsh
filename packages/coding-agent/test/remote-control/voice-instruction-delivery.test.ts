@@ -14,6 +14,7 @@ async function fixture(apiKey = true, owned = false) {
 	const voice = new NativeVoice({
 		authenticateApiKey: async () => "api-fixture",
 		createCall: async () => ({ callId: "owned-fixture", sdp: "v=0\r\n" }),
+		closureTimeoutMs: 20,
 		authenticate: async () => ({ accessToken: "fixture", accountId: "<ACCOUNT_ID>" }),
 		open: async (_url, _headers, next) => {
 			handlers = next;
