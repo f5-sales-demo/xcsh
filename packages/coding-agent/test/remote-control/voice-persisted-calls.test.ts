@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { NativeVoice } from "../../src/remote-control/voice";
 import { pendingVoiceCalls } from "../../src/remote-control/voice-persisted-calls";
 
-const hash = "sha256:" + createHash("sha256").update("selected-fixture").digest("hex");
+const hash = "sha256:" + createHash("sha256").update("<ACCOUNT_ID>").digest("hex");
 const identity = {
 	kind: "voiceCallIdentity",
 	providerCallId: "rtc_old_fixture",
@@ -57,21 +57,21 @@ for (const fixture of [
 	{
 		name: "known call closes before replacement",
 		records: [identity],
-		account: "selected-fixture",
+		account: "<ACCOUNT_ID>",
 		expectedCreates: 1,
 		expectedOldOpens: 1,
 	},
 	{
 		name: "wrong subscription cannot attach or replace",
 		records: [identity],
-		account: "other-fixture",
+		account: "<OTHER_ACCOUNT_ID>",
 		expectedCreates: 0,
 		expectedOldOpens: 0,
 	},
 	{
 		name: "unknown creation cannot be retried",
 		records: [{ kind: "voiceCallCreation", creationAttemptId: "unknown_fixture", state: "prepared" }],
-		account: "selected-fixture",
+		account: "<ACCOUNT_ID>",
 		expectedCreates: 0,
 		expectedOldOpens: 0,
 	},
@@ -100,7 +100,7 @@ for (const fixture of [
 			open: async (url, headers, handlers) => {
 				if (url.includes("rtc_old_fixture")) {
 					oldOpens++;
-					expect(headers["ChatGPT-Account-Id"]).toBe("selected-fixture");
+					expect(headers["ChatGPT-Account-Id"]).toBe("<ACCOUNT_ID>");
 					expect(headers["x-session-id"]).toBe("chat_fixture");
 				} else
 					queueMicrotask(() =>

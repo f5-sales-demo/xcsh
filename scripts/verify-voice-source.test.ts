@@ -19,7 +19,7 @@ async function fixture() {
 	await git("init", "--quiet");
 	await writeFile(join(root, "source.ts"), "export const fixture = 1;\n");
 	await git("add", "source.ts");
-	await git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "test: initialize source fixture");
+	await git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "--quiet", "-m", "test: initialize source fixture");
 	return { root, git, environment, source: await git("rev-parse", "HEAD") };
 }
 test("a clean source qualifies only at its actual revision", async () => {
@@ -37,7 +37,7 @@ test("source changes committed during qualification cannot reuse the original re
 	const f = await fixture();
 	await writeFile(join(f.root, "source.ts"), "changed\n");
 	await f.git("add", "source.ts");
-	await f.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "test: change source fixture");
+	await f.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "--quiet", "-m", "test: change source fixture");
 	await expect(verifyVoiceSource(f.root, f.source, f.environment)).rejects.toThrow("does not match");
 });
 

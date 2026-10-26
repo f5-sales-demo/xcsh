@@ -12,7 +12,7 @@ for (const fixture of [
 			consumed = 0;
 		const sent: Record<string, unknown>[] = [];
 		const voice = new NativeVoice({
-			authenticate: async () => ({ accessToken: "fixture-secret", accountId: "selected-fixture" }),
+			authenticate: async () => ({ accessToken: "fixture-secret", accountId: "<ACCOUNT_ID>" }),
 			createCall: async () => ({ sdp: "v=0\r\nfixture-answer", callId: "rtc_control_fixture" }),
 			closureTimeoutMs: 30,
 			records: () => [],

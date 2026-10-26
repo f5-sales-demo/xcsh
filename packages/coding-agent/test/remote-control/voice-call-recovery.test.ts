@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { reconcileVoiceCall } from "../../src/remote-control/voice-call-recovery";
 import type { VoiceHandlers } from "../../src/remote-control/voice-socket";
 
-const identity = { callId: "rtc_recovery_fixture", realtimeSessionId: "selected-chat", accountId: "selected-account" };
+const identity = { callId: "rtc_recovery_fixture", realtimeSessionId: "selected-chat", accountId: "<ACCOUNT_ID>" };
 const auth = { accessToken: "fixture-secret", accountId: identity.accountId };
 
 test("known call reconciliation closes its pinned sideband without creating or configuring another model", async () => {
@@ -41,7 +41,7 @@ test("reconciliation refuses another selected subscription before opening the ca
 	const result = await reconcileVoiceCall(
 		identity,
 		{
-			authenticate: async () => ({ ...auth, accountId: "different-account" }),
+			authenticate: async () => ({ ...auth, accountId: "<OTHER_ACCOUNT_ID>" }),
 			open: async () => {
 				opens++;
 				throw new Error("No connection allowed");
