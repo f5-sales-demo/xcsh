@@ -26,6 +26,7 @@ import {
 } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
 import { CompletedVoiceHandoff, completedVoiceText } from "./voice-output";
+import { pendingVoiceCalls } from "./voice-persisted-calls";
 import { type VoicePersonaSnapshot, voicePersonaInstructions, voiceRuntimeContext } from "./voice-persona";
 import { voicePronunciationInstructions } from "./voice-pronunciation";
 import {
@@ -152,6 +153,9 @@ export class NativeVoice {
 	#ownedCreation?: VoiceCreationEvidence;
 	#knownCall?: OwnedVoiceCallIdentity;
 	#recovery?: Promise<void>;
+	#creationAttemptId?: string;
+	#persisted: ReturnType<typeof pendingVoiceCalls>;
+	#persistedRecovery?: Promise<void>;
 	#creationDisposition: "not-attempted" | "in-flight" | "accepted" | "rejected" | "uncertain" = "not-attempted";
 	get canReleaseAudioOwnership(): boolean {
 		return (
@@ -162,7 +166,7 @@ export class NativeVoice {
 	}
 	#answeredInteraction?: string;
 	get ownedCall(): boolean {
-		return !!this.#ownedCreation || !!this.#knownCall;
+		return !!this.#ownedCreation || !!this.#knownCall || this.#persisted.calls.length > 0;
 	}
 	#finalization = new VoiceFinalization();
 	#closureConfirmed = false;
@@ -228,6 +232,8 @@ export class NativeVoice {
 	#hasCallerInput = false;
 	#diagnostics?: VoiceDiagnosticRuntime;
 	constructor(private readonly deps: VoiceDependencies) {
+		this.#persisted = pendingVoiceCalls(deps.records());
+		if (this.#persisted.uncertainCreation || this.#persisted.calls.length) this.#creationDisposition = "uncertain";
 		this.#diagnostics = deps.diagnostics ?? voiceDiagnosticRuntimeFromEnvironment(record => deps.record(record));
 	}
 	#diagnosticQueues(): void {
@@ -243,6 +249,11 @@ export class NativeVoice {
 	}
 	async start(params: Record<string, unknown>): Promise<void> {
 		if (this.#state !== "idle") throw new ProtocolError(-32000, "Voice requires a new attachment after stopping");
+		if (this.#persisted.uncertainCreation || this.#persisted.calls.length)
+			throw new ProtocolError(
+				-32000,
+				"Previous voice closure is unconfirmed; explicitly end voice before starting another call",
+			);
 		this.#state = "opening";
 		this.#startedAt = Date.now();
 		this.#diagnostics?.transition("starting");
@@ -311,6 +322,8 @@ export class NativeVoice {
 			if (standalone && !apiKey) throw new ProtocolError(-32602, "Realtime conversation requires API key auth");
 			const auth = standalone ? undefined : await this.deps.authenticate();
 			if (this.#state !== "opening") throw new Error("Voice stopped during authentication");
+			await this.#recoverPersisted();
+			if (this.#state !== "opening") throw new Error("Voice stopped during persisted call reconciliation");
 			await this.deps.record({
 				kind: "voiceDiagnostic",
 				stage,
@@ -341,6 +354,20 @@ export class NativeVoice {
 				stageStartedAt = Date.now();
 				if (this.#state !== "opening" || this.#abort.signal.aborted)
 					throw new Error("Voice stopped before call creation");
+				this.#creationAttemptId = randomUUID();
+				await this.deps.record({
+					kind: "voiceCallCreation",
+					creationAttemptId: this.#creationAttemptId,
+					state: "prepared",
+				});
+				if (this.#state !== "opening" || this.#abort.signal.aborted) {
+					await this.deps.record({
+						kind: "voiceCallCreation",
+						creationAttemptId: this.#creationAttemptId,
+						state: "rejected",
+					});
+					throw new Error("Voice stopped before persisted creation");
+				}
 				this.#creationDisposition = "in-flight";
 				let call: Awaited<ReturnType<typeof createVoiceCall>>;
 				try {
@@ -353,6 +380,12 @@ export class NativeVoice {
 					);
 				} catch (error) {
 					this.#creationDisposition = error instanceof VoiceCallCreationError ? error.outcome : "uncertain";
+					if (this.#creationDisposition === "rejected")
+						await this.deps.record({
+							kind: "voiceCallCreation",
+							creationAttemptId: this.#creationAttemptId,
+							state: "rejected",
+						});
 					if (error instanceof VoiceCallCreationError && error.callId) {
 						this.#knownCall = { callId: error.callId, accountId: auth!.accountId, realtimeSessionId: sessionId };
 						this.deps.emit("xcsh/voice/call", { providerCallId: error.callId });
@@ -554,6 +587,11 @@ export class NativeVoice {
 	}
 	stop(reason = "requested"): Promise<void> {
 		const closing = this.#stopCore(reason);
+		if (this.#persisted.uncertainCreation || this.#persisted.calls.length) {
+			const recovery = closing.then(() => this.#recoverPersisted());
+			this.#closing = recovery.catch(() => {});
+			return this.#closing;
+		}
 		if (!this.#knownCall || this.#closureConfirmed) return closing;
 		if (this.#recovery) return this.#recovery;
 		const identity = this.#knownCall;
@@ -587,10 +625,64 @@ export class NativeVoice {
 		this.#closing = this.#recovery;
 		return this.#recovery;
 	}
+	#recoverPersisted(): Promise<void> {
+		if (this.#persistedRecovery) return this.#persistedRecovery;
+		if (!this.#persisted.uncertainCreation && !this.#persisted.calls.length) return Promise.resolve();
+		const recovery = Promise.resolve()
+			.then(async () => {
+				if (this.#persisted.uncertainCreation)
+					throw new ProtocolError(
+						-32000,
+						"Previous call creation has no confirmed provider identity; another call cannot start",
+					);
+				for (const call of [...this.#persisted.calls]) {
+					const receipt = await reconcileVoiceCall(
+						{
+							callId: call.providerCallId,
+							realtimeSessionId: call.realtimeSessionId,
+							accountId: "",
+							accountIdSha256: call.accountIdSha256,
+						},
+						{
+							authenticate: () => (this.deps.authenticateClosure ?? this.deps.authenticate)(),
+							open: this.deps.open,
+						},
+						this.deps.closureTimeoutMs,
+					);
+					await this.deps.record({
+						kind: "voiceProviderClosure",
+						providerCallId: call.providerCallId,
+						reconciliation: true,
+						persisted: true,
+						...receipt,
+					});
+					this.deps.emit("xcsh/voice/recoveryReceipt", {
+						...receipt,
+						providerCallId: call.providerCallId,
+						persisted: true,
+					});
+					if (!receipt.confirmed)
+						throw new ProtocolError(
+							-32000,
+							"Could not confirm previous call closure with the selected subscription",
+						);
+					this.#persisted.calls = this.#persisted.calls.filter(value => value !== call);
+				}
+				this.#creationDisposition = "not-attempted";
+				if (!this.active)
+					this.deps.emit("xcsh/voice/closure", { confirmed: true, reconciliation: true, persisted: true });
+			})
+			.finally(() => {
+				this.#persistedRecovery = undefined;
+			});
+		this.#persistedRecovery = recovery;
+		return recovery;
+	}
 	async #recordCallIdentity(disposition: "accepted" | "uncertain"): Promise<void> {
 		const identity = this.#knownCall!;
 		await this.deps.record({
 			kind: "voiceCallIdentity",
+			creationAttemptId: this.#creationAttemptId,
 			providerCallId: identity.callId,
 			realtimeSessionId: identity.realtimeSessionId,
 			accountIdSha256: "sha256:" + createHash("sha256").update(identity.accountId).digest("hex"),

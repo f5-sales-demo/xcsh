@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { SubscriptionAuth } from "./enrollment";
 import { type VoiceClosureReceipt, VoiceFinalization } from "./voice-finalization";
 import { CODEX_LIVE_VERSION, existingCallConfig } from "./voice-protocol";
@@ -7,7 +8,9 @@ import { openVoiceSocket, type VoiceHandlers, type VoiceSocket } from "./voice-s
 export interface OwnedVoiceCallIdentity {
 	callId: string;
 	realtimeSessionId: string | null;
+	/** Empty only for a durable identity that is bound by accountIdSha256. */
 	accountId: string;
+	accountIdSha256?: string;
 }
 interface RecoveryDependencies {
 	authenticate(): Promise<SubscriptionAuth>;
@@ -44,7 +47,13 @@ export async function reconcileVoiceCall(
 			transport: { type: "existingCall", callId: identity.callId },
 		});
 		const auth = await Promise.race([dependencies.authenticate(), expired]);
-		if (!identity.accountId || auth.accountId !== identity.accountId || controller.signal.aborted)
+		if (
+			controller.signal.aborted ||
+			(!identity.accountId && !identity.accountIdSha256) ||
+			(identity.accountId && auth.accountId !== identity.accountId) ||
+			(identity.accountIdSha256 &&
+				identity.accountIdSha256 !== "sha256:" + createHash("sha256").update(auth.accountId).digest("hex"))
+		)
 			throw new Error("Original subscription is required for call reconciliation");
 		const headers = {
 			Authorization: `Bearer ${auth.accessToken}`,

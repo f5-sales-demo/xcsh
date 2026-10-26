@@ -126,3 +126,13 @@ Ubuntu, Safari/iPhone Home Screen, Office, VS Code and Chrome.
 Require two fresh captured iPhone calls, with the second at least twenty minutes. A failed
 physical case needs a changed validated candidate before a new trial. Record tested duration
 separately if engine replacement is not observed. No physical trial is currently armed.
+
+## Persisted call ownership
+
+Before call creation, xcsh durably records a creation attempt in the selected chat.
+Accepted provider identity retires that attempt; explicit rejection admits no call.
+A fresh voice attachment refuses replacement until an explicit Stop reconciles
+remaining identities using the original subscription account hash. Reconciliation preserves
+the real account header and requires provider-confirmed closure before creating another call. Unknown attempts, malformed identities, conflicting records
+and unconfirmed closure retain ownership and cannot silently retry creation. Recovery
+opens no microphone, creates no provider call and admits no backend task.
