@@ -32,8 +32,11 @@ for the owned subscription path.
 
 The terminal exposes /voice discovery and start, stop, mute, unmute, pause, resume,
 interrupt, devices and companion controls. Mac and Linux terminals use the packaged native
-helper; SSH and headless terminals offer companion audio. Devices discovery and selection
-are not fully implemented and must not be presented as accepted.
+helper; SSH and headless terminals offer companion audio. Devices opens Cancel-first microphone, speaker and channel choices. Selection
+uses exact names and rejects missing or ambiguous devices. Streams remain closed
+until Start. Browser microphone selection uses an exact device constraint; speaker
+selection uses supported client output controls, otherwise the system output.
+Physical device behavior remains unaccepted.
 
 The browser obtains microphone permission only after activation. Office and VS Code use a
 selected-session companion while retaining the parent panel connection and host tools.

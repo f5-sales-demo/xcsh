@@ -3,7 +3,8 @@ use napi_derive::napi;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use xcsh_realtime_webrtc::{
-	AudioDeviceSelection, PackageLayout, RealtimeWebrtcSession, RealtimeWebrtcSessionHandle,
+	AudioDeviceKind, AudioDeviceSelection, PackageLayout, RealtimeWebrtcSession,
+	RealtimeWebrtcSessionHandle, VoiceHost,
 };
 
 #[napi(object)]
@@ -11,6 +12,9 @@ pub struct NativeVoicePackageOptions {
 	pub package_dir: String,
 	pub build_commit: String,
 	pub manifest_sha256: String,
+	pub microphone: Option<String>,
+	pub speaker: Option<String>,
+	pub channel: Option<Vec<u32>>,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -119,6 +123,59 @@ fn verify_package(options: &NativeVoicePackageOptions) -> std::io::Result<PathBu
 }
 
 #[napi(object)]
+pub struct NativeVoiceDevice {
+	pub name: String,
+	pub channels: u32,
+	pub is_default: bool,
+}
+#[napi(object)]
+pub struct NativeVoiceDeviceCatalog {
+	pub inputs: Vec<NativeVoiceDevice>,
+	pub outputs: Vec<NativeVoiceDevice>,
+}
+fn device_description(device: xcsh_realtime_webrtc::AudioDevice) -> NativeVoiceDevice {
+	NativeVoiceDevice {
+		name: device.name,
+		channels: u32::from(device.channels),
+		is_default: device.is_default,
+	}
+}
+/// Same-build enumeration closes its helper and never requests audio streams.
+#[napi]
+pub async fn native_voice_devices(
+	options: NativeVoicePackageOptions,
+) -> napi::Result<NativeVoiceDeviceCatalog> {
+	let build_commit = options.build_commit.clone();
+	let root = tokio::task::spawn_blocking(move || verify_package(&options))
+		.await
+		.map_err(|_| napi::Error::from_reason("Native device worker stopped"))?
+		.map_err(|_| napi::Error::from_reason("Voice package integrity check failed"))?;
+	let mut host = VoiceHost::connect(&PackageLayout { package_dir: root }, &build_commit)
+		.await
+		.map_err(|_| napi::Error::from_reason("Native device helper could not start"))?;
+	let result = async {
+		let inputs = host
+			.list_devices(AudioDeviceKind::Input)
+			.await
+			.map_err(|_| napi::Error::from_reason("Native input devices unavailable"))?;
+		let outputs = host
+			.list_devices(AudioDeviceKind::Output)
+			.await
+			.map_err(|_| napi::Error::from_reason("Native output devices unavailable"))?;
+		Ok::<_, napi::Error>(NativeVoiceDeviceCatalog {
+			inputs: inputs.into_iter().map(device_description).collect(),
+			outputs: outputs.into_iter().map(device_description).collect(),
+		})
+	}
+	.await;
+	let closed = host.close().await;
+	let catalog =
+		result.map_err(|_| napi::Error::from_reason("Native audio devices unavailable"))?;
+	closed.map_err(|_| napi::Error::from_reason("Native device helper did not close"))?;
+	Ok(catalog)
+}
+
+#[napi(object)]
 pub struct NativeVoiceAudioState {
 	pub applied: bool,
 	pub microphone_muted: bool,
@@ -139,12 +196,31 @@ impl NativeVoiceAudio {
 		let session = tokio::task::spawn_blocking(move || {
 			let root = verify_package(&options)
 				.map_err(|_| napi::Error::from_reason("Voice package integrity check failed"))?;
+			let channel = options
+				.channel
+				.map(|channels| {
+					channels
+						.into_iter()
+						.map(|channel| {
+							u16::try_from(channel)
+								.ok()
+								.and_then(std::num::NonZeroU16::new)
+								.ok_or_else(|| napi::Error::from_reason("Invalid microphone channel"))
+						})
+						.collect::<napi::Result<Vec<_>>>()
+				})
+				.transpose()?;
+			let selection = AudioDeviceSelection {
+				microphone: options.microphone,
+				speaker: options.speaker,
+				channel,
+			};
 			let (_, cancellation) = futures::future::AbortHandle::new_pair();
 			RealtimeWebrtcSession::start(
 				PackageLayout { package_dir: root },
 				options.build_commit,
 				cancellation,
-				AudioDeviceSelection::default(),
+				selection,
 			)
 			.map_err(|_| napi::Error::from_reason("Native voice helper could not start"))
 		})

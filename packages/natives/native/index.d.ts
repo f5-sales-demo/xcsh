@@ -1081,10 +1081,27 @@ export interface NativeVoiceAudioState {
   speakerPeak: number
 }
 
+export interface NativeVoiceDevice {
+  name: string
+  channels: number
+  isDefault: boolean
+}
+
+export interface NativeVoiceDeviceCatalog {
+  inputs: Array<NativeVoiceDevice>
+  outputs: Array<NativeVoiceDevice>
+}
+
+/** Same-build enumeration closes its helper and never requests audio streams. */
+export declare function nativeVoiceDevices(options: NativeVoicePackageOptions): Promise<NativeVoiceDeviceCatalog>
+
 export interface NativeVoicePackageOptions {
   packageDir: string
   buildCommit: string
   manifestSha256: string
+  microphone?: string
+  speaker?: string
+  channel?: Array<number>
 }
 
 /** Parsed Kitty keyboard protocol sequence result for a Kitty input sequence. */

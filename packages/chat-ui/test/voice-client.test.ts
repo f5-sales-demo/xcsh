@@ -102,3 +102,36 @@ test("another panel's signaling cannot activate or change this audio client", ()
 	expect(voice.snapshot.chatId).toBeUndefined();
 	voice.dispose();
 });
+
+test("microphone selection stays inactive until activation and uses an exact device constraint", async () => {
+	const t = transport();
+	const constraints: (MediaStreamConstraints | undefined)[] = [];
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async options => {
+			constraints.push(options);
+			throw new Error("fixture permission denial");
+		},
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	voice.selectDevices({ microphone: "fixture-microphone" });
+	expect(constraints).toEqual([]);
+	await voice.start();
+	expect(constraints).toEqual([{ audio: { deviceId: { exact: "fixture-microphone" } } }]);
+	expect(t.sent.some(request => request.action === "start")).toBe(false);
+	voice.dispose();
+});
+test("connecting audio cannot change its selected capture device", async () => {
+	const t = transport();
+	const permission = Promise.withResolvers<MediaStream>();
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: () => permission.promise,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	const pending = voice.start();
+	expect(() => voice.selectDevices({ microphone: "another-device" })).toThrow("End voice");
+	voice.dispose();
+	permission.reject(new Error("fixture ended"));
+	await pending;
+});

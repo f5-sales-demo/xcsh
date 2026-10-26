@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { NativeVoiceAudio } from "@f5-sales-demo/pi-natives";
+import { NativeVoiceAudio, nativeVoiceDevices } from "@f5-sales-demo/pi-natives";
 import type { VoiceFrame, VoiceRequest } from "../../../chat-ui/src/voice/contract";
 import { BUILD_INFO } from "../internal-urls/build-info.generated";
 import { RemoteSession, type SessionTarget } from "./session";
 import { voiceCoordinatorFor } from "./voice-coordinator";
+import {
+	type AudioDeviceCatalog,
+	type AudioDevicePreferences,
+	validateAudioPreferences,
+} from "./voice-device-selection";
 
 export interface SelectedVoiceSession {
 	call(id: string, method: string, params: Record<string, unknown>): Promise<unknown>;
@@ -18,6 +23,7 @@ export class SelectedChatVoice {
 	#disposed = false;
 	#clients = new Map<string, SelectedChatVoice>();
 	#native?: NativeVoiceAudio;
+	#nativePreferences: Readonly<AudioDevicePreferences> = {};
 	#nativeGeneration = 0;
 	#nativeRequest?: string;
 	#nativeAdmitted = false;
@@ -105,6 +111,17 @@ export class SelectedChatVoice {
 		this.#native?.stop();
 		this.#native = undefined;
 	}
+	async nativeDevices(): Promise<AudioDeviceCatalog> {
+		const directory = process.env.XCSH_VOICE_PACKAGE_DIR,
+			manifest = process.env.XCSH_VOICE_PACKAGE_SHA256;
+		if (this.#disposed || BUILD_INFO.dirty || !directory || !manifest)
+			throw new Error("An immutable qualified native voice package is required");
+		return nativeVoiceDevices({ packageDir: directory, buildCommit: BUILD_INFO.commit, manifestSha256: manifest });
+	}
+	selectNativeDevices(catalog: AudioDeviceCatalog, preferences: AudioDevicePreferences): void {
+		if (this.#disposed || this.#native) throw new Error("End native voice before selecting devices");
+		this.#nativePreferences = validateAudioPreferences(catalog, preferences);
+	}
 	async startNative(takeover = false): Promise<void> {
 		if (this.#disposed || this.#native) throw new Error("Audio is already active");
 		if (!["darwin", "linux"].includes(process.platform) || process.env.SSH_CONNECTION)
@@ -120,6 +137,7 @@ export class SelectedChatVoice {
 			packageDir: directory,
 			buildCommit: BUILD_INFO.commit,
 			manifestSha256: manifest,
+			...this.#nativePreferences,
 		});
 		if (generation !== this.#nativeGeneration || this.#disposed || this.target.sessionId !== chatId) {
 			native.stop();

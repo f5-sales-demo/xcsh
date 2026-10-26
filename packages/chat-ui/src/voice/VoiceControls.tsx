@@ -5,10 +5,17 @@ import { BrowserVoiceClient, type BrowserVoiceSnapshot, type VoiceTransport } fr
 export function VoiceControls({ transport, ready = true }: { transport: VoiceTransport; ready?: boolean }) {
 	const [client, setClient] = useState<BrowserVoiceClient>();
 	const [snapshot, setSnapshot] = useState<BrowserVoiceSnapshot>();
-	const [devices, setDevices] = useState<{ id: string; label: string }[]>([]);
+	const [microphone, setMicrophone] = useState("");
+	const [speaker, setSpeaker] = useState("");
+	const [deviceError, setDeviceError] = useState<string>();
+	const [devices, setDevices] = useState<{ id: string; label: string; kind: string }[]>([]);
 	useEffect(() => {
 		if (!ready) return;
 		const voice = new BrowserVoiceClient(transport);
+		setMicrophone("");
+		setSpeaker("");
+		setDevices([]);
+		setDeviceError(undefined);
 		setClient(voice);
 		const unsubscribe = voice.subscribe(setSnapshot);
 		return () => {
@@ -80,22 +87,85 @@ export function VoiceControls({ transport, ready = true }: { transport: VoiceTra
 				<button
 					type="button"
 					onClick={() => {
-						void client
-							.devices()
-							.then(list =>
-								setDevices(
-									list
-										.filter(device => ["audioinput", "audiooutput"].includes(device.kind))
-										.map(device => ({ id: device.deviceId, label: device.label || device.kind })),
-								),
-							);
+						void client.devices().then(list =>
+							setDevices(
+								list
+									.filter(device => ["audioinput", "audiooutput"].includes(device.kind))
+									.map(device => ({
+										id: device.deviceId,
+										label: device.label || device.kind,
+										kind: device.kind,
+									})),
+							),
+						);
 					}}
 				>
 					Devices
 				</button>
-				{devices.map(device => (
-					<p key={device.id}>{device.label}</p>
-				))}
+				{devices.length > 0 && (
+					<>
+						<label>
+							Microphone
+							<select
+								value={microphone}
+								disabled={snapshot.active}
+								onChange={event => {
+									const value = event.currentTarget.value;
+									try {
+										client.selectDevices({ microphone: value || undefined, speaker: speaker || undefined });
+										setMicrophone(value);
+										setDeviceError(undefined);
+									} catch {
+										setDeviceError("End voice before changing audio devices.");
+									}
+								}}
+							>
+								<option value="">System default</option>
+								{devices
+									.filter(device => device.kind === "audioinput" && device.id)
+									.map(device => (
+										<option key={device.id} value={device.id}>
+											{device.label}
+										</option>
+									))}
+							</select>
+						</label>
+						{client.outputSelectionSupported ? (
+							<label>
+								Speaker
+								<select
+									value={speaker}
+									disabled={snapshot.active}
+									onChange={event => {
+										const value = event.currentTarget.value;
+										try {
+											client.selectDevices({
+												microphone: microphone || undefined,
+												speaker: value || undefined,
+											});
+											setSpeaker(value);
+											setDeviceError(undefined);
+										} catch {
+											setDeviceError("The selected speaker is unavailable.");
+										}
+									}}
+								>
+									<option value="">System default</option>
+									{devices
+										.filter(device => device.kind === "audiooutput" && device.id)
+										.map(device => (
+											<option key={device.id} value={device.id}>
+												{device.label}
+											</option>
+										))}
+								</select>
+							</label>
+						) : (
+							<p>Speaker uses system output.</p>
+						)}
+					</>
+				)}
+				{deviceError && <p role="alert">{deviceError}</p>}
 			</details>
 		</fieldset>
 	);

@@ -548,6 +548,46 @@ export class CommandController {
 			);
 			return;
 		}
+		if (command === "devices") {
+			const chatId = this.ctx.session.sessionId;
+			try {
+				const catalog = await this.#voice.nativeDevices();
+				const options = (devices: { name: string; channels: number; isDefault: boolean }[]) => [
+					"Cancel",
+					"System default",
+					...devices.map(
+						(device, index) =>
+							`${index + 1}. ${device.name} (${device.channels} channels)${device.isDefault ? " · default" : ""}`,
+					),
+				];
+				const inputs = options(catalog.inputs),
+					outputs = options(catalog.outputs);
+				const mic = await this.ctx.showHookSelector("Voice microphone", inputs);
+				if (!mic || mic === "Cancel" || this.ctx.session.sessionId !== chatId) return;
+				const speaker = await this.ctx.showHookSelector("Voice speaker", outputs);
+				if (!speaker || speaker === "Cancel" || this.ctx.session.sessionId !== chatId) return;
+				const input = catalog.inputs[inputs.indexOf(mic) - 2];
+				const output = catalog.outputs[outputs.indexOf(speaker) - 2];
+				let channel: number[] | undefined;
+				if (input && input.channels > 1) {
+					const channels = [
+						"Cancel",
+						"Mix selected device channels",
+						...Array.from({ length: Math.min(input.channels, 64) }, (_, index) => `Channel ${index + 1}`),
+					];
+					const selected = await this.ctx.showHookSelector("Voice microphone channel", channels);
+					if (!selected || selected === "Cancel" || this.ctx.session.sessionId !== chatId) return;
+					if (selected !== "Mix selected device channels") channel = [channels.indexOf(selected) - 1];
+				}
+				this.#voice.selectNativeDevices(catalog, { microphone: input?.name, speaker: output?.name, channel });
+				this.ctx.showStatus("Voice devices selected. Start voice to activate them.");
+			} catch {
+				this.ctx.showError(
+					"Voice devices could not be selected. Check the qualified package and current audio owner.",
+				);
+			}
+			return;
+		}
 		if (command === "start") {
 			this.ctx.showStatus("Connecting voice");
 			try {

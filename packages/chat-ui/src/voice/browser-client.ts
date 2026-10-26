@@ -18,6 +18,7 @@ export interface BrowserVoiceSnapshot {
 /** Media goes directly to the provider. Delegation is handled only by xcsh's sideband. */
 export class BrowserVoiceClient {
 	#clientId = crypto.randomUUID();
+	#selectedDevices: { microphone?: string; speaker?: string } = {};
 	#snapshot: BrowserVoiceSnapshot = { available: false, active: false, state: "Listening" };
 	#listeners = new Set<(snapshot: BrowserVoiceSnapshot) => void>();
 	#unsubscribe: () => void;
@@ -57,6 +58,18 @@ export class BrowserVoiceClient {
 			action: "capabilities",
 		});
 	}
+	get outputSelectionSupported(): boolean {
+		return typeof HTMLMediaElement !== "undefined" && typeof HTMLMediaElement.prototype.setSinkId === "function";
+	}
+	selectDevices(preferences: { microphone?: string; speaker?: string }): void {
+		if (this.#snapshot.active) throw new Error("End voice before selecting devices");
+		for (const id of [preferences.microphone, preferences.speaker])
+			if (id !== undefined && (typeof id !== "string" || !id.length || id.length > 1024))
+				throw new Error("Invalid audio device");
+		if (preferences.speaker && !this.outputSelectionSupported)
+			throw new Error("Use the system speaker output on this client");
+		this.#selectedDevices = { ...preferences };
+	}
 	get snapshot(): BrowserVoiceSnapshot {
 		return this.#snapshot;
 	}
@@ -90,7 +103,9 @@ export class BrowserVoiceClient {
 		}, 30_000);
 		try {
 			// Called only from the user's Start/Take over activation.
-			const microphone = await this.devicesApi.getUserMedia({ audio: true });
+			const microphone = await this.devicesApi.getUserMedia({
+				audio: this.#selectedDevices.microphone ? { deviceId: { exact: this.#selectedDevices.microphone } } : true,
+			});
 			if (generation !== this.#generation) {
 				microphone.getTracks().forEach(track => {
 					track.stop();
@@ -103,6 +118,8 @@ export class BrowserVoiceClient {
 			const audio = new Audio();
 			audio.autoplay = true;
 			this.#audio = audio;
+			if (this.#selectedDevices.speaker) await audio.setSinkId(this.#selectedDevices.speaker);
+			if (generation !== this.#generation) return;
 			peer.addEventListener("track", event => {
 				if (generation !== this.#generation) return;
 				const stream = new MediaStream([event.track]);

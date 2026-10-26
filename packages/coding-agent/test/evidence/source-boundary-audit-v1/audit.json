@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "8c55e25592c13529eeddda55bd7bc7aeea130262",
-  "fingerprint": "fa4745db740c5a133af3aecb5eceeb80b0cc3d4eb11971e8a2028ffedf000767",
+  "revision": "4fc81f598b1c05e02ccef748a1ceb136ef3af477",
+  "fingerprint": "4ab8b2282069611fbb41ea515568651692a647b716f2b9fec6f16cd701f92691",
   "counts": {
     "total": 245,
     "components": 102,
@@ -3235,7 +3235,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "core",
-      "sha256": "26446dcd56c16c9f787d4b2da16d3da2991355cbe6a71782f511567769f193fb",
+      "sha256": "55df45dd572e9d67bc51337a52eb0cb29fd85a0d58f11e58cb0b3ab2ff565c0f",
       "exports": [
         "CommandController",
         "renderProviderSection",
