@@ -47,3 +47,8 @@ paths and signs that copy on approved CI. Manifest hashes describe the adapted c
 A platform-independent Mach-O reader rejects external imports and search paths in
 every packaged helper/library before runtime activation, even when a build prefix
 is present. The pinned runtime projection and original reference remain unchanged.
+
+Approved native qualification uses the supported macos-15 arm64 runner after
+GitHub announced macos-14 brownouts and retirement. The explicit arm64 check
+and macOS 13 deployment target remain in force; this changes the CI builder
+image, without adopting another Codex reference or native ABI.

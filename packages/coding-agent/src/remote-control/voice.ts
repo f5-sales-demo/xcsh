@@ -52,6 +52,8 @@ export interface VoiceDependencies {
 	/** Shared by successive calls attached to one backing session. */
 	history?: VoiceHistory;
 	closureTimeoutMs?: number;
+	/** Early committed input may consume controls, never authorize interactions. */
+	committedCallerControl?(text: string): Promise<boolean> | boolean;
 	completedTranscript?(role: "user" | "assistant", text: string): Promise<boolean> | boolean;
 	authenticate(): Promise<SubscriptionAuth>;
 	/** Cleanup may outlive the execution epoch; identity is revalidated against the original call. */
@@ -1402,21 +1404,6 @@ export class NativeVoice {
 			}
 			return;
 		}
-		if (this.#answeredInteraction && event.text.trim().toLowerCase() === this.#answeredInteraction) {
-			this.#seen.add(key);
-			await this.deps.record({ key, kind: "voiceInteractionDelegation", outcome: "already-resolved-no-submission" });
-			this.#send({
-				type: "delegation.context.append",
-				delegation_item_id: event.id,
-				content: [
-					{
-						type: "input_text",
-						text: "The interaction owner already resolved this answer. No new backend task was admitted.",
-					},
-				],
-			});
-			return;
-		}
 		// An empty handoff is valid only when this unconsumed exchange contains
 		// actual caller text. A provider turn reference is not caller input.
 		if (!event.text.trim() && !this.#tail.some(entry => entry.role === "user" && entry.text.trim())) {
@@ -1446,6 +1433,37 @@ export class NativeVoice {
 					{
 						type: "input_text",
 						text: "This is a previous typed request. No new caller input was observed and no work was admitted. Wait for the caller's next request.",
+					},
+				],
+			});
+			return;
+		}
+		// The pinned delegation commits its input before the whole input turn ends.
+		// Offer matching observed caller text only to the non-authorizing control owner.
+		const committedInput = event.text.trim();
+		if (
+			this.#ownedCreation &&
+			committedInput &&
+			!this.#answeredInteraction &&
+			this.#tail.some(
+				entry => entry.role === "user" && entry.text.trim().toLowerCase() === committedInput.toLowerCase(),
+			) &&
+			(await this.deps.committedCallerControl?.(committedInput))
+		) {
+			this.#answeredInteraction = committedInput.toLowerCase();
+			this.#tail = [];
+			this.#newTranscriptEntry = { user: true, assistant: true };
+		}
+		if (this.#answeredInteraction && event.text.trim().toLowerCase() === this.#answeredInteraction) {
+			this.#seen.add(key);
+			await this.deps.record({ key, kind: "voiceInteractionDelegation", outcome: "already-resolved-no-submission" });
+			this.#send({
+				type: "delegation.context.append",
+				delegation_item_id: event.id,
+				content: [
+					{
+						type: "input_text",
+						text: "The interaction owner already resolved this answer. No new backend task was admitted.",
 					},
 				],
 			});

@@ -54,6 +54,10 @@ interaction announcement receipts require further synthetic calibration and phys
 While a question, approval or plan remains pending, provider delegation cannot
 replace a completed caller decision. Its interaction owner must resolve the prompt
 before admitting another voice task. Backend work and typed input keep their existing owners.
+A pinned delegation can commit caller input before the continuous input turn ends.
+The control owner receives that committed input only when it matches observed caller text,
+so a Resume control resolves before task admission. Interaction answers and approvals
+still require a completed caller transcript; delegation cannot authorize them.
 Resolved spoken answers are retained in durable history, excluded from tail resubmission,
 and their repeated provider handoffs receive one retirement response per provider identity.
 

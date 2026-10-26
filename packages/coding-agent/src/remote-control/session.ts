@@ -1205,6 +1205,14 @@ export class RemoteSession {
 			);
 			let lease: VoiceLease | undefined;
 			const voice = new NativeVoice({
+				committedCallerControl: text => {
+					this.#assertCurrent(epoch);
+					if (!voice.active || !lease || !coordinator.owns(lease) || this.#voiceSpeechMuted) return false;
+					if (!this.#voiceSpeechPaused || !/^resume[.!]?$/i.test(text.trim())) return false;
+					this.#voiceSpeechPaused = false;
+					this.#emit("xcsh/voice/control", { action: "resume" });
+					return true;
+				},
 				completedTranscript: (role, text) => {
 					this.#assertCurrent(epoch);
 					if (!voice.active || !lease || !coordinator.owns(lease)) return false;
