@@ -113,3 +113,5 @@ async function main(): Promise<void> {
 }
 
 await main();
+// This CLI owns no work after the awaited build and cleanup have completed.
+process.exit(0);

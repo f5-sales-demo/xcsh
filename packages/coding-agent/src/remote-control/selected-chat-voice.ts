@@ -31,8 +31,10 @@ export class SelectedChatVoice {
 	#nativeAnswerFailed = false;
 	#nativeState?: string;
 	#nativeBackendState = "Listening";
+	#nativePendingInput = false;
 	#nativeAnswer?: Promise<void>;
 	#nativePoll?: ReturnType<typeof setInterval>;
+	#nativeDesiredMute = false;
 	#nativePaused = false;
 	#nativeInterrupted = false;
 	#nativeAnnouncement?: { id: string; revision: number };
@@ -59,6 +61,7 @@ export class SelectedChatVoice {
 		});
 	}
 	#emit(event: VoiceFrame): void {
+		if (event.method === "xcsh/voice/interactionState") this.#nativePendingInput = event.params.waiting === true;
 		if (event.method === "thread/status/changed") {
 			const status = event.params.status as { type?: string; activeFlags?: string[] } | undefined;
 			this.#nativeBackendState = status?.activeFlags?.includes("waitingOnUserInput")
@@ -133,6 +136,8 @@ export class SelectedChatVoice {
 		if (BUILD_INFO.dirty || !directory || !manifest)
 			throw new Error("An immutable qualified native voice package is required");
 		this.#nativeStarting = true;
+		this.#nativeDesiredMute = false;
+		this.#nativePendingInput = false;
 		this.#nativePaused = this.#nativeInterrupted = false;
 		this.#nativeAnnouncement = undefined;
 		this.#nativeCaptionCompleted = this.#nativePlayed = false;
@@ -175,8 +180,17 @@ export class SelectedChatVoice {
 					native.stop();
 					return;
 				}
-				native.mute(false);
-				native.suppressOutput(false);
+				for (const action of [
+					this.#nativeDesiredMute ? "mute" : undefined,
+					this.#nativePaused ? "pause" : undefined,
+				])
+					if (action) await this.#remote?.call(randomUUID(), "xcsh/voice/control", { threadId: chatId, action });
+				if (generation !== this.#nativeGeneration || this.target.sessionId !== chatId) {
+					native.stop();
+					return;
+				}
+				native.mute(this.#nativeDesiredMute);
+				native.suppressOutput(this.#nativePaused || this.#nativeInterrupted);
 				this.#nativePoll = setInterval(() => {
 					const error = native.takeError();
 					if (error) {
@@ -195,7 +209,9 @@ export class SelectedChatVoice {
 							? "Muted"
 							: audio.applied && !audio.speakerSuppressed && audio.speakerPeak > 100
 								? "Speaking"
-								: this.#nativeBackendState;
+								: this.#nativePendingInput
+									? "Needs input"
+									: this.#nativeBackendState;
 					if (state !== this.#nativeState) {
 						this.#nativeState = state;
 						this.sink({ type: "voice_event", chatId, method: "xcsh/voice/audioState", params: { state } });
@@ -272,19 +288,17 @@ export class SelectedChatVoice {
 		}
 		if (request.action === "stop") this.#stopNative();
 		if (["mute", "unmute", "pause", "resume", "interrupt", "devices"].includes(request.action)) {
+			if (request.action === "mute") this.#nativeDesiredMute = true;
+			if (request.action === "unmute") this.#nativeDesiredMute = false;
+			if (request.action === "pause" || request.action === "interrupt") {
+				this.#nativeCaptionCompleted = this.#nativePlayed = false;
+				this.#nativePaused = request.action === "pause";
+				this.#nativeInterrupted = request.action === "interrupt";
+			}
+			if (request.action === "resume") this.#nativePaused = this.#nativeInterrupted = false;
 			if (this.#native) {
-				if (request.action === "mute") this.#native.mute(true);
-				if (request.action === "unmute") this.#native.mute(false);
-				if (request.action === "pause" || request.action === "interrupt") {
-					this.#native.suppressOutput(true);
-					this.#nativeCaptionCompleted = this.#nativePlayed = false;
-					this.#nativePaused = request.action === "pause";
-					this.#nativeInterrupted = request.action === "interrupt";
-				}
-				if (request.action === "resume") {
-					this.#nativePaused = this.#nativeInterrupted = false;
-					this.#native.suppressOutput(false);
-				}
+				this.#native.mute(!this.#nativeAdmitted || this.#nativeDesiredMute);
+				this.#native.suppressOutput(!this.#nativeAdmitted || this.#nativePaused || this.#nativeInterrupted);
 			}
 			await this.#remote?.call(request.requestId, "xcsh/voice/control", {
 				threadId: chatId,

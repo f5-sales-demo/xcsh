@@ -63,6 +63,8 @@ async function fixture(secret = false, planMode = false) {
 		setRealtimeMode: () => {},
 	} as unknown as SessionTarget;
 	const remote = new RemoteSession(target);
+	const events: { method: string; params: Record<string, unknown> }[] = [];
+	remote.subscribe(event => events.push(event));
 	await remote.call("activate", "thread/realtime/start", {
 		threadId: target.sessionId,
 		version: "v3",
@@ -120,6 +122,7 @@ async function fixture(secret = false, planMode = false) {
 		plans,
 		decisions,
 		backendRequests,
+		events,
 		ui,
 		speech: () => voice.options.completedTranscript("user", plan ? "yes" : "Beta"),
 		close: async () => {
@@ -156,6 +159,42 @@ test("secret prompts remain UI-only through the session voice callback", async (
 		expect(await f.ui()).toEqual({ accepted: true });
 		expect(await f.result).toBe("Beta");
 		expect(f.resolved).toHaveLength(1);
+	} finally {
+		await f.close();
+	}
+});
+
+test("async input exposes its current announcement identity to the audio client", async () => {
+	const f = await fixture();
+	try {
+		const request = f.broker.pending()[0]!;
+		expect(f.events).toContainEqual(
+			expect.objectContaining({
+				method: "xcsh/voice/interaction",
+				params: expect.objectContaining({ requestId: request.id, revision: f.broker.snapshot().revision }),
+			}),
+		);
+	} finally {
+		await f.close();
+	}
+});
+test("a closed audio lease cannot accept late playback or a late caller answer", async () => {
+	const f = await fixture();
+	try {
+		const closedVoice = voice;
+		await closedVoice.stop();
+		const request = f.broker.pending()[0]!;
+		expect(
+			await f.remote.call("late-playback", "xcsh/voice/playback", {
+				threadId: f.remote.target.sessionId,
+				announcementId: request.id,
+				announcementRevision: f.broker.snapshot().revision,
+			}),
+		).toEqual({ accepted: false });
+		expect(closedVoice.options.completedTranscript("user", "Beta")).toBe(false);
+		expect(f.broker.pending()).toHaveLength(1);
+		expect(await f.ui()).toEqual({ accepted: true });
+		expect(await f.result).toBe("Beta");
 	} finally {
 		await f.close();
 	}

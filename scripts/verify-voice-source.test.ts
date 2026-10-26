@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { verifyVoiceSource } from "./verify-voice-source";
@@ -39,4 +39,15 @@ test("source changes committed during qualification cannot reuse the original re
 	await f.git("add", "source.ts");
 	await f.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "test: change source fixture");
 	await expect(verifyVoiceSource(f.root, f.source, f.environment)).rejects.toThrow("does not match");
+});
+
+test("only the separately verified pinned documentation inputs are outside source status", async () => {
+	const f = await fixture();
+	const data = join(f.root, "packages/coding-agent/src/internal-urls/.documentation-generated");
+	await mkdir(join(data, "terraform"), { recursive: true });
+	await writeFile(join(data, "documentation-index.sqlite.gz"), "fixture-pinned-input");
+	await writeFile(join(data, "terraform/terraform-documentation.sqlite.gz"), "fixture-pinned-input");
+	await verifyVoiceSource(f.root, f.source, f.environment);
+	await writeFile(join(data, "unreviewed-source.ts"), "changed");
+	await expect(verifyVoiceSource(f.root, f.source, f.environment)).rejects.toThrow("clean committed");
 });

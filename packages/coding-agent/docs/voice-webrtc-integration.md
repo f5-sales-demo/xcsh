@@ -79,7 +79,7 @@ reference stamp is not an application-source receipt.
 
 Qualification checks the checkout revision and clean source both before building and
 after packaged verification. The voice workflow generates canonical documentation
-indexes on Linux and shares those pinned bytes with both native targets. Existing
+indices on Linux and shares those pinned bytes with both native targets. Existing
 prebuilt verification still enforces their published digests; Mac SQLite regeneration
 does not replace a pin. Compiled smoke tests use separate agent, config and cache
 directories outside the checkout while retaining the host's home identity.

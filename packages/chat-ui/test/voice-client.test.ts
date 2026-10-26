@@ -2,6 +2,157 @@ import { expect, test } from "bun:test";
 import { BrowserVoiceClient, type VoiceTransport } from "../src/voice/browser-client";
 import type { VoiceRequest } from "../src/voice/contract";
 
+function mediaFixture() {
+	const originalPeer = globalThis.RTCPeerConnection;
+	const originalAudio = globalThis.Audio;
+	const channel = new EventTarget();
+	Object.assign(channel, { close: () => channel.dispatchEvent(new Event("close")) });
+	let output: { muted: boolean; paused: boolean } | undefined;
+	class FixturePeer extends EventTarget {
+		iceGatheringState = "complete";
+		localDescription = { sdp: "v=0\r\nfixture" };
+		addTrack() {}
+		createDataChannel() {
+			return channel;
+		}
+		async createOffer() {
+			return this.localDescription;
+		}
+		async setLocalDescription() {}
+		close() {}
+	}
+	class FixtureAudio {
+		muted = false;
+		paused = false;
+		constructor() {
+			output = this;
+		}
+		async play() {
+			this.paused = false;
+		}
+	}
+	globalThis.RTCPeerConnection = FixturePeer as unknown as typeof RTCPeerConnection;
+	globalThis.Audio = FixtureAudio as unknown as typeof Audio;
+	let stops = 0;
+	const track = { stop: () => stops++, enabled: true };
+	const stream = { getTracks: () => [track], getAudioTracks: () => [track] } as unknown as MediaStream;
+	return {
+		channel,
+		track,
+		stream,
+		output: () => output,
+		stops: () => stops,
+		restore: () => {
+			globalThis.RTCPeerConnection = originalPeer;
+			globalThis.Audio = originalAudio;
+		},
+	};
+}
+
+test("mute and pause during permission wait persist into the admitted browser call", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	const permission = Promise.withResolvers<MediaStream>();
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: () => permission.promise,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	try {
+		const pending = voice.start();
+		voice.mute(true);
+		voice.pause();
+		permission.resolve(media.stream);
+		await pending;
+		expect(media.track.enabled).toBe(false);
+		expect(media.output()?.muted).toBe(true);
+		media.channel.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "session.started" }) }));
+		expect(voice.snapshot.state).toBe("Muted");
+	} finally {
+		voice.dispose();
+		media.restore();
+	}
+});
+
+test("closing browser voice cannot unmute capture or resume output", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => media.stream,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	try {
+		await voice.start();
+		voice.stop();
+		voice.mute(false);
+		voice.resume();
+		expect(media.track.enabled).toBe(false);
+		expect(media.output()?.muted).toBe(true);
+		expect(voice.snapshot.state).toBe("Closing");
+		expect(t.sent.map(request => request.action)).toEqual(["capabilities", "start", "stop"]);
+	} finally {
+		voice.dispose();
+		media.restore();
+	}
+});
+
+test("backend work and pending input update presentation before any audio track", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => media.stream,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	try {
+		await voice.start();
+		media.channel.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "session.started" }) }));
+		t.receive({
+			type: "voice_event",
+			chatId: "fixture-chat",
+			method: "thread/status/changed",
+			params: { status: { type: "active", activeFlags: [] } },
+		});
+		expect(voice.snapshot.state).toBe("Working");
+		t.receive({
+			type: "voice_event",
+			chatId: "fixture-chat",
+			method: "thread/status/changed",
+			params: { status: { type: "active", activeFlags: ["waitingOnUserInput"] } },
+		});
+		expect(voice.snapshot.state).toBe("Needs input");
+	} finally {
+		voice.dispose();
+		media.restore();
+	}
+});
+
+test.each(["pagehide", "freeze"])("%s retires capture and restoration requires explicit activation", async event => {
+	const media = mediaFixture();
+	const t = transport();
+	const lifecycle = new EventTarget();
+	const voice = new BrowserVoiceClient(
+		t.channel,
+		{ getUserMedia: async () => media.stream, enumerateDevices: async () => [] },
+		[lifecycle],
+	);
+	t.capabilities();
+	try {
+		await voice.start();
+		lifecycle.dispatchEvent(new Event(event));
+		lifecycle.dispatchEvent(new Event("pageshow"));
+		voice.resume();
+		expect(voice.snapshot.active).toBe(false);
+		expect(media.stops()).toBe(1);
+		expect(t.sent.filter(request => request.action === "start")).toHaveLength(1);
+		expect(t.sent.filter(request => request.action === "stop")).toHaveLength(1);
+	} finally {
+		voice.dispose();
+		media.restore();
+	}
+});
+
 function transport() {
 	const sent: VoiceRequest[] = [];
 	let receive: (message: unknown) => void = () => {};

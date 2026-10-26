@@ -193,6 +193,7 @@ export class RemoteSession {
 		() => this.#speechApprovals(),
 		(id, value) => this.#respondSpeech(id, value),
 	);
+	#voiceInteractionSignature?: string;
 	#voiceStartRevision = 0;
 	#voiceClientId = `attachment:${randomUUID()}`;
 	#prestartVoiceStopReported = false;
@@ -326,19 +327,17 @@ export class RemoteSession {
 					const approval = this.#speechApprovals().find(
 						item => item.requestId === request.id && item.eligible && !item.secret,
 					);
-					if (this.#voice?.ownedCall && approval)
-						this.#emit("xcsh/voice/interaction", {
-							requestId: approval.requestId,
-							revision: approval.revision,
-							title: approval.title,
-						});
+					if (this.#voice?.ownedCall && approval) this.#publishVoiceInteraction();
 				},
 				() => {
 					void this.target.abort();
 				},
 			);
 		if (target.userInteractions)
-			this.#unsubscribeInteractionStatus = target.userInteractions.subscribe(() => this.#emitThreadStatus());
+			this.#unsubscribeInteractionStatus = target.userInteractions.subscribe(() => {
+				this.#emitThreadStatus();
+				this.#publishVoiceInteraction();
+			});
 		this.#threadStatus = JSON.stringify(this.#threadStatusValue());
 		this.#unsubscribeDispose = target.addBeforeDisposeHook?.(() => this.close());
 		this.#unsubscribeTitle = subscribeSessionTitle(target.sessionManager, title =>
@@ -1155,6 +1154,7 @@ export class RemoteSession {
 		}
 		if (method === "xcsh/voice/playback") {
 			if (
+				!this.#voice?.active ||
 				!this.#voice?.ownedCall ||
 				typeof params.announcementId !== "string" ||
 				!Number.isSafeInteger(params.announcementRevision)
@@ -1207,6 +1207,7 @@ export class RemoteSession {
 			const voice = new NativeVoice({
 				completedTranscript: (role, text) => {
 					this.#assertCurrent(epoch);
+					if (!voice.active || !lease || !coordinator.owns(lease)) return false;
 					if (role === "assistant") {
 						this.#voiceApprovals.assistantCompleted(text);
 						return false;
@@ -1313,6 +1314,7 @@ export class RemoteSession {
 				// Capture controls and announcement eligibility belong to this admitted call.
 				this.#voiceSpeechMuted = this.#voiceSpeechPaused = false;
 				this.#voiceApprovals.reset();
+				this.#voiceInteractionSignature = undefined;
 				this.#prestartVoiceStopReported = false;
 				this.#voiceHandoffsRetired = false;
 				this.#voiceAdmissionTail = Promise.resolve();
@@ -1352,6 +1354,7 @@ export class RemoteSession {
 				throw error;
 			}
 			this.#assertCurrent(epoch);
+			this.#publishVoiceInteraction();
 			return {};
 		}
 		if (method === "thread/realtime/appendText" || method === "thread/realtime/appendSpeech") {
@@ -1837,6 +1840,28 @@ export class RemoteSession {
 			throw new ProtocolError(-32602, "The terminal cannot change collaboration mode");
 		await this.#effect(epoch, () => this.controls.setCollaborationMode!(selection.mode));
 		this.#applyEffort(selection.reasoningEffort);
+	}
+	#publishVoiceInteraction(): void {
+		if (
+			this.#disposed ||
+			this.#suspended ||
+			this.#boundId !== this.target.sessionId ||
+			!this.#voice?.active ||
+			!this.#voice.ownedCall
+		)
+			return;
+		const current = this.#speechApprovals();
+		this.#emit("xcsh/voice/interactionState", { waiting: current.length > 0 });
+		const request = current.length === 1 && current[0]?.eligible && !current[0].secret ? current[0] : undefined;
+		const signature = request ? createHash("sha256").update(JSON.stringify(request)).digest("hex") : undefined;
+		if (signature === this.#voiceInteractionSignature) return;
+		this.#voiceInteractionSignature = signature;
+		if (request)
+			this.#emit("xcsh/voice/interaction", {
+				requestId: request.requestId,
+				revision: request.revision,
+				title: request.title,
+			});
 	}
 	#speechApprovals(): VoiceApproval[] {
 		const pending = this.target.userInteractions?.pending() ?? [];

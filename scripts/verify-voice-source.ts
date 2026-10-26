@@ -25,6 +25,8 @@ export async function verifyVoiceSource(
 	const status = await git([
 		"status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ".",
 		":(exclude)voice-qualified-artifacts", ":(exclude)packages/coding-agent/binaries",
+		":(exclude)packages/coding-agent/src/internal-urls/.documentation-generated/documentation-index.sqlite.gz",
+		":(exclude)packages/coding-agent/src/internal-urls/.documentation-generated/terraform/terraform-documentation.sqlite.gz",
 	]);
 	if (status.length) throw new Error("A clean committed source tree is required for qualification");
 }

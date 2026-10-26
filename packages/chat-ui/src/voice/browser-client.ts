@@ -22,6 +22,7 @@ export class BrowserVoiceClient {
 	#snapshot: BrowserVoiceSnapshot = { available: false, active: false, state: "Listening" };
 	#listeners = new Set<(snapshot: BrowserVoiceSnapshot) => void>();
 	#unsubscribe: () => void;
+	#unsubscribeSuspension: () => void;
 	#peer?: RTCPeerConnection;
 	#microphone?: MediaStream;
 	#channel?: RTCDataChannel;
@@ -41,6 +42,7 @@ export class BrowserVoiceClient {
 	#playbackQuietSince?: number;
 	#working = false;
 	#needsInput = false;
+	#pendingVoiceInput = false;
 	#closeTimer?: ReturnType<typeof setTimeout>;
 	#connectTimer?: ReturnType<typeof setTimeout>;
 	constructor(
@@ -49,7 +51,21 @@ export class BrowserVoiceClient {
 			getUserMedia: constraints => navigator.mediaDevices.getUserMedia(constraints),
 			enumerateDevices: () => navigator.mediaDevices.enumerateDevices(),
 		},
+		suspensionTargets: readonly EventTarget[] = [
+			...(typeof window === "undefined" ? [] : [window]),
+			...(typeof document === "undefined" ? [] : [document]),
+		],
 	) {
+		const suspend = () => {
+			if (this.#snapshot.active)
+				this.#fail("Voice suspended. Check the pending call, then select Start to activate audio again.");
+		};
+		for (const target of suspensionTargets)
+			for (const event of ["pagehide", "freeze"]) target.addEventListener(event, suspend);
+		this.#unsubscribeSuspension = () => {
+			for (const target of suspensionTargets)
+				for (const event of ["pagehide", "freeze"]) target.removeEventListener(event, suspend);
+		};
 		this.#unsubscribe = transport.onMessage(message => {
 			if (isVoiceFrame(message)) this.#event(message);
 		});
@@ -94,6 +110,19 @@ export class BrowserVoiceClient {
 			...extra,
 		});
 	}
+	#presentState(speaking = this.#snapshot.state === "Speaking"): void {
+		if (["Connecting", "Closing", "Error"].includes(this.#snapshot.state)) return;
+		const state: VoiceState = this.#muted
+			? "Muted"
+			: speaking && !this.#paused && !this.#interrupted
+				? "Speaking"
+				: this.#needsInput || this.#pendingVoiceInput
+					? "Needs input"
+					: this.#working
+						? "Working"
+						: "Listening";
+		if (state !== this.#snapshot.state) this.#update({ state });
+	}
 	async start(takeover = false): Promise<void> {
 		if (this.#disposed || this.#snapshot.active || !this.#snapshot.available || !this.#snapshot.chatId) return;
 		const generation = ++this.#generation;
@@ -120,6 +149,7 @@ export class BrowserVoiceClient {
 			this.#peer = peer;
 			const audio = new Audio();
 			audio.autoplay = true;
+			audio.muted = this.#paused || this.#interrupted;
 			this.#audio = audio;
 			if (this.#selectedDevices.speaker) await audio.setSinkId(this.#selectedDevices.speaker);
 			if (generation !== this.#generation) return;
@@ -134,7 +164,10 @@ export class BrowserVoiceClient {
 				if (generation === this.#generation && ["failed", "disconnected"].includes(peer.connectionState))
 					this.#fail("Voice disconnected. Activate again after checking the pending call.");
 			});
-			for (const track of microphone.getAudioTracks()) peer.addTrack(track, microphone);
+			for (const track of microphone.getAudioTracks()) {
+				track.enabled = !this.#muted;
+				peer.addTrack(track, microphone);
+			}
 			const channel = peer.createDataChannel("oai-events");
 			this.#channel = channel;
 			channel.addEventListener("close", () => {
@@ -148,7 +181,10 @@ export class BrowserVoiceClient {
 					const value = JSON.parse(event.data);
 					if (value.type === "session.started") {
 						clearTimeout(this.#connectTimer);
-						this.#update({ state: "Listening" });
+						this.#update({ state: this.#muted ? "Muted" : "Listening" });
+						this.#presentState(false);
+						if (this.#muted) this.#send("mute");
+						if (this.#paused) this.#send("pause");
 					} else if (value.type === "session.closed") {
 						const seconds = value.usage?.seconds;
 						const confirmed =
@@ -211,6 +247,15 @@ export class BrowserVoiceClient {
 			return;
 		}
 		if (frame.chatId !== this.#snapshot.chatId) return;
+		if (frame.method === "xcsh/voice/interactionState") {
+			this.#pendingVoiceInput = frame.params.waiting === true;
+			if (!this.#pendingVoiceInput) {
+				this.#announcement = undefined;
+				this.#captionCompleted = this.#playedOutput = false;
+			}
+			this.#presentState();
+			return;
+		}
 		if (
 			frame.method === "xcsh/voice/interaction" &&
 			typeof frame.params.requestId === "string" &&
@@ -270,6 +315,7 @@ export class BrowserVoiceClient {
 			const status = frame.params.status as { type?: string; activeFlags?: string[] } | undefined;
 			this.#working = status?.type === "active";
 			this.#needsInput = status?.activeFlags?.includes("waitingOnUserInput") === true;
+			this.#presentState();
 		}
 	}
 	#measurePlayback(stream: MediaStream, generation: number): void {
@@ -293,7 +339,12 @@ export class BrowserVoiceClient {
 					}
 				}
 			}
-			const speaking = audible && !this.#audio?.muted && !this.#audio?.paused && context.state === "running";
+			const outputReady = !this.#audio?.muted && !this.#audio?.paused && context.state === "running";
+			const speaking = audible && outputReady;
+			if (!outputReady) {
+				this.#playedOutput = this.#captionCompleted = false;
+				this.#playbackQuietSince = undefined;
+			}
 			if (speaking) {
 				this.#playedOutput = true;
 				this.#playbackQuietSince = undefined;
@@ -301,6 +352,9 @@ export class BrowserVoiceClient {
 				this.#playedOutput &&
 				this.#captionCompleted &&
 				this.#announcement &&
+				outputReady &&
+				!audible &&
+				this.#snapshot.state !== "Closing" &&
 				!this.#paused &&
 				!this.#interrupted
 			) {
@@ -314,38 +368,35 @@ export class BrowserVoiceClient {
 					this.#playedOutput = false;
 				}
 			}
-			if (!["Connecting", "Closing", "Error"].includes(this.#snapshot.state)) {
-				const state: VoiceState = this.#muted
-					? "Muted"
-					: speaking
-						? "Speaking"
-						: this.#needsInput
-							? "Needs input"
-							: this.#working
-								? "Working"
-								: "Listening";
-				if (state !== this.#snapshot.state) this.#update({ state });
-			}
+			this.#presentState(speaking);
 			this.#animation = requestAnimationFrame(tick);
 		};
 		tick();
 	}
 	mute(muted: boolean, notify = true): void {
+		if (this.#snapshot.state === "Closing") return;
 		if (notify) this.#send(muted ? "mute" : "unmute");
 		this.#muted = muted;
 		this.#microphone?.getAudioTracks().forEach(track => {
 			track.enabled = !muted;
 		});
 		this.#update({ state: muted ? "Muted" : "Listening" });
+		this.#presentState(false);
 	}
 	pause(notify = true): void {
+		if (this.#snapshot.state === "Closing") return;
 		if (notify) this.#send("pause");
 		this.#captionCompleted = this.#playedOutput = false;
 		this.#paused = true;
 		if (this.#audio) this.#audio.muted = true;
-		this.#update({ state: "Listening", message: "Speech paused. Say resume or select Resume." });
+		this.#update({
+			state: this.#muted ? "Muted" : "Listening",
+			message: "Speech paused. Say resume or select Resume.",
+		});
+		this.#presentState(false);
 	}
 	resume(notify = true): void {
+		if (this.#snapshot.state === "Closing") return;
 		if (notify) this.#send("resume");
 		this.#paused = false;
 		if (this.#audio) {
@@ -354,14 +405,17 @@ export class BrowserVoiceClient {
 		}
 		void this.#context?.resume();
 		this.#update({ message: undefined });
+		this.#presentState(false);
 	}
 	interrupt(notify = true): void {
+		if (this.#snapshot.state === "Closing") return;
 		if (notify) this.#send("interrupt");
 		this.#captionCompleted = this.#playedOutput = false;
 		this.#interrupted = true;
 		this.#quietSince = undefined;
 		if (this.#audio) this.#audio.muted = true;
-		this.#update({ state: "Listening" });
+		this.#update({ state: this.#muted ? "Muted" : "Listening" });
+		this.#presentState(false);
 	}
 	companion(): void {
 		this.#send("companion");
@@ -377,6 +431,8 @@ export class BrowserVoiceClient {
 			return;
 		}
 		this.#update({ state: "Closing" });
+		if (this.#audio) this.#audio.muted = true;
+		this.#playedOutput = this.#captionCompleted = false;
 		this.#microphone?.getTracks().forEach(track => {
 			track.enabled = false;
 		});
@@ -420,6 +476,7 @@ export class BrowserVoiceClient {
 		this.stop();
 		this.#cleanup();
 		this.#unsubscribe();
+		this.#unsubscribeSuspension();
 		this.#listeners.clear();
 	}
 }
