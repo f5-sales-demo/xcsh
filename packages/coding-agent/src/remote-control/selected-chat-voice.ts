@@ -23,6 +23,7 @@ export class SelectedChatVoice {
 	#disposed = false;
 	#clients = new Map<string, SelectedChatVoice>();
 	#native?: NativeVoiceAudio;
+	#nativeStarting = false;
 	#nativePreferences: Readonly<AudioDevicePreferences> = {};
 	#nativeGeneration = 0;
 	#nativeRequest?: string;
@@ -119,106 +120,117 @@ export class SelectedChatVoice {
 		return nativeVoiceDevices({ packageDir: directory, buildCommit: BUILD_INFO.commit, manifestSha256: manifest });
 	}
 	selectNativeDevices(catalog: AudioDeviceCatalog, preferences: AudioDevicePreferences): void {
-		if (this.#disposed || this.#native) throw new Error("End native voice before selecting devices");
+		if (this.#disposed || this.#native || this.#nativeStarting)
+			throw new Error("End native voice before selecting devices");
 		this.#nativePreferences = validateAudioPreferences(catalog, preferences);
 	}
 	async startNative(takeover = false): Promise<void> {
-		if (this.#disposed || this.#native) throw new Error("Audio is already active");
+		if (this.#disposed || this.#native || this.#nativeStarting) throw new Error("Audio is already active");
 		if (!["darwin", "linux"].includes(process.platform) || process.env.SSH_CONNECTION)
 			throw new Error("Use an explicitly activated companion on this terminal");
 		const directory = process.env.XCSH_VOICE_PACKAGE_DIR,
 			manifest = process.env.XCSH_VOICE_PACKAGE_SHA256;
 		if (BUILD_INFO.dirty || !directory || !manifest)
 			throw new Error("An immutable qualified native voice package is required");
-		const chatId = this.target.sessionId,
-			generation = ++this.#nativeGeneration;
-		const revision = voiceCoordinatorFor(this.target, chatId).snapshot?.revision;
-		const native = await NativeVoiceAudio.start({
-			packageDir: directory,
-			buildCommit: BUILD_INFO.commit,
-			manifestSha256: manifest,
-			...this.#nativePreferences,
-		});
-		if (generation !== this.#nativeGeneration || this.#disposed || this.target.sessionId !== chatId) {
-			native.stop();
-			return;
-		}
-		this.#native = native;
-		native.mute(true);
-		native.suppressOutput(true);
-		this.#nativeRequest = randomUUID();
-		this.#nativeAnswerFailed = false;
-		this.#nativeAdmitted = false;
-		this.#nativeAnswer = undefined;
+		this.#nativeStarting = true;
+		this.#nativePaused = this.#nativeInterrupted = false;
+		this.#nativeAnnouncement = undefined;
+		this.#nativeCaptionCompleted = this.#nativePlayed = false;
+		this.#nativeQuietSince = undefined;
+		this.#nativeState = undefined;
 		try {
-			await this.handle({
-				type: "voice_request",
-				action: "start",
-				requestId: this.#nativeRequest,
-				chatId,
-				sdp: native.offerSdp,
-				...(takeover && revision !== undefined ? { takeoverRevision: revision } : {}),
+			const chatId = this.target.sessionId,
+				generation = ++this.#nativeGeneration;
+			const revision = voiceCoordinatorFor(this.target, chatId).snapshot?.revision;
+			const native = await NativeVoiceAudio.start({
+				packageDir: directory,
+				buildCommit: BUILD_INFO.commit,
+				manifestSha256: manifest,
+				...this.#nativePreferences,
 			});
-			if (!this.#nativeAdmitted || !this.#nativeAnswer || this.#nativeAnswerFailed)
-				throw new Error("Native call admission failed");
-			await this.#nativeAnswer;
-			if (generation !== this.#nativeGeneration || this.target.sessionId !== chatId) {
+			if (generation !== this.#nativeGeneration || this.#disposed || this.target.sessionId !== chatId) {
 				native.stop();
 				return;
 			}
-			native.mute(false);
-			native.suppressOutput(false);
-			this.#nativePoll = setInterval(() => {
-				const error = native.takeError();
-				if (error) {
-					this.#emit({
-						type: "voice_event",
-						chatId,
-						method: "xcsh/voice/error",
-						params: { message: "Native audio stopped" },
-					});
-					void this.handle({ type: "voice_request", action: "stop", requestId: randomUUID(), chatId });
+			this.#native = native;
+			native.mute(true);
+			native.suppressOutput(true);
+			this.#nativeRequest = randomUUID();
+			this.#nativeAnswerFailed = false;
+			this.#nativeAdmitted = false;
+			this.#nativeAnswer = undefined;
+			try {
+				await this.handle({
+					type: "voice_request",
+					action: "start",
+					requestId: this.#nativeRequest,
+					chatId,
+					sdp: native.offerSdp,
+					...(takeover && revision !== undefined ? { takeoverRevision: revision } : {}),
+				});
+				if (!this.#nativeAdmitted || !this.#nativeAnswer || this.#nativeAnswerFailed)
+					throw new Error("Native call admission failed");
+				await this.#nativeAnswer;
+				if (generation !== this.#nativeGeneration || this.target.sessionId !== chatId) {
+					native.stop();
 					return;
 				}
-				const audio = native.audioState();
-				const state =
-					audio.applied && audio.microphoneMuted
-						? "Muted"
-						: audio.applied && !audio.speakerSuppressed && audio.speakerPeak > 100
-							? "Speaking"
-							: this.#nativeBackendState;
-				if (state !== this.#nativeState) {
-					this.#nativeState = state;
-					this.sink({ type: "voice_event", chatId, method: "xcsh/voice/audioState", params: { state } });
-				}
-				if (audio.applied && !audio.speakerSuppressed && audio.speakerPeak > 100) {
-					this.#nativePlayed = true;
-					this.#nativeQuietSince = undefined;
-				} else if (
-					this.#nativePlayed &&
-					this.#nativeCaptionCompleted &&
-					this.#nativeAnnouncement &&
-					!this.#nativePaused &&
-					!this.#nativeInterrupted
-				) {
-					this.#nativeQuietSince ??= Date.now();
-					if (Date.now() - this.#nativeQuietSince >= 500) {
-						void this.handle({
-							type: "voice_request",
-							action: "playback",
-							requestId: randomUUID(),
+				native.mute(false);
+				native.suppressOutput(false);
+				this.#nativePoll = setInterval(() => {
+					const error = native.takeError();
+					if (error) {
+						this.#emit({
+							type: "voice_event",
 							chatId,
-							announcementId: this.#nativeAnnouncement.id,
-							announcementRevision: this.#nativeAnnouncement.revision,
+							method: "xcsh/voice/error",
+							params: { message: "Native audio stopped" },
 						});
-						this.#nativeAnnouncement = undefined;
-						this.#nativePlayed = false;
+						void this.handle({ type: "voice_request", action: "stop", requestId: randomUUID(), chatId });
+						return;
 					}
-				}
-			}, 50);
-		} catch {
-			this.#stopNative();
-			throw new Error("Native voice could not connect");
+					const audio = native.audioState();
+					const state =
+						audio.applied && audio.microphoneMuted
+							? "Muted"
+							: audio.applied && !audio.speakerSuppressed && audio.speakerPeak > 100
+								? "Speaking"
+								: this.#nativeBackendState;
+					if (state !== this.#nativeState) {
+						this.#nativeState = state;
+						this.sink({ type: "voice_event", chatId, method: "xcsh/voice/audioState", params: { state } });
+					}
+					if (audio.applied && !audio.speakerSuppressed && audio.speakerPeak > 100) {
+						this.#nativePlayed = true;
+						this.#nativeQuietSince = undefined;
+					} else if (
+						this.#nativePlayed &&
+						this.#nativeCaptionCompleted &&
+						this.#nativeAnnouncement &&
+						!this.#nativePaused &&
+						!this.#nativeInterrupted
+					) {
+						this.#nativeQuietSince ??= Date.now();
+						if (Date.now() - this.#nativeQuietSince >= 500) {
+							void this.handle({
+								type: "voice_request",
+								action: "playback",
+								requestId: randomUUID(),
+								chatId,
+								announcementId: this.#nativeAnnouncement.id,
+								announcementRevision: this.#nativeAnnouncement.revision,
+							});
+							this.#nativeAnnouncement = undefined;
+							this.#nativePlayed = false;
+						}
+					}
+				}, 50);
+			} catch {
+				this.#stopNative();
+				throw new Error("Native voice could not connect");
+			}
+		} finally {
+			this.#nativeStarting = false;
 		}
 	}
 	async handle(request: VoiceRequest): Promise<void> {

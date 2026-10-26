@@ -29,6 +29,8 @@ export class BrowserVoiceClient {
 	#context?: AudioContext;
 	#animation?: number;
 	#generation = 0;
+	#disposed = false;
+	#creationSubmitted = false;
 	#paused = false;
 	#muted = false;
 	#interrupted = false;
@@ -93,8 +95,9 @@ export class BrowserVoiceClient {
 		});
 	}
 	async start(takeover = false): Promise<void> {
-		if (this.#snapshot.active || !this.#snapshot.available || !this.#snapshot.chatId) return;
+		if (this.#disposed || this.#snapshot.active || !this.#snapshot.available || !this.#snapshot.chatId) return;
 		const generation = ++this.#generation;
+		this.#creationSubmitted = false;
 		this.#paused = this.#muted = this.#interrupted = false;
 		this.#update({ active: true, state: "Connecting", message: undefined, closureConfirmed: undefined });
 		this.#connectTimer = setTimeout(() => {
@@ -134,6 +137,10 @@ export class BrowserVoiceClient {
 			for (const track of microphone.getAudioTracks()) peer.addTrack(track, microphone);
 			const channel = peer.createDataChannel("oai-events");
 			this.#channel = channel;
+			channel.addEventListener("close", () => {
+				if (generation === this.#generation)
+					this.#fail("Voice signaling disconnected. Check the pending call before activating again.");
+			});
 			channel.addEventListener("message", event => {
 				if (generation !== this.#generation || typeof event.data !== "string" || event.data.length > 1_048_576)
 					return;
@@ -179,6 +186,8 @@ export class BrowserVoiceClient {
 			if (generation !== this.#generation) return;
 			const sdp = peer.localDescription?.sdp;
 			if (!sdp) throw new Error("Missing SDP");
+			// From this point, creation may have reached the owner even if signaling fails.
+			this.#creationSubmitted = true;
 			this.#send("start", { sdp, ...(takeover ? { takeoverRevision: this.#snapshot.ownerRevision } : {}) });
 		} catch {
 			if (generation === this.#generation)
@@ -186,8 +195,14 @@ export class BrowserVoiceClient {
 		}
 	}
 	#event(frame: VoiceFrame): void {
+		if (this.#disposed) return;
 		if (frame.clientId !== undefined && frame.clientId !== this.#clientId) return;
 		if (frame.method === "xcsh/voice/capabilities") {
+			if (this.#snapshot.chatId !== undefined && frame.chatId !== this.#snapshot.chatId) {
+				this.stop();
+				this.#cleanup();
+				this.#update({ state: "Listening", caption: undefined, companionUrl: undefined, message: undefined });
+			}
 			this.#update({
 				available: frame.params.model === "gpt-live-1" && frame.params.transport === "webrtc",
 				chatId: frame.chatId,
@@ -207,6 +222,14 @@ export class BrowserVoiceClient {
 		}
 		if (frame.method === "thread/realtime/transcript/done" && frame.params.role === "assistant")
 			this.#captionCompleted = true;
+		if (
+			frame.method === "thread/realtime/transcript/done" &&
+			frame.params.role === "user" &&
+			this.#paused &&
+			typeof frame.params.text === "string" &&
+			/^resume[.!]?$/i.test(frame.params.text.trim())
+		)
+			this.resume(false);
 
 		if (frame.method === "xcsh/voice/control") {
 			if (frame.params.action === "mute") this.mute(true, false);
@@ -348,6 +371,11 @@ export class BrowserVoiceClient {
 	}
 	stop(): void {
 		if (!this.#snapshot.active) return;
+		if (!this.#creationSubmitted) {
+			this.#cleanup();
+			this.#update({ state: "Listening", message: undefined });
+			return;
+		}
 		this.#update({ state: "Closing" });
 		this.#microphone?.getTracks().forEach(track => {
 			track.enabled = false;
@@ -360,12 +388,16 @@ export class BrowserVoiceClient {
 		}, 20_000);
 	}
 	#fail(message: string): void {
-		if (this.#snapshot.active && this.#snapshot.chatId) this.#send("stop");
+		if (this.#creationSubmitted && this.#snapshot.active && this.#snapshot.chatId) this.#send("stop");
 		this.#cleanup();
 		this.#update({ state: "Error", message });
 	}
 	#cleanup(): void {
 		this.#generation++;
+		this.#creationSubmitted = false;
+		this.#announcement = undefined;
+		this.#captionCompleted = this.#playedOutput = false;
+		this.#playbackQuietSince = undefined;
 		clearTimeout(this.#closeTimer);
 		clearTimeout(this.#connectTimer);
 		if (this.#animation !== undefined) cancelAnimationFrame(this.#animation);
@@ -384,6 +416,7 @@ export class BrowserVoiceClient {
 		this.#update({ active: false });
 	}
 	dispose(): void {
+		this.#disposed = true;
 		this.stop();
 		this.#cleanup();
 		this.#unsubscribe();

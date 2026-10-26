@@ -88,6 +88,58 @@ test("permission rejection does not automatically retry or choose another captur
 	voice.dispose();
 });
 
+test("ending voice cancels pending permission without submitting a call", async () => {
+	const t = transport();
+	const permission = Promise.withResolvers<MediaStream>();
+	let stops = 0;
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: () => permission.promise,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	const pending = voice.start();
+	voice.stop();
+	permission.resolve({ getTracks: () => [{ stop: () => stops++ }] } as unknown as MediaStream);
+	try {
+		await pending;
+		expect(voice.snapshot.active).toBe(false);
+		expect(voice.snapshot.state).toBe("Listening");
+		expect(stops).toBe(1);
+		expect(t.sent.map(request => request.action)).toEqual(["capabilities"]);
+	} finally {
+		voice.dispose();
+	}
+});
+
+test("changing selected chat cancels pending capture and requires fresh activation", async () => {
+	const t = transport();
+	const permission = Promise.withResolvers<MediaStream>();
+	let stops = 0;
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: () => permission.promise,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	const pending = voice.start();
+	t.receive({
+		type: "voice_event",
+		chatId: "next-chat",
+		method: "xcsh/voice/capabilities",
+		params: { model: "gpt-live-1", transport: "webrtc" },
+	});
+	permission.resolve({ getTracks: () => [{ stop: () => stops++ }] } as unknown as MediaStream);
+	try {
+		await pending;
+		expect(voice.snapshot.chatId).toBe("next-chat");
+		expect(voice.snapshot.active).toBe(false);
+		expect(voice.snapshot.state).toBe("Listening");
+		expect(stops).toBe(1);
+		expect(t.sent.some(request => request.action === "start")).toBe(false);
+	} finally {
+		voice.dispose();
+	}
+});
+
 test("another panel's signaling cannot activate or change this audio client", () => {
 	const t = transport();
 	const voice = new BrowserVoiceClient(t.channel);
@@ -100,6 +152,29 @@ test("another panel's signaling cannot activate or change this audio client", ()
 	});
 	expect(voice.snapshot.available).toBe(false);
 	expect(voice.snapshot.chatId).toBeUndefined();
+	voice.dispose();
+});
+
+test("only a completed caller resume utterance resumes paused speech", () => {
+	const t = transport();
+	const voice = new BrowserVoiceClient(t.channel);
+	t.capabilities();
+	voice.pause();
+	for (const [method, role] of [
+		["thread/realtime/transcript/delta", "user"],
+		["thread/realtime/transcript/done", "assistant"],
+	]) {
+		t.receive({ type: "voice_event", chatId: "fixture-chat", method, params: { role, text: "resume" } });
+		expect(voice.snapshot.message).toContain("paused");
+	}
+	t.receive({
+		type: "voice_event",
+		chatId: "fixture-chat",
+		method: "thread/realtime/transcript/done",
+		params: { role: "user", text: " Resume. " },
+	});
+	expect(voice.snapshot.message).toBeUndefined();
+	expect(t.sent.map(request => request.action)).toEqual(["capabilities", "pause"]);
 	voice.dispose();
 });
 
@@ -134,4 +209,60 @@ test("connecting audio cannot change its selected capture device", async () => {
 	voice.dispose();
 	permission.reject(new Error("fixture ended"));
 	await pending;
+});
+
+test("data channel loss stops capture, while confirmed closure avoids a second stop", async () => {
+	const originalPeer = globalThis.RTCPeerConnection;
+	const originalAudio = globalThis.Audio;
+	const channel = new EventTarget();
+	Object.assign(channel, { close: () => channel.dispatchEvent(new Event("close")) });
+	class FixturePeer extends EventTarget {
+		iceGatheringState = "complete";
+		localDescription = { sdp: "v=0\r\nfixture" };
+		addTrack() {}
+		createDataChannel() {
+			return channel;
+		}
+		async createOffer() {
+			return this.localDescription;
+		}
+		async setLocalDescription() {}
+		close() {}
+	}
+	globalThis.RTCPeerConnection = FixturePeer as unknown as typeof RTCPeerConnection;
+	globalThis.Audio = class {} as unknown as typeof Audio;
+	try {
+		for (const confirmed of [false, true]) {
+			const t = transport();
+			let stops = 0;
+			const track = { stop: () => stops++, enabled: true };
+			const voice = new BrowserVoiceClient(t.channel, {
+				getUserMedia: async () =>
+					({ getTracks: () => [track], getAudioTracks: () => [track] }) as unknown as MediaStream,
+				enumerateDevices: async () => [],
+			});
+			t.capabilities();
+			try {
+				await voice.start();
+				expect(t.sent.map(request => request.action)).toEqual(["capabilities", "start"]);
+				if (confirmed)
+					channel.dispatchEvent(
+						new MessageEvent("message", {
+							data: JSON.stringify({ type: "session.closed", usage: { seconds: 1 } }),
+						}),
+					);
+				else channel.dispatchEvent(new Event("close"));
+				expect(voice.snapshot.active).toBe(false);
+				expect(voice.snapshot.state === "Error").toBe(!confirmed);
+				expect(voice.snapshot.closureConfirmed).toBe(confirmed ? true : undefined);
+				expect(stops).toBe(1);
+				expect(t.sent.map(request => request.action)).toEqual(["capabilities", "start", "stop"]);
+			} finally {
+				voice.dispose();
+			}
+		}
+	} finally {
+		globalThis.RTCPeerConnection = originalPeer;
+		globalThis.Audio = originalAudio;
+	}
 });
