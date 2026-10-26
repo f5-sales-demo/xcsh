@@ -171,7 +171,8 @@ the attachment route. The canonical browser and backend share this validator.
 Data-channel closure requests owner finalization once; it cannot confirm ownership
 release. Clients retain muted media until the owner completes its bounded drain.
 Late startup events or data-channel loss during Closing cannot reactivate capture
-or discard media that the owner still needs.
+or discard media that the owner still needs. If the bounded drain times out, local
+media is released and call ownership remains pending until explicit reconciliation.
 
 Reconciliation keeps existing backend work,
 the selected model, permissions and registered host tools with AgentSession.

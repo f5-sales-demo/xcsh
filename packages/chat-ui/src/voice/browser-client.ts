@@ -482,7 +482,7 @@ export class BrowserVoiceClient {
 		});
 		clearTimeout(this.#closeTimer);
 		this.#closeTimer = setTimeout(() => {
-			this.#update({ closureConfirmed: false, message: "Provider closure is unconfirmed." });
+			this.#update({ closureConfirmed: false, pendingCall: true, message: "Provider closure is unconfirmed." });
 			this.#cleanup();
 		}, timeoutMs);
 	}

@@ -602,3 +602,37 @@ test("discovery of a persisted call offers reconciliation before microphone acti
 		voice.dispose();
 	}
 });
+
+test("closing timeout keeps unknown call ownership pending after local media cleanup", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	const originalTimeout = globalThis.setTimeout;
+	let expire = () => {};
+	globalThis.setTimeout = ((callback: () => void, milliseconds?: number, ...args: unknown[]) => {
+		if (milliseconds === 35000) {
+			expire = callback;
+			return originalTimeout(() => {}, milliseconds);
+		}
+		return originalTimeout(callback, milliseconds, ...args);
+	}) as typeof setTimeout;
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => media.stream,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	try {
+		await voice.start();
+		voice.stop();
+		expire();
+		expect(voice.snapshot.active).toBe(false);
+		expect(voice.snapshot.closureConfirmed).toBe(false);
+		expect(voice.snapshot.pendingCall).toBe(true);
+		expect(media.stops()).toBe(1);
+		await voice.start();
+		expect(t.sent.filter(request => request.action === "start")).toHaveLength(1);
+	} finally {
+		voice.dispose();
+		globalThis.setTimeout = originalTimeout;
+		media.restore();
+	}
+});
