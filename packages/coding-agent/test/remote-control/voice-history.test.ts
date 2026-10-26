@@ -220,6 +220,8 @@ test.each(["existingCall", "webrtc"] as const)(
 				);
 				return {
 					send: data => {
+						if (JSON.parse(data).type === "session.close")
+							handlers.message(JSON.stringify({ type: "session.closed" }));
 						if (JSON.parse(data).type === "session.instructions.append")
 							queueMicrotask(() =>
 								handlers.message(
