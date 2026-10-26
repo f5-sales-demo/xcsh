@@ -59,6 +59,14 @@ Mute disables input; pause suppresses output while preserving input for resume; 
 suppresses current playback while backend work continues. Stop ends voice and preserves
 chat/tasks. Backend cancellation uses the existing turn owner. Playback-based Speaking and
 interaction announcement receipts require further synthetic calibration and physical proof.
+
+Owned-call Stop and takeover retain muted media while graceful close and any
+known-call reconciliation drain. Pending sideband setup is cancelled before a
+replacement attachment; closed notification follows the complete bounded attempt.
+Browser and native clients display Closing, disable input/output and keep the
+connection alive until that notification. Unconfirmed closure retains ownership.
+A cancelled startup cannot destroy media that is still needed for reconciliation.
+
 While a question, approval or plan remains pending, provider delegation cannot
 replace a completed caller decision. Its interaction owner must resolve the prompt
 before admitting another voice task. Backend work and typed input keep their existing owners.

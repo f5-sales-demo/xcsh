@@ -2,6 +2,49 @@ import { expect, test } from "bun:test";
 import { SelectedChatVoice } from "../../src/remote-control/selected-chat-voice";
 import type { SessionTarget } from "../../src/remote-control/session";
 
+test("a cancelled startup does not publish a media-destroying error during owner closure", async () => {
+	const entered = Promise.withResolvers<void>();
+	const start = Promise.withResolvers<void>();
+	const events: { method: string; params: Record<string, unknown> }[] = [];
+	let receive: (event: { method: string; params: Record<string, unknown> }) => void = () => {};
+	const bridge = new SelectedChatVoice(
+		{ sessionId: "fixture-chat" } as SessionTarget,
+		event => {
+			events.push(event);
+		},
+		() => ({
+			call: async () => {
+				entered.resolve();
+				await start.promise;
+			},
+			subscribe: listener => {
+				receive = listener;
+				return () => {};
+			},
+			close: async () => {},
+		}),
+	);
+	try {
+		const pending = bridge.handle({
+			type: "voice_request",
+			action: "start",
+			requestId: "start-fixture",
+			chatId: "fixture-chat",
+			sdp: "v=0\r\nfixture",
+		});
+		await entered.promise;
+		receive({ method: "xcsh/voice/closing", params: { timeoutMs: 35000 } });
+		start.reject(new Error("Cancelled sideband setup"));
+		await pending;
+		expect(events.some(event => event.method === "xcsh/voice/error")).toBe(false);
+		expect(events).toContainEqual(
+			expect.objectContaining({ method: "xcsh/voice/receipt", params: { accepted: false, cancelled: true } }),
+		);
+	} finally {
+		await bridge.close();
+	}
+});
+
 test("disconnect retires only the selected connection's client adapters", async () => {
 	const closed: string[] = [];
 	let current = "";

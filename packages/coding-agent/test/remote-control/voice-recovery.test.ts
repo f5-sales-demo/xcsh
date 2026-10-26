@@ -342,6 +342,7 @@ test("stopping during a pending recovery handshake closes the late socket withou
 		"thread/realtime/item/started",
 		"thread/realtime/item/completed",
 		"thread/realtime/started",
+		"xcsh/voice/closing",
 		"thread/realtime/item/started",
 		"thread/realtime/item/completed",
 		"thread/realtime/closed",

@@ -31,6 +31,9 @@ export class SelectedChatVoice {
 	#nativeAdmitted = false;
 	#nativeAnswerFailed = false;
 	#nativeState?: string;
+	#nativeClosing = false;
+	#nativeCallAccepted = false;
+	#voiceClosing = false;
 	#nativeBackendState = "Listening";
 	#nativePendingInput = false;
 	#nativeAnswer?: Promise<void>;
@@ -62,6 +65,12 @@ export class SelectedChatVoice {
 		});
 	}
 	#emit(event: VoiceFrame): void {
+		if (event.method === "xcsh/voice/call" && this.#native) this.#nativeCallAccepted = true;
+		if (event.method === "xcsh/voice/closing") {
+			this.#voiceClosing = true;
+			if (this.#native) this.#beginNativeClose();
+		}
+		if (event.method === "thread/realtime/closed") this.#voiceClosing = false;
 		if (event.method === "xcsh/voice/interactionState") this.#nativePendingInput = event.params.waiting === true;
 		if (event.method === "thread/status/changed") {
 			const status = event.params.status as { type?: string; activeFlags?: string[] } | undefined;
@@ -111,7 +120,23 @@ export class SelectedChatVoice {
 			this.#stopNative();
 		this.sink(event);
 	}
+	#beginNativeClose(): void {
+		this.#nativeClosing = true;
+		this.#nativeDesiredMute = this.#nativePaused = true;
+		this.#native?.mute(true);
+		this.#native?.suppressOutput(true);
+		if (this.#nativeState !== "Closing") {
+			this.#nativeState = "Closing";
+			this.sink({
+				type: "voice_event",
+				chatId: this.target.sessionId,
+				method: "xcsh/voice/audioState",
+				params: { state: "Closing" },
+			});
+		}
+	}
 	#stopNative(): void {
+		this.#nativeClosing = this.#nativeCallAccepted = false;
 		this.#nativeGeneration++;
 		clearInterval(this.#nativePoll);
 		this.#native?.stop();
@@ -138,6 +163,7 @@ export class SelectedChatVoice {
 		if (BUILD_INFO.dirty || !directory || !manifest)
 			throw new Error("An immutable qualified native voice package is required");
 		this.#nativeStarting = true;
+		this.#nativeClosing = this.#nativeCallAccepted = false;
 		this.#nativeDesiredMute = false;
 		this.#nativePendingInput = false;
 		this.#nativePaused = this.#nativeInterrupted = false;
@@ -206,8 +232,9 @@ export class SelectedChatVoice {
 						return;
 					}
 					const audio = native.audioState();
-					const state =
-						audio.applied && audio.microphoneMuted
+					const state = this.#nativeClosing
+						? "Closing"
+						: audio.applied && audio.microphoneMuted
 							? "Muted"
 							: audio.applied && !audio.speakerSuppressed && audio.speakerPeak > 100
 								? "Speaking"
@@ -244,7 +271,7 @@ export class SelectedChatVoice {
 					}
 				}, 50);
 			} catch {
-				this.#stopNative();
+				if (!this.#nativeClosing) this.#stopNative();
 				throw new Error("Native voice could not connect");
 			}
 		} finally {
@@ -302,8 +329,15 @@ export class SelectedChatVoice {
 			reply("xcsh/voice/error", { message: "The selected chat changed. Activate voice again." });
 			return;
 		}
-		if (request.action === "stop") this.#stopNative();
+		if (request.action === "stop") {
+			if (this.#nativeCallAccepted) this.#beginNativeClose();
+			else this.#stopNative();
+		}
 		if (["mute", "unmute", "pause", "resume", "interrupt", "devices"].includes(request.action)) {
+			if (this.#nativeClosing) {
+				reply("xcsh/voice/receipt", { accepted: false, message: "Voice is closing" });
+				return;
+			}
 			if (request.action === "mute") this.#nativeDesiredMute = true;
 			if (request.action === "unmute") this.#nativeDesiredMute = false;
 			if (request.action === "pause" || request.action === "interrupt") {
@@ -431,6 +465,10 @@ export class SelectedChatVoice {
 			});
 			reply("xcsh/voice/receipt", { accepted: true });
 		} catch {
+			if (request.action === "start" && this.#voiceClosing) {
+				reply("xcsh/voice/receipt", { accepted: false, cancelled: true });
+				return;
+			}
 			const owner = voiceCoordinatorFor(this.target, chatId).snapshot;
 			reply("xcsh/voice/error", {
 				message: "Voice could not connect. Check the current audio owner and call before trying again.",

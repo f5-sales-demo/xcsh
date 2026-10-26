@@ -97,6 +97,49 @@ test("closing browser voice cannot unmute capture or resume output", async () =>
 	}
 });
 
+test("owner-driven closing disables input without destroying media before finalization", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => media.stream,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	try {
+		await voice.start();
+		t.receive({
+			type: "voice_event",
+			chatId: "fixture-chat",
+			method: "xcsh/voice/closing",
+			params: { timeoutMs: 35000 },
+		});
+		expect(voice.snapshot.state).toBe("Closing");
+		expect(media.track.enabled).toBe(false);
+		expect(media.output()?.muted).toBe(true);
+		expect(media.stops()).toBe(0);
+		voice.resume();
+		voice.mute(false);
+		expect(media.track.enabled).toBe(false);
+		t.receive({
+			type: "voice_event",
+			chatId: "fixture-chat",
+			method: "xcsh/voice/closure",
+			params: { confirmed: true },
+		});
+		t.receive({
+			type: "voice_event",
+			chatId: "fixture-chat",
+			method: "thread/realtime/closed",
+			params: { reason: "requested" },
+		});
+		expect(media.stops()).toBe(1);
+		expect(voice.snapshot.closureConfirmed).toBe(true);
+		expect(t.sent.filter(request => request.action === "stop")).toHaveLength(0);
+	} finally {
+		voice.dispose();
+		media.restore();
+	}
+});
 test("backend work and pending input update presentation before any audio track", async () => {
 	const media = mediaFixture();
 	const t = transport();

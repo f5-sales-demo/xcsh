@@ -590,12 +590,22 @@ export class NativeVoice {
 	get closing(): Promise<void> | undefined {
 		return this.#closing;
 	}
+	#closedReported = false;
+	#reportClosed(reason: string): void {
+		if (this.#closedReported) return;
+		this.#closedReported = true;
+		this.deps.emit("thread/realtime/closed", { reason });
+	}
 	stop(reason = "requested"): Promise<void> {
+		if (this.active)
+			this.deps.emit("xcsh/voice/closing", {
+				timeoutMs: Math.min(60000, 2 * (this.deps.closureTimeoutMs ?? 15000) + 5000),
+			});
 		const closing = this.#stopCore(reason);
 		if (this.#persisted.uncertainCreation || this.#persisted.calls.length) {
 			if (reason !== "requested") return closing;
 			const recovery = closing.then(() => this.#recoverPersisted());
-			this.#closing = recovery.catch(() => {});
+			this.#closing = recovery.catch(() => {}).then(() => this.#reportClosed(reason));
 			return this.#closing;
 		}
 		if (!this.#knownCall || this.#closureConfirmed) return closing;
@@ -627,6 +637,7 @@ export class NativeVoice {
 			})
 			.finally(() => {
 				this.#recovery = undefined;
+				this.#reportClosed(reason);
 			});
 		this.#closing = this.#recovery;
 		return this.#recovery;
@@ -746,7 +757,7 @@ export class NativeVoice {
 		const failed = reason === "failed" || reason === "transportClosed";
 		this.#state = "closed";
 		this.#handoff?.close();
-		if (!this.#ownedCreation) this.#epoch++;
+		if (!this.#ownedCreation || !socket) this.#epoch++;
 		clearTimeout(this.#reconnectTimer);
 		clearInterval(this.#workStatusTimer);
 		this.#outbound = [];
@@ -757,7 +768,7 @@ export class NativeVoice {
 
 		this.#sessionReady?.reject(new Error("Voice stopped during session initialization"));
 		this.#sessionReady = undefined;
-		if (!this.#ownedCreation) this.#abort.abort();
+		if (!this.#ownedCreation || !socket) this.#abort.abort();
 		const endInstructions = this.#modeUpdates
 			.catch(() => {})
 			.then(async () => {
@@ -828,7 +839,7 @@ export class NativeVoice {
 				this.deps.emit("thread/realtime/error", { message: "Could not persist voice history" });
 			})
 			.then(() => {
-				this.deps.emit("thread/realtime/closed", { reason });
+				if (!this.#knownCall || this.#closureConfirmed) this.#reportClosed(reason);
 			});
 		if (this.#started && this.#flushTail) void this.#closing.then(() => this.#flushTranscriptTail()).catch(() => {});
 		return this.#closing;

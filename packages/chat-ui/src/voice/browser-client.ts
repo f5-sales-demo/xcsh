@@ -315,6 +315,14 @@ export class BrowserVoiceClient {
 				this.#update({ companionUrl: url.href });
 			return;
 		}
+		if (frame.method === "xcsh/voice/closing") {
+			const timeout =
+				typeof frame.params.timeoutMs === "number" && Number.isFinite(frame.params.timeoutMs)
+					? frame.params.timeoutMs
+					: 35000;
+			this.#beginClose(Math.max(5000, Math.min(60000, timeout)));
+			return;
+		}
 		if (frame.method === "thread/realtime/sdp" && this.#peer && typeof frame.params.sdp === "string") {
 			const generation = this.#generation;
 			void this.#peer.setRemoteDescription({ type: "answer", sdp: frame.params.sdp }).catch(() => {
@@ -450,18 +458,22 @@ export class BrowserVoiceClient {
 			this.#update({ state: "Listening", message: undefined });
 			return;
 		}
+		this.#beginClose();
+		this.#send("stop", { cleanup });
+	}
+	#beginClose(timeoutMs = 35000): void {
+		clearTimeout(this.#connectTimer);
 		this.#update({ active: true, state: "Closing" });
 		if (this.#audio) this.#audio.muted = true;
 		this.#playedOutput = this.#captionCompleted = false;
 		this.#microphone?.getTracks().forEach(track => {
 			track.enabled = false;
 		});
-		this.#send("stop", { cleanup });
 		clearTimeout(this.#closeTimer);
 		this.#closeTimer = setTimeout(() => {
 			this.#update({ closureConfirmed: false, message: "Provider closure is unconfirmed." });
 			this.#cleanup();
-		}, 20_000);
+		}, timeoutMs);
 	}
 	#fail(message: string): void {
 		const pendingCall = this.#creationSubmitted || this.#snapshot.pendingCall;
