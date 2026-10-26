@@ -83,7 +83,7 @@ export async function startVoiceCompanion(
 				"X-Content-Type-Options": "nosniff",
 				"Permissions-Policy": "microphone=(self)",
 				"Content-Security-Policy":
-					"default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; media-src blob:; frame-ancestors 'none'",
+					"default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; media-src blob:; manifest-src 'self'; frame-ancestors 'none'",
 			};
 			if (url.pathname === "/")
 				return new Response(page, { headers: { ...headers, "Content-Type": "text/html; charset=utf-8" } });

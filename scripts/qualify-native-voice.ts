@@ -30,7 +30,7 @@ async function run(args: string[], name: string): Promise<void> {
 	if ((await child.exited) !== 0) {
 		// Build-only diagnostics contain no provider session or audio capture.
 		// Preserve complete logs privately; expose a bounded compiler finding in CI.
-		if (["native-addon", "release-helper", "application"].includes(name)) {
+		if (["native-addon", "release-helper", "application", "assembly"].includes(name)) {
 			const diagnostics = await Bun.file(join(evidence, `${name}.stderr.private.log`)).text();
 			console.error(diagnostics.split("\n").slice(-24).join("\n"));
 		}
