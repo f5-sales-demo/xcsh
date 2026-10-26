@@ -67,6 +67,7 @@ for (const [path, expected] of Object.entries(references.files)) {
 }
 const apache = await Bun.file(join(import.meta.dir, "../crates/xcsh-voice-host/LICENSE")).bytes();
 licenseInputs.push({ path: "licenses/Apache-2.0.txt", bytes: apache });
+await mkdir(dirname(output), { recursive: true });
 await mkdir(output);
 const voice = join(output, "codex-resources/voice");
 await mkdir(join(voice, "bin"), { recursive: true });
