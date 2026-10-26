@@ -2,11 +2,13 @@ import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { prepareVoiceRuntime } from "./prepare-voice-runtime";
 import { voiceBuildEnvironment } from "./voice-build-environment";
+import { verifyVoiceSource } from "./verify-voice-source";
 const repo = resolve(import.meta.dir, "..");
 const source =
 	Bun.env.GITHUB_SHA ??
 	(await new Response(Bun.spawn(["git", "rev-parse", "HEAD"], { stdout: "pipe" }).stdout).text()).trim();
 if (!/^[0-9a-f]{40}$/.test(source)) throw new Error("Source identity is required");
+await verifyVoiceSource(repo, source);
 const native = await prepareVoiceRuntime(repo);
 const target = `${process.arch === "arm64" ? "aarch64" : "x86_64"}-${process.platform === "darwin" ? "apple-darwin" : "unknown-linux-gnu"}`;
 const evidence = join(
@@ -43,6 +45,7 @@ await run(
 		"scripts/verify-voice-package.test.ts",
 		"scripts/application-build-defines.test.ts",
 		"scripts/voice-build-environment.test.ts",
+		"scripts/verify-voice-source.test.ts",
 	],
 	"assembly-rejections",
 );
@@ -100,4 +103,5 @@ await Bun.write(
 	join(output, "native-verification.json"),
 	await Bun.file(join(evidence, "package-handshake-capture/receipt.json")).text(),
 );
+await verifyVoiceSource(repo, source);
 console.log(JSON.stringify({ source, target, output, packagingChecks: "passed", physicalAcceptance: "untested" }));
