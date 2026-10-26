@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { prepareVoiceRuntime } from "./prepare-voice-runtime";
+import { voiceBuildEnvironment } from "./voice-build-environment";
 const repo = resolve(import.meta.dir, "..");
 const source =
 	Bun.env.GITHUB_SHA ??
@@ -20,7 +21,7 @@ const environment = { ...Bun.env, ...native.environment, STABLE_GIT_COMMIT: sour
 async function run(args: string[], name: string): Promise<void> {
 	const child = Bun.spawn(args, {
 		cwd: repo,
-		env: environment,
+		env: voiceBuildEnvironment(environment, name),
 		stdout: Bun.file(join(evidence, `${name}.private.log`)),
 		stderr: Bun.file(join(evidence, `${name}.stderr.private.log`)),
 	});
@@ -41,6 +42,7 @@ await run(
 		"scripts/assemble-voice-package.test.ts",
 		"scripts/verify-voice-package.test.ts",
 		"scripts/application-build-defines.test.ts",
+		"scripts/voice-build-environment.test.ts",
 	],
 	"assembly-rejections",
 );

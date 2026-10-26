@@ -30,3 +30,10 @@ Current Ubuntu synthetic checks: 57 helper unit tests, 3 lifecycle tests, an
 explicit relocated-runtime test and 3 installed-client tests passed. Hardware
 permission/audio tests and immutable Mac/Linux application packaging remain
 separate requirements. Failed TCP and Clippy logs remain private.
+
+SDK loader paths apply only to native helper test/build and pre-assembly execution.
+Application builds, native addon readiness, companion generation and packaged
+verification exclude these paths while retaining explicit pkg-config and linker
+inputs. A preserved Mac CI failure showed SDK libintl shadowing Homebrew Git
+during source fingerprinting. This environment adaptation retains the original
+reference and requires fresh Mac CI qualification; Linux success does not qualify it.
