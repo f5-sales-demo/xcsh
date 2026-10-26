@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile, realpath } from "node:fs/promises";
-import { dirname, join, posix, resolve } from "node:path";
+import { basename, dirname, join, posix, resolve } from "node:path";
 import { mkdir } from "node:fs/promises";
 import references from "./voice-runtime-reference.json";
 
@@ -16,7 +16,8 @@ export async function voiceInputBytes(
 	const maximum = 64 * 1024 * 1024;
 	let bytes: Uint8Array;
 	if (provided) {
-		const file = resolve(provided);
+		const requested = resolve(provided);
+		const file = join(await realpath(dirname(requested)), basename(requested));
 		const info = await lstat(file);
 		if (!info.isFile() || info.size > maximum || (await realpath(file)) !== file)
 			throw new Error(`Invalid native input file: ${label}`);

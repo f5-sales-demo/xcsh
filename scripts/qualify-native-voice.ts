@@ -29,11 +29,16 @@ async function run(args: string[], name: string): Promise<void> {
 		stderr: Bun.file(join(evidence, `${name}.stderr.private.log`)),
 	});
 	if ((await child.exited) !== 0) {
-		// Build-only diagnostics contain no provider session or audio capture.
-		// Preserve complete logs privately; expose a bounded compiler finding in CI.
-		if (["native-addon", "release-helper", "application", "assembly"].includes(name)) {
+		// Build and assembly-fixture diagnostics contain no provider session or audio capture.
+		// Preserve complete logs privately; expose a bounded failure finding in CI.
+		if (["assembly-rejections", "native-addon", "release-helper", "application", "assembly"].includes(name)) {
 			const diagnostics = await Bun.file(join(evidence, `${name}.stderr.private.log`)).text();
-			console.error(diagnostics.split("\n").slice(-24).join("\n"));
+			const lines = diagnostics.split("\n");
+			if (name === "assembly-rejections") {
+				const failure = lines.findIndex(line => /\(fail\)|^error:/.test(line));
+				console.error((failure < 0 ? lines.slice(-80) : lines.slice(Math.max(0, failure - 28), failure + 5)).join("\n"));
+				console.error(lines.slice(-8).join("\n"));
+			} else console.error(lines.slice(-24).join("\n"));
 		}
 		throw new Error(`Native qualification failed: ${name}`);
 	}
