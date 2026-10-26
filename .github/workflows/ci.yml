@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-14, macos-15-intel, windows-latest]
+        os: [ubuntu-24.04, macos-latest, macos-26-intel, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -218,13 +218,13 @@ jobs:
         include:
           ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_native_matrix)) && fromJSON('[
           {"os":"ubuntu-24.04","runner":"xcsh-compute","platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu"},
-          {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"baseline"},
-          {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"modern"},
-          {"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true},
+          {"os":"macos-26-intel","platform":"darwin","arch":"x64","variants":"baseline"},
+          {"os":"macos-26-intel","platform":"darwin","arch":"x64","variants":"modern"},
+          {"os":"macos-latest","platform":"darwin","arch":"arm64","sandbox_check":true},
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"baseline"},
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"modern"}
           ]') || fromJSON('[
-          {"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true}
+          {"os":"macos-latest","platform":"darwin","arch":"arm64","sandbox_check":true}
           ]') }}
     runs-on: ${{ matrix.runner || matrix.os }}
     env:
@@ -747,9 +747,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15-intel
+          - os: macos-26-intel
             arch: x64
-          - os: macos-14
+          - os: macos-latest
             arch: arm64
     runs-on: ${{ matrix.os }}
     env:
@@ -1163,7 +1163,7 @@ jobs:
     needs: [build-release, build-sign-macos]
     # This job performs strict codesign verification after archive assembly.
     # Keep it on macOS; Linux cannot validate Developer ID signatures.
-    runs-on: macos-14
+    runs-on: macos-latest
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1240,7 +1240,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [create-release]
     # Downloaded cask archives are re-verified with strict codesign checks.
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1332,9 +1332,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15-intel
+          - os: macos-26-intel
             arch: x64
-          - os: macos-14
+          - os: macos-latest
             arch: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -1384,9 +1384,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15-intel
+          - os: macos-26-intel
             arch: x64
-          - os: macos-14
+          - os: macos-latest
             arch: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -1532,7 +1532,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14, windows-latest]
+        os: [ubuntu-22.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -32,7 +32,7 @@ jobs:
     name: Backfill immutable GitHub release
     environment: release
     # Backfill repeats strict macOS provenance verification after archive assembly.
-    runs-on: macos-14
+    runs-on: macos-latest
     timeout-minutes: 90
     steps:
       - name: Checkout trusted backfill controller

@@ -20,12 +20,12 @@ test -f "$npm_workflow" || fail "npm backfill workflow is missing"
 test -x "$script" || fail "backfill script is not executable"
 test -f "$job_validator" || fail "source-run job validator is missing"
 
-grep -Fq 'runs-on: macos-14' "$workflow" || fail "backfill must run on macOS for strict codesign verification"
+grep -Fq 'runs-on: macos-latest' "$workflow" || fail "backfill must run on macOS for strict codesign verification"
 if grep -Fq 'runs-on: xcsh-socketless' "$workflow"; then
   fail "backfill must not route strict macOS verification to Linux"
 fi
 create_release=$(sed -n '/^  create-release:/,/^  update-homebrew:/p' "$ci_workflow")
-grep -Fq 'runs-on: macos-14' <<<"$create_release" || fail "immutable release publisher must run on macOS"
+grep -Fq 'runs-on: macos-latest' <<<"$create_release" || fail "immutable release publisher must run on macOS"
 grep -Fq "bash scripts/ci-release-github-backfill.sh \\" <<<"$create_release" ||
   fail "primary release workflow must use the verified draft uploader"
 grep -Fq '"$GITHUB_REPOSITORY"' <<<"$create_release" || fail "primary release publisher repository is not wired"
@@ -35,7 +35,7 @@ if grep -Fq 'gh release create "$REF_NAME" packages/coding-agent/binaries/*' <<<
   fail "primary release workflow must not publish before verifying every asset"
 fi
 update_homebrew=$(sed -n '/^  update-homebrew:/,/^  verify-homebrew-install:/p' "$ci_workflow")
-grep -Fq 'runs-on: macos-14' <<<"$update_homebrew" || fail "Homebrew publisher must run on macOS"
+grep -Fq 'runs-on: macos-latest' <<<"$update_homebrew" || fail "Homebrew publisher must run on macOS"
 grep -Fq 'environment: release' "$workflow" || fail "backfill must use the release environment"
 for release_workflow in "$workflow" "$ci_workflow"; do
   grep -Fq 'name: Confirm immutable publication independently' "$release_workflow" ||
@@ -441,9 +441,9 @@ jq -n '{jobs: [
   {name: "Native build (linux, x64, baseline)", conclusion: "success"},
   {name: "Native build (linux, x64, modern)", conclusion: "success"},
   {name: "Native build (ubuntu-24.04, arm64)", conclusion: "success"},
-  {name: "Native build (macos-15-intel, x64)", conclusion: "success"},
-  {name: "Native build (macos-15-intel, x64)", conclusion: "success"},
-  {name: "Native build (macos-14, arm64)", conclusion: "success"},
+  {name: "Native build (macos-26-intel, x64)", conclusion: "success"},
+  {name: "Native build (macos-26-intel, x64)", conclusion: "success"},
+  {name: "Native build (macos-latest, arm64)", conclusion: "success"},
   {name: "Native build (windows-latest, x64)", conclusion: "success"},
   {name: "Native build (windows-latest, x64)", conclusion: "success"}
 ]}' >"$valid_jobs"
