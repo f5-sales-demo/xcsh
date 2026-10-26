@@ -46,6 +46,7 @@ await run(
 		"scripts/application-build-defines.test.ts",
 		"scripts/voice-build-environment.test.ts",
 		"scripts/verify-voice-source.test.ts",
+		"scripts/voice-macho.test.ts",
 	],
 	"assembly-rejections",
 );

@@ -1,3 +1,4 @@
+import { verifyMachOLinkage } from "./voice-macho";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { join, posix, resolve } from "node:path";
@@ -98,6 +99,10 @@ export async function verifyVoicePackage(directory: string, source: string, evid
 			verifyNativeArchitecture(bytes, process.platform, process.arch);
 		files.set(entry.path, entry.sha256);
 	}
+	if (process.platform === "darwin")
+		for (const path of files.keys())
+			if (path.endsWith(".dylib") || path.endsWith("/codex-voice-host"))
+				verifyMachOLinkage(await readFile(join(root, path)), path, new Set(files.keys()));
 	for (const [path, expected] of Object.entries(references.files)) {
 		if (path === "third_party/voice/NOTICE.md" || path.startsWith("third_party/voice/licenses/"))
 			if (files.get(path.replace("third_party/voice/", "codex-resources/voice/")) !== expected)
