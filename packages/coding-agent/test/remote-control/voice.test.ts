@@ -25,6 +25,84 @@ const start = {
 	outputModality: "audio",
 	includeStartupContext: false,
 };
+
+test("an answered interaction retires its provider handoff once without duplicate backend admission", async () => {
+	const f = fixture();
+	f.deps.createCall = async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" });
+	f.deps.completedTranscript = role => role === "user";
+	await f.voice.start({ ...start, model: "gpt-live-1", transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" } });
+	try {
+		f.receive({ type: "turn.done", turn: { id: "interaction-answer", role: "user", transcript: "Beta" } });
+		const handoff = {
+			...delegation,
+			item: { ...delegation.item, id: "interaction-handoff", content: [{ type: "input_text", text: "Beta" }] },
+		};
+		f.receive(handoff);
+		f.receive(handoff);
+		await Bun.sleep(10);
+		expect(f.delegated).toEqual([]);
+		const responses = (f.sent as { type?: string; delegation_item_id?: string }[]).filter(
+			event => event.type === "delegation.context.append" && event.delegation_item_id === "interaction-handoff",
+		);
+		expect(responses).toHaveLength(1);
+		expect(f.records).toContainEqual(
+			expect.objectContaining({ kind: "voiceInteractionDelegation", outcome: "already-resolved-no-submission" }),
+		);
+	} finally {
+		f.finish("Fixture cleanup");
+		await f.voice.stop();
+	}
+});
+
+test("answered speech is durable but cannot become a new task during tail finalization", async () => {
+	const f = fixture();
+	f.deps.createCall = async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" });
+	f.deps.completedTranscript = role => role === "user";
+	await f.voice.start({
+		...start,
+		model: "gpt-live-1",
+		flushTranscriptTailOnSessionEnd: true,
+		transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
+	});
+	try {
+		f.receive({ type: "turn.done", turn: { id: "answered", role: "user", transcript: "Beta" } });
+		await Bun.sleep(10);
+		await f.voice.stop();
+		expect(f.delegated).toEqual([]);
+		expect(f.events).toContainEqual(
+			expect.objectContaining({ method: "thread/realtime/transcript/done", params: { role: "user", text: "Beta" } }),
+		);
+	} finally {
+		f.finish("Fixture cleanup");
+		await f.voice.stop();
+	}
+});
+
+test("a fresh caller may use the same words as a previous interaction answer", async () => {
+	const f = fixture();
+	let answers = 0;
+	f.deps.createCall = async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" });
+	f.deps.completedTranscript = role => role === "user" && ++answers === 1;
+	await f.voice.start({ ...start, model: "gpt-live-1", transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" } });
+	try {
+		f.receive({ type: "turn.done", turn: { id: "answered", role: "user", transcript: "Beta" } });
+		const handoff = {
+			...delegation,
+			item: { ...delegation.item, id: "answer-handoff", content: [{ type: "input_text", text: "Beta" }] },
+		};
+		f.receive(handoff);
+		f.receive({ type: "input_audio_buffer.speech_started", item_id: "new-caller" });
+		f.receive({ type: "turn.done", turn: { id: "new-caller", role: "user", transcript: "Beta" } });
+		const fresh = { ...handoff, item: { ...handoff.item, id: "fresh-handoff" } };
+		f.receive(fresh);
+		f.receive(fresh);
+		await Bun.sleep(10);
+		expect(f.delegated).toHaveLength(1);
+	} finally {
+		f.finish("Fixture cleanup");
+		await f.voice.stop();
+	}
+});
 function fixture(records: Record<string, unknown>[] = [], diagnostics?: VoiceDiagnosticRuntime) {
 	const sent: unknown[] = [];
 	const policySent: unknown[] = [];

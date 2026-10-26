@@ -1248,12 +1248,14 @@ export class NativeVoice {
 		if (event.kind === "sessionUpdated") return;
 		if (event.kind === "transcriptBoundary") {
 			if (event.role === "assistant") this.#captionBranding.reset();
+			if (event.role === "user") this.#answeredInteraction = undefined;
 			this.#newTranscriptEntry[event.role] = true;
 			return;
 		}
 		if (event.kind === "transcript") {
 			const transcriptKey = event.done ? this.#key("transcript", event.id ?? randomUUID()) : undefined;
 			if (transcriptKey && this.#seen.has(transcriptKey)) return;
+			if (event.role === "user" && this.#newTranscriptEntry.user) this.#answeredInteraction = undefined;
 			const finalCaption =
 				event.role === "assistant" && event.done ? this.#captionBranding.finish(event.text) : undefined;
 			const captionText =
@@ -1311,19 +1313,19 @@ export class NativeVoice {
 				this.deps.emit("thread/realtime/transcript/delta", { role: "assistant", delta: finalCaption.delta });
 			}
 			await this.#history?.transcript(event.role, captionText, event.done);
-			if (event.done && this.#ownedCreation && (await this.deps.completedTranscript?.(event.role, captionText)))
+			if (event.done && this.#ownedCreation && (await this.deps.completedTranscript?.(event.role, captionText))) {
 				this.#answeredInteraction = captionText.trim().toLowerCase();
+				// The interaction owner consumed this exchange. Its durable transcript remains,
+				// but neither a later handoff nor end-of-call tail flushing may resubmit it.
+				this.#tail = [];
+				this.#newTranscriptEntry = { user: true, assistant: true };
+			}
 
 			if (!this.active) return;
 			this.deps.emit(`thread/realtime/transcript/${event.done ? "done" : "delta"}`, {
 				role: event.role,
 				[event.done ? "text" : "delta"]: captionText,
 			});
-			return;
-		}
-		if (this.#answeredInteraction && event.text.trim().toLowerCase() === this.#answeredInteraction) {
-			this.#answeredInteraction = undefined;
-			await this.deps.record({ kind: "voiceInteractionDelegation", outcome: "already-resolved-no-submission" });
 			return;
 		}
 		const key = this.#key("delegation", event.id);
@@ -1336,6 +1338,21 @@ export class NativeVoice {
 							"The previous request has an uncertain outcome. Check its task and resource state before retrying.",
 					});
 			}
+			return;
+		}
+		if (this.#answeredInteraction && event.text.trim().toLowerCase() === this.#answeredInteraction) {
+			this.#seen.add(key);
+			await this.deps.record({ key, kind: "voiceInteractionDelegation", outcome: "already-resolved-no-submission" });
+			this.#send({
+				type: "delegation.context.append",
+				delegation_item_id: event.id,
+				content: [
+					{
+						type: "input_text",
+						text: "The interaction owner already resolved this answer. No new backend task was admitted.",
+					},
+				],
+			});
 			return;
 		}
 		// An empty handoff is valid only when this unconsumed exchange contains

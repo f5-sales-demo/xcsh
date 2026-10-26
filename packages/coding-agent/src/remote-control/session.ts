@@ -1310,6 +1310,9 @@ export class RemoteSession {
 				}
 				this.#assertCurrent(epoch);
 				this.#voice = voice;
+				// Capture controls and announcement eligibility belong to this admitted call.
+				this.#voiceSpeechMuted = this.#voiceSpeechPaused = false;
+				this.#voiceApprovals.reset();
 				this.#prestartVoiceStopReported = false;
 				this.#voiceHandoffsRetired = false;
 				this.#voiceAdmissionTail = Promise.resolve();
@@ -1925,10 +1928,12 @@ export class RemoteSession {
 
 	#delegateVoice(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string> {
 		if (
-			/^(yes|no|approve|decline|deny)[.!]?$/i.test(text.trim()) &&
-			(this.target.userInteractions?.pending().length ?? 0) > 0
+			(this.target.userInteractions?.pending().length ?? 0) > 0 ||
+			this.target.conversationPlans?.current?.status === "pending"
 		)
-			return Promise.resolve("The current request needs a verified spoken decision or a decision in the app.");
+			return Promise.resolve(
+				"The current prompt needs a completed verified spoken decision or a decision in the app. No new voice task was admitted.",
+			);
 
 		return new Promise((resolve, reject) => {
 			const admit = async () => {

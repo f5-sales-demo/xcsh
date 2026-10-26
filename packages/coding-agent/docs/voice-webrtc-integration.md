@@ -48,6 +48,11 @@ Mute disables input; pause suppresses output while preserving input for resume; 
 suppresses current playback while backend work continues. Stop ends voice and preserves
 chat/tasks. Backend cancellation uses the existing turn owner. Playback-based Speaking and
 interaction announcement receipts require further synthetic calibration and physical proof.
+While a question, approval or plan remains pending, provider delegation cannot
+replace a completed caller decision. Its interaction owner must resolve the prompt
+before admitting another voice task. Backend work and typed input keep their existing owners.
+Resolved spoken answers are retained in durable history, excluded from tail resubmission,
+and their repeated provider handoffs receive one retirement response per provider identity.
 
 ## Native package and isolated settings
 
