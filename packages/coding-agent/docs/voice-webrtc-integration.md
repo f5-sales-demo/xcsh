@@ -143,3 +143,7 @@ media cleanup and disposal carry separate intent and cannot reconcile persisted 
 An explicit Stop restores the selected chat closure owner even after process replacement;
 a fork does not inherit its parent chat call. Reconciliation keeps existing backend work,
 the selected model, permissions and registered host tools with AgentSession.
+
+Qualification resolves the helper from the actual Cargo target directory, including
+relative or external CARGO_TARGET_DIR overrides. The same-build probe still rejects
+an older repository helper; changing build storage cannot bypass source identity.

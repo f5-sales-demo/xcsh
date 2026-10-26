@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { prepareVoiceRuntime } from "./prepare-voice-runtime";
+import { voiceHelperPath } from "./voice-cargo-target";
 import { voiceBuildEnvironment } from "./voice-build-environment";
 import { verifyVoiceSource } from "./verify-voice-source";
 const repo = resolve(import.meta.dir, "..");
@@ -47,6 +48,7 @@ await run(
 		"scripts/voice-build-environment.test.ts",
 		"scripts/verify-voice-source.test.ts",
 		"scripts/voice-macho.test.ts",
+		"scripts/voice-cargo-target.test.ts",
 	],
 	"assembly-rejections",
 );
@@ -75,7 +77,7 @@ await run(
 		"bun",
 		"scripts/assemble-voice-package.ts",
 		"--helper",
-		join(repo, "target/release/codex-voice-host"),
+		voiceHelperPath(repo, environment),
 		"--runtime",
 		join(native.root, "runtime"),
 		"--app",
