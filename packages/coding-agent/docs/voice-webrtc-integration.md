@@ -48,6 +48,11 @@ interaction announcement receipts require further synthetic calibration and phys
 
 ## Native package and isolated settings
 
+Qualification produces explicitly labeled voice-development artifacts without
+embedding licensed Corporate Vertex client inputs. Ordinary release builds retain
+their licensed-input gate. Backend model selection remains with AgentSession;
+runtime authentication is a separate requirement.
+
 Build Mac arm64 artifacts on the approved CI runner. Do not invoke Xcode or build native
 artifacts on the managed Mac. Linux x64 artifacts require their own runtime qualification.
 

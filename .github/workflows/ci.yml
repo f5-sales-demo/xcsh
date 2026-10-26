@@ -293,6 +293,13 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Prepare Linux audio build metadata
+        run: |
+          if ! pkg-config --exists alsa; then
+            sudo -n apt-get update
+            sudo -n apt-get install -y --no-install-recommends libasound2-dev
+          fi
+          pkg-config --exists alsa
       - name: Verify baked Rust toolchain
         run: bash scripts/verify-self-hosted-tools.sh full
       - name: Restore exact Rust cache

@@ -24,10 +24,24 @@ async function run(args: string[], name: string): Promise<void> {
 		stdout: Bun.file(join(evidence, `${name}.private.log`)),
 		stderr: Bun.file(join(evidence, `${name}.stderr.private.log`)),
 	});
-	if ((await child.exited) !== 0) throw new Error(`Native qualification failed: ${name}`);
+	if ((await child.exited) !== 0) {
+		// Build-only diagnostics contain no provider session or audio capture.
+		// Preserve complete logs privately; expose a bounded compiler finding in CI.
+		if (["native-addon", "release-helper", "application"].includes(name)) {
+			const diagnostics = await Bun.file(join(evidence, `${name}.stderr.private.log`)).text();
+			console.error(diagnostics.split("\n").slice(-24).join("\n"));
+		}
+		throw new Error(`Native qualification failed: ${name}`);
+	}
 }
 await run(
-	["bun", "test", "scripts/assemble-voice-package.test.ts", "scripts/verify-voice-package.test.ts"],
+	[
+		"bun",
+		"test",
+		"scripts/assemble-voice-package.test.ts",
+		"scripts/verify-voice-package.test.ts",
+		"scripts/application-build-defines.test.ts",
+	],
 	"assembly-rejections",
 );
 await run(["cargo", "test", "-p", "xcsh-realtime-webrtc"], "controller");
@@ -38,7 +52,15 @@ await run(["cargo", "build", "--release", "-p", "xcsh-voice-host"], "release-hel
 await run(["bun", "scripts/ensure-dev-native.ts"], "native-addon");
 await run(["bun", "scripts/generate-voice-companion.ts", "--check"], "companion-source");
 await run(
-	["bun", "scripts/ci-release-build-binaries.ts", "--platform", process.platform, "--arch", process.arch],
+	[
+		"bun",
+		"scripts/ci-release-build-binaries.ts",
+		"--voice-qualification",
+		"--platform",
+		process.platform,
+		"--arch",
+		process.arch,
+	],
 	"application",
 );
 const output = join(repo, "voice-qualified-artifacts", `${source}-${target}`);
