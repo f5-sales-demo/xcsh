@@ -1,4 +1,4 @@
-import { isVoiceFrame, type VoiceFrame, type VoiceRequest, type VoiceState } from "./contract";
+import { isVoiceFrame, type VoiceFrame, type VoiceRequest, type VoiceState, voiceClosureReceipt } from "./contract";
 
 export interface VoiceTransport {
 	send(message: VoiceRequest): void;
@@ -33,6 +33,7 @@ export class BrowserVoiceClient {
 	#generation = 0;
 	#disposed = false;
 	#creationSubmitted = false;
+	#providerCallId?: string;
 	#paused = false;
 	#muted = false;
 	#interrupted = false;
@@ -135,6 +136,7 @@ export class BrowserVoiceClient {
 			return;
 		const generation = ++this.#generation;
 		this.#creationSubmitted = false;
+		this.#providerCallId = undefined;
 		this.#paused = this.#muted = this.#interrupted = false;
 		this.#update({ active: true, state: "Connecting", message: undefined, closureConfirmed: undefined });
 		this.#connectTimer = setTimeout(() => {
@@ -169,7 +171,11 @@ export class BrowserVoiceClient {
 				this.#measurePlayback(stream, generation);
 			});
 			peer.addEventListener("connectionstatechange", () => {
-				if (generation === this.#generation && ["failed", "disconnected"].includes(peer.connectionState))
+				if (
+					generation === this.#generation &&
+					this.#snapshot.state !== "Closing" &&
+					["failed", "disconnected"].includes(peer.connectionState)
+				)
 					this.#fail("Voice disconnected. Activate again after checking the pending call.");
 			});
 			for (const track of microphone.getAudioTracks()) {
@@ -179,7 +185,7 @@ export class BrowserVoiceClient {
 			const channel = peer.createDataChannel("oai-events");
 			this.#channel = channel;
 			channel.addEventListener("close", () => {
-				if (generation === this.#generation)
+				if (generation === this.#generation && this.#snapshot.state !== "Closing")
 					this.#fail("Voice signaling disconnected. Check the pending call before activating again.");
 			});
 			channel.addEventListener("message", event => {
@@ -187,19 +193,20 @@ export class BrowserVoiceClient {
 					return;
 				try {
 					const value = JSON.parse(event.data);
-					if (value.type === "session.started") {
+					if (value.type === "session.started" && this.#snapshot.state !== "Closing") {
 						clearTimeout(this.#connectTimer);
 						this.#update({ state: this.#muted ? "Muted" : "Listening" });
 						this.#presentState(false);
 						if (this.#muted) this.#send("mute");
 						if (this.#paused) this.#send("pause");
 					} else if (value.type === "session.closed") {
-						const seconds = value.usage?.seconds;
-						const confirmed =
-							seconds === undefined || (typeof seconds === "number" && Number.isFinite(seconds) && seconds >= 0);
-						this.#update({ closureConfirmed: confirmed, pendingCall: !confirmed });
-						this.#send("stop");
-						this.#cleanup();
+						if (!voiceClosureReceipt(value, this.#providerCallId)) return;
+						// The coordinator owns finalization. Keep muted media for its
+						// sideband drain even if the data channel closes first.
+						if (this.#snapshot.state !== "Closing") {
+							this.#beginClose();
+							this.#send("stop");
+						}
 					} else if (
 						value.type === "turn.done" &&
 						value.turn?.role === "user" &&
@@ -313,6 +320,10 @@ export class BrowserVoiceClient {
 				/^[A-Za-z0-9_-]{43}$/.test(url.hash.slice(1))
 			)
 				this.#update({ companionUrl: url.href });
+			return;
+		}
+		if (frame.method === "xcsh/voice/call" && typeof frame.params.providerCallId === "string") {
+			this.#providerCallId = frame.params.providerCallId;
 			return;
 		}
 		if (frame.method === "xcsh/voice/closing") {
@@ -485,6 +496,7 @@ export class BrowserVoiceClient {
 	#cleanup(): void {
 		this.#generation++;
 		this.#creationSubmitted = false;
+		this.#providerCallId = undefined;
 		this.#announcement = undefined;
 		this.#captionCompleted = this.#playedOutput = false;
 		this.#playbackQuietSince = undefined;

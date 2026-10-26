@@ -405,59 +405,108 @@ test("connecting audio cannot change its selected capture device", async () => {
 	await pending;
 });
 
-test("data channel loss stops capture, while confirmed closure avoids a second stop", async () => {
-	const originalPeer = globalThis.RTCPeerConnection;
-	const originalAudio = globalThis.Audio;
-	const channel = new EventTarget();
-	Object.assign(channel, { close: () => channel.dispatchEvent(new Event("close")) });
-	class FixturePeer extends EventTarget {
-		iceGatheringState = "complete";
-		localDescription = { sdp: "v=0\r\nfixture" };
-		addTrack() {}
-		createDataChannel() {
-			return channel;
-		}
-		async createOffer() {
-			return this.localDescription;
-		}
-		async setLocalDescription() {}
-		close() {}
-	}
-	globalThis.RTCPeerConnection = FixturePeer as unknown as typeof RTCPeerConnection;
-	globalThis.Audio = class {} as unknown as typeof Audio;
+test("unexpected data channel loss stops capture and leaves finalization unconfirmed", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => media.stream,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
 	try {
-		for (const confirmed of [false, true]) {
-			const t = transport();
-			let stops = 0;
-			const track = { stop: () => stops++, enabled: true };
-			const voice = new BrowserVoiceClient(t.channel, {
-				getUserMedia: async () =>
-					({ getTracks: () => [track], getAudioTracks: () => [track] }) as unknown as MediaStream,
-				enumerateDevices: async () => [],
-			});
-			t.capabilities();
-			try {
-				await voice.start();
-				expect(t.sent.map(request => request.action)).toEqual(["capabilities", "start"]);
-				if (confirmed)
-					channel.dispatchEvent(
-						new MessageEvent("message", {
-							data: JSON.stringify({ type: "session.closed", usage: { seconds: 1 } }),
-						}),
-					);
-				else channel.dispatchEvent(new Event("close"));
-				expect(voice.snapshot.active).toBe(false);
-				expect(voice.snapshot.state === "Error").toBe(!confirmed);
-				expect(voice.snapshot.closureConfirmed).toBe(confirmed ? true : undefined);
-				expect(stops).toBe(1);
-				expect(t.sent.map(request => request.action)).toEqual(["capabilities", "start", "stop"]);
-			} finally {
-				voice.dispose();
-			}
+		await voice.start();
+		media.channel.dispatchEvent(new Event("close"));
+		expect(voice.snapshot.active).toBe(false);
+		expect(voice.snapshot.state).toBe("Error");
+		expect(voice.snapshot.closureConfirmed).toBeUndefined();
+		expect(media.stops()).toBe(1);
+		expect(t.sent.map(request => request.action)).toEqual(["capabilities", "start", "stop"]);
+	} finally {
+		voice.dispose();
+		media.restore();
+	}
+});
+
+test("data closure retains muted media until the coordinator validates finalization", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => media.stream,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	try {
+		await voice.start();
+		const closed = () =>
+			media.channel.dispatchEvent(
+				new MessageEvent("message", {
+					data: JSON.stringify({ type: "session.closed", usage: { seconds: 1 } }),
+				}),
+			);
+		closed();
+		expect(voice.snapshot.state).toBe("Closing");
+		expect(voice.snapshot.active).toBe(true);
+		expect(voice.snapshot.closureConfirmed).toBeUndefined();
+		expect(media.track.enabled).toBe(false);
+		expect(media.output()?.muted).toBe(true);
+		expect(media.stops()).toBe(0);
+		closed();
+		media.channel.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "session.started" }) }));
+		expect(voice.snapshot.state).toBe("Closing");
+		media.channel.dispatchEvent(new Event("close"));
+		expect(media.stops()).toBe(0);
+		expect(t.sent.filter(request => request.action === "stop")).toHaveLength(1);
+		t.receive({
+			type: "voice_event",
+			chatId: "fixture-chat",
+			method: "xcsh/voice/closure",
+			params: { confirmed: true },
+		});
+		t.receive({
+			type: "voice_event",
+			chatId: "fixture-chat",
+			method: "thread/realtime/closed",
+			params: { reason: "providerClosed" },
+		});
+		expect(voice.snapshot.closureConfirmed).toBe(true);
+		expect(voice.snapshot.active).toBe(false);
+		expect(media.stops()).toBe(1);
+	} finally {
+		voice.dispose();
+		media.restore();
+	}
+});
+
+test("browser ignores conflicting and malformed data closure snapshots", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => media.stream,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	try {
+		await voice.start();
+		t.receive({
+			type: "voice_event",
+			chatId: "fixture-chat",
+			method: "xcsh/voice/call",
+			params: { providerCallId: "rtc_browser_fixture" },
+		});
+		for (const value of [
+			{ type: "session.closed", session: { id: "rtc_other_fixture" } },
+			{ type: "session.closed", session: null },
+			{ type: "session.closed", usage: [] },
+		]) {
+			media.channel.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(value) }));
+			expect(voice.snapshot.active).toBe(true);
+			expect(voice.snapshot.closureConfirmed).toBeUndefined();
+			expect(media.stops()).toBe(0);
+			expect(t.sent.filter(request => request.action === "stop")).toHaveLength(0);
 		}
 	} finally {
-		globalThis.RTCPeerConnection = originalPeer;
-		globalThis.Audio = originalAudio;
+		voice.dispose();
+		media.restore();
 	}
 });
 

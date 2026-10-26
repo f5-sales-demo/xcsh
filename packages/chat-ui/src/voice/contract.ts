@@ -108,3 +108,45 @@ export type VoiceState =
 	| "Muted"
 	| "Closing"
 	| "Error";
+
+export interface VoiceClosureReceipt {
+	confirmed: boolean;
+	seconds?: number;
+	usageConfirmed?: boolean;
+	reason?: string;
+}
+/** Optional provider echoes may be absent, but supplied evidence must agree with its call. */
+export function voiceClosureReceipt(value: unknown, expectedSessionId?: string): VoiceClosureReceipt | undefined {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+	const event = value as {
+		type?: unknown;
+		usage?: { seconds?: unknown };
+		reason?: unknown;
+		session?: { id?: unknown };
+	};
+	if (event.type !== "session.closed") return undefined;
+	// The subscription may omit the snapshot or ID echo. A supplied echo must
+	// agree with the accepted call bound to this transport, never the chat ID.
+	if (
+		event.session !== undefined &&
+		(!event.session || typeof event.session !== "object" || Array.isArray(event.session))
+	)
+		return undefined;
+	if (
+		event.session?.id !== undefined &&
+		(typeof event.session.id !== "string" ||
+			!event.session.id ||
+			(expectedSessionId !== undefined && event.session.id !== expectedSessionId))
+	)
+		return undefined;
+	const seconds = event.usage?.seconds;
+	if (event.usage !== undefined && (!event.usage || typeof event.usage !== "object" || Array.isArray(event.usage)))
+		return undefined;
+	if (seconds !== undefined && (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0))
+		return undefined;
+	return {
+		confirmed: true,
+		...(typeof seconds === "number" ? { seconds } : { usageConfirmed: false }),
+		...(typeof event.reason === "string" && /^[a-z_]{1,64}$/.test(event.reason) ? { reason: event.reason } : {}),
+	};
+}

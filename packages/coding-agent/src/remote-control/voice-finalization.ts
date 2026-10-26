@@ -1,48 +1,16 @@
-export interface VoiceClosureReceipt {
-	confirmed: boolean;
-	seconds?: number;
-	usageConfirmed?: boolean;
-	reason?: string;
-}
+import { type VoiceClosureReceipt, voiceClosureReceipt } from "../../../chat-ui/src/voice/contract";
+
+export type { VoiceClosureReceipt } from "../../../chat-ui/src/voice/contract";
 /** Receiver is installed before sending close, including synchronous fixture replies. */
 export class VoiceFinalization {
 	#receipt?: VoiceClosureReceipt;
 	#resolve?: (receipt: VoiceClosureReceipt) => void;
 	#closing?: Promise<VoiceClosureReceipt>;
 	observe(value: unknown, expectedSessionId?: string): boolean {
-		if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-		const event = value as {
-			type?: unknown;
-			usage?: { seconds?: unknown };
-			reason?: unknown;
-			session?: { id?: unknown };
-		};
-		if (event.type !== "session.closed") return false;
-		// The subscription may omit the snapshot or ID echo. A supplied echo must
-		// agree with the accepted call bound to this transport, never the chat ID.
-		if (
-			event.session !== undefined &&
-			(!event.session || typeof event.session !== "object" || Array.isArray(event.session))
-		)
-			return false;
-		if (
-			event.session?.id !== undefined &&
-			(typeof event.session.id !== "string" ||
-				!event.session.id ||
-				(expectedSessionId !== undefined && event.session.id !== expectedSessionId))
-		)
-			return false;
-		const seconds = event.usage?.seconds;
-		if (event.usage !== undefined && (!event.usage || typeof event.usage !== "object" || Array.isArray(event.usage)))
-			return false;
-		if (seconds !== undefined && (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0))
-			return false;
+		const receipt = voiceClosureReceipt(value, expectedSessionId);
+		if (!receipt) return false;
 		// A duplicate terminal event cannot rewrite the first confirmed final usage.
-		this.#receipt ??= {
-			confirmed: true,
-			...(typeof seconds === "number" ? { seconds } : { usageConfirmed: false }),
-			...(typeof event.reason === "string" && /^[a-z_]{1,64}$/.test(event.reason) ? { reason: event.reason } : {}),
-		};
+		this.#receipt ??= receipt;
 		this.#resolve?.(this.#receipt);
 		return true;
 	}

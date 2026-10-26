@@ -167,7 +167,11 @@ model echo. When a session ID is supplied, it must match the accepted provider c
 a conflicting or malformed snapshot cannot release ownership. Array envelopes and
 array usage are rejected. Duplicate terminal events preserve the first confirmed
 usage receipt. These xcsh checks do not extend the pinned provider schema or change
-the attachment route.
+the attachment route. The canonical browser and backend share this validator.
+Data-channel closure requests owner finalization once; it cannot confirm ownership
+release. Clients retain muted media until the owner completes its bounded drain.
+Late startup events or data-channel loss during Closing cannot reactivate capture
+or discard media that the owner still needs.
 
 Reconciliation keeps existing backend work,
 the selected model, permissions and registered host tools with AgentSession.
