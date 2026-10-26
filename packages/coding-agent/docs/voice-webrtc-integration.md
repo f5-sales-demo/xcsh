@@ -47,6 +47,14 @@ Chrome also supports direct browser WebRTC. The companion serves the canonical c
 typing, transcript, interaction and voice controls, HTTPS and its own application credential.
 Provider credentials remain on the execution host.
 
+A companion admits at most four authenticated control connections and eight
+client identities for its selected chat. Each connection registers its own
+identities; targeted frames cannot reach another connection or an unauthenticated
+socket. The chat coordinator still permits one audio client. A second client can
+discover the current owner before capture and explicitly take over audio. Closing
+an observer retires only its adapters and preserves the active client, parent
+panel, registered host tools and backend work.
+
 Mute disables input; pause suppresses output while preserving input for resume; interrupt
 suppresses current playback while backend work continues. Stop ends voice and preserves
 chat/tasks. Backend cancellation uses the existing turn owner. Playback-based Speaking and

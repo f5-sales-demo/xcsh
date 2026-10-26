@@ -2,6 +2,45 @@ import { expect, test } from "bun:test";
 import { SelectedChatVoice } from "../../src/remote-control/selected-chat-voice";
 import type { SessionTarget } from "../../src/remote-control/session";
 
+test("disconnect retires only the selected connection's client adapters", async () => {
+	const closed: string[] = [];
+	let current = "";
+	const bridge = new SelectedChatVoice(
+		{ sessionId: "chat" } as SessionTarget,
+		() => {},
+		() => {
+			const id = current;
+			return {
+				call: async () => {},
+				subscribe: () => () => {},
+				close: async () => {
+					closed.push(id);
+				},
+			};
+		},
+	);
+	try {
+		for (const clientId of ["first-client", "second-client"]) {
+			current = clientId;
+			await bridge.handle({ type: "voice_request", action: "capabilities", clientId, requestId: clientId });
+			await bridge.handle({
+				type: "voice_request",
+				action: "history",
+				clientId,
+				requestId: clientId,
+				chatId: "chat",
+			});
+		}
+		await bridge.disconnectClient("second-client");
+		expect(closed).toEqual(["second-client"]);
+		await bridge.disconnectClient("second-client");
+		expect(closed).toEqual(["second-client"]);
+	} finally {
+		await bridge.close();
+	}
+	expect(closed).toEqual(["second-client", "first-client"]);
+});
+
 test("voice attaches the selected chat without fresh thread creation or backend configuration", async () => {
 	const requests: { method: string; params: Record<string, unknown> }[] = [];
 	const target = { sessionId: "selected-chat" } as SessionTarget;

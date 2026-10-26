@@ -438,6 +438,13 @@ export class SelectedChatVoice {
 			});
 		}
 	}
+	async disconnectClient(clientId: string): Promise<void> {
+		if (this.#disposed) return;
+		const client = this.#clients.get(clientId);
+		if (!client) return;
+		this.#clients.delete(clientId);
+		await client.close();
+	}
 	async close(): Promise<void> {
 		this.#disposed = true;
 		this.#stopNative();
