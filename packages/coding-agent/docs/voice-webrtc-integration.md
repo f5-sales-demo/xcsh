@@ -77,6 +77,13 @@ N-API entrypoint verifies package hashes and the same-build handshake before mic
 activation. Final qualified artifacts require a clean committed xcsh revision; a native C
 reference stamp is not an application-source receipt.
 
+Qualification checks the checkout revision and clean source both before building and
+after packaged verification. The voice workflow generates canonical documentation
+indexes on Linux and shares those pinned bytes with both native targets. Existing
+prebuilt verification still enforces their published digests; Mac SQLite regeneration
+does not replace a pin. Compiled smoke tests use separate agent, config and cache
+directories outside the checkout while retaining the host's home identity.
+
 Isolated candidate settings are XCSH_VOICE_PACKAGE_DIR and XCSH_VOICE_PACKAGE_SHA256.
 Companion TLS and endpoint settings are XCSH_VOICE_COMPANION_CERT,
 XCSH_VOICE_COMPANION_KEY, XCSH_VOICE_COMPANION_BIND and

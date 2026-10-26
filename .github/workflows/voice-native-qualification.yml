@@ -16,8 +16,38 @@ concurrency:
   group: voice-native-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  documentation:
+    name: Prepare pinned voice documentation inputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - name: Bootstrap declared worktree
+        run: bash scripts/ci-bun-install.sh
+      - name: Generate canonical pinned indexes
+        run: |
+          bun --cwd=packages/coding-agent run generate-documentation-index
+          bun --cwd=packages/coding-agent run generate-terraform-documentation-index
+      - name: Upload canonical documentation bytes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: voice-documentation-${{ github.sha }}
+          path: |
+            packages/coding-agent/src/internal-urls/.documentation-generated/documentation-index.sqlite.gz
+            packages/coding-agent/src/internal-urls/.documentation-generated/terraform/terraform-documentation.sqlite.gz
+          include-hidden-files: true
+          if-no-files-found: error
   native:
     name: Native voice (${{ matrix.os }}, ${{ matrix.arch }})
+    needs: [documentation]
     strategy:
       fail-fast: false
       matrix:
@@ -31,6 +61,7 @@ jobs:
     env:
       EXPECTED_ARCH: ${{ matrix.arch }}
       GITHUB_TOKEN: ${{ github.token }}
+      XCSH_DOCUMENTATION_INDEX_MODE: prebuilt
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -55,6 +86,11 @@ jobs:
           fi
       - name: Bootstrap declared worktree
         run: bash scripts/ci-bun-install.sh
+      - name: Download canonical documentation inputs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: voice-documentation-${{ github.sha }}
+          path: packages/coding-agent/src/internal-urls/.documentation-generated/
       - name: Qualify immutable native package
         run: bun scripts/qualify-native-voice.ts
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
