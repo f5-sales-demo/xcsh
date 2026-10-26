@@ -33,9 +33,9 @@ describe("release Homebrew backfill workflow contract", () => {
 
 	it("runs the existing no-sudo UAT on arm64 and Intel macOS", async () => {
 		const workflow = await fs.readFile(workflowPath, "utf8");
-		expect(workflow).toContain("os: macos-15-intel");
+		expect(workflow).toContain("os: macos-26-intel");
 		expect(workflow).toContain("arch: x64");
-		expect(workflow).toContain("os: macos-14");
+		expect(workflow).toContain("os: macos-latest");
 		expect(workflow).toContain("arch: arm64");
 		expect(workflow).not.toContain('          cd "$UAT_HOME"');
 		expect(workflow).toContain('sudo -H -u "$UAT_USER" env');
