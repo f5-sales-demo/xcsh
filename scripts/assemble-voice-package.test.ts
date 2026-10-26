@@ -103,3 +103,18 @@ test("assembly requires redistribution notices before publishing a manifest", as
 	expect(result.text).toContain("NOTICE.md");
 	expect(await Bun.file(join(f.output, "xcsh-voice-package.json")).exists()).toBe(false);
 });
+
+test("assembly accepts the pinned macOS plugins directory before requiring notices", async () => {
+	const f = await fixture();
+	const path = "plugins/libgstapp.dylib";
+	await mkdir(join(f.runtime, "plugins"));
+	await writeFile(join(f.runtime, path), "synthetic macOS plugin");
+	const entry = { path, sha256: createHash("sha256").update("synthetic macOS plugin").digest("hex") };
+	await writeFile(join(f.runtime, "runtime.json"), JSON.stringify({
+		target: "aarch64-apple-darwin", sourceCommit: reference.reference, libraries: [entry],
+	}));
+	const result = await assemble(f);
+	expect(result.text).not.toContain("Invalid or duplicate runtime path");
+	expect(result.text).toContain("NOTICE.md");
+	expect(await Bun.file(join(f.output, "xcsh-voice-package.json")).exists()).toBe(false);
+});

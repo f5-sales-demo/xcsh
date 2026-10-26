@@ -72,7 +72,9 @@ Assembly binds the helper build identity to the application source, refuses an e
 path, validates runtime bytes and copies hash-verified upstream notices and licenses. The
 packaged-helper verification additionally checks architecture and runtime provenance,
 then initializes and closes the copied helper with no inherited SDK loader paths. Its
-raw capture stays private and a sanitized receipt joins the artifact. The
+raw capture stays private and a sanitized receipt joins the artifact. Pinned macOS plugins retain
+their plugins/ directory; Linux plugins retain lib/gstreamer-1.0/. Assembly accepts
+those inventories while rejecting absolute paths, traversal and duplicates. The
 N-API entrypoint verifies package hashes and the same-build handshake before microphone
 activation. Final qualified artifacts require a clean committed xcsh revision; a native C
 reference stamp is not an application-source receipt.

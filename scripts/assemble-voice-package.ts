@@ -49,7 +49,7 @@ const digest = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest(
 const inputs = new Map<string, Uint8Array>();
 for (const entry of inventory.libraries) {
 	if (
-		!/^(?:lib|bin)\/[A-Za-z0-9_.+/-]+$/.test(entry.path) ||
+		!/^(?:lib|bin|plugins)\/[A-Za-z0-9_.+/-]+$/.test(entry.path) ||
 		entry.path.split("/").some(part => part === ".." || part === "." || part === "") ||
 		inputs.has(entry.path)
 	)
