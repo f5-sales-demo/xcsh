@@ -1,3 +1,4 @@
+import { relocatePackagedMachO } from "./voice-macho";
 import references from "./voice-runtime-reference.json";
 import { createHash } from "node:crypto";
 import { cp, lstat, mkdir, stat } from "node:fs/promises";
@@ -89,8 +90,10 @@ for (const license of licenseInputs) {
 	files.push({ path: relative, sha256: digest(license.bytes) });
 }
 const helperName = process.platform === "win32" ? "codex-voice-host.exe" : "codex-voice-host";
-await cp(helper, join(voice, "bin", helperName));
-files.push({ path: `codex-resources/voice/bin/${helperName}`, sha256: digest(await Bun.file(helper).bytes()) });
+const packagedHelper = join(voice, "bin", helperName);
+await cp(helper, packagedHelper);
+if (process.platform === "darwin") await relocatePackagedMachO(packagedHelper, new Set(inventory.libraries.map(entry => entry.path)));
+files.push({ path: `codex-resources/voice/bin/${helperName}`, sha256: digest(await Bun.file(packagedHelper).bytes()) });
 const receipt = await Bun.file(join(runtime, "runtime.json")).bytes();
 await Bun.write(join(voice, "runtime.json"), receipt);
 files.push({ path: "codex-resources/voice/runtime.json", sha256: digest(receipt) });

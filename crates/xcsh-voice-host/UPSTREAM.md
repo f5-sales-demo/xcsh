@@ -37,3 +37,13 @@ verification exclude these paths while retaining explicit pkg-config and linker
 inputs. A preserved Mac CI failure showed SDK libintl shadowing Homebrew Git
 during source fingerprinting. This environment adaptation retains the original
 reference and requires fresh Mac CI qualification; Linux success does not qualify it.
+
+## Packaged macOS loader closure
+
+A preserved offline prebuilt check found helper load commands still pointing at
+the CI native prefix, despite successful verification on that same runner. Assembly
+now rewrites verified bundled library imports on the copied helper to loader-relative
+paths and signs that copy on approved CI. Manifest hashes describe the adapted copy.
+A platform-independent Mach-O reader rejects external imports and search paths in
+every packaged helper/library before runtime activation, even when a build prefix
+is present. The pinned runtime projection and original reference remain unchanged.
