@@ -10,6 +10,7 @@ import { ProtocolError } from "./session";
 import { traceFromEnvironment } from "./trace-runtime";
 import { VoiceAudioEvidence } from "./voice-audio-evidence";
 import { createVoiceCall, VoiceCallCreationError, voiceCallConfig } from "./voice-call";
+import { type OwnedVoiceCallIdentity, reconcileVoiceCall } from "./voice-call-recovery";
 import { VoiceCaptionBranding } from "./voice-caption-branding";
 import { evaluateVoiceContract, type VoiceCreationEvidence } from "./voice-contract-evidence";
 import { voiceDelegation } from "./voice-delegation";
@@ -53,6 +54,8 @@ export interface VoiceDependencies {
 	closureTimeoutMs?: number;
 	completedTranscript?(role: "user" | "assistant", text: string): Promise<boolean> | boolean;
 	authenticate(): Promise<SubscriptionAuth>;
+	/** Cleanup may outlive the execution epoch; identity is revalidated against the original call. */
+	authenticateClosure?(): Promise<SubscriptionAuth>;
 	authenticateApiKey?(): Promise<string | undefined>;
 	createCall?: typeof createVoiceCall;
 	persona?(): VoicePersonaSnapshot | Promise<VoicePersonaSnapshot>;
@@ -145,6 +148,8 @@ function safeConnectionError(error: unknown): string {
 }
 export class NativeVoice {
 	#ownedCreation?: VoiceCreationEvidence;
+	#knownCall?: OwnedVoiceCallIdentity;
+	#recovery?: Promise<void>;
 	#creationDisposition: "not-attempted" | "in-flight" | "accepted" | "rejected" | "uncertain" = "not-attempted";
 	get canReleaseAudioOwnership(): boolean {
 		return (
@@ -155,7 +160,7 @@ export class NativeVoice {
 	}
 	#answeredInteraction?: string;
 	get ownedCall(): boolean {
-		return !!this.#ownedCreation;
+		return !!this.#ownedCreation || !!this.#knownCall;
 	}
 	#finalization = new VoiceFinalization();
 	#closureConfirmed = false;
@@ -346,9 +351,16 @@ export class NativeVoice {
 					);
 				} catch (error) {
 					this.#creationDisposition = error instanceof VoiceCallCreationError ? error.outcome : "uncertain";
+					if (error instanceof VoiceCallCreationError && error.callId) {
+						this.#knownCall = { callId: error.callId, accountId: auth!.accountId, realtimeSessionId: sessionId };
+						this.deps.emit("xcsh/voice/call", { providerCallId: error.callId });
+						await this.#recordCallIdentity("uncertain");
+					}
 					throw error;
 				}
 				this.#creationDisposition = "accepted";
+				this.#knownCall = { callId: call.callId, accountId: auth!.accountId, realtimeSessionId: sessionId };
+				await this.#recordCallIdentity("accepted");
 				this.#ownedCreation = {
 					requestedModel: callConfig.session.model,
 					route: "chatgpt-subscription",
@@ -539,6 +551,52 @@ export class NativeVoice {
 		return this.#closing;
 	}
 	stop(reason = "requested"): Promise<void> {
+		const closing = this.#stopCore(reason);
+		if (!this.#knownCall || this.#closureConfirmed) return closing;
+		if (this.#recovery) return this.#recovery;
+		const identity = this.#knownCall;
+		this.#recovery = closing
+			.then(async () => {
+				if (this.#closureConfirmed) return;
+				const receipt = await reconcileVoiceCall(
+					identity,
+					{
+						authenticate: () => (this.deps.authenticateClosure ?? this.deps.authenticate)(),
+						open: this.deps.open,
+					},
+					this.deps.closureTimeoutMs,
+				);
+				this.#closureConfirmed = receipt.confirmed;
+				await this.deps
+					.record({
+						kind: "voiceProviderClosure",
+						providerCallId: identity.callId,
+						reconciliation: true,
+						...receipt,
+					})
+					.catch(() => {
+						this.deps.emit("thread/realtime/error", { message: "Could not persist call reconciliation" });
+					});
+				this.deps.emit("xcsh/voice/closure", { ...receipt, reconciliation: true });
+			})
+			.finally(() => {
+				this.#recovery = undefined;
+			});
+		this.#closing = this.#recovery;
+		return this.#recovery;
+	}
+	async #recordCallIdentity(disposition: "accepted" | "uncertain"): Promise<void> {
+		const identity = this.#knownCall!;
+		await this.deps.record({
+			kind: "voiceCallIdentity",
+			providerCallId: identity.callId,
+			realtimeSessionId: identity.realtimeSessionId,
+			accountIdSha256: "sha256:" + createHash("sha256").update(identity.accountId).digest("hex"),
+			disposition,
+		});
+		if (this.#state === "closed" && !this.#closureConfirmed) void this.stop("requested");
+	}
+	#stopCore(reason: string): Promise<void> {
 		if (this.#state === "closed" || this.#state === "idle") return this.#closing ?? Promise.resolve();
 		const captionTail = this.#captionBranding.flush();
 		if (captionTail) {
@@ -623,7 +681,11 @@ export class NativeVoice {
 						)
 						.then(async receipt => {
 							this.#closureConfirmed = receipt.confirmed;
-							await this.deps.record({ kind: "voiceProviderClosure", ...receipt });
+							await this.deps.record({
+								kind: "voiceProviderClosure",
+								providerCallId: this.#knownCall?.callId,
+								...receipt,
+							});
 							this.deps.emit("xcsh/voice/closure", { ...receipt });
 						})
 				: Promise.resolve();

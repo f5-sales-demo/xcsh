@@ -13,6 +13,7 @@ export class VoiceCallCreationError extends ProtocolError {
 	constructor(
 		readonly outcome: "rejected" | "uncertain",
 		message: string,
+		readonly callId?: string,
 	) {
 		super(-32000, message);
 	}
@@ -160,10 +161,10 @@ export async function createVoiceCall(
 		);
 	if (!callId) {
 		await response.body?.cancel();
-		throw new ProtocolError(-32000, "Native realtime call response omitted its identity");
+		throw new VoiceCallCreationError("uncertain", "Native realtime call response omitted its identity");
 	}
 	const reader = response.body?.getReader();
-	if (!reader) throw new ProtocolError(-32000, "Native realtime call response omitted SDP");
+	if (!reader) throw new VoiceCallCreationError("uncertain", "Native realtime call response omitted SDP", callId);
 	let bytes = 0;
 	const chunks: Uint8Array[] = [];
 	try {
@@ -176,9 +177,9 @@ export async function createVoiceCall(
 		}
 	} catch {
 		await reader.cancel().catch(() => {});
-		throw new ProtocolError(-32000, "Invalid realtime call response");
+		throw new VoiceCallCreationError("uncertain", "Invalid realtime call response", callId);
 	}
 	const sdp = Buffer.concat(chunks).toString("utf8");
-	if (!sdp.startsWith("v=0")) throw new ProtocolError(-32000, "Invalid realtime answer SDP");
+	if (!sdp.startsWith("v=0")) throw new VoiceCallCreationError("uncertain", "Invalid realtime answer SDP", callId);
 	return { sdp, callId };
 }

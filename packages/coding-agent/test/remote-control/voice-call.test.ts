@@ -154,3 +154,141 @@ test("owned calls use exactly gpt-live-1 and reject alternate model configuratio
 	expect(voiceCallConfig({ ...params, model: undefined }, persona).session.model).toBe("gpt-live-1");
 	expect(() => voiceCallConfig({ ...params, model: "gpt-live-1-codex" }, persona)).toThrow();
 });
+
+test.each(["malformed", "missing", "interrupted", "oversized"])(
+	"accepted call identity survives a %s SDP answer without another creation",
+	async failure => {
+		const { VoiceCallCreationError } = await import("../../src/remote-control/voice-call");
+		let requests = 0;
+		const body =
+			failure === "missing"
+				? null
+				: failure === "interrupted"
+					? new ReadableStream({
+							start(controller) {
+								controller.error(new Error("fixture read failed"));
+							},
+						})
+					: failure === "oversized"
+						? "v=0\r\n" + "x".repeat(262145)
+						: "malformed fixture answer";
+		let observed: unknown;
+		try {
+			await createVoiceCall(voiceCallConfig(params, persona), auth, {}, (async () => {
+				requests++;
+				return new Response(body, { status: 201, headers: { Location: "/v1/live/rtc_uncertain_fixture" } });
+			}) as unknown as typeof fetch);
+		} catch (error) {
+			observed = error;
+		}
+		expect(observed).toBeInstanceOf(VoiceCallCreationError);
+		expect(observed).toMatchObject({ outcome: "uncertain", callId: "rtc_uncertain_fixture" });
+		expect(requests).toBe(1);
+	},
+);
+
+test("NativeVoice retains known failed creation and reconciles only its sideband on explicit stop", async () => {
+	const { NativeVoice } = await import("../../src/remote-control/voice");
+	let creations = 0,
+		opens = 0,
+		backend = 0;
+	const sent: unknown[] = [];
+	const records: Record<string, unknown>[] = [];
+	const voice = new NativeVoice({
+		closureTimeoutMs: 30,
+		authenticate: async () => auth,
+		persona: async () => persona,
+		createCall: async (config, subscription, headers) =>
+			createVoiceCall(config, subscription, headers, (async () => {
+				creations++;
+				return new Response("malformed fixture answer", {
+					status: 201,
+					headers: { Location: "/v1/live/rtc_retained_fixture" },
+				});
+			}) as unknown as typeof fetch),
+		open: async (url, _headers, handlers) => {
+			opens++;
+			expect(url).toBe("wss://api.openai.com/v1/live/rtc_retained_fixture");
+			if (opens === 1) throw new Error("fixture upgrade unavailable");
+			return {
+				bufferedAmount: 0,
+				close: () => {},
+				send: data => {
+					sent.push(JSON.parse(data));
+					handlers.message(JSON.stringify({ type: "session.closed" }));
+				},
+			};
+		},
+		record: async record => {
+			records.push(record);
+		},
+		records: () => records,
+		emit: () => {},
+		delegate: async () => {
+			backend++;
+			return "No work allowed";
+		},
+	});
+	try {
+		await expect(voice.start(params)).rejects.toThrow();
+		await voice.closing;
+		expect(voice.ownedCall).toBe(true);
+		expect(voice.canReleaseAudioOwnership).toBe(false);
+		expect(opens).toBe(1);
+		await Promise.all([voice.stop(), voice.stop()]);
+		expect(opens).toBe(2);
+		expect(creations).toBe(1);
+		expect(sent).toEqual([{ type: "session.close" }]);
+		expect(voice.closureConfirmed).toBe(true);
+		expect(voice.canReleaseAudioOwnership).toBe(true);
+		expect(backend).toBe(0);
+	} finally {
+		await voice.stop();
+	}
+});
+
+test("a call identity learned after Stop is still reconciled without activating media", async () => {
+	const { NativeVoice } = await import("../../src/remote-control/voice");
+	const { VoiceCallCreationError } = await import("../../src/remote-control/voice-call");
+	const entered = Promise.withResolvers<void>();
+	const creation = Promise.withResolvers<{ sdp: string; callId: string }>();
+	const events: string[] = [];
+	let closes = 0;
+	const voice = new NativeVoice({
+		closureTimeoutMs: 30,
+		authenticate: async () => auth,
+		createCall: async () => {
+			entered.resolve();
+			return creation.promise;
+		},
+		persona: async () => persona,
+		record: async () => {},
+		records: () => [],
+		emit: method => {
+			events.push(method);
+		},
+		delegate: async () => {
+			throw new Error("No work permitted");
+		},
+		open: async (_url, _headers, handlers) => ({
+			bufferedAmount: 0,
+			close: () => {
+				closes++;
+			},
+			send: () => {
+				handlers.message(JSON.stringify({ type: "session.closed" }));
+			},
+		}),
+	});
+	const starting = voice.start(params);
+	const rejected = starting.catch(error => error);
+	await entered.promise;
+	await voice.stop();
+	creation.reject(new VoiceCallCreationError("uncertain", "Invalid realtime call response", "rtc_late_fixture"));
+	expect(await rejected).toBeInstanceOf(Error);
+	await voice.closing;
+	expect(voice.closureConfirmed).toBe(true);
+	expect(voice.canReleaseAudioOwnership).toBe(true);
+	expect(closes).toBe(1);
+	expect(events).not.toContain("thread/realtime/sdp");
+});

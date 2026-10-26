@@ -1237,6 +1237,7 @@ export class RemoteSession {
 					this.#assertCurrent(epoch);
 					return auth;
 				},
+				authenticateClosure: () => loadRemoteSubscription(this.target.modelRegistry.authStorage, this.#boundId),
 				authenticateApiKey: async () => {
 					this.#assertCurrent(epoch);
 					const key = await this.target.modelRegistry.authStorage.getApiKeyFromNonOAuthSources(
@@ -1248,7 +1249,8 @@ export class RemoteSession {
 				},
 				emit: (name, value) => {
 					if (
-						name === "thread/realtime/closed" &&
+						(name === "thread/realtime/closed" ||
+							(name === "xcsh/voice/closure" && value.reconciliation === true && value.confirmed === true)) &&
 						lease &&
 						((params.transport as { type?: unknown } | undefined)?.type !== "webrtc" ||
 							voice.canReleaseAudioOwnership)

@@ -18,7 +18,10 @@ for provider-confirmed closure of the previous owned call. Unconfirmed closure r
 lease and requires reconciliation. Known request rejections and failures before
 request dispatch admit no provider call and release the lease after cleanup.
 Transport or response uncertainty retains ownership; no automatic creation retry
-is performed. Rejected takeovers retain the adapter's previous voice
+is performed. A returned provider identity is retained even when its SDP answer
+is missing, malformed, oversized or interrupted. Stop reconciles a known call
+through its existing sideband using the original subscription identity; it does
+not create another call or override a model. Rejected takeovers retain the adapter's previous voice
 reference so stop and disposal can still reach that call.
 
 The owned subscription request explicitly selects gpt-live-1. Public API documentation uses
