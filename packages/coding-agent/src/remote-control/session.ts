@@ -193,7 +193,6 @@ export class RemoteSession {
 		() => this.#speechApprovals(),
 		(id, value) => this.#respondSpeech(id, value),
 	);
-	#voiceLease?: VoiceLease;
 	#voiceStartRevision = 0;
 	#voiceClientId = `attachment:${randomUUID()}`;
 	#prestartVoiceStopReported = false;
@@ -1250,7 +1249,8 @@ export class RemoteSession {
 					if (
 						name === "thread/realtime/closed" &&
 						lease &&
-						((params.transport as { type?: unknown } | undefined)?.type !== "webrtc" || voice.closureConfirmed)
+						((params.transport as { type?: unknown } | undefined)?.type !== "webrtc" ||
+							voice.canReleaseAudioOwnership)
 					)
 						coordinator.release(lease);
 					if (name === "thread/realtime/error" || name === "thread/realtime/closed") startupOutcomeReported = true;
@@ -1270,7 +1270,10 @@ export class RemoteSession {
 				},
 				record: record =>
 					this.#effect(epoch, async () => {
-						this.target.sessionManager.appendCustomEntry("remote-realtime", record);
+						this.target.sessionManager.appendCustomEntry("remote-realtime", {
+							...record,
+							xcshVoice: { chatId: this.#boundId, voiceSessionId: lease?.voiceSessionId },
+						});
 						await this.target.sessionManager.flush();
 					}),
 				title: () => {
@@ -1292,7 +1295,7 @@ export class RemoteSession {
 						await voice.stop("requested");
 						if (
 							(params.transport as { type?: unknown } | undefined)?.type === "webrtc" &&
-							!voice.closureConfirmed
+							!voice.canReleaseAudioOwnership
 						)
 							throw new ProtocolError(
 								-32000,
@@ -1307,7 +1310,6 @@ export class RemoteSession {
 				}
 				this.#assertCurrent(epoch);
 				this.#voice = voice;
-				this.#voiceLease = lease;
 				this.#prestartVoiceStopReported = false;
 				this.#voiceHandoffsRetired = false;
 				this.#voiceAdmissionTail = Promise.resolve();

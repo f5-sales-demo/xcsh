@@ -731,3 +731,74 @@ test("rejected takeover retains the existing voice for owner cleanup", async () 
 	await new Promise(resolve => setTimeout(resolve, 20));
 	expect(stopped).toContain(started[0]);
 });
+
+async function rejectedOwnedCallFixture(uncertain: boolean) {
+	const { session, remote } = await fixture();
+	const { NativeVoice } = await import("../../src/remote-control/voice");
+	const { createVoiceCall } = await import("../../src/remote-control/voice-call");
+	const original = NativeVoice.prototype.start;
+	let captured: InstanceType<typeof NativeVoice> | undefined;
+	vi.spyOn(NativeVoice.prototype, "start").mockImplementation(async function (
+		this: InstanceType<typeof NativeVoice>,
+		params,
+	) {
+		captured = this;
+		const deps = (this as unknown as { deps: import("../../src/remote-control/voice").VoiceDependencies }).deps;
+		deps.authenticate = async () => ({ accessToken: "fixture-secret", accountId: "example-voice-account" });
+		const fetcher = Object.assign(
+			async () => {
+				if (uncertain) throw new Error("fixture network loss");
+				return new Response(
+					JSON.stringify({ detail: "Field `session.model` is not allowed for this Codex realtime session" }),
+					{ status: 400 },
+				);
+			},
+			{ preconnect: () => {} },
+		);
+		deps.createCall = (config, auth, headers) => createVoiceCall(config, auth, headers, fetcher);
+		return original.call(this, params);
+	});
+	await expect(
+		remote.call("rejected-owned-start", "thread/realtime/start", {
+			threadId: session.sessionId,
+			version: "v3",
+			model: "gpt-live-1",
+			outputModality: "audio",
+			includeStartupContext: false,
+			transport: { type: "webrtc", sdp: "v=0\r\nfixture" },
+			xcshVoice: { clientId: "panel-rejection-fixture" },
+		}),
+	).rejects.toMatchObject({ code: -32000 });
+	await captured!.stop();
+	return { session, remote };
+}
+test("known rejected creation releases audio ownership after cleanup", async () => {
+	const { session } = await rejectedOwnedCallFixture(false);
+	const { voiceCoordinatorFor } = await import("../../src/remote-control/voice-coordinator");
+	const coordinator = voiceCoordinatorFor(session, session.sessionId);
+	expect(coordinator.snapshot).toBeUndefined();
+	const records = session.sessionManager
+		.getBranch()
+		.flatMap(entry =>
+			entry.type === "custom" && entry.customType === "remote-realtime"
+				? [entry.data as { xcshVoice: { chatId: string; voiceSessionId: string } }]
+				: [],
+		);
+	expect(records.length).toBeGreaterThan(0);
+	for (const record of records) {
+		expect(record.xcshVoice.chatId).toBe(session.sessionId);
+		expect(record.xcshVoice.voiceSessionId).not.toBe(session.sessionId);
+		expect(record.xcshVoice.voiceSessionId).toMatch(/^[0-9a-f-]{36}$/);
+	}
+	const next = await coordinator.acquire("changed-candidate", async () => {});
+	coordinator.release(next);
+});
+test("uncertain creation retains audio ownership after cleanup", async () => {
+	const { session } = await rejectedOwnedCallFixture(true);
+	const { voiceCoordinatorFor } = await import("../../src/remote-control/voice-coordinator");
+	const coordinator = voiceCoordinatorFor(session, session.sessionId);
+	expect(coordinator.snapshot).toBeDefined();
+	await expect(
+		coordinator.acquire("changed-candidate", async () => {}, coordinator.snapshot!.revision),
+	).rejects.toThrow("closure is unconfirmed");
+});

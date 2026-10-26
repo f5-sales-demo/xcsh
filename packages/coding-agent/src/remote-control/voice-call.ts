@@ -8,6 +8,16 @@ import type { VoicePersonaSnapshot } from "./voice-persona";
 import { voicePersonaInstructions } from "./voice-persona";
 import { defaultVoice, requireLiveVersion, voiceInstructions, voices } from "./voice-protocol";
 
+/** A rejected request admits no call; transport/response uncertainty must remain reserved. */
+export class VoiceCallCreationError extends ProtocolError {
+	constructor(
+		readonly outcome: "rejected" | "uncertain",
+		message: string,
+	) {
+		super(-32000, message);
+	}
+}
+
 async function rejectedCreationField(response: Response): Promise<string | null> {
 	if (!response.body) return null;
 	const reader = response.body.getReader();
@@ -130,13 +140,13 @@ export async function createVoiceCall(
 			},
 		);
 	} catch {
-		throw new ProtocolError(-32000, "Native realtime call transport failed");
+		throw new VoiceCallCreationError("uncertain", "Native realtime call transport failed");
 	}
 	if (response.status !== 201) {
 		const field = response.status === 400 ? await rejectedCreationField(response) : null;
 		if (response.status !== 400) await response.body?.cancel();
-		throw new ProtocolError(
-			-32000,
+		throw new VoiceCallCreationError(
+			[400, 401, 403, 404, 413, 415, 422, 429].includes(response.status) ? "rejected" : "uncertain",
 			`Native realtime call failed (HTTP ${response.status}${field ? `; rejected field session.${field}` : ""})`,
 		);
 	}

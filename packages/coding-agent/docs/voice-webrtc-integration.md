@@ -15,7 +15,10 @@ VoiceCoordinator grants one audio lease per selected chat. Chat identity, voice-
 identity, client identity, provider call identity and interaction revision remain distinct.
 A second client requires the current lease revision for explicit takeover. Replacement waits
 for provider-confirmed closure of the previous owned call. Unconfirmed closure retains the
-lease and requires reconciliation. Rejected takeovers retain the adapter's previous voice
+lease and requires reconciliation. Known request rejections and failures before
+request dispatch admit no provider call and release the lease after cleanup.
+Transport or response uncertainty retains ownership; no automatic creation retry
+is performed. Rejected takeovers retain the adapter's previous voice
 reference so stop and disposal can still reach that call.
 
 The owned subscription request explicitly selects gpt-live-1. Public API documentation uses
@@ -72,6 +75,10 @@ bun run check:docs-quality and pre-commit/privacy checks. Packaging rejection te
 bun test scripts/assemble-voice-package.test.ts. The native qualification workflow additionally
 runs controller/helper tests, explicit relocated-runtime and installed-client tests, builds
 the application/helper and assembles a package. CI must exercise that actual entrypoint.
+
+Vendor digests use an explicit sha256 algorithm label; self-verification also
+reads historical bare digests and still rejects changed bytes. This prevents
+source filenames such as tokens.ts from making a checksum look like a credential.
 
 The original reference is openai/codex at
 970111f6cb62cc02fe36a82ea7d71b37a2889c97. The crate UPSTREAM.md files record adaptations.

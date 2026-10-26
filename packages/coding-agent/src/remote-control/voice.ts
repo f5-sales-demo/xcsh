@@ -9,7 +9,7 @@ import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
 import { traceFromEnvironment } from "./trace-runtime";
 import { VoiceAudioEvidence } from "./voice-audio-evidence";
-import { createVoiceCall, voiceCallConfig } from "./voice-call";
+import { createVoiceCall, VoiceCallCreationError, voiceCallConfig } from "./voice-call";
 import { VoiceCaptionBranding } from "./voice-caption-branding";
 import { evaluateVoiceContract, type VoiceCreationEvidence } from "./voice-contract-evidence";
 import { voiceDelegation } from "./voice-delegation";
@@ -145,6 +145,14 @@ function safeConnectionError(error: unknown): string {
 }
 export class NativeVoice {
 	#ownedCreation?: VoiceCreationEvidence;
+	#creationDisposition: "not-attempted" | "in-flight" | "accepted" | "rejected" | "uncertain" = "not-attempted";
+	get canReleaseAudioOwnership(): boolean {
+		return (
+			this.#closureConfirmed ||
+			this.#creationDisposition === "not-attempted" ||
+			this.#creationDisposition === "rejected"
+		);
+	}
 	#answeredInteraction?: string;
 	get ownedCall(): boolean {
 		return !!this.#ownedCreation;
@@ -324,13 +332,23 @@ export class NativeVoice {
 			if (callConfig) {
 				stage = "call-create";
 				stageStartedAt = Date.now();
-				const call = await (this.deps.createCall ?? createVoiceCall)(
-					callConfig,
-					auth!,
-					headers,
-					undefined,
-					this.#abort.signal,
-				);
+				if (this.#state !== "opening" || this.#abort.signal.aborted)
+					throw new Error("Voice stopped before call creation");
+				this.#creationDisposition = "in-flight";
+				let call: Awaited<ReturnType<typeof createVoiceCall>>;
+				try {
+					call = await (this.deps.createCall ?? createVoiceCall)(
+						callConfig,
+						auth!,
+						headers,
+						undefined,
+						this.#abort.signal,
+					);
+				} catch (error) {
+					this.#creationDisposition = error instanceof VoiceCallCreationError ? error.outcome : "uncertain";
+					throw error;
+				}
+				this.#creationDisposition = "accepted";
 				this.#ownedCreation = {
 					requestedModel: callConfig.session.model,
 					route: "chatgpt-subscription",
