@@ -101,8 +101,9 @@ export class SelectedChatVoice {
 				typeof event.params.text === "string" &&
 				(this.#nativeInterrupted || (this.#nativePaused && /^resume[.!]?$/i.test(event.params.text.trim())))
 			) {
-				this.#nativePaused = this.#nativeInterrupted = false;
-				this.#native.suppressOutput(false);
+				if (/^resume[.!]?$/i.test(event.params.text.trim())) this.#nativePaused = false;
+				this.#nativeInterrupted = false;
+				this.#native.suppressOutput(this.#nativePaused);
 			}
 		}
 		if (["thread/realtime/error", "thread/realtime/closed", "xcsh/voice/error"].includes(event.method))
@@ -292,8 +293,8 @@ export class SelectedChatVoice {
 			if (request.action === "unmute") this.#nativeDesiredMute = false;
 			if (request.action === "pause" || request.action === "interrupt") {
 				this.#nativeCaptionCompleted = this.#nativePlayed = false;
-				this.#nativePaused = request.action === "pause";
-				this.#nativeInterrupted = request.action === "interrupt";
+				if (request.action === "pause") this.#nativePaused = true;
+				if (request.action === "interrupt") this.#nativeInterrupted = true;
 			}
 			if (request.action === "resume") this.#nativePaused = this.#nativeInterrupted = false;
 			if (this.#native) {

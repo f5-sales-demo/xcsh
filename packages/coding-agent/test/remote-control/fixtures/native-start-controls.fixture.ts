@@ -78,3 +78,41 @@ test.each(["helper", "call"])(
 		}
 	},
 );
+
+test.each(["pause-first", "interrupt-first"])("%s retains pause until completed resume", async order => {
+	helper = Promise.withResolvers<FixtureAudio>();
+	const audio = new FixtureAudio();
+	let notify: (event: { method: string; params: Record<string, unknown> }) => void = () => {};
+	const bridge = new SelectedChatVoice(
+		{ sessionId: "fixture-chat" } as SessionTarget,
+		() => {},
+		() => ({
+			subscribe: listener => {
+				notify = listener;
+				return () => {};
+			},
+			close: async () => {},
+			call: async (_id, method) => {
+				if (method === "thread/realtime/start")
+					notify({ method: "thread/realtime/sdp", params: { sdp: "v=0\r\nfixture-answer" } });
+			},
+		}),
+	);
+	try {
+		helper.resolve(audio);
+		await bridge.startNative();
+		const actions = order === "pause-first" ? (["pause", "interrupt"] as const) : (["interrupt", "pause"] as const);
+		for (const action of actions)
+			await bridge.handle({ type: "voice_request", action, chatId: "fixture-chat", requestId: action });
+		notify({ method: "thread/realtime/transcript/done", params: { role: "user", text: "Continue the task" } });
+		expect(audio.suppressed).toBe(true);
+		notify({ method: "thread/realtime/transcript/delta", params: { role: "user", delta: "resume" } });
+		expect(audio.suppressed).toBe(true);
+		notify({ method: "thread/realtime/transcript/done", params: { role: "assistant", text: "resume" } });
+		expect(audio.suppressed).toBe(true);
+		notify({ method: "thread/realtime/transcript/done", params: { role: "user", text: "resume" } });
+		expect(audio.suppressed).toBe(false);
+	} finally {
+		await bridge.close();
+	}
+});
