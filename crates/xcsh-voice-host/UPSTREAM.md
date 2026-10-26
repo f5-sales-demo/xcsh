@@ -58,3 +58,8 @@ with explicit capacity annotations. The next candidate uses the standard macos-2
 arm64 image to discriminate image-pool capacity from shared arm64 scarcity.
 The architecture guard, macOS 13 deployment target and original Codex pin remain
 unchanged; qualification receipts must establish whether this candidate runs.
+
+Qualification schedules Linux before Mac with one active platform job after
+repeated hosted arm64 acquisition cancellations. Both platform checks remain
+required. This changes CI scheduling, retaining native ABI, source pin and
+deployment target; runner and artifact receipts determine qualification.
