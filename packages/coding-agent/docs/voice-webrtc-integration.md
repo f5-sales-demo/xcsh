@@ -160,7 +160,16 @@ Discovery exposes pending call ownership before microphone activation. The share
 offers End previous voice and disables Start until the owner confirms release. Automatic
 media cleanup and disposal carry separate intent and cannot reconcile persisted calls.
 An explicit Stop restores the selected chat closure owner even after process replacement;
-a fork does not inherit its parent chat call. Reconciliation keeps existing backend work,
+a fork does not inherit its parent chat call.
+
+Closure validation accepts the supported subscription event without a session or
+model echo. When a session ID is supplied, it must match the accepted provider call;
+a conflicting or malformed snapshot cannot release ownership. Array envelopes and
+array usage are rejected. Duplicate terminal events preserve the first confirmed
+usage receipt. These xcsh checks do not extend the pinned provider schema or change
+the attachment route.
+
+Reconciliation keeps existing backend work,
 the selected model, permissions and registered host tools with AgentSession.
 
 Qualification resolves the helper from the actual Cargo target directory, including

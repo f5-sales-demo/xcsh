@@ -72,7 +72,7 @@ export async function reconcileVoiceCall(
 				message: data => {
 					if (controller.signal.aborted || data.length > 1_048_576) return;
 					try {
-						observedClosed = finalization.observe(JSON.parse(data)) || observedClosed;
+						observedClosed = finalization.observe(JSON.parse(data), identity.callId) || observedClosed;
 					} catch {}
 				},
 				closed: () => {

@@ -40,7 +40,9 @@ test("an accepted call cancels pending sideband setup and reports closed only af
 				close: () => {},
 				send: value => {
 					expect(JSON.parse(value)).toEqual({ type: "session.close" });
-					handlers.message(JSON.stringify({ type: "session.closed" }));
+					handlers.message(JSON.stringify({ type: "session.closed", session: { id: "rtc_other_fixture" } }));
+					expect(voice.closureConfirmed).toBe(false);
+					handlers.message(JSON.stringify({ type: "session.closed", session: { id: "rtc_startup_fixture" } }));
 				},
 			};
 		},
@@ -68,6 +70,58 @@ test("an accepted call cancels pending sideband setup and reports closed only af
 	} finally {
 		release();
 		await started;
+		await voice.stop();
+	}
+}, 10000);
+
+test("owned subscription call cannot release audio for another provider session", async () => {
+	let receive = (_data: string) => {};
+	let admitted = 0;
+	const records: Record<string, unknown>[] = [];
+	const voice = new NativeVoice({
+		authenticate: async () => ({ accessToken: "fixture-secret", accountId: "<ACCOUNT_ID>" }),
+		createCall: async () => ({ callId: "rtc_owned_fixture", sdp: "v=0\r\nfixture-answer" }),
+		closureTimeoutMs: 50,
+		records: () => records,
+		record: async record => {
+			records.push(record);
+		},
+		emit: () => {},
+		delegate: async () => {
+			admitted++;
+			return "unexpected";
+		},
+		open: async (_url, _headers, handlers) => {
+			receive = handlers.message;
+			queueMicrotask(() =>
+				handlers.message(JSON.stringify({ type: "session.started", session: { id: "rtc_owned_fixture" } })),
+			);
+			return {
+				bufferedAmount: 0,
+				close: () => {},
+				send: data => {
+					if (JSON.parse(data).type === "session.close")
+						handlers.message(JSON.stringify({ type: "session.closed", session: { id: "rtc_owned_fixture" } }));
+				},
+			};
+		},
+	});
+	try {
+		await voice.start({
+			version: "v3",
+			model: "gpt-live-1",
+			outputModality: "audio",
+			transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
+		});
+		receive(JSON.stringify({ type: "session.closed", session: { id: "rtc_other_fixture" } }));
+		expect(voice.closureConfirmed).toBe(false);
+		expect(voice.canReleaseAudioOwnership).toBe(false);
+		receive(JSON.stringify({ type: "session.closed", session: { id: "rtc_owned_fixture" } }));
+		await voice.stop();
+		expect(voice.closureConfirmed).toBe(true);
+		expect(voice.canReleaseAudioOwnership).toBe(true);
+		expect(admitted).toBe(0);
+	} finally {
 		await voice.stop();
 	}
 }, 10000);

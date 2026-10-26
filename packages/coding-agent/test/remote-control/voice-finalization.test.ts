@@ -44,3 +44,36 @@ test("subscription closure can be confirmed without a usage field; usage remains
 	);
 	expect(receipt).toEqual({ confirmed: true, usageConfirmed: false });
 });
+
+test("closure retains the first confirmed usage when duplicate terminal events arrive", async () => {
+	const closure = new VoiceFinalization();
+	closure.observe({ type: "session.closed", usage: { seconds: 20 }, reason: "close_requested" });
+	closure.observe({ type: "session.closed", usage: { seconds: 99 }, reason: "expired" });
+	expect(
+		await closure.close(
+			() => {},
+			() => {},
+			5,
+		),
+	).toEqual({
+		confirmed: true,
+		seconds: 20,
+		reason: "close_requested",
+	});
+});
+
+test("array envelopes and array usage cannot confirm finalization", async () => {
+	for (const value of [Object.assign([], { type: "session.closed" }), { type: "session.closed", usage: [] }]) {
+		const closure = new VoiceFinalization();
+		expect(closure.observe(value)).toBe(false);
+		expect(
+			(
+				await closure.close(
+					() => {},
+					() => {},
+					5,
+				)
+			).confirmed,
+		).toBe(false);
+	}
+});

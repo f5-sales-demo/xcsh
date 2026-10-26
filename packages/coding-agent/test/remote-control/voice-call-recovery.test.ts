@@ -103,3 +103,40 @@ test("malformed final usage cannot confirm closure", async () => {
 	);
 	expect(result.confirmed).toBe(false);
 });
+
+test("known-call recovery rejects conflicting or malformed provider session snapshots", async () => {
+	for (const session of [{ id: "rtc_other_fixture" }, { id: 42 }, null, []]) {
+		const result = await reconcileVoiceCall(
+			identity,
+			{
+				authenticate: async () => auth,
+				open: async (_url, _headers, handlers) => ({
+					bufferedAmount: 0,
+					close: () => {},
+					send: () => {
+						handlers.message(JSON.stringify({ type: "session.closed", session }));
+						handlers.closed();
+					},
+				}),
+			},
+			20,
+		);
+		expect(result.confirmed).toBe(false);
+	}
+});
+
+test("known-call recovery accepts matching provider identity without requiring a model echo", async () => {
+	const result = await reconcileVoiceCall(
+		identity,
+		{
+			authenticate: async () => auth,
+			open: async (_url, _headers, handlers) => ({
+				bufferedAmount: 0,
+				close: () => {},
+				send: () => handlers.message(JSON.stringify({ type: "session.closed", session: { id: identity.callId } })),
+			}),
+		},
+		20,
+	);
+	expect(result).toEqual({ confirmed: true, usageConfirmed: false });
+});

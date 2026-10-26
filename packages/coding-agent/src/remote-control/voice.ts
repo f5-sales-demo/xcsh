@@ -1090,7 +1090,7 @@ export class NativeVoice {
 	#receive(data: string): void {
 		if (this.#ownedCreation && Buffer.byteLength(data) <= 1_048_576) {
 			try {
-				if (this.#finalization.observe(JSON.parse(data))) {
+				if (this.#finalization.observe(JSON.parse(data), this.#ownedCreation.returnedCallId)) {
 					this.#closureConfirmed = true;
 					if (this.active) void this.stop("providerClosed");
 					return;
