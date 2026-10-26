@@ -136,3 +136,10 @@ remaining identities using the original subscription account hash. Reconciliatio
 the real account header and requires provider-confirmed closure before creating another call. Unknown attempts, malformed identities, conflicting records
 and unconfirmed closure retain ownership and cannot silently retry creation. Recovery
 opens no microphone, creates no provider call and admits no backend task.
+
+Discovery exposes pending call ownership before microphone activation. The shared UI
+offers End previous voice and disables Start until the owner confirms release. Automatic
+media cleanup and disposal carry separate intent and cannot reconcile persisted calls.
+An explicit Stop restores the selected chat closure owner even after process replacement;
+a fork does not inherit its parent chat call. Reconciliation keeps existing backend work,
+the selected model, permissions and registered host tools with AgentSession.

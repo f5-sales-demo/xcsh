@@ -50,6 +50,8 @@ import { standaloneVoiceConfig } from "./voice-standalone";
 import { isSniffAnnotation, StartupAssistantPolicy } from "./voice-startup-policy";
 
 export interface VoiceDependencies {
+	/** Authoritative selected chat; ownership from a forked parent is not inherited. */
+	chatId?: string;
 	/** Shared by successive calls attached to one backing session. */
 	history?: VoiceHistory;
 	closureTimeoutMs?: number;
@@ -232,7 +234,7 @@ export class NativeVoice {
 	#hasCallerInput = false;
 	#diagnostics?: VoiceDiagnosticRuntime;
 	constructor(private readonly deps: VoiceDependencies) {
-		this.#persisted = pendingVoiceCalls(deps.records());
+		this.#persisted = pendingVoiceCalls(deps.records(), deps.chatId);
 		if (this.#persisted.uncertainCreation || this.#persisted.calls.length) this.#creationDisposition = "uncertain";
 		this.#diagnostics = deps.diagnostics ?? voiceDiagnosticRuntimeFromEnvironment(record => deps.record(record));
 	}
@@ -249,6 +251,9 @@ export class NativeVoice {
 	}
 	async start(params: Record<string, unknown>): Promise<void> {
 		if (this.#state !== "idle") throw new ProtocolError(-32000, "Voice requires a new attachment after stopping");
+		this.#persisted = pendingVoiceCalls(this.deps.records(), this.deps.chatId);
+		if (!this.#persisted.uncertainCreation && !this.#persisted.calls.length)
+			this.#creationDisposition = "not-attempted";
 		if (this.#persisted.uncertainCreation || this.#persisted.calls.length)
 			throw new ProtocolError(
 				-32000,
@@ -588,6 +593,7 @@ export class NativeVoice {
 	stop(reason = "requested"): Promise<void> {
 		const closing = this.#stopCore(reason);
 		if (this.#persisted.uncertainCreation || this.#persisted.calls.length) {
+			if (reason !== "requested") return closing;
 			const recovery = closing.then(() => this.#recoverPersisted());
 			this.#closing = recovery.catch(() => {});
 			return this.#closing;

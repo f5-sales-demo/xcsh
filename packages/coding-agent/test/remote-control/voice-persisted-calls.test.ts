@@ -130,6 +130,9 @@ for (const fixture of [
 			}
 			expect(creates).toBe(0);
 			expect(error).toBeDefined();
+			await voice.stop("cleanup");
+			expect(oldOpens).toBe(0);
+			expect(voice.canReleaseAudioOwnership).toBe(false);
 			await voice.stop();
 			if (fixture.expectedCreates) {
 				error = undefined;
@@ -155,3 +158,9 @@ for (const fixture of [
 			await voice.stop();
 		}
 	});
+
+test("a fork does not acquire or close its parent chat provider call", () => {
+	const parent = { ...identity, xcshVoice: { chatId: "parent-fixture" } };
+	expect(pendingVoiceCalls([parent], "child-fixture").calls).toHaveLength(0);
+	expect(pendingVoiceCalls([parent], "parent-fixture").calls).toHaveLength(1);
+});

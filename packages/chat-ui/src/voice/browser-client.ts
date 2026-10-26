@@ -13,6 +13,7 @@ export interface BrowserVoiceSnapshot {
 	message?: string;
 	caption?: string;
 	closureConfirmed?: boolean;
+	pendingCall?: boolean;
 	companionUrl?: string;
 }
 /** Media goes directly to the provider. Delegation is handled only by xcsh's sideband. */
@@ -124,7 +125,14 @@ export class BrowserVoiceClient {
 		if (state !== this.#snapshot.state) this.#update({ state });
 	}
 	async start(takeover = false): Promise<void> {
-		if (this.#disposed || this.#snapshot.active || !this.#snapshot.available || !this.#snapshot.chatId) return;
+		if (
+			this.#disposed ||
+			this.#snapshot.active ||
+			!this.#snapshot.available ||
+			!this.#snapshot.chatId ||
+			(this.#snapshot.pendingCall && !takeover)
+		)
+			return;
 		const generation = ++this.#generation;
 		this.#creationSubmitted = false;
 		this.#paused = this.#muted = this.#interrupted = false;
@@ -189,7 +197,7 @@ export class BrowserVoiceClient {
 						const seconds = value.usage?.seconds;
 						const confirmed =
 							seconds === undefined || (typeof seconds === "number" && Number.isFinite(seconds) && seconds >= 0);
-						this.#update({ closureConfirmed: confirmed });
+						this.#update({ closureConfirmed: confirmed, pendingCall: !confirmed });
 						this.#send("stop");
 						this.#cleanup();
 					} else if (
@@ -235,7 +243,7 @@ export class BrowserVoiceClient {
 		if (frame.clientId !== undefined && frame.clientId !== this.#clientId) return;
 		if (frame.method === "xcsh/voice/capabilities") {
 			if (this.#snapshot.chatId !== undefined && frame.chatId !== this.#snapshot.chatId) {
-				this.stop();
+				this.stop(true);
 				this.#cleanup();
 				this.#update({ state: "Listening", caption: undefined, companionUrl: undefined, message: undefined });
 			}
@@ -243,10 +251,19 @@ export class BrowserVoiceClient {
 				available: frame.params.model === "gpt-live-1" && frame.params.transport === "webrtc",
 				chatId: frame.chatId,
 				ownerRevision: (frame.params.owner as { revision?: number } | undefined)?.revision,
+				pendingCall: frame.params.pendingCall === true,
 			});
 			return;
 		}
 		if (frame.chatId !== this.#snapshot.chatId) return;
+		if (frame.method === "xcsh/voice/ownership" && typeof frame.params.reserved === "boolean") {
+			this.#update({ pendingCall: frame.params.reserved });
+			if (!frame.params.reserved && this.#snapshot.state === "Closing") {
+				this.#cleanup();
+				this.#update({ state: "Listening", message: undefined });
+			}
+			return;
+		}
 		if (frame.method === "xcsh/voice/interactionState") {
 			this.#pendingVoiceInput = frame.params.waiting === true;
 			if (!this.#pendingVoiceInput) {
@@ -305,7 +322,10 @@ export class BrowserVoiceClient {
 			});
 		} else if (frame.method === "thread/realtime/closed") this.#cleanup();
 		else if (frame.method === "xcsh/voice/closure")
-			this.#update({ closureConfirmed: frame.params.confirmed === true });
+			this.#update({
+				closureConfirmed: frame.params.confirmed === true,
+				pendingCall: frame.params.confirmed !== true,
+			});
 		else if (frame.method === "xcsh/voice/error" || frame.method === "thread/realtime/error") {
 			this.#update({ ownerRevision: (frame.params.owner as { revision?: number } | undefined)?.revision });
 			this.#fail("Voice could not continue. Check the current audio owner before trying again.");
@@ -423,20 +443,20 @@ export class BrowserVoiceClient {
 	devices(): Promise<MediaDeviceInfo[]> {
 		return this.devicesApi.enumerateDevices();
 	}
-	stop(): void {
-		if (!this.#snapshot.active) return;
-		if (!this.#creationSubmitted) {
+	stop(cleanup = false): void {
+		if (!this.#snapshot.active && (!this.#snapshot.pendingCall || cleanup)) return;
+		if (!this.#creationSubmitted && !this.#snapshot.pendingCall) {
 			this.#cleanup();
 			this.#update({ state: "Listening", message: undefined });
 			return;
 		}
-		this.#update({ state: "Closing" });
+		this.#update({ active: true, state: "Closing" });
 		if (this.#audio) this.#audio.muted = true;
 		this.#playedOutput = this.#captionCompleted = false;
 		this.#microphone?.getTracks().forEach(track => {
 			track.enabled = false;
 		});
-		this.#send("stop");
+		this.#send("stop", { cleanup });
 		clearTimeout(this.#closeTimer);
 		this.#closeTimer = setTimeout(() => {
 			this.#update({ closureConfirmed: false, message: "Provider closure is unconfirmed." });
@@ -444,9 +464,11 @@ export class BrowserVoiceClient {
 		}, 20_000);
 	}
 	#fail(message: string): void {
-		if (this.#creationSubmitted && this.#snapshot.active && this.#snapshot.chatId) this.#send("stop");
+		const pendingCall = this.#creationSubmitted || this.#snapshot.pendingCall;
+		if (this.#creationSubmitted && this.#snapshot.active && this.#snapshot.chatId)
+			this.#send("stop", { cleanup: true });
 		this.#cleanup();
-		this.#update({ state: "Error", message });
+		this.#update({ state: "Error", message, pendingCall });
 	}
 	#cleanup(): void {
 		this.#generation++;
@@ -473,7 +495,7 @@ export class BrowserVoiceClient {
 	}
 	dispose(): void {
 		this.#disposed = true;
-		this.stop();
+		this.stop(true);
 		this.#cleanup();
 		this.#unsubscribe();
 		this.#unsubscribeSuspension();

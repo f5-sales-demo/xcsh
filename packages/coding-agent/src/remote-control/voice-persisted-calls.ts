@@ -4,7 +4,10 @@ export interface PersistedVoiceCall {
 	realtimeSessionId: string | null;
 	accountIdSha256: string;
 }
-export function pendingVoiceCalls(records: Record<string, unknown>[]): {
+export function pendingVoiceCalls(
+	records: Record<string, unknown>[],
+	chatId?: string,
+): {
 	calls: PersistedVoiceCall[];
 	uncertainCreation: boolean;
 } {
@@ -12,6 +15,8 @@ export function pendingVoiceCalls(records: Record<string, unknown>[]): {
 	const calls = new Map<string, PersistedVoiceCall>();
 	let malformedIdentity = false;
 	for (const record of records) {
+		const owner = record.xcshVoice as { chatId?: unknown } | undefined;
+		if (chatId && typeof owner?.chatId === "string" && owner.chatId !== chatId) continue;
 		if (record.kind === "voiceCallCreation") {
 			if (typeof record.creationAttemptId !== "string" || !record.creationAttemptId) {
 				malformedIdentity = true;

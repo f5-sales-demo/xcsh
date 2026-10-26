@@ -52,3 +52,9 @@ Approved native qualification uses the supported macos-15 arm64 runner after
 GitHub announced macos-14 brownouts and retirement. The explicit arm64 check
 and macOS 13 deployment target remain in force; this changes the CI builder
 image, without adopting another Codex reference or native ABI.
+
+GitHub subsequently cancelled macos-15 arm64 jobs before runner acquisition,
+with explicit capacity annotations. The next candidate uses the standard macos-26
+arm64 image to discriminate image-pool capacity from shared arm64 scarcity.
+The architecture guard, macOS 13 deployment target and original Codex pin remain
+unchanged; qualification receipts must establish whether this candidate runs.

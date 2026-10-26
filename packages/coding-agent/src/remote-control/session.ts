@@ -348,7 +348,7 @@ export class RemoteSession {
 				target.userInteractions?.cancelAll();
 				this.#suspended = true;
 				for (const cancel of this.#cancelDelegations) cancel();
-				await this.#voice?.stop();
+				await this.#voice?.stop("cleanup");
 				await Promise.allSettled([...this.#effects]);
 				await this.#voiceHistoryOwner.history.drain();
 			} else {
@@ -453,7 +453,7 @@ export class RemoteSession {
 			this.#effects.delete(pending);
 		}
 	}
-	#deferVoiceStop(): void {
+	#deferVoiceStop(cleanup = false): void {
 		const voice = this.#voice;
 		if (!voice) {
 			if (this.#prestartVoiceStopReported) return;
@@ -467,7 +467,12 @@ export class RemoteSession {
 			void pending.finally(() => this.#effects.delete(pending));
 			return;
 		}
-		const pending = new Promise<void>(resolve => setTimeout(resolve, 0)).then(() => voice.stop());
+		const epoch = this.#epoch;
+		const pending = new Promise<void>(resolve => setTimeout(resolve, 0)).then(async () => {
+			await voice.stop(cleanup ? "cleanup" : "requested");
+			if (epoch === this.#epoch && this.#voice === voice && !this.#disposed && !this.#suspended)
+				this.#emit("xcsh/voice/ownership", { reserved: !voice.canReleaseAudioOwnership }, true);
+		});
 		this.#effects.add(pending);
 		void pending.then(
 			() => this.#effects.delete(pending),
@@ -499,7 +504,7 @@ export class RemoteSession {
 		this.#voiceOutputs.clear();
 		this.#commandPreviews.clear();
 		this.#commandSettlements.clear();
-		this.#closing = Promise.resolve(this.#voice?.stop())
+		this.#closing = Promise.resolve(this.#voice?.stop("cleanup"))
 			.then(async () => {
 				await Promise.allSettled([...this.#effects]);
 				await this.#voiceHistoryOwner.history.drain();
@@ -1168,11 +1173,54 @@ export class RemoteSession {
 			};
 		}
 		if (method === "thread/realtime/stop") {
+			const cleanup = (params.xcshVoice as { cleanup?: unknown } | undefined)?.cleanup === true;
+			if (!cleanup && !this.#voice) {
+				if (voiceCoordinatorFor(this.target, this.#boundId).snapshot)
+					throw new ProtocolError(-32000, "Another client owns audio; take over before ending its call");
+				const records = (
+					this.target.sessionManager.getBranch?.() ?? this.target.sessionManager.getEntries()
+				).flatMap(entry =>
+					entry.type === "custom" &&
+					entry.customType === "remote-realtime" &&
+					entry.data &&
+					typeof entry.data === "object"
+						? [entry.data as Record<string, unknown>]
+						: [],
+				);
+				const { pendingVoiceCalls } = await import("./voice-persisted-calls");
+				this.#assertCurrent(epoch);
+				const pending = pendingVoiceCalls(records, this.#boundId);
+				if (pending.calls.length || pending.uncertainCreation) {
+					const { NativeVoice } = await import("./voice");
+					const { loadRemoteSubscription } = await import("./auth");
+					this.#assertCurrent(epoch);
+					this.#voice = new NativeVoice({
+						chatId: this.#boundId,
+						authenticate: () => loadRemoteSubscription(this.target.modelRegistry.authStorage, this.#boundId),
+						records: () => records,
+						record: record =>
+							this.#effect(epoch, async () => {
+								this.target.sessionManager.appendCustomEntry("remote-realtime", {
+									...record,
+									xcshVoice: { chatId: this.#boundId },
+								});
+								await this.target.sessionManager.flush();
+								records.push(record);
+							}),
+						emit: (method, params) => {
+							if (epoch === this.#epoch) this.#emit(method, params, true);
+						},
+						delegate: async () => {
+							throw new ProtocolError(-32000, "Call reconciliation cannot execute work");
+						},
+					});
+				}
+			}
 			this.#voiceApprovals.reset();
 			this.#voiceStartRevision++;
 			// Return the stop result before closure/history notifications so the phone
 			// can retire its voice overlay before navigating to the durable transcript.
-			this.#deferVoiceStop();
+			this.#deferVoiceStop(cleanup);
 			return {};
 		}
 		if (method === "thread/realtime/start") {
@@ -1190,7 +1238,7 @@ export class RemoteSession {
 				throw new ProtocolError(-32602, "Invalid audio ownership request");
 			if (this.#voice?.active && metadata?.takeoverRevision === undefined)
 				throw new ProtocolError(-32000, "Voice is already active; explicit takeover is required");
-			if (!this.#voice?.active) await this.#voice?.stop();
+			if (!this.#voice?.active) await this.#voice?.stop("cleanup");
 			this.#assertCurrent(epoch);
 			let startupOutcomeReported = false;
 			// Hash application-owned user inputs before attaching. No profile or
@@ -1205,6 +1253,7 @@ export class RemoteSession {
 			);
 			let lease: VoiceLease | undefined;
 			const voice = new NativeVoice({
+				chatId: this.#boundId,
 				committedCallerControl: text => {
 					this.#assertCurrent(epoch);
 					if (!voice.active || !lease || !coordinator.owns(lease) || this.#voiceSpeechMuted) return false;
@@ -1360,7 +1409,7 @@ export class RemoteSession {
 			try {
 				await voice.start(params);
 			} catch (error) {
-				if (!voice.active && !voice.closing && lease) coordinator.release(lease);
+				if (!voice.active && !voice.closing && lease && voice.canReleaseAudioOwnership) coordinator.release(lease);
 				throw error;
 			}
 			this.#assertCurrent(epoch);

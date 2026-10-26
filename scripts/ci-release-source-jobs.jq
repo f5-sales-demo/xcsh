@@ -12,7 +12,7 @@ def required_native_jobs:
     "Native build (ubuntu-24.04, arm64)",
     "Native build (macos-15-intel, x64)",
     "Native build (macos-15-intel, x64)",
-    "Native build (macos-15, arm64)",
+    "Native build (macos-26, arm64)",
     "Native build (windows-latest, x64)",
     "Native build (windows-latest, x64)"
   ];

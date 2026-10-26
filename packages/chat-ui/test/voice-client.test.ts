@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { BrowserVoiceClient, type VoiceTransport } from "../src/voice/browser-client";
-import type { VoiceRequest } from "../src/voice/contract";
+import { isVoiceRequest, type VoiceRequest } from "../src/voice/contract";
 
 function mediaFixture() {
 	const originalPeer = globalThis.RTCPeerConnection;
@@ -415,5 +415,98 @@ test("data channel loss stops capture, while confirmed closure avoids a second s
 	} finally {
 		globalThis.RTCPeerConnection = originalPeer;
 		globalThis.Audio = originalAudio;
+	}
+});
+
+test("failed creation cleanup reserves the previous call until deliberate reconciliation", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	let captures = 0;
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => {
+			captures++;
+			return media.stream;
+		},
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	try {
+		await voice.start();
+		t.receive({ type: "voice_event", chatId: "fixture-chat", method: "xcsh/voice/error", params: {} });
+		expect(voice.snapshot.pendingCall).toBe(true);
+		expect(t.sent.findLast(value => value.action === "stop")?.cleanup).toBe(true);
+		await voice.start();
+		expect(captures).toBe(1);
+		voice.stop();
+		expect(t.sent.findLast(value => value.action === "stop")?.cleanup).toBe(false);
+		t.receive({
+			type: "voice_event",
+			chatId: "fixture-chat",
+			method: "xcsh/voice/ownership",
+			params: { reserved: false },
+		});
+		expect(voice.snapshot.pendingCall).toBe(false);
+		expect(voice.snapshot.active).toBe(false);
+	} finally {
+		voice.dispose();
+		media.restore();
+	}
+});
+
+test("disposal does not authorize reconciliation after a failed start", async () => {
+	const media = mediaFixture();
+	const t = transport();
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => media.stream,
+		enumerateDevices: async () => [],
+	});
+	t.capabilities();
+	try {
+		await voice.start();
+		t.receive({ type: "voice_event", chatId: "fixture-chat", method: "xcsh/voice/error", params: {} });
+		const before = t.sent.length;
+		voice.dispose();
+		expect(t.sent).toHaveLength(before);
+	} finally {
+		media.restore();
+	}
+});
+
+test("cleanup metadata is boolean and applies only to Stop", () => {
+	const request = {
+		type: "voice_request",
+		requestId: "fixture-request",
+		chatId: "fixture-chat",
+		action: "stop",
+		cleanup: true,
+	};
+	expect(isVoiceRequest(request)).toBe(true);
+	expect(isVoiceRequest({ ...request, cleanup: "yes" })).toBe(false);
+	expect(isVoiceRequest({ ...request, action: "capabilities" })).toBe(false);
+});
+
+test("discovery of a persisted call offers reconciliation before microphone activation", async () => {
+	const t = transport();
+	let captures = 0;
+	const voice = new BrowserVoiceClient(t.channel, {
+		getUserMedia: async () => {
+			captures++;
+			throw new Error("No capture allowed");
+		},
+		enumerateDevices: async () => [],
+	});
+	t.receive({
+		type: "voice_event",
+		chatId: "fixture-chat",
+		method: "xcsh/voice/capabilities",
+		params: { model: "gpt-live-1", transport: "webrtc", pendingCall: true },
+	});
+	try {
+		await voice.start();
+		expect(captures).toBe(0);
+		voice.stop();
+		expect(t.sent.findLast(value => value.action === "stop")?.cleanup).toBe(false);
+	} finally {
+		voice.dispose();
 	}
 });

@@ -24,6 +24,8 @@ export interface VoiceRequest {
 	chatId?: string;
 	sdp?: string;
 	takeoverRevision?: number;
+	/** Cleanup cannot authorize reconciliation of a persisted call. */
+	cleanup?: boolean;
 	announcementId?: string;
 	announcementRevision?: number;
 	text?: string;
@@ -65,6 +67,7 @@ export function isVoiceRequest(value: unknown): value is VoiceRequest {
 		].includes(String(value.action))
 	)
 		return false;
+	if (value.cleanup !== undefined && (value.action !== "stop" || typeof value.cleanup !== "boolean")) return false;
 	if (value.action === "capabilities") return true;
 	if (typeof value.chatId !== "string" || value.chatId.length > 256) return false;
 	if (value.action === "text")

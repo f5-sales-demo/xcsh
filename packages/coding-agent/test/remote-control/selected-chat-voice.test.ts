@@ -101,3 +101,28 @@ test("client-scoped signaling and failed-client cleanup cannot stop a different 
 	expect(frames.find(frame => frame.method === "xcsh/voice/error")?.clientId).toBe("panel-b");
 	await bridge.close();
 });
+
+test("selected-chat Stop preserves cleanup intent outside the provider schema", async () => {
+	const requests: Record<string, unknown>[] = [];
+	const bridge = new SelectedChatVoice(
+		{ sessionId: "fixture-chat" } as SessionTarget,
+		() => {},
+		() => ({
+			call: async (_id, _method, params) => {
+				requests.push(params);
+			},
+			subscribe: () => () => {},
+			close: async () => {},
+		}),
+	);
+	for (const cleanup of [true, false])
+		await bridge.handle({
+			type: "voice_request",
+			action: "stop",
+			requestId: `stop-${cleanup}`,
+			chatId: "fixture-chat",
+			cleanup,
+		});
+	expect(requests.map(value => value.xcshVoice)).toEqual([{ cleanup: true }, { cleanup: false }]);
+	await bridge.close();
+});

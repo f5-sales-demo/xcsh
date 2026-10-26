@@ -443,7 +443,7 @@ jq -n '{jobs: [
   {name: "Native build (ubuntu-24.04, arm64)", conclusion: "success"},
   {name: "Native build (macos-15-intel, x64)", conclusion: "success"},
   {name: "Native build (macos-15-intel, x64)", conclusion: "success"},
-  {name: "Native build (macos-15, arm64)", conclusion: "success"},
+  {name: "Native build (macos-26, arm64)", conclusion: "success"},
   {name: "Native build (windows-latest, x64)", conclusion: "success"},
   {name: "Native build (windows-latest, x64)", conclusion: "success"}
 ]}' >"$valid_jobs"

@@ -51,12 +51,18 @@ export function VoiceControls({ transport, ready = true }: { transport: VoiceTra
 				<>
 					<button
 						type="button"
+						disabled={snapshot.pendingCall === true}
 						onClick={() => {
 							void client.start();
 						}}
 					>
 						Start voice
 					</button>
+					{snapshot.pendingCall && (
+						<button type="button" onClick={() => client.stop()}>
+							End previous voice
+						</button>
+					)}
 					{snapshot.ownerRevision !== undefined && (
 						<button
 							type="button"

@@ -9,6 +9,7 @@ import {
 	type AudioDevicePreferences,
 	validateAudioPreferences,
 } from "./voice-device-selection";
+import { pendingVoiceCalls } from "./voice-persisted-calls";
 
 export interface SelectedVoiceSession {
 	call(id: string, method: string, params: Record<string, unknown>): Promise<unknown>;
@@ -275,10 +276,24 @@ export class SelectedChatVoice {
 		if (this.#disposed) return;
 		if (request.action === "capabilities") {
 			const owner = voiceCoordinatorFor(this.target, chatId).snapshot;
+			const records = (
+				this.target.sessionManager?.getBranch?.() ??
+				this.target.sessionManager?.getEntries() ??
+				[]
+			).flatMap(entry =>
+				entry.type === "custom" &&
+				entry.customType === "remote-realtime" &&
+				entry.data &&
+				typeof entry.data === "object"
+					? [entry.data as Record<string, unknown>]
+					: [],
+			);
+			const pending = pendingVoiceCalls(records, chatId);
 			reply("xcsh/voice/capabilities", {
 				model: "gpt-live-1",
 				transport: "webrtc",
 				clientId: this.#clientId,
+				pendingCall: pending.calls.length > 0 || pending.uncertainCreation,
 				...(owner ? { owner } : {}),
 			});
 			return;
@@ -402,6 +417,7 @@ export class SelectedChatVoice {
 			}
 			await this.#remote.call(request.requestId, `thread/realtime/${request.action}`, {
 				threadId: chatId,
+				...(request.action === "stop" ? { xcshVoice: { cleanup: request.cleanup === true } } : {}),
 				...(request.action === "start"
 					? {
 							version: "v3",
