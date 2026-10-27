@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: $/.github/actions/setup-bun
+      - uses: ./.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -71,6 +71,9 @@ jobs:
         run: bun test --cwd packages/coding-agent test/utils/image-resize.test.ts test/utils/image-convert.test.ts
       - name: Verify worker fixture startup and termination on this runtime
         run: bun test --cwd packages/coding-agent test/helpers/worker-process.test.ts
+      - name: Verify signing archive preflight compatibility
+        if: runner.os != 'Windows'
+        run: bash tests/test-ci-verify-signing-p12.sh
       - name: Verify release upload and publication under macOS system Bash
         if: runner.os == 'macOS'
         env:
@@ -239,18 +242,18 @@ jobs:
         run: bash scripts/verify-self-hosted-tools.sh full
       - name: Set up hosted Rust
         if: runner.environment != 'self-hosted' || runner.os != 'Linux'
-        uses: $/.github/actions/setup-rust
+        uses: ./.github/actions/setup-rust
         with:
           target: ${{ matrix.target }}
       - name: Set up hosted Bun 1.4.2
         if: runner.environment != 'self-hosted' || runner.os != 'Linux'
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
       - name: Set up hosted Zig 0.16.0
         if: runner.environment != 'self-hosted' || runner.os != 'Linux'
-        uses: $/.github/actions/setup-zig
+        uses: ./.github/actions/setup-zig
       - name: Restore exact Rust cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -401,7 +404,7 @@ jobs:
           persist-credentials: false
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -446,7 +449,7 @@ jobs:
           fi
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
-      - uses: $/.github/actions/setup-rust
+      - uses: ./.github/actions/setup-rust
       - name: Restore exact Rust cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -457,7 +460,7 @@ jobs:
             target/
           key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - name: Setup Zig 0.16.0
-        uses: $/.github/actions/setup-zig
+        uses: ./.github/actions/setup-zig
       - name: Cache bun dependencies
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -490,7 +493,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.4.2
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -513,7 +516,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
       - name: Setup Bun 1.4.2
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -635,7 +638,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -790,7 +793,7 @@ jobs:
           fi
           printf 'SOURCE_SHA=%s\n' "$source_sha" >> "$GITHUB_ENV"
       - name: Setup Bun 1.4.2
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         id: setup-bun
         continue-on-error: true
         with:
@@ -882,7 +885,7 @@ jobs:
 
           echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
 
-          openssl pkcs12 -info -in "$RUNNER_TEMP/certificate.p12" -noout -passin pass:"$APPLE_CERTIFICATE_PASSWORD" || {
+          bash .controller/scripts/ci-verify-signing-p12.sh "$RUNNER_TEMP/certificate.p12" APPLE_CERTIFICATE_PASSWORD || {
             echo "ERROR: Invalid p12 file or wrong password"
             exit 1
           }
@@ -908,8 +911,8 @@ jobs:
             exit 1
           fi
           echo "$APPLE_INSTALLER_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/installer-certificate.p12"
-          openssl pkcs12 -info -in "$RUNNER_TEMP/installer-certificate.p12" -noout \
-            -passin pass:"$APPLE_INSTALLER_CERTIFICATE_PASSWORD" >/dev/null
+          bash .controller/scripts/ci-verify-signing-p12.sh "$RUNNER_TEMP/installer-certificate.p12" \
+            APPLE_INSTALLER_CERTIFICATE_PASSWORD >/dev/null
           security import "$RUNNER_TEMP/installer-certificate.p12" \
             -k "$KEYCHAIN_PATH" \
             -P "$APPLE_INSTALLER_CERTIFICATE_PASSWORD" \
@@ -1171,7 +1174,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.4.2
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -1247,7 +1250,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.4.2
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -1394,7 +1397,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: $/.github/actions/setup-bun
+      - uses: ./.github/actions/setup-bun
         with:
           no-cache: true
           bun-version: "1.4.2"
@@ -1434,7 +1437,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.4.2
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
@@ -1618,7 +1621,7 @@ jobs:
       - name: Verify runner Node.js
         run: node --version && npm --version
       - name: Setup Bun 1.4.2
-        uses: $/.github/actions/setup-bun
+        uses: ./.github/actions/setup-bun
         id: setup-bun
         with:
           no-cache: true
