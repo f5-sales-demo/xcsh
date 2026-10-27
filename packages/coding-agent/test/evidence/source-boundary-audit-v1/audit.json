@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "236871e881123f1f902261c444bd66519c956793",
+  "revision": "15aad13c7c4ebf5bf444704dd0e90c65ec5abf75",
   "fingerprint": "56a13da2d339df9a64f9fe42e1c27e7b40e3104727b73fe27c2b9b88ce91b532",
   "counts": {
     "total": 244,
@@ -1917,6 +1917,7 @@
       "directTests": [
         "packages/coding-agent/test/component-boundary-contract.test.ts",
         "packages/coding-agent/test/gpt-61-sol-config.test.ts",
+        "packages/coding-agent/test/gpt-61-terra-catalog.test.ts",
         "packages/coding-agent/test/keybindings-escape-components.test.ts",
         "packages/coding-agent/test/litellm-current-models.test.ts",
         "packages/coding-agent/test/model-selection-scope.test.ts",
