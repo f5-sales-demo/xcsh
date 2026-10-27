@@ -68,7 +68,7 @@ unixTest("self-repository controller executes only the matching frozen harness",
 			RUNNER_TEMP: folder,
 			MARKER_PATH: marker,
 		};
-		const invoke = () => run(["bash", "-euo", "pipefail", "-c", step.run], workspace, env);
+		const invoke = () => run(["bash", "--noprofile", "--norc", "-euo", "pipefail", "-c", step.run], workspace, env);
 		const accepted = await invoke();
 		expect(accepted.stderr).toBe("");
 		expect(accepted.code).toBe(0);
@@ -79,7 +79,7 @@ unixTest("self-repository controller executes only the matching frozen harness",
 		expect(rejected.code).not.toBe(0);
 		expect(rejected.stderr).toContain("qualification harness SHA");
 		expect(await Bun.file(marker).exists()).toBe(false);
-		const wrongSource = await run(["bash", "-euo", "pipefail", "-c", step.run], workspace, {
+		const wrongSource = await run(["bash", "--noprofile", "--norc", "-euo", "pipefail", "-c", step.run], workspace, {
 			...env,
 			PROFILE_SOURCE_SHA: "0".repeat(40),
 		});

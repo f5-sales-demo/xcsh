@@ -1,5 +1,6 @@
 import { describe, expect, it, test } from "bun:test";
 import {
+	deriveBridgePorts,
 	OFFICE_PORT_RANGE,
 	OFFICE_PORT_RANGE_END,
 	OFFICE_PORT_RANGE_START,
@@ -7,6 +8,7 @@ import {
 	PORT_RANGE_END,
 	PORT_RANGE_START,
 	portCandidates,
+	resolveBridgePortBase,
 	resolveForcedPort,
 } from "../../src/browser/extension-bridge";
 
@@ -46,8 +48,9 @@ describe("port selection helpers", () => {
 
 	test("portCandidates(OFFICE_PORT_RANGE) is the dedicated office range, disjoint from chrome", () => {
 		const c = portCandidates(OFFICE_PORT_RANGE);
-		expect(OFFICE_PORT_RANGE_START).toBe(19242);
-		expect(OFFICE_PORT_RANGE_END).toBe(19261);
+		expect(OFFICE_PORT_RANGE_START).toBe(PORT_RANGE_END + 1);
+		expect(deriveBridgePorts(resolveBridgePortBase({})).office.start).toBe(19242);
+		expect(OFFICE_PORT_RANGE_END).toBe(OFFICE_PORT_RANGE_START + 19);
 		expect(c[0]).toBe(OFFICE_PORT_RANGE_START);
 		expect(c.at(-1)).toBe(OFFICE_PORT_RANGE_END);
 		// Disjoint from the chrome worker range (structural elimination of the collision).

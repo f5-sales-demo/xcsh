@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { prepareVoiceRuntime } from "./prepare-voice-runtime";
 
 import { $ } from "bun";
 import { existsSync } from "node:fs";
@@ -37,11 +38,14 @@ const TASK_COMMANDS = {
 	],
 	"fmt:rs": [["cargo", "fmt", "--all"]],
 	"lint:rs": [["cargo", "clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"]],
-	"test:rs": [["cargo", "nextest", "run", "--workspace", "--all-features", "--status-level=fail", "--final-status-level=fail"]],
+	"test:rs": [
+		["cargo", "nextest", "run", "--workspace", "--all-features", "--status-level=fail", "--final-status-level=fail"],
+	],
 } as const satisfies Record<string, readonly (readonly string[])[]>;
 
 type RustTaskName = keyof typeof TASK_COMMANDS;
 
+let voiceEnvironment: Record<string, string> = {};
 const repoRoot = path.join(import.meta.dir, "..");
 
 // Guarded so the decision helpers can be imported and tested. Without this, importing the module ran the
@@ -59,6 +63,14 @@ if (import.meta.main) {
 		process.exit(0);
 	}
 
+	if (
+		taskName !== "fmt:rs" &&
+		existsSync(path.join(repoRoot, "crates/xcsh-voice-host/Cargo.toml")) &&
+		["linux", "darwin"].includes(process.platform)
+	) {
+		const native = await prepareVoiceRuntime(repoRoot);
+		voiceEnvironment = native.environment;
+	}
 	const manifests = await discoverRustManifests(repoRoot);
 	for (const manifest of manifests) {
 		for (const command of TASK_COMMANDS[taskName]) {
@@ -74,9 +86,16 @@ if (import.meta.main) {
 /** Discover tracked and new manifests, checking each Cargo workspace exactly once. */
 export async function discoverRustManifests(root: string): Promise<string[]> {
 	const files = await $`git ls-files --cached --others --exclude-standard -z`.cwd(root).quiet();
-	const manifests = [...new Set(files.stdout.toString().split("\0")
-		.filter(file => path.basename(file) === "Cargo.toml")
-		.map(file => path.resolve(root, file)).filter(existsSync))].sort((a, b) => a.length - b.length || a.localeCompare(b));
+	const manifests = [
+		...new Set(
+			files.stdout
+				.toString()
+				.split("\0")
+				.filter(file => path.basename(file) === "Cargo.toml")
+				.map(file => path.resolve(root, file))
+				.filter(existsSync),
+		),
+	].sort((a, b) => a.length - b.length || a.localeCompare(b));
 	const covered = new Set<string>();
 	const workspaces = new Set<string>();
 	for (const manifest of manifests) {
@@ -142,10 +161,7 @@ async function hasRustAffectingChanges(taskName: RustTaskName): Promise<boolean>
 	// destination, so `git mv src/foo.rs src/foo.txt` emitted just the .txt path and the branch looked
 	// Rust-free while having deleted a module. Verified in a scratch repo. Without renames the same change
 	// appears as a delete plus an add, so the .rs side is visible.
-	const committed = await $`git diff --name-only --no-renames -z ${`${base}...HEAD`}`
-		.cwd(repoRoot)
-		.quiet()
-		.nothrow();
+	const committed = await $`git diff --name-only --no-renames -z ${`${base}...HEAD`}`.cwd(repoRoot).quiet().nothrow();
 	if (committed.exitCode !== 0) {
 		const stderr = committed.stderr.toString().trim();
 		const suffix = stderr === "" ? `exit ${committed.exitCode}` : stderr;
@@ -201,7 +217,9 @@ export function isRustAffectingPath(changedPath: string): boolean {
 	const normalized = changedPath.replace(/\\/g, "/");
 	const fileName = normalized.slice(normalized.lastIndexOf("/") + 1);
 	return (
-		normalized === "scripts/run-rs-task.ts" ||
+		["scripts/run-rs-task.ts", "scripts/prepare-voice-runtime.ts", "scripts/voice-runtime-reference.json"].includes(
+			normalized,
+		) ||
 		normalized.endsWith(".rs") ||
 		normalized.startsWith(".cargo/") ||
 		isNativeSource(normalized) ||
@@ -229,6 +247,7 @@ function isOneOf<T extends string>(value: string, values: readonly T[]): value i
 
 async function runCommand(command: readonly string[]): Promise<number> {
 	const proc = Bun.spawn([...command], {
+		env: { ...Bun.env, ...voiceEnvironment },
 		cwd: repoRoot,
 		stdin: "inherit",
 		stdout: "inherit",

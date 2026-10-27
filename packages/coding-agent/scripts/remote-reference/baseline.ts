@@ -32,8 +32,8 @@ export function validateReferenceBaseline(value: unknown, requestedVersion: stri
 }
 
 export async function loadReferenceBaseline(version: string): Promise<ReferenceBaseline> {
-	if (version !== "0.153.4" && version !== "0.154.0")
-		throw new Error("Explicit reference baseline must be 0.153.4 or 0.154.0");
+	if (version !== "0.153.4" && version !== "0.154.0" && version !== "0.159.2")
+		throw new Error("Explicit reference baseline must be 0.153.4, 0.154.0 or 0.159.2");
 	const value = JSON.parse(await readFile(join(import.meta.dir, `source-manifest-${version}.json`), "utf8"));
 	return validateReferenceBaseline(value, version);
 }

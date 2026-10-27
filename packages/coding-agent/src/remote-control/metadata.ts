@@ -1,4 +1,5 @@
 import type { RemoteModelDescriptor } from "./session";
+import { voicePersonaInstructions } from "./voice-persona";
 
 function remoteInputModalities(
 	modalities: RemoteModelDescriptor["inputModalities"],
@@ -40,6 +41,11 @@ export function configResponse(thread: Record<string, unknown> | undefined, incl
 			"desktop",
 		].map(key => [key, null]),
 	);
+	// Supply the compiled policy before the phone creates its independent call.
+	config.experimental_realtime_ws_backend_prompt = voicePersonaInstructions(
+		{},
+		{ tools: [], history: "" },
+	).instructions;
 	config.model = thread?.model ?? null;
 	config.model_provider = thread?.modelProvider ?? null;
 	config.model_reasoning_effort = thread?.reasoningEffort ?? null;

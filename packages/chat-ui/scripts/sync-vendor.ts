@@ -35,7 +35,7 @@ const GENERATED_FROM = "@f5-sales-demo/xcsh-chat-ui";
 /** The manifest committed alongside a vendored copy. */
 export interface VendorManifest {
 	generatedFrom: string;
-	/** Posix relative path → sha256 hex of the file's bytes. */
+	/** Posix relative path → sha256:<hex> digest of the file's bytes. Legacy bare digests remain readable. */
 	files: Record<string, string>;
 }
 
@@ -54,6 +54,8 @@ export function listSourceFiles(srcDir: string = SRC_DIR): string[] {
 		for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
 			const full = path.join(dir, entry.name);
 			if (entry.isDirectory()) {
+				// Standalone companion entry points are bundled by xcsh, outside the reusable vendor surface.
+				if (entry.name === "standalone") continue;
 				walk(full);
 			} else if (
 				(/\.(?:tsx?|js|LICENSE)$/.test(entry.name) || entry.name === "LICENSE.code-presentation") &&
@@ -83,7 +85,7 @@ export function buildManifest(srcDir: string = SRC_DIR): VendorManifest {
 	}
 	const files: Record<string, string> = {};
 	for (const rel of listSourceFiles(srcDir)) {
-		files[rel] = sha256(fs.readFileSync(path.join(srcDir, rel)));
+		files[rel] = `sha256:${sha256(fs.readFileSync(path.join(srcDir, rel)))}`;
 	}
 	return { generatedFrom: GENERATED_FROM, files };
 }
@@ -146,7 +148,8 @@ export function verifySelf(targetDir: string): VerifyResult {
 			problems.push(`missing vendored file: ${rel}`);
 			continue;
 		}
-		if (sha256(fs.readFileSync(full)) !== expected) problems.push(`hash mismatch (hand-edited?): ${rel}`);
+		if (sha256(fs.readFileSync(full)) !== expected.replace(/^sha256:/, ""))
+			problems.push(`hash mismatch (hand-edited?): ${rel}`);
 	}
 	const onDisk = new Set(listSourceFiles(targetDir));
 	for (const rel of onDisk) {

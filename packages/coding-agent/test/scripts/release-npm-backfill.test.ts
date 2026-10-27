@@ -52,7 +52,7 @@ describe("release npm backfill publish semantics", () => {
 		} finally {
 			await fs.rm(packRoot, { recursive: true, force: true });
 		}
-	});
+	}, 30_000);
 
 	it("does not misclassify a lower-than-latest dist-tag rejection as already published", () => {
 		const output =

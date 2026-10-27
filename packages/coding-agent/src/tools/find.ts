@@ -78,6 +78,7 @@ export interface FindToolOptions {
 
 export class FindTool implements AgentTool<typeof findSchema, FindToolDetails> {
 	readonly name = "find";
+	getOperationEffect = () => "readOnly" as const;
 	readonly label = "Find";
 	readonly description: string;
 	readonly parameters = findSchema;

@@ -54,7 +54,11 @@ test("waiting field descriptions match pinned Codex source text", () => {
 	visit(requestUserInputSchema);
 });
 test("plan instructions and action labels match pinned source", () => {
-	expect(readFileSync(resolve(import.meta.dir, "../src/prompts/system/plan-mode-active.md"), "utf8")).toBe(
+	const plan = readFileSync(resolve(import.meta.dir, "../src/prompts/system/plan-mode-active.md"), "utf8");
+	const persistence =
+		"When asked to save or show a planning review, emit a complete `<proposed_plan>` block. The Plan card is persisted in conversation history. Do not attempt a project-file write or search for a separate saving tool while Plan Mode is active. A saved review card is not an executable Terraform plan; preserve missing inputs and separate deployment authorization.\n\n";
+	expect(plan).toContain(persistence);
+	expect(plan.replace(persistence, "")).toBe(
 		readFileSync(resolve(root, "codex-rs/collaboration-mode-templates/templates/plan.source"), "utf8"),
 	);
 	const implementation = readFileSync(resolve(root, "codex-rs/tui/src/chatwidget/plan_implementation.source"), "utf8");

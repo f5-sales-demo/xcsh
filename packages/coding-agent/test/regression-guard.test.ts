@@ -460,7 +460,7 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		expect(smokeJob).toBe("");
 		expect(nativeJob).toContain("ubuntu-24.04");
 		expect(nativeJob).toContain("macos-15-intel");
-		expect(nativeJob).toContain("macos-14");
+		expect(nativeJob).toContain("macos-26");
 		expect(nativeJob).toContain("windows-latest");
 		expect(nativeJob).toContain("uses: $/.github/actions/setup-zig");
 		expect(nativeJob).toContain("run: bash scripts/verify-self-hosted-tools.sh full");
@@ -726,7 +726,7 @@ describe("protected CI enforces the macOS sibling-customer boundary", () => {
 	it("runs the real Seatbelt isolation probes after building the native addon", async () => {
 		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
 		const native = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}test:\n)/)?.[0] ?? "";
-		expect(native).toContain('{"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true}');
+		expect(native).toContain('{"os":"macos-26","platform":"darwin","arch":"arm64","sandbox_check":true}');
 		expect(native).toContain("name: Seatbelt sibling-customer enforcement");
 		expect(native).toContain("if: matrix.platform == 'darwin' && matrix.sandbox_check");
 		expect(native).toContain("bun test packages/coding-agent/test/sandbox-isolation.test.ts");

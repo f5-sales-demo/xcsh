@@ -10,10 +10,19 @@ export interface RealtimeModeInstructions {
 }
 
 export class RealtimeContext {
-	#mode?: { sessionId: string; active: boolean; instructions: RealtimeModeInstructions };
+	#mode?: { sessionId: string; active: boolean };
 	#turn?: { sessionId: string; active: boolean };
-	update(sessionId: string, active: boolean, instructions: RealtimeModeInstructions): void {
-		this.#mode = { sessionId, active, instructions: { ...instructions } };
+	update(sessionId: string, active: boolean, _instructions: RealtimeModeInstructions): void {
+		// Incoming fields remain protocol-compatible but cannot author backend policy.
+		this.#mode = { sessionId, active };
+	}
+	/** Active call ownership before the next turn begins. */
+	isVoiceMode(sessionId: string): boolean {
+		return this.#mode?.sessionId === sessionId && this.#mode.active;
+	}
+	/** Voice ownership belongs to the turn snapshot, even after its call closes. */
+	isVoiceTurn(sessionId: string): boolean {
+		return this.#turn?.sessionId === sessionId && this.#turn.active;
 	}
 	beginTurn(sessionId: string): void {
 		this.#turn = { sessionId, active: this.#mode?.sessionId === sessionId && this.#mode.active };
@@ -30,15 +39,20 @@ export class RealtimeContext {
 		const active = this.#turn.active;
 		const previousActive =
 			previous && "customType" in previous ? previous.customType === "remote-voice-start" : undefined;
-		if (active === previousActive || (!active && previousActive === undefined)) return [];
 		const phase = active ? "start" : "end";
-		const instructions = this.#mode?.sessionId === sessionId ? this.#mode.instructions : {};
-		const body = instructions[phase] ?? prompt.render(active ? startTemplate : endTemplate).trim();
+		const body = prompt.render(active ? startTemplate : endTemplate).trim();
+		const content = `<realtime_conversation>\n${body}\n</realtime_conversation>`;
+		// A retained client-authored or older policy cannot suppress current compiled policy.
+		if (
+			(!active && previousActive === undefined) ||
+			(active === previousActive && previous && "content" in previous && previous.content === content)
+		)
+			return [];
 		return [
 			{
 				role: "custom",
 				customType: `remote-voice-${phase}`,
-				content: `<realtime_conversation>\n${body}\n</realtime_conversation>`,
+				content,
 				display: false,
 				attribution: "agent",
 				timestamp: Date.now(),

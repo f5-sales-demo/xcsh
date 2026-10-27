@@ -29,7 +29,7 @@ describe("buildManifest", () => {
 		expect(a).toEqual(b);
 		expect(a.generatedFrom).toBe("@f5-sales-demo/xcsh-chat-ui");
 		expect(Object.keys(a.files)).toEqual(listSourceFiles());
-		for (const h of Object.values(a.files)) expect(h).toMatch(/^[0-9a-f]{64}$/);
+		for (const h of Object.values(a.files)) expect(h).toMatch(/^sha256:[0-9a-f]{64}$/);
 	});
 });
 

@@ -1,0 +1,18 @@
+:root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #10191d; color: #f4f6f7; }
+body { margin: 0; min-height: 100dvh; display: grid; place-items: center; }
+main { max-width: 26rem; padding: max(2rem, env(safe-area-inset-top)) 1.5rem max(2rem, env(safe-area-inset-bottom)); text-align: center; }
+.logo { border-radius: 22px; }
+h1 { font-size: 2.2rem; line-height: 1.14; font-weight: 650; letter-spacing: -.05rem; margin: 1.4rem 0 .8rem; }
+.account, #install { color: #a8b8c0; font-size: .95rem; line-height: 1.6; }
+#status { margin: 2rem 0 1rem; min-height: 2.4em; line-height: 1.5; }
+button { background: #b8edbd; color: #122016; border: 0; border-radius: 18px; padding: 1rem; width: 100%; font: inherit; font-weight: 650; min-height: 3.5rem; }
+button:disabled { opacity: .4; }
+#stop { background: #f6c0b8; color: #3b1b14; }
+#timer { font-variant-numeric: tabular-nums; font-size: 1.5rem; color: #b8edbd; }
+#install { margin-top: 2rem; }
+form { margin-top: 2rem; text-align: left; }
+label { display: block; margin-bottom: .6rem; }
+input { box-sizing: border-box; width: 100%; padding: .8rem; margin-bottom: .8rem; border: 1px solid #667a85; border-radius: 10px; background: #1b292f; color: #fff; font: inherit; }
+[hidden] { display: none !important; }
+
+.secondary { margin-top: 1.5rem; background: transparent; color: #a8b8c0; border: 1px solid #667a85; font-weight: 400; }

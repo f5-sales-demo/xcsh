@@ -42,3 +42,9 @@ declare module "turndown-plugin-gfm" {
 	export const strikethrough: TurndownService.Plugin;
 	export const taskListItems: TurndownService.Plugin;
 }
+
+// This generated browser bundle is imported with Bun type: text.
+declare module "*voice-companion.generated.min.js" {
+	const content: string;
+	export default content;
+}

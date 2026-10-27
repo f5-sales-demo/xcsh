@@ -6,8 +6,9 @@ import { connectPeer, type LocalPeer, listenLocal } from "./ipc";
 import { ManagedRemoteSessions } from "./managed-sessions";
 import { RelayCodec } from "./relay";
 import { RELAY_SWEEP_MS, ReconnectBackoff, RelayClientTracker, RelayHeartbeat } from "./relay-lifecycle";
-import { RemoteRouter, type SessionEndpoint } from "./router";
+import { RemoteRouter, type RemoteTaskSettings, type SessionEndpoint } from "./router";
 import { type Notification, ProtocolError } from "./session";
+import { loadRemoteTaskSettings } from "./task-settings";
 import { type TraceSink, traceFromEnvironment, traceJson } from "./trace-runtime";
 
 async function prepareSocketPath(socketPath: string): Promise<void> {
@@ -180,14 +181,31 @@ export async function startLocalHost(
 	socketPath: string,
 	version: string,
 	trace: TraceSink | undefined = traceFromEnvironment("host", version),
-	options: { defaultCwd?: string; primarySessionId?: string } = {},
+	options: { defaultCwd?: string; primarySessionId?: string; taskSettings?: () => Promise<RemoteTaskSettings> } = {},
 ) {
 	await prepareSocketPath(socketPath);
 	const managed = await new ManagedRemoteSessions(
 		dirname(socketPath),
 		options.defaultCwd ?? process.cwd(),
 	).initialize();
-	const router = new RemoteRouter(dirname(socketPath), version, managed, options.primarySessionId);
+	let bootstrap: { at: number; value: ReturnType<typeof loadRemoteTaskSettings> } | undefined;
+	const taskSettings = () => {
+		if (!bootstrap || Date.now() - bootstrap.at > 30_000) {
+			const value = loadRemoteTaskSettings(managed.defaultCwd);
+			bootstrap = { at: Date.now(), value };
+			void value.catch(() => {
+				if (bootstrap?.value === value) bootstrap = undefined;
+			});
+		}
+		return bootstrap.value;
+	};
+	const router = new RemoteRouter(
+		dirname(socketPath),
+		version,
+		managed,
+		options.primarySessionId,
+		options.taskSettings ?? taskSettings,
+	);
 	managed.publish = event => router.publish(event);
 	managed.detached = threadId => router.removeSession(threadId);
 	managed.hasSubscribers = threadId => router.hasSubscribers(threadId);
@@ -239,6 +257,8 @@ export async function startLocalHost(
 					enabled: true,
 					relay: relayStatus,
 					liveSessions: router.sessions.size,
+					activeVoiceSessions: [...router.sessions.values()].filter(session => session.voiceActive === true)
+						.length,
 					managedSessions: managed.counts().total,
 					loadedManagedSessions: managed.counts().loaded,
 					archivedManagedSessions: managed.counts().archived,
@@ -282,12 +302,15 @@ export async function startLocalHost(
 				const models = registrationModels(params.models);
 				const collaborationMode = registrationCollaborationMode(params.collaborationMode);
 				const asyncInteractions = registrationAsyncInteractions(params.asyncInteractions);
+				if (params.voiceActive != null && typeof params.voiceActive !== "boolean")
+					throw new ProtocolError(-32602, "Invalid voice activity registration");
 				if (params.publishedInteraction != null && typeof params.publishedInteraction !== "boolean")
 					throw new ProtocolError(-32602, "Invalid interaction publication registration");
 				router.registerSession(
 					thread.id,
 					{
 						thread,
+						voiceActive: params.voiceActive === true,
 						requests,
 						skills,
 						skillErrors,

@@ -22,6 +22,10 @@ export class MachineProfileTool implements AgentTool<typeof schema> {
 	readonly label = "Machine profile";
 	readonly description = prompt.render(template);
 	readonly parameters = schema;
+	getOperationEffect(args: unknown): "readOnly" | "mutation" {
+		const action = (args as { action?: string })?.action;
+		return ["get", "status"].includes(action ?? "") ? "readOnly" : "mutation";
+	}
 	constructor(private readonly session: ToolSession) {}
 	async execute(
 		_id: string,

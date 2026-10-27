@@ -12,6 +12,7 @@ function fixture(options: Record<string, unknown> = {}, transport = "existingCal
 	let receive = (_data: string) => {};
 	let authenticated = 0;
 	const deps: VoiceDependencies = {
+		closureTimeoutMs: 20,
 		authenticate: async () => {
 			authenticated++;
 			return { accessToken: "fixture-key", accountId: "example-voice-account" };
@@ -19,9 +20,40 @@ function fixture(options: Record<string, unknown> = {}, transport = "existingCal
 		createCall: async () => ({ callId: "rtc_fixture", sdp: "v=0\r\nfixture-answer" }),
 		open: async (_url, _headers, handlers) => {
 			receive = handlers.message;
-			return { send: data => sent.push(JSON.parse(data)), close: () => {}, bufferedAmount: 0 };
+			queueMicrotask(() =>
+				handlers.message(JSON.stringify({ type: "session.created", session: { id: "fixture-session" } })),
+			);
+			return {
+				send: data => {
+					if (!(JSON.parse(data).type === "session.instructions.append")) sent.push(JSON.parse(data));
+					if (JSON.parse(data).type === "session.instructions.append")
+						queueMicrotask(() =>
+							handlers.message(
+								JSON.stringify({
+									type: "session.instructions.appended",
+									client_event_id: JSON.parse(data).event_id,
+									start_ms: 0,
+									end_ms: 1,
+								}),
+							),
+						);
+					if (JSON.parse(data).type === "session.context.append")
+						queueMicrotask(() =>
+							handlers.message(
+								JSON.stringify({
+									type: "session.context.appended",
+
+									start_ms: performance.now(),
+									end_ms: performance.now() + 1,
+								}),
+							),
+						);
+				},
+				close: () => {},
+				bufferedAmount: 0,
+			};
 		},
-		emit: () => {},
+		emit() {},
 		records: () => records,
 		record: async record => {
 			records.push(record);
@@ -227,7 +259,10 @@ test.each(["items", "text", "cumulative"])("response-item delivery enforces its 
 			job.output({ id: "third", text: "Overflow", done: true });
 		}
 		expect(f.voice.active).toBe(false);
-		expect(f.sent.every(frame => frame.type === "session.context.append")).toBe(true);
+		expect(
+			f.sent.filter(frame => frame.type !== "session.close").every(frame => frame.type === "session.context.append"),
+		).toBe(true);
+		expect(f.sent.filter(frame => frame.type === "session.close")).toHaveLength(1);
 	} finally {
 		await f.close();
 	}

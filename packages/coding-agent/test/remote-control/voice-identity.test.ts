@@ -13,6 +13,7 @@ function fixture() {
 	const calls: Record<string, string>[] = [];
 	const connections: { headers: Record<string, string>; handlers: VoiceHandlers }[] = [];
 	const deps: VoiceDependencies = {
+		closureTimeoutMs: 20,
 		authenticate: async () => ({ accessToken: "fixture-key", accountId: "example-voice-account" }),
 		createCall: async (_config, _auth, headers) => {
 			calls.push(headers);
@@ -20,7 +21,37 @@ function fixture() {
 		},
 		open: async (_url, headers, handlers) => {
 			connections.push({ headers, handlers });
-			return { send: () => {}, close: () => {}, bufferedAmount: 0 };
+			queueMicrotask(() =>
+				handlers.message(JSON.stringify({ type: "session.created", session: { id: "fixture-session" } })),
+			);
+			return {
+				send: data => {
+					if (JSON.parse(data).type === "session.instructions.append")
+						queueMicrotask(() =>
+							handlers.message(
+								JSON.stringify({
+									type: "session.instructions.appended",
+									client_event_id: JSON.parse(data).event_id,
+									start_ms: 0,
+									end_ms: 1,
+								}),
+							),
+						);
+					if (JSON.parse(data).type === "session.context.append")
+						queueMicrotask(() =>
+							handlers.message(
+								JSON.stringify({
+									type: "session.context.appended",
+
+									start_ms: performance.now(),
+									end_ms: performance.now() + 1,
+								}),
+							),
+						);
+				},
+				close: () => {},
+				bufferedAmount: 0,
+			};
 		},
 		emit: (method, params) => events.push({ method, params }),
 		records: () => records,

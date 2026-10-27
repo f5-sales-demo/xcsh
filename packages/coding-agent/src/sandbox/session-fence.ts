@@ -18,7 +18,7 @@
 import * as os from "node:os";
 import * as path from "node:path";
 import { buildContainmentFence, type ContainmentFence } from "./containment";
-import { isRemoteAsk } from "./remote-permissions";
+import { isRemoteAsk, isRemoteReadOnly } from "./remote-permissions";
 
 /**
  * Trusted context added to commands launched by the fenced model bash tool.
@@ -88,9 +88,10 @@ export function resolveSessionFence(
 	const allowRead = readSetting<string[]>(settings, "sandbox.allowRead", []);
 	const allowWrite = readSetting<string[]>(settings, "sandbox.allowWrite", []);
 	const ask = isRemoteAsk(settings as import("./remote-permissions").RuntimeSandboxSettings);
+	const readOnly = isRemoteReadOnly(settings as import("./remote-permissions").RuntimeSandboxSettings);
 	const signature = [
 		workspace,
-		ask ? "remote-ask" : "operator-rights",
+		readOnly ? "remote-read-only" : ask ? "remote-ask" : "operator-rights",
 		JSON.stringify(allowRead),
 		JSON.stringify(allowWrite),
 		extras.sessionTmp ?? "",
@@ -107,12 +108,19 @@ export function resolveSessionFence(
 	// directional roots for specialized callers and tests, but ordinary xcsh sessions never emit them.
 	const fence = buildContainmentFence({
 		workspace,
-		sessionTmp: extras.sessionTmp,
-		extraRoots: ask
-			? [...(extras.extraRoots ?? []), os.tmpdir(), ...allowWrite]
-			: [...(extras.extraRoots ?? []), ...allowRead, ...allowWrite],
-		readOnlyRoots: ask ? [path.parse(workspace).root, ...allowRead] : undefined,
+		sessionTmp: readOnly ? undefined : extras.sessionTmp,
+		extraRoots: readOnly
+			? undefined
+			: ask
+				? [...(extras.extraRoots ?? []), os.tmpdir(), ...allowWrite]
+				: [...(extras.extraRoots ?? []), ...allowRead, ...allowWrite],
+		readOnlyRoots: readOnly
+			? [path.parse(workspace).root]
+			: ask
+				? [path.parse(workspace).root, ...allowRead]
+				: undefined,
 		strictWorkspaceWrite: ask,
+		strictReadOnly: readOnly,
 	});
 	if (cache.size >= CACHE_LIMIT) {
 		const oldest = cache.keys().next();

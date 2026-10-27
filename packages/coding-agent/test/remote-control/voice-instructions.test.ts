@@ -19,12 +19,46 @@ function fixture() {
 		events: string[] = [];
 	let authenticated = 0;
 	const deps: VoiceDependencies = {
+		closureTimeoutMs: 20,
 		authenticate: async () => {
 			authenticated++;
 			return { accessToken: "fixture-key", accountId: "example-voice-account" };
 		},
 		createCall: async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" }),
-		open: async () => ({ send: data => sent.push(JSON.parse(data)), close: () => {}, bufferedAmount: 0 }),
+		open: async (_url, _headers, handlers) => {
+			queueMicrotask(() =>
+				handlers.message(JSON.stringify({ type: "session.created", session: { id: "fixture-session" } })),
+			);
+			return {
+				send: data => {
+					sent.push(JSON.parse(data));
+					if (JSON.parse(data).type === "session.instructions.append")
+						queueMicrotask(() =>
+							handlers.message(
+								JSON.stringify({
+									type: "session.instructions.appended",
+									client_event_id: JSON.parse(data).event_id,
+									start_ms: 0,
+									end_ms: 1,
+								}),
+							),
+						);
+					if (JSON.parse(data).type === "session.context.append")
+						queueMicrotask(() =>
+							handlers.message(
+								JSON.stringify({
+									type: "session.context.appended",
+
+									start_ms: performance.now(),
+									end_ms: performance.now() + 1,
+								}),
+							),
+						);
+				},
+				close: () => {},
+				bufferedAmount: 0,
+			};
+		},
 		modeChanged: async (active, options) => {
 			const phase = active ? "start" : "end",
 				text = options[phase];
@@ -51,7 +85,8 @@ test.each(transports)("$type accepts backing instructions and applies them after
 	expect(f.instructions).toEqual(["start:Start fixture"]);
 	await f.voice.stop();
 	expect(f.instructions).toEqual(["start:Start fixture", "end:End fixture"]);
-	if (transport.type === "existingCall") expect(f.sent.some(frame => frame.type === "session.update")).toBe(false);
+	if (transport.type === "existingCall")
+		expect(f.sent.filter(frame => frame.type === "session.instructions.append")).toHaveLength(0);
 });
 
 test.each(transports)("$type reports mode changes even without custom instructions", async transport => {

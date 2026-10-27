@@ -7,6 +7,24 @@ export interface Pairing {
 	environment_id: string;
 	expires_at: string;
 }
+/** Keep terminal controls and oversized challenges out of human pairing displays. */
+export function validatePairing(value: unknown, now = Date.now()): asserts value is Pairing {
+	const body = value as Partial<Pairing> | null;
+	if (
+		!body ||
+		typeof body.server_id !== "string" ||
+		!body.server_id ||
+		typeof body.environment_id !== "string" ||
+		!body.environment_id ||
+		typeof body.pairing_code !== "string" ||
+		!/^[\x21-\x7e]{1,4096}$/.test(body.pairing_code) ||
+		typeof body.expires_at !== "string" ||
+		!(Date.parse(body.expires_at) > now) ||
+		(body.manual_pairing_code != null &&
+			(typeof body.manual_pairing_code !== "string" || !/^[A-Za-z0-9 -]{1,128}$/.test(body.manual_pairing_code)))
+	)
+		throw new RemoteControlError("Invalid pairing response", { stage: "pairing" });
+}
 export async function startPairing(
 	enrollment: Enrollment,
 	send: (request: Request) => Promise<Response> = request => fetch(request),
@@ -57,14 +75,8 @@ export async function startPairing(
 			reader.releaseLock();
 		}
 		const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Pairing;
-		if (
-			body.server_id !== enrollment.server_id ||
-			body.environment_id !== enrollment.environment_id ||
-			typeof body.pairing_code !== "string" ||
-			!body.pairing_code ||
-			!(Date.parse(body.expires_at) > Date.now()) ||
-			(body.manual_pairing_code != null && typeof body.manual_pairing_code !== "string")
-		)
+		validatePairing(body);
+		if (body.server_id !== enrollment.server_id || body.environment_id !== enrollment.environment_id)
 			throw new Error();
 		return {
 			pairing_code: body.pairing_code,

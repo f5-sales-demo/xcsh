@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { HerdrClient } from "../herdr/client";
 import { HerdrInteractionBridge } from "../herdr/interactions";
 import {
+	adoptActivatedContextExecution,
 	type ContextExecutionSnapshot,
 	captureContextExecution,
 	captureNextContextExecution,
@@ -8,6 +10,9 @@ import {
 	runWithContextExecution,
 } from "../services/context-execution";
 import { coordinateSessionTitle } from "../utils/title-generator";
+import { voiceChatContext } from "./voice-chat-context";
+import { canonicalVoiceArguments } from "./voice-operation-retry";
+import { VoiceToolRetry } from "./voice-tool-retry";
 /**
  * AgentSession - Core abstraction for agent lifecycle and session management.
  *
@@ -394,6 +399,8 @@ export interface PromptOptions {
 	streamingBehavior?: "steer" | "followUp";
 	/** Optional tool choice override for the next LLM call. */
 	toolChoice?: ToolChoice;
+	/** JSON Schema that constrains only this turn's assistant text output. */
+	outputSchema?: unknown;
 	/** Send as developer/system message instead of user. Providers that support it use the developer role; others fall back to user. */
 	synthetic?: boolean;
 	/** Explicit billing/initiator attribution for the prompt. Defaults to user prompts as `user` and synthetic prompts as `agent`. */
@@ -873,6 +880,83 @@ export class AgentSession {
 			this.#preCacheStreamingEditFile(event);
 			this.#maybeAbortStreamingEdit(event);
 		});
+		this.agent.executeTool = async (tool, id, args, signal, update, context) => {
+			const execute = () =>
+				tool.execute(id, structuredClone(args), tool.nonAbortable ? undefined : signal, update, context);
+			if (!this.#realtimeContext.isVoiceTurn(this.sessionId)) return execute();
+			const originalSessionId = this.sessionId;
+			const originalWorkspace = this.sessionManager.getCwd();
+			const originalTaskId = this.#voiceTaskId;
+			const selectionFingerprint = () => {
+				// Inspect the live selection outside the admitted credential snapshot.
+				const env = captureNextContextExecution(this.settings).environment;
+				return JSON.stringify([
+					env?.XCSH_CONTEXT_NAME,
+					env?.XCSH_TENANT,
+					env?.XCSH_NAMESPACE,
+					env?.XCSH_API_URL,
+					process.env.XCSH_CONTEXT_NAME,
+					process.env.XCSH_TENANT,
+					process.env.XCSH_NAMESPACE,
+					process.env.XCSH_API_URL,
+				]);
+			};
+			const originalSelection = selectionFingerprint();
+
+			const effect = tool.getOperationEffect?.(args) ?? "unknown";
+			const argsSha256 = createHash("sha256").update(canonicalVoiceArguments(args)).digest("hex");
+			const operationId = `${this.#voiceTaskId}:${tool.name}:${argsSha256}`;
+			const revision = this.sessionManager
+				.getEntries()
+				.findLast(
+					entry =>
+						entry.type === "custom" &&
+						entry.customType === "voice-operation" &&
+						entry.data &&
+						typeof entry.data === "object" &&
+						(entry.data as any).kind === "voiceTaskDelegation" &&
+						(entry.data as any).taskId === this.#voiceTaskId,
+				);
+			const taskRevision = revision && revision.type === "custom" ? (revision.data as any).revision : 1;
+			this.sessionManager.appendCustomEntry("voice-operation", {
+				kind: "voiceOperationIdentity",
+				id: operationId,
+				taskRevision,
+				taskId: this.#voiceTaskId,
+				toolCallId: id,
+				toolName: tool.name,
+				argsSha256,
+				effect,
+			});
+			await this.sessionManager.flush();
+			return this.#voiceToolRetry.run(
+				operationId,
+				effect,
+				execute,
+				() => signal?.aborted === true,
+				() => {
+					const latest = this.sessionManager
+						.getEntries()
+						.findLast(
+							entry =>
+								entry.type === "custom" &&
+								entry.customType === "voice-operation" &&
+								entry.data &&
+								typeof entry.data === "object" &&
+								(entry.data as any).kind === "voiceTaskDelegation" &&
+								(entry.data as any).taskId === originalTaskId,
+						);
+					const latestRevision = latest && latest.type === "custom" ? (latest.data as any).revision : 1;
+					return (
+						originalSessionId === this.sessionId &&
+						originalWorkspace === this.sessionManager.getCwd() &&
+						originalTaskId === this.#voiceTaskId &&
+						latestRevision === taskRevision &&
+						originalSelection === selectionFingerprint()
+					);
+				},
+			);
+		};
 		this.agent.providerSessionState = this.#providerSessionState;
 		this.#syncTodoPhasesFromBranch();
 
@@ -947,9 +1031,23 @@ export class AgentSession {
 		});
 		this.addDisposeHook(
 			this.agent.setContextMessagesProvider(messages =>
-				this.isDisposing ? [] : this.#realtimeContext.messages(this.sessionId, messages),
+				this.isDisposing
+					? []
+					: [
+							...this.#realtimeContext.messages(this.sessionId, messages),
+							...voiceChatContext(this.sessionManager.getBranch(), messages),
+						],
 			),
 		);
+	}
+
+	/** Called only after this session completed an explicit context activation. */
+	adoptActivatedContext(name: string): void {
+		const snapshot = captureNextContextExecution(this.settings);
+		if (snapshot.environment.XCSH_CONTEXT_NAME !== name)
+			throw new Error("Activated context selection changed before admission");
+		this.#executionSnapshot = snapshot;
+		adoptActivatedContextExecution(snapshot);
 	}
 
 	/** Model registry for API key resolution and model discovery */
@@ -1374,6 +1472,86 @@ export class AgentSession {
 	}
 	// A terminal envelope is discarded, but the core still pairs its partial tool
 	// calls with aborted placeholders. Keep those placeholders out of session state.
+	#beginPromptVoicePolicy(): void {
+		this.#realtimeContext.beginTurn(this.sessionId);
+		this.#voiceTaskId = this.#realtimeContext.isVoiceTurn(this.sessionId)
+			? (this.#pendingVoiceTaskId ?? crypto.randomUUID())
+			: undefined;
+		this.#pendingVoiceTaskId = undefined;
+		this.#voiceToolRetry = this.#newVoiceToolRetry();
+		this.agent.maxRetries = this.#realtimeContext.isVoiceTurn(this.sessionId) ? 0 : undefined;
+	}
+	#voiceTaskId?: string;
+	#pendingVoiceTaskId?: string;
+	/** Attach the existing task/delegation identity without resubmitting work. */
+	setVoiceTaskIdentity(taskId: string, delegationId: string): void {
+		if (!this.isStreaming) this.#pendingVoiceTaskId = taskId;
+		const prior = this.sessionManager
+			.getEntries()
+			.flatMap(entry =>
+				entry.type === "custom" &&
+				entry.customType === "voice-operation" &&
+				entry.data &&
+				typeof entry.data === "object" &&
+				(entry.data as any).kind === "voiceTaskDelegation" &&
+				(entry.data as any).taskId === taskId
+					? [entry.data as any]
+					: [],
+			);
+		if (prior.some(record => record.delegationId === delegationId)) return;
+		const previous = prior.at(-1);
+		const revision = (typeof previous?.revision === "number" ? previous.revision : prior.length) + 1;
+		this.sessionManager.appendCustomEntry("voice-operation", {
+			kind: "voiceTaskDelegation",
+			taskId,
+			delegationId,
+			revision,
+			...(previous?.delegationId ? { supersedes: previous.delegationId } : {}),
+		});
+	}
+
+	#voiceToolRetry = this.#newVoiceToolRetry();
+	#newVoiceToolRetry(): VoiceToolRetry {
+		const taskId = this.#voiceTaskId;
+		const spent =
+			taskId !== undefined &&
+			this.sessionManager
+				.getEntries()
+				.some(
+					entry =>
+						entry.type === "custom" &&
+						entry.customType === "voice-operation" &&
+						entry.data &&
+						typeof entry.data === "object" &&
+						(entry.data as any).taskId === taskId &&
+						(entry.data as any).kind === "voiceRetryReserved",
+				);
+		const restored =
+			this.sessionManager
+				?.getEntries()
+				.flatMap(entry =>
+					entry.type === "custom" &&
+					entry.customType === "voice-operation" &&
+					entry.data &&
+					typeof entry.data === "object" &&
+					(entry.data as any).taskId === taskId &&
+					(entry.data as any).kind === "voiceOperation"
+						? [entry.data as any]
+						: [],
+				) ?? [];
+		return new VoiceToolRetry(
+			async record => {
+				this.sessionManager.appendCustomEntry("voice-operation", {
+					...record,
+					taskId,
+					sessionId: this.sessionId,
+				});
+				await this.sessionManager.flush();
+			},
+			spent,
+			restored,
+		);
+	}
 	readonly #discardedTerminalToolCallIds = new Set<string>();
 
 	/** Internal handler for agent events - shared by subscribe and reconnect */
@@ -2126,6 +2304,8 @@ export class AgentSession {
 		this.#routingCoordinator.restoreState(state);
 	}
 	public recordRoutingOutcome(outcome: RoutingOutcome): void {
+		if (this.#realtimeContext.isVoiceMode(this.sessionId) || this.#realtimeContext.isVoiceTurn(this.sessionId))
+			return;
 		const routingMode = this.settings.get("routing.mode") as import("../routing/types").RoutingMode;
 		if (outcome.status === "rejected") {
 			const hasUserFeedback = outcome.evidence.some(e => e.kind === "user_feedback");
@@ -3571,6 +3751,19 @@ export class AgentSession {
 		return this.#planModeState;
 	}
 
+	/** Enter the existing Plan runtime from a user-requested backend tool. */
+	async enterPlanModeFromTool(): Promise<void> {
+		if (this.#planModeState?.enabled && this.sessionManager.buildSessionContext().mode === "plan") return;
+		const previous = this.#planModeState;
+		try {
+			await this.setPlanModeState({ enabled: true });
+			this.sessionManager.appendModeChange("plan");
+		} catch (error) {
+			await this.setPlanModeState(previous);
+			throw error;
+		}
+	}
+
 	async setPlanModeState(state: PlanModeState | undefined): Promise<void> {
 		this.#planModeState = state;
 		this.#syncWaitingToolAvailability();
@@ -3770,6 +3963,8 @@ export class AgentSession {
 				: { role: "user" as const, content: userContent, attribution: promptAttribution, timestamp: Date.now() };
 			if (message.role === "user") await this.#prepareUserInput(message, options?.userTaskText);
 
+			// Reset voice ownership for a new prompt before routing or fallback restoration.
+			this.#beginPromptVoicePolicy();
 			await this.#maybeRestoreRetryFallbackPrimary();
 			if (!this.#isPromptCurrent(generation)) return;
 
@@ -3864,6 +4059,9 @@ export class AgentSession {
 		options?: { signal?: AbortSignal } | any,
 	): Promise<string | undefined> {
 		const generation = this.#promptGeneration;
+		// The voice conversation explicitly selected its executor; automatic routing
+		// cannot reinterpret that selection before starting the delegated turn.
+		if (this.#realtimeContext.isVoiceMode(this.sessionId)) return undefined;
 		const routingMode = (this.settings.get("routing.mode") as import("../routing/types").RoutingMode) ?? "off";
 		if (routingMode === "off" || !this.model) return undefined;
 
@@ -4125,7 +4323,10 @@ export class AgentSession {
 	async #promptWithMessage(
 		message: AgentMessage,
 		expandedText: string,
-		options?: Pick<PromptOptions, "toolChoice" | "images" | "skipCompactionCheck" | "serverTools"> & {
+		options?: Pick<
+			PromptOptions,
+			"toolChoice" | "images" | "skipCompactionCheck" | "serverTools" | "outputSchema"
+		> & {
 			prependMessages?: AgentMessage[];
 			skipPostPromptRecoveryWait?: boolean;
 		},
@@ -4316,8 +4517,12 @@ export class AgentSession {
 			messages.push(message);
 
 			const agentPromptOptions =
-				options?.toolChoice || options?.serverTools
-					? { toolChoice: options?.toolChoice, serverTools: options?.serverTools }
+				options?.toolChoice || options?.serverTools || options?.outputSchema != null
+					? {
+							toolChoice: options?.toolChoice,
+							serverTools: options?.serverTools,
+							outputSchema: options?.outputSchema,
+						}
 					: undefined;
 			agentLoopStarted = true;
 			await logger.ttftAttr("ttft.agent-loop-total", () =>
@@ -4740,6 +4945,7 @@ export class AgentSession {
 
 		if (options?.deliverAs === "nextTurn") {
 			if (options?.triggerTurn) {
+				this.#beginPromptVoicePolicy();
 				let promptText = "";
 				if (typeof message.content === "string") promptText = message.content;
 				else if (Array.isArray(message.content)) {
@@ -4784,6 +4990,7 @@ export class AgentSession {
 		}
 
 		if (options?.triggerTurn) {
+			this.#beginPromptVoicePolicy();
 			let promptText = "";
 			if (typeof message.content === "string") promptText = message.content;
 			else if (Array.isArray(message.content)) {
@@ -7125,6 +7332,8 @@ export class AgentSession {
 	}
 
 	async #tryRetryModelFallback(currentSelector: string): Promise<boolean> {
+		// Live owns speech, but the attached conversation retains its selected executor.
+		if (this.#realtimeContext.isVoiceTurn(this.sessionId)) return false;
 		const role = this.#activeRetryFallback?.role ?? this.#resolveRetryFallbackRole(currentSelector);
 		if (!role) return false;
 
@@ -7149,6 +7358,8 @@ export class AgentSession {
 	}
 
 	async #maybeRestoreRetryFallbackPrimary(): Promise<void> {
+		if (this.#realtimeContext.isVoiceMode(this.sessionId) || this.#realtimeContext.isVoiceTurn(this.sessionId))
+			return;
 		if (!this.#activeRetryFallback) return;
 		if (this.#getRetryFallbackRevertPolicy() !== "cooldown-expiry") return;
 
@@ -7240,6 +7451,7 @@ export class AgentSession {
 	 * @returns true if retry was initiated, false if max retries exceeded or disabled
 	 */
 	async #handleRetryableError(message: AssistantMessage): Promise<boolean> {
+		if (this.#realtimeContext.isVoiceTurn(this.sessionId)) return false;
 		const retrySettings = this.settings.getGroup("retry");
 		if (!retrySettings.enabled) return false;
 
@@ -7363,7 +7575,7 @@ export class AgentSession {
 
 	async #promptAgentWithIdleRetry(
 		messages: AgentMessage[],
-		options?: { toolChoice?: ToolChoice; serverTools?: Record<string, unknown>[] },
+		options?: { toolChoice?: ToolChoice; serverTools?: Record<string, unknown>[]; outputSchema?: unknown },
 	): Promise<void> {
 		const deadline = Date.now() + 30_000;
 		for (;;) {

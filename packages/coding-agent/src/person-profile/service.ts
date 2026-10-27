@@ -1,6 +1,7 @@
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { getConfigRootDir } from "@f5-sales-demo/pi-utils";
 import { Value } from "@sinclair/typebox/value";
+import { samePluginRegistrationOwner } from "../utils/plugin-registration-owner";
 import { PROFILE_COLLECTORS } from "./collectors";
 import { PrivateProfileStore, type ProfileResetLease, type ProfileStoreStatus } from "./private-store";
 import {
@@ -52,7 +53,7 @@ export interface ProfileCollector {
 export interface ExtensionProfileCollector extends Omit<ProfileCollector, "collect"> {
 	collect(signal?: AbortSignal): Promise<ProfileCollection>;
 }
-const defaultPath = () => join(homedir(), ".xcsh", "user-profile.json");
+const defaultPath = () => join(getConfigRootDir(), "user-profile.json");
 function cancelled(signal?: AbortSignal) {
 	if (signal?.aborted) throw new Error("Person profile operation cancelled");
 }
@@ -150,7 +151,8 @@ export class PersonProfileService {
 			collector.name.length > 128 ||
 			!/^[a-z][a-z0-9_-]{0,63}$/.test(collector.id) ||
 			["user", "conversation", "inference"].includes(collector.id) ||
-			(this.#collectors.has(collector.id) && (!registrant || this.#registrants.get(collector.id) !== registrant)) ||
+			(this.#collectors.has(collector.id) &&
+				(!registrant || !samePluginRegistrationOwner(this.#registrants.get(collector.id), registrant))) ||
 			typeof collector.available !== "function" ||
 			typeof collector.collect !== "function" ||
 			(collector.timeoutMs !== undefined &&

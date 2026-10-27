@@ -30,6 +30,7 @@ import { ClassifyTool } from "./classify";
 import { DebugTool } from "./debug";
 import type { DiscoverableTool, DiscoverableToolSearchIndex } from "./discoverable-tool-metadata";
 import { DisplayMediaTool } from "./display-media";
+import { EnterPlanModeTool } from "./enter-plan-mode";
 import { FindTool } from "./find";
 import { GetPageContextTool } from "./get-page-context";
 import { GrepTool } from "./grep";
@@ -56,6 +57,7 @@ import { WriteTool } from "./write";
 import { XcshApiTool } from "./xcsh-api";
 import { XcshBlindfoldTool } from "./xcsh-blindfold";
 import { XcshContextTool } from "./xcsh-context";
+import { XcshPluginTool } from "./xcsh-plugin";
 
 export * from "../edit";
 export * from "../lsp";
@@ -108,6 +110,7 @@ export type { DiscoverableTool } from "./discoverable-tool-metadata";
 
 /** Session context for tool factories */
 export interface ToolSession {
+	adoptActivatedContext?: (name: string) => void;
 	getModel?: () => import("@f5-sales-demo/pi-ai").Model | undefined;
 	getUserInteractions?: () => import("../session/user-interactions").UserInteractions;
 	getInteractionIdentity?: (itemId: string) => import("../session/user-interactions").InteractionIdentity;
@@ -189,6 +192,8 @@ export interface ToolSession {
 	appendMediaMessage?: (message: import("../media/types").MediaMessage) => void;
 	/** Plan mode state (if active) */
 	getPlanModeState?: () => PlanModeState | undefined;
+	/** Enter runtime Plan mode and persist the mode without changing model or context. */
+	enterPlanMode?: () => Promise<void>;
 	/** Get compact conversation context for subagents (excludes tool results, system prompts) */
 	getCompactContext?: () => string;
 	/** Get cached todo phases for this session. */
@@ -222,6 +227,8 @@ export interface ToolSession {
 	queueDeferredMessage?(message: CustomMessage): void;
 
 	/** Extension bridge server (available when Chrome extension is connected). */
+	reloadPluginTools?(): Promise<void>;
+	getPluginWorkflowService?(): Promise<import("../services/plugin-workflow").PluginWorkflowService>;
 	bridgeServer?: import("../browser/extension-bridge").BridgeServer;
 }
 
@@ -231,7 +238,9 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	classify: s => new ClassifyTool(s),
 	person_profile: s => new PersonProfileTool(s),
 	xcsh_context: s => new XcshContextTool(s),
+	xcsh_plugin: s => new XcshPluginTool(s),
 	machine_profile: s => new MachineProfileTool(s),
+	enter_plan_mode: EnterPlanModeTool.createIf,
 	ast_grep: s => new AstGrepTool(s),
 	ast_edit: s => new AstEditTool(s),
 	render_mermaid: s => new RenderMermaidTool(s),

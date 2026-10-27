@@ -65,7 +65,13 @@ try {
 			} else await Bun.write(path, raw);
 			continue;
 		}
-		const format = Bun.spawnSync(["biome", "check", "--write", "--stdin-file-path", path], {
+		// The root source matcher includes TypeScript, not generated JavaScript.
+		// Use a parsed source filename for export ordering while retaining the
+		// minifier's whitespace in the generated browser artifact.
+		const checkArgs = ["biome", "check", "--write"];
+		if (path.endsWith(".js")) checkArgs.push("--formatter-enabled=false");
+		checkArgs.push("--stdin-file-path", path.endsWith(".js") ? path.replace(/\.js$/, ".ts") : path);
+		const format = Bun.spawnSync(checkArgs, {
 			stdin: Buffer.from(raw),
 		});
 		if (format.exitCode !== 0) throw new Error(format.stderr.toString());

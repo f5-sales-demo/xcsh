@@ -23,7 +23,16 @@ export type StreamFn = (
 /**
  * Configuration for the agent loop.
  */
+export type ToolExecutionHandler = (
+	tool: AgentTool,
+	id: string,
+	args: any,
+	signal: AbortSignal | undefined,
+	update: AgentToolUpdateCallback | undefined,
+	context: AgentToolContext | undefined,
+) => Promise<AgentToolResult>;
 export interface AgentLoopConfig extends SimpleStreamOptions {
+	executeTool?: ToolExecutionHandler;
 	model: Model;
 
 	/**
@@ -203,6 +212,8 @@ export interface AgentState {
 }
 
 export interface AgentToolResult<T = any, _TInput = unknown> {
+	/** Returned execution failure; preserved in events and durable tool messages. */
+	isError?: boolean;
 	/** Trusted schemas loaded by client tool search. */
 	tools?: import("@f5-sales-demo/pi-ai").Tool[];
 	// Content blocks supporting text and images
@@ -252,6 +263,8 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
 	extends Tool<TParameters> {
 	// A human-readable label for the tool to be displayed in UI
 	label: string;
+	/** Application-owned effect classification; absent means unknown. */
+	getOperationEffect?: (args: unknown) => "readOnly" | "mutation" | "unknown";
 	/** Host presentation of the actual executor; absent for ordinary dynamic tools. */
 	executionKind?: "command" | "fileChange";
 	/** Pure per-call classification; returning undefined preserves ordinary dynamic-tool presentation. */

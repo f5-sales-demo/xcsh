@@ -73,6 +73,8 @@ export interface ContainmentOptions {
 	otherRoots?: readonly string[];
 	/** Enforce workspace-write semantics instead of the normal operator-rights courtesy. */
 	strictWorkspaceWrite?: boolean;
+	/** Enforce read-only semantics across the filesystem, including the workspace. */
+	strictReadOnly?: boolean;
 	/**
 	 * The filesystem root whose immediate entries are classified as operational or data — see
 	 * DATA_ROOTS. Overridable for tests; defaults to the real root.
@@ -430,7 +432,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 
 	const home = canonical(options.home ?? os.homedir());
 	const fsRoot = options.fsRoot ?? path.parse(workspace).root;
-	const allow = new Set<string>([workspace]);
+	const allow = new Set<string>(options.strictReadOnly ? [] : [workspace]);
 	const allowReadOnly = new Set<string>();
 	const allowWriteOnly = new Set<string>();
 	const deny = new Set<string>();
@@ -487,7 +489,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		denyEnumerate.add(parentToProtect);
 	}
 
-	if (home !== undefined && !options.strictWorkspaceWrite) {
+	if (home !== undefined && !options.strictWorkspaceWrite && !options.strictReadOnly) {
 		// The account container is a data root, but this operator's whole home belongs to them (#2637).
 		// A deeper full allow preserves their normal filesystem rights. The account container loses only
 		// enumeration, and cross-session stores are denied again at still greater depth below.

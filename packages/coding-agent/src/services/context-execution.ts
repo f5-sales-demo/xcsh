@@ -6,11 +6,11 @@ export interface ContextExecutionSnapshot {
 	readonly source: "local" | "global";
 }
 
-const execution = new AsyncLocalStorage<ContextExecutionSnapshot>();
+const execution = new AsyncLocalStorage<{ snapshot: ContextExecutionSnapshot }>();
 
 /** Private runtime data only. Never serialize this credential-bearing snapshot. */
 export function currentContextExecution(): ContextExecutionSnapshot | undefined {
-	return execution.getStore();
+	return execution.getStore()?.snapshot;
 }
 
 export function captureContextExecution(settings: {
@@ -18,7 +18,7 @@ export function captureContextExecution(settings: {
 	get(key: "xcsh.sensitiveKeys"): unknown;
 	get(key: "xcsh.contextSource"): unknown;
 }): ContextExecutionSnapshot {
-	const inherited = execution.getStore();
+	const inherited = execution.getStore()?.snapshot;
 	if (inherited) return inherited;
 	const environment = { ...((settings.get("bash.environment") ?? {}) as Record<string, string>) };
 	for (const [key, value] of Object.entries(process.env)) {
@@ -32,16 +32,22 @@ export function captureContextExecution(settings: {
 }
 
 export function runWithContextExecution<T>(snapshot: ContextExecutionSnapshot, action: () => T): T {
-	return execution.run(snapshot, action);
+	return execution.run({ snapshot }, action);
 }
 
 /** Credentials resolve from the admitted turn when present, including absent values. */
 export function executionEnvironmentValue(key: string): string | undefined {
-	return execution.getStore() ? execution.getStore()!.environment[key] : process.env[key];
+	return execution.getStore() ? execution.getStore()!.snapshot.environment[key] : process.env[key];
 }
 
 export function captureNextContextExecution(
 	settings: Parameters<typeof captureContextExecution>[0],
 ): ContextExecutionSnapshot {
 	return execution.exit(() => captureContextExecution(settings));
+}
+
+/** Advance only the caller scope after its explicit context activation was verified. */
+export function adoptActivatedContextExecution(snapshot: ContextExecutionSnapshot): void {
+	const scope = execution.getStore();
+	if (scope) scope.snapshot = snapshot;
 }

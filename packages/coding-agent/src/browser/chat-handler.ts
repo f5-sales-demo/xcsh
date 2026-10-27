@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { AssistantMessage, AssistantMessagePhase, ImageContent } from "@f5-sales-demo/pi-ai";
 import { isInteractionCommand } from "../../../chat-ui/src/interactions/transport";
+import { isVoiceRequest, type VoiceRequest } from "../../../chat-ui/src/voice/contract";
 import { parseModelString } from "../config/model-resolver";
 import { settings } from "../config/settings";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
@@ -21,6 +22,7 @@ import {
 } from "../media/transport";
 import { LITELLM_LOGIN_MODEL_CHOICES } from "../modes/controllers/login-model";
 import { extractReferences } from "../references";
+import { SelectedChatVoice } from "../remote-control/selected-chat-voice";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { EXTENSION_CAPABILITIES } from "./capabilities.generated";
 import {
@@ -114,6 +116,7 @@ export class ChatHandler {
 	// driver — the only WS-specific wiring is the `send()` output sink below.
 	#hostToolBridge: RpcHostToolBridge;
 	#unsubscribeInteractions?: () => void;
+	#voiceBridge?: SelectedChatVoice;
 
 	constructor(server: BridgeServer, session: AgentSession) {
 		this.#server = server;
@@ -135,6 +138,10 @@ export class ChatHandler {
 			if (event.type === "plan_available" || event.type === "plan_resolved") this.#server.send(event);
 		});
 		this.#server.onMessage(msg => {
+			if (isVoiceRequest(msg)) {
+				void this.#handleVoiceRequest(msg);
+				return;
+			}
 			if (msg.type === "interaction_snapshot") {
 				this.#server.send({
 					type: "interaction_snapshot",
@@ -231,6 +238,7 @@ export class ChatHandler {
 		});
 
 		this.#server.onDisconnected(() => {
+			void this.#voiceBridge?.close();
 			this.#disposed = true;
 			this.#pendingRequest = null; // abandon any queued prompt — the bridge is gone
 			// Fail any in-flight host-tool call — the client that would answer it is gone.
@@ -245,6 +253,12 @@ export class ChatHandler {
 			}
 			this.#activeChats.clear();
 		});
+	}
+
+	async #handleVoiceRequest(request: VoiceRequest): Promise<void> {
+		if (this.#disposed) return;
+		this.#voiceBridge ??= new SelectedChatVoice(this.#session, frame => this.#server.send(frame));
+		await this.#voiceBridge.handle(request);
 	}
 
 	async #handleMediaAssetRead(req: MediaAssetRead): Promise<void> {
@@ -738,6 +752,7 @@ export class ChatHandler {
 	}
 
 	dispose(): void {
+		void this.#voiceBridge?.close();
 		this.#unsubscribeInteractions?.();
 		this.#disposed = true;
 		this.#pendingRequest = null; // abandon any queued prompt — don't replay into a dead session

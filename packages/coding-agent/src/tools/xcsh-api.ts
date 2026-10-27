@@ -11,6 +11,7 @@ import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text
 import { SecretObfuscator } from "../secrets";
 import { type ContextEnv, createContextEnv } from "../services/context-env";
 import { currentContextExecution } from "../services/context-execution";
+import { voiceRetryManaged } from "../session/voice-tool-retry";
 import type { ToolSession } from ".";
 import { humanizeResourceType } from "./render-utils";
 import { checkImmutableMutation } from "./xcsh-api-replacement";
@@ -76,7 +77,7 @@ const xcshApiSchema = Type.Object({
 	contextName: Type.Optional(
 		Type.String({
 			description:
-				"Expected active context name. Rejects the call before network I/O if this session is using a different context. Supply the user's requested context after selection.",
+				"Expected active context; rejects mismatches before network I/O. Set after activating the requested context.",
 		}),
 	),
 	method: Type.Union(
@@ -105,7 +106,7 @@ const xcshApiSchema = Type.Object({
 	expandDiscovery: Type.Optional(
 		Type.Boolean({
 			description:
-				"Set false for a scoped GET of one resource type: preserve its full response and avoid automatic namespace-wide discovery. Defaults to true for compatibility. Applies to single path GETs.",
+				"For a single GET, false preserves the full scoped response without namespace-wide discovery; default true.",
 		}),
 	),
 });
@@ -260,6 +261,9 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	#autoExpandPathsCache: string[] | null = null;
 	#expandedNamespaces = new Set<string>();
 
+	getOperationEffect(args: unknown): "readOnly" | "mutation" {
+		return (args as { method?: string })?.method === "GET" ? "readOnly" : "mutation";
+	}
 	constructor(
 		private readonly session: ToolSession,
 		private readonly cacheDir = BATCH_CACHE_DIR,
@@ -526,11 +530,16 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		const fetchOne = async (rawPath: string): Promise<BatchEntry> => {
 			const resolvedPath = this.#contextEnv.resolvePath(rawPath, params);
 			const url = `${apiBase}${resolvedPath}`;
-			for (let attempt = 0; attempt < 3; attempt++) {
+			for (let attempt = 0; attempt < (voiceRetryManaged() ? 1 : 3); attempt++) {
 				try {
 					const response = await fetch(url, { method: "GET", headers, signal: fetchSignal });
 					// Retry on 429/503 (transient rate limit / server error)
-					if ((response.status === 429 || response.status === 503) && attempt < 2 && !fetchSignal.aborted) {
+					if (
+						(response.status === 429 || response.status === 503) &&
+						attempt < 2 &&
+						!voiceRetryManaged() &&
+						!fetchSignal.aborted
+					) {
 						await Bun.sleep(1000 * (attempt + 1));
 						continue;
 					}
@@ -552,7 +561,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 						itemCount,
 					};
 				} catch (err) {
-					if (attempt < 2 && !fetchSignal.aborted) {
+					if (attempt < 2 && !voiceRetryManaged() && !fetchSignal.aborted) {
 						await Bun.sleep(1000 * (attempt + 1));
 						continue;
 					}
@@ -1119,7 +1128,12 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 			// Auto-retry idempotent GET on transient 429/503
 			let retried = false;
-			if (params.method === "GET" && (response.status === 429 || response.status === 503) && !fetchSignal.aborted) {
+			if (
+				!voiceRetryManaged() &&
+				params.method === "GET" &&
+				(response.status === 429 || response.status === 503) &&
+				!fetchSignal.aborted
+			) {
 				const retryAfter = response.headers.get("retry-after");
 				const seconds = retryAfter ? Number.parseInt(retryAfter, 10) : Number.NaN;
 				const delayMs = Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, 10_000) : 1000;

@@ -1,0 +1,52 @@
+diff --git a/codex-rs/app-server-transport/src/lib.rs b/codex-rs/app-server-transport/src/lib.rs
+index 7b91ece..d3ec740 100644
+--- a/codex-rs/app-server-transport/src/lib.rs
++++ b/codex-rs/app-server-transport/src/lib.rs
+@@ -3,0 +4 @@ mod daemon_shutdown;
++mod reference_capture;
+diff --git a/codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs b/codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs
+index 7c46632..9f7a765 100644
+--- a/codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs
++++ b/codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs
+@@ -134,0 +135,5 @@ impl ClientTracker {
++                crate::reference_capture::record(
++                    "rpc",
++                    "in",
++                    &serde_json::json!({"clientId": client_id, "streamId": stream_id, "message": &message}),
++                );
+@@ -263,0 +269 @@ impl ClientTracker {
++                    crate::reference_capture::record("rpc", "out", &serde_json::json!({"clientId": client_id, "streamId": stream_id, "message": &queued_message.message}));
+diff --git a/codex-rs/app-server-transport/src/transport/remote_control/websocket.rs b/codex-rs/app-server-transport/src/transport/remote_control/websocket.rs
+index 588756d..9ce4b41 100644
+--- a/codex-rs/app-server-transport/src/transport/remote_control/websocket.rs
++++ b/codex-rs/app-server-transport/src/transport/remote_control/websocket.rs
+@@ -982 +982,4 @@ impl RemoteControlWebsocket {
+-                send_result = websocket_writer.send(tungstenite::Message::Text(payload.into())) => {
++                send_result = async {
++                    crate::reference_capture::json("relay", "out", &payload);
++                    websocket_writer.send(tungstenite::Message::Text(payload.into())).await
++                } => {
+@@ -1075 +1078,4 @@ impl RemoteControlWebsocket {
+-                    send_result = websocket_writer.send(tungstenite::Message::Text(payload.into())) => {
++                    send_result = async {
++                    crate::reference_capture::json("relay", "out", &payload);
++                    websocket_writer.send(tungstenite::Message::Text(payload.into())).await
++                } => {
+@@ -1178,0 +1185 @@ impl RemoteControlWebsocket {
++                    crate::reference_capture::json("relay", "in", &text);
+diff --git a/codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs b/codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs
+index 58ade3b..2e6eb6c 100644
+--- a/codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs
++++ b/codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs
+@@ -448,0 +449 @@ impl RealtimeWebsocketWriter {
++            crate::reference_capture::json("realtime", "out", &payload);
+@@ -516,0 +518 @@ impl RealtimeWebsocketWriter {
++        crate::reference_capture::json("realtime", "out", &payload);
+@@ -566,0 +569 @@ impl RealtimeWebsocketEvents {
++                    crate::reference_capture::json("realtime", "in", &text);
+diff --git a/codex-rs/codex-api/src/lib.rs b/codex-rs/codex-api/src/lib.rs
+index b7511d9..33cf7cb 100644
+--- a/codex-rs/codex-api/src/lib.rs
++++ b/codex-rs/codex-api/src/lib.rs
+@@ -9,0 +10 @@ pub(crate) mod rate_limits;
++mod reference_capture;

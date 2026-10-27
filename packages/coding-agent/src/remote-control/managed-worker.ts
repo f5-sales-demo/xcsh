@@ -42,6 +42,7 @@ async function prepareSocket(socketPath: string): Promise<void> {
 function endpointView(runtime: ManagedRuntime): Record<string, unknown> {
 	return {
 		thread: runtime.endpoint.thread,
+		voiceActive: runtime.endpoint.voiceActive === true,
 		models: runtime.endpoint.models ?? [],
 		skills: runtime.endpoint.skills ?? [],
 		skillErrors: runtime.endpoint.skillErrors ?? [],

@@ -6,6 +6,7 @@ const PROVIDER_TAG = "v3.73.0";
 const PROVIDER_COMMIT = "a".repeat(40);
 const EXACT_URL = `https://raw.githubusercontent.com/f5-sales-demo/terraform-provider-xcsh/${PROVIDER_COMMIT}/documentation/terraform-llms-index.json`;
 const GENERATOR_PATH = path.resolve(import.meta.dir, "../../scripts/generate-terraform-index.ts");
+const PACKAGE_JSON_PATH = path.resolve(import.meta.dir, "../../package.json");
 
 describe("Terraform index exact provider delivery", () => {
 	it("keeps the reviewed bundled catalog during ordinary package preparation", async () => {
@@ -55,5 +56,11 @@ describe("Terraform index exact provider delivery", () => {
 		expect(source).not.toContain("DEFAULT_CONFIG_BLOCK");
 		expect(source).not.toContain("DEFAULT_AUTH_METHODS");
 		expect(source).not.toContain("normalizeProvider");
+	});
+
+	it("packages the committed provider index without regenerating from mutable sources", async () => {
+		const packageJson = (await Bun.file(PACKAGE_JSON_PATH).json()) as { scripts: Record<string, string> };
+		expect(packageJson.scripts.prepack.split(" && ")).not.toContain("bun scripts/generate-terraform-index.ts");
+		expect(packageJson.scripts["generate-terraform-index"]).toBe("bun scripts/generate-terraform-index.ts");
 	});
 });

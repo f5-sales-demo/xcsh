@@ -1,0 +1,1 @@
+{{#if files}}Inspect project files. {{/if}}{{#if tenant}}Inspect or select saved authentication context. {{/if}}{{#if api}}Query or change authorized F5 resources. {{/if}}{{#if person}}Read canonical person profile. {{/if}}{{#if machine}}Read canonical machine profile. {{/if}}{{#if tests}}Run project tests. {{/if}}{{#if discovery}}Discover enabled tools and plugins.{{/if}}

@@ -24,6 +24,18 @@ function digest(root: string): string {
 	return hash.digest("hex");
 }
 
+function isolateLocalMarketplace(root: string): void {
+	// These fixtures exercise local catalogs; remote discovery adds unrelated network dependencies.
+	const marketplacesPath = join(root, ".xcsh", "marketplaces.json");
+	const marketplaces = JSON.parse(readFileSync(marketplacesPath, "utf8"));
+	const builtin = marketplaces.marketplaces.find(
+		(entry: { name: string }) => entry.name === "f5-sales-demo-marketplace",
+	);
+	expect(builtin).toBeDefined();
+	builtin.enabled = false;
+	writeFileSync(marketplacesPath, `${JSON.stringify(marketplaces)}\n`);
+}
+
 describe("plugin dry-run", () => {
 	it("includes the dependency plan in a successful JSON install result", async () => {
 		const root = mkdtempSync(join(tmpdir(), "xcsh-plugin-result-plan-"));
@@ -40,6 +52,7 @@ describe("plugin dry-run", () => {
 				env: environment,
 			}).exitCode,
 		).toBe(0);
+		isolateLocalMarketplace(root);
 		const installed = Bun.spawnSync(["bun", cli, "plugin", "install", "hello-plugin@test-marketplace", "--json"], {
 			cwd: isolatedProject,
 			env: environment,
@@ -111,6 +124,7 @@ describe("plugin dry-run", () => {
 			Bun.spawnSync(["bun", cli, "plugin", "marketplace", "add", fixture], { cwd: repository, env: environment })
 				.exitCode,
 		).toBe(0);
+		isolateLocalMarketplace(root);
 		expect(
 			Bun.spawnSync(["bun", cli, "plugin", "install", "hello-plugin@test-marketplace"], {
 				cwd: repository,
@@ -171,15 +185,7 @@ describe("plugin dry-run", () => {
 			Bun.spawnSync(["bun", cli, "plugin", "marketplace", "add", fixture], { cwd: repository, env: environment })
 				.exitCode,
 		).toBe(0);
-		// Keep the local upgrade fixture independent of the live built-in marketplace.
-		const marketplacesPath = join(root, ".xcsh", "marketplaces.json");
-		const marketplaces = JSON.parse(readFileSync(marketplacesPath, "utf8"));
-		const builtin = marketplaces.marketplaces.find(
-			(entry: { name: string }) => entry.name === "f5-sales-demo-marketplace",
-		);
-		expect(builtin).toBeDefined();
-		builtin.enabled = false;
-		writeFileSync(marketplacesPath, `${JSON.stringify(marketplaces)}\n`);
+		isolateLocalMarketplace(root);
 		expect(
 			Bun.spawnSync(["bun", cli, "plugin", "install", "hello-plugin@test-marketplace"], {
 				cwd: repository,

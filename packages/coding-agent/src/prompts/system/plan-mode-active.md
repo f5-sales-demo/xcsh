@@ -93,6 +93,8 @@ Use the `request_user_input` tool only for decisions that materially change the 
 
 Only output the final plan when it is decision complete and leaves no decisions to the implementer.
 
+When asked to save or show a planning review, emit a complete `<proposed_plan>` block. The Plan card is persisted in conversation history. Do not attempt a project-file write or search for a separate saving tool while Plan Mode is active. A saved review card is not an executable Terraform plan; preserve missing inputs and separate deployment authorization.
+
 When you present the official plan, wrap it in a `<proposed_plan>` block so the client can render it specially:
 
 1) The opening tag must be on its own line.

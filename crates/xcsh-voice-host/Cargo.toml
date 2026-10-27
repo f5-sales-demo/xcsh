@@ -1,0 +1,44 @@
+[package]
+name = "xcsh-voice-host"
+version.workspace = true
+edition.workspace = true
+license = "Apache-2.0"
+
+[[bin]]
+name = "codex-voice-host"
+path = "src/main.rs"
+
+[[test]]
+name = "installed_client"
+test = false
+
+[lints]
+workspace = true
+
+[dependencies]
+codex-realtime-webrtc = { package = "xcsh-realtime-webrtc", path = "../xcsh-realtime-webrtc" }
+codex-process-hardening = { git = "https://github.com/openai/codex", rev = "970111f6cb62cc02fe36a82ea7d71b37a2889c97" }
+futures = "0.3"
+libloading = "=0.8.9"
+rand = "0.9"
+rtc = "=0.20.3"
+tokio = { version = "=1.53.1", features = ["rt-multi-thread", "sync", "time"] }
+webrtc = "=0.20.3"
+
+[target.'cfg(any(target_os = "macos", all(target_os = "linux", target_env = "gnu"), all(windows, target_env = "msvc")))'.dependencies]
+cpal = "=0.18.2"
+crossbeam-queue = "0.3.12"
+gstreamer = { version = "=0.25.3", features = ["v1_28"] }
+gstreamer-app = { version = "=0.25.2", features = ["v1_28"] }
+gstreamer-audio = { version = "=0.25.3", features = ["v1_28"] }
+opus = "=0.4.0"
+rubato = { version = "=5.0.0", default-features = false }
+sonora = { version = "=0.2.0", default-features = false }
+
+[dev-dependencies]
+anyhow = "1.0"
+codex-install-context = { git = "https://github.com/openai/codex", rev = "970111f6cb62cc02fe36a82ea7d71b37a2889c97" }
+codex-utils-cargo-bin = { git = "https://github.com/openai/codex", rev = "970111f6cb62cc02fe36a82ea7d71b37a2889c97" }
+pretty_assertions = "1.4"
+tempfile = "3"
+tokio = { version = "=1.53.1", features = ["io-util", "macros", "process", "rt-multi-thread", "time"] }

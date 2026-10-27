@@ -12,6 +12,7 @@
 
 import type { ClientHost } from "@f5-sales-demo/xcsh/browser/chat-protocol";
 import { isInteractionFrame } from "@f5-sales-demo/xcsh-chat-ui/src/interactions/transport";
+import { isVoiceFrame } from "@f5-sales-demo/xcsh-chat-ui/src/voice/contract";
 import {
 	isChatDelta,
 	isChatDone,
@@ -527,6 +528,7 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 			return;
 		}
 		if (
+			isVoiceFrame(msg) ||
 			isInteractionFrame(msg) ||
 			isChatDelta(msg) ||
 			isChatDone(msg) ||

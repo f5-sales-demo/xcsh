@@ -2,15 +2,7 @@ Execute an F5 Distributed Cloud API call directly.
 
 Prefer this tool for default execution. Example-only requests must not trigger resource operations. Use catalog/schema evidence for cURL examples and the shell for explicitly requested cURL execution under existing controls.
 
-Handles authentication, URL construction, and HTTP execution.
-Credentials are resolved from the active context profile (`/context`). Environment variables
-`XCSH_API_URL` and `XCSH_API_TOKEN` override context values when set.
-Path parameters like `{namespace}` are auto-resolved from the active context when not
-explicitly provided in `params`. For example, `{namespace}` resolves to the context's
-default namespace (`XCSH_NAMESPACE`).
-Pass all path `{placeholder}` values via `params`, e.g. `{ namespace: "default", name: "example-lb", vh_name: "example-vh" }`.
-Body is sent for all methods except GET when `payload` is provided — including DELETE operations that require a body.
-Payload values like `$XCSH_NAMESPACE` are auto-expanded from the active context.
+Handles authentication, URL construction, and HTTP execution. Active `/context` supplies credentials and its configured default namespace; `XCSH_API_URL` and `XCSH_API_TOKEN` override context values. Set path placeholders with `params`; omitted values and `$XCSH_*` payload values resolve from context. Non-GET methods, including DELETE, send `payload` when supplied.
 Use this tool after reading the API catalog to get the endpoint path and payload structure.
 For a scoped question about one resource type, set `expandDiscovery: false` on single-path GETs. This retrieves the requested endpoint's full response, including available creator metadata and pagination, without automatically expanding to unrelated resource types. Use batch namespace discovery for broad inventory requests. Once returned metadata answers the question, do not repeat detail GETs just to reconfirm it.
 When the user also requests a context switch, first complete `xcsh_context` activation and check its effective target and connection result. Then issue the resource query. Do not query an old tenant after a failed or cancelled selection.

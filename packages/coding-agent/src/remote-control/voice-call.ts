@@ -2,10 +2,58 @@
 
 import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
+import { LIVE_MODEL } from "./voice-contract-evidence";
 import { handoffOptions } from "./voice-handoff";
 import type { VoicePersonaSnapshot } from "./voice-persona";
 import { voicePersonaInstructions } from "./voice-persona";
 import { defaultVoice, requireLiveVersion, voiceInstructions, voices } from "./voice-protocol";
+
+/** A rejected request admits no call; transport/response uncertainty must remain reserved. */
+export class VoiceCallCreationError extends ProtocolError {
+	constructor(
+		readonly outcome: "rejected" | "uncertain",
+		message: string,
+		readonly callId?: string,
+	) {
+		super(-32000, message);
+	}
+}
+
+async function rejectedCreationField(response: Response): Promise<string | null> {
+	if (!response.body) return null;
+	const reader = response.body.getReader();
+	try {
+		const chunks: Uint8Array[] = [];
+		let size = 0;
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			size += value.byteLength;
+			if (size > 4096) return null;
+			chunks.push(value);
+		}
+		const bytes = new Uint8Array(size);
+		let offset = 0;
+		for (const chunk of chunks) {
+			bytes.set(chunk, offset);
+			offset += chunk.byteLength;
+		}
+		const detail = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)).detail;
+		if (typeof detail !== "string") return null;
+		// Report only known field names from the captured provider rejection.
+		// Never expose arbitrary server text or retry an ambiguous creation.
+		return (
+			/^Field `session\.(model|instructions|audio\.output\.voice|delegation|initial_items)` is not allowed for this Codex realtime session$/.exec(
+				detail,
+			)?.[1] ?? null
+		);
+	} catch {
+		return null;
+	} finally {
+		await reader.cancel().catch(() => {});
+		reader.releaseLock();
+	}
+}
 export function voiceCallConfig(params: Record<string, unknown>, persona: VoicePersonaSnapshot) {
 	voiceInstructions(params);
 	handoffOptions(params);
@@ -29,15 +77,9 @@ export function voiceCallConfig(params: Record<string, unknown>, persona: VoiceP
 		initialItems.reduce((bytes, item) => bytes + Buffer.byteLength(item.text), 0) > 32768
 	)
 		throw new ProtocolError(-32602, "Invalid or excessive realtime initial history");
-	const model = params.model ?? "gpt-live-1-codex",
+	const model = params.model ?? LIVE_MODEL,
 		voice = params.voice ?? defaultVoice;
-	if (
-		typeof model !== "string" ||
-		!model ||
-		model.length > 256 ||
-		typeof voice !== "string" ||
-		!voices.includes(voice)
-	)
+	if (model !== LIVE_MODEL || typeof voice !== "string" || !voices.includes(voice))
 		throw new ProtocolError(-32602, "Invalid realtime model or voice");
 	if (params.prompt != null && (typeof params.prompt !== "string" || Buffer.byteLength(params.prompt) > 262_144))
 		throw new ProtocolError(-32602, "Invalid realtime instructions");
@@ -57,7 +99,7 @@ export function voiceCallConfig(params: Record<string, unknown>, persona: VoiceP
 			audio: { output: { voice } },
 			delegation: {
 				type: "client",
-				...(typeof params.delegationAckFiller === "boolean" ? { ack_filler: params.delegationAckFiller } : {}),
+				ack_filler: params.delegationAckFiller === true,
 			},
 			...(initialItems.length
 				? {
@@ -99,11 +141,15 @@ export async function createVoiceCall(
 			},
 		);
 	} catch {
-		throw new ProtocolError(-32000, "Native realtime call transport failed");
+		throw new VoiceCallCreationError("uncertain", "Native realtime call transport failed");
 	}
-	if (!response.ok) {
-		await response.body?.cancel();
-		throw new ProtocolError(-32000, `Native realtime call failed (HTTP ${response.status})`);
+	if (response.status !== 201) {
+		const field = response.status === 400 ? await rejectedCreationField(response) : null;
+		if (response.status !== 400) await response.body?.cancel();
+		throw new VoiceCallCreationError(
+			[400, 401, 403, 404, 413, 415, 422, 429].includes(response.status) ? "rejected" : "uncertain",
+			`Native realtime call failed (HTTP ${response.status}${field ? `; rejected field session.${field}` : ""})`,
+		);
 	}
 	const location = response.headers.get("location")?.split("?")[0] ?? "";
 	const callId = location
@@ -115,10 +161,10 @@ export async function createVoiceCall(
 		);
 	if (!callId) {
 		await response.body?.cancel();
-		throw new ProtocolError(-32000, "Native realtime call response omitted its identity");
+		throw new VoiceCallCreationError("uncertain", "Native realtime call response omitted its identity");
 	}
 	const reader = response.body?.getReader();
-	if (!reader) throw new ProtocolError(-32000, "Native realtime call response omitted SDP");
+	if (!reader) throw new VoiceCallCreationError("uncertain", "Native realtime call response omitted SDP", callId);
 	let bytes = 0;
 	const chunks: Uint8Array[] = [];
 	try {
@@ -131,9 +177,9 @@ export async function createVoiceCall(
 		}
 	} catch {
 		await reader.cancel().catch(() => {});
-		throw new ProtocolError(-32000, "Invalid realtime call response");
+		throw new VoiceCallCreationError("uncertain", "Invalid realtime call response", callId);
 	}
 	const sdp = Buffer.concat(chunks).toString("utf8");
-	if (!sdp.startsWith("v=0")) throw new ProtocolError(-32000, "Invalid realtime answer SDP");
+	if (!sdp.startsWith("v=0")) throw new VoiceCallCreationError("uncertain", "Invalid realtime answer SDP", callId);
 	return { sdp, callId };
 }

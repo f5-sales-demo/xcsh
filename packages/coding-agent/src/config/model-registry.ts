@@ -2297,7 +2297,16 @@ export class ModelRegistry {
 		// Discovery caches contain provider-advertised metadata, which can lag the
 		// bundled corrections. Reapply generated-model policy before a cached entry
 		// replaces its bundled peer; explicit user overrides still run afterward.
-		applyGeneratedModelPolicies(models, { preserveDiscoveredThinking });
+		// Bundled subscription entries already carry the pinned application selector
+		// contract. Retain each normalized replacement, including other providers.
+		for (let index = 0; index < models.length; index++) {
+			const entry = [models[index]!];
+			applyGeneratedModelPolicies(entry, {
+				preserveDiscoveredThinking: preserveDiscoveredThinking || entry[0]!.api === "openai-codex-responses",
+			});
+			models[index] = entry[0]!;
+		}
+
 		return models.map(rawModel => {
 			const model = applyCodexInteractionMetadata(rawModel);
 			if (model.id !== "gpt-5.4" || model.provider === "github-copilot") {

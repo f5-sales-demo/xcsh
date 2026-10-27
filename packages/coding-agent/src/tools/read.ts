@@ -478,6 +478,7 @@ function parseSqliteSelectorInput(selector: string | undefined): { subPath: stri
  */
 export class ReadTool implements AgentTool<typeof readSchema, ReadToolDetails> {
 	readonly name = "read";
+	getOperationEffect = () => "readOnly" as const;
 	readonly label = "Read";
 	readonly description: string;
 	readonly parameters = readSchema;

@@ -26,6 +26,7 @@ import {
 	type MenuItem,
 	type SkillPill,
 	Transcript,
+	VoiceCompanionControl,
 } from "@f5-sales-demo/xcsh-chat-ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -501,6 +502,7 @@ export function ChatPanel({
 					onFollowTranscript={() => setTranscriptFollowRevision(value => value + 1)}
 				/>
 			) : null}
+			<VoiceCompanionControl transport={transport} ready={ready} />
 			<Composer
 				ref={composerRef}
 				streaming={streaming}

@@ -63,6 +63,116 @@ test("closing session storage waits for an atomic rewrite even without a persist
 	}
 });
 
+test("voice stop acknowledges the RPC and replays durable turns before closure", async () => {
+	const dir = await mkdtemp("/tmp/xcsh-voice-stop-order-");
+	const auth = await AuthStorage.create(":memory:");
+	const manager = SessionManager.create(dir, dir);
+	const session = new AgentSession({
+		agent: new Agent({ initialState: { messages: [], tools: [] } }),
+		sessionManager: manager,
+		settings: Settings.isolated({ "compaction.enabled": false }),
+		modelRegistry: new ModelRegistry(auth),
+	});
+	const remote = new RemoteSession(session);
+	const token = `fixture.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "example-stop-order-account" } })).toString("base64url")}.fixture`;
+	const credential = spyOn(auth, "getCredentialSource").mockReturnValue("stored-oauth");
+	const key = spyOn(auth, "getApiKey").mockResolvedValue(token);
+	let socket: { onmessage?: (event: { data: string }) => void } | undefined;
+	class Socket {
+		bufferedAmount = 0;
+		onopen?: () => void;
+		onmessage?: (event: { data: string }) => void;
+		constructor() {
+			socket = this;
+			queueMicrotask(() => {
+				this.onopen?.();
+				queueMicrotask(() =>
+					this.onmessage?.({
+						data: JSON.stringify({ type: "session.created", session: { id: "fixture-session" } }),
+					}),
+				);
+			});
+		}
+		send(data: string) {
+			if (JSON.parse(data).type === "session.close") {
+				this.onmessage?.({
+					data: JSON.stringify({ type: "session.closed", usage: { seconds: 1 }, reason: "close_requested" }),
+				});
+			}
+			const frame = JSON.parse(data);
+			if (frame.type === "session.context.append" && frame.content?.[0]?.text?.startsWith("You are xcsh"))
+				queueMicrotask(() =>
+					this.onmessage?.({
+						data: JSON.stringify({
+							type: "session.context.appended",
+							client_event_id: frame.event_id,
+							start_ms: 0,
+							end_ms: 1,
+						}),
+					}),
+				);
+			if (JSON.parse(data).type === "session.context.append")
+				queueMicrotask(() =>
+					this.onmessage?.({
+						data: JSON.stringify({
+							type: "session.context.appended",
+
+							start_ms: performance.now(),
+							end_ms: performance.now() + 1,
+						}),
+					}),
+				);
+		}
+		close() {}
+	}
+	const websocket = spyOn(globalThis as any, "WebSocket").mockImplementation((() => new Socket()) as any);
+	const order: string[] = [];
+	remote.subscribe(event => {
+		if (event.method === "thread/realtime/closed" || event.method === "turn/started") order.push(event.method);
+	});
+	try {
+		await manager.ensureOnDisk();
+		const params = {
+			threadId: session.sessionId,
+			version: "v3",
+			outputModality: "audio",
+			includeStartupContext: false,
+			transport: { type: "existingCall", callId: "fixture-call" },
+		};
+		const ready = new Promise<void>(resolve =>
+			remote.subscribe(event => {
+				if (event.method === "thread/realtime/started") resolve();
+			}),
+		);
+		await remote.call("start", "thread/realtime/start", params);
+		await ready;
+		socket?.onmessage?.({
+			data: JSON.stringify({ type: "input_transcript.added", item: { text: "Synthetic voice turn" } }),
+		});
+		socket?.onmessage?.({
+			data: JSON.stringify({
+				type: "turn.done",
+				turn: { id: "synthetic-user", role: "user", transcript: "Synthetic voice turn" },
+			}),
+		});
+		await Bun.sleep(0);
+		expect(await remote.call("stop", "thread/realtime/stop", { threadId: session.sessionId })).toEqual({});
+		order.push("result");
+		const deadline = Date.now() + 1000;
+		while ((!order.includes("thread/realtime/closed") || !order.includes("turn/started")) && Date.now() < deadline)
+			await Bun.sleep(5);
+		expect(order).toEqual(["result", "turn/started", "thread/realtime/closed"]);
+	} finally {
+		await remote.close();
+		await session.dispose();
+		websocket.mockRestore();
+		key.mockRestore();
+		credential.mockRestore();
+		auth.close();
+		await rm(dir, { recursive: true, force: true });
+	}
+});
+
 test.each(["direct", "bridge"])(
 	"disposing the terminal drains voice history before closing storage: %s",
 	async mode => {
@@ -112,10 +222,47 @@ test.each(["direct", "bridge"])(
 		class Socket {
 			bufferedAmount = 0;
 			onopen?: () => void;
+			onmessage?: (event: { data: string }) => void;
 			constructor() {
-				queueMicrotask(() => this.onopen?.());
+				queueMicrotask(() => {
+					this.onopen?.();
+					queueMicrotask(() =>
+						this.onmessage?.({
+							data: JSON.stringify({ type: "session.created", session: { id: "fixture-session" } }),
+						}),
+					);
+				});
 			}
-			send() {}
+			send(data: string) {
+				if (JSON.parse(data).type === "session.close") {
+					this.onmessage?.({
+						data: JSON.stringify({ type: "session.closed", usage: { seconds: 1 }, reason: "close_requested" }),
+					});
+				}
+				const frame = JSON.parse(data);
+				if (frame.type === "session.context.append" && frame.content?.[0]?.text?.startsWith("You are xcsh"))
+					queueMicrotask(() =>
+						this.onmessage?.({
+							data: JSON.stringify({
+								type: "session.context.appended",
+								client_event_id: frame.event_id,
+								start_ms: 0,
+								end_ms: 1,
+							}),
+						}),
+					);
+				if (JSON.parse(data).type === "session.context.append")
+					queueMicrotask(() =>
+						this.onmessage?.({
+							data: JSON.stringify({
+								type: "session.context.appended",
+
+								start_ms: performance.now(),
+								end_ms: performance.now() + 1,
+							}),
+						}),
+					);
+			}
 			close() {
 				socketsClosed++;
 			}
@@ -225,6 +372,39 @@ test("terminal disposal unregisters its bridge before disposal completes", async
 		await stop();
 		await session.dispose();
 		await host.close();
+		auth.close();
+		await rm(dir, { recursive: true, force: true });
+	}
+});
+
+test("phone stop before realtime start acknowledges then closes once without work or transcript mutation", async () => {
+	const dir = await mkdtemp("/tmp/xcsh-prestart-stop-");
+	const auth = await AuthStorage.create(":memory:");
+	const manager = SessionManager.create(dir, dir);
+	const session = new AgentSession({
+		agent: new Agent({ initialState: { messages: [], tools: [] } }),
+		sessionManager: manager,
+		settings: Settings.isolated({ "compaction.enabled": false }),
+		modelRegistry: new ModelRegistry(auth),
+	});
+	const remote = new RemoteSession(session);
+	const order: string[] = [];
+	remote.subscribe(event => order.push(event.method));
+	const before = manager.getBranch();
+	try {
+		expect(await remote.call("stop-one", "thread/realtime/stop", { threadId: session.sessionId })).toEqual({});
+		order.push("acknowledged");
+		await Bun.sleep(10);
+		expect(order).toEqual(["acknowledged", "thread/realtime/closed"]);
+		expect(await remote.call("stop-two", "thread/realtime/stop", { threadId: session.sessionId })).toEqual({});
+		await Bun.sleep(10);
+		expect(order.filter(name => name === "thread/realtime/closed")).toHaveLength(1);
+		expect(manager.getBranch()).toEqual(before);
+		expect(session.messages).toEqual([]);
+	} finally {
+		await remote.close();
+		await session.dispose();
+		await manager.close();
 		auth.close();
 		await rm(dir, { recursive: true, force: true });
 	}

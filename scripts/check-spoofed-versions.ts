@@ -4,6 +4,8 @@
 
 import * as path from "node:path";
 
+export type VersionFetch = (url: string, options: RequestInit) => Promise<Response>;
+
 type ReleaseSource =
 	| { type: "github"; repo: string; parseTag: (tag: string) => string | null }
 	| { type: "npm"; packageName: string };
@@ -15,27 +17,48 @@ interface VersionCheck {
 	releaseSource: ReleaseSource;
 }
 
-async function fetchLatestGitHubRelease(repo: string, parseTag: (tag: string) => string | null): Promise<string | null> {
+export async function fetchLatestGitHubRelease(
+	repo: string,
+	parseTag: (tag: string) => string | null,
+	fetcher: VersionFetch = fetch,
+	token = Bun.env.GITHUB_TOKEN,
+): Promise<string | null> {
 	try {
-		const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
-			headers: { Accept: "application/vnd.github+json", "User-Agent": "xcsh/version-check" },
+		const response = await fetcher(`https://api.github.com/repos/${repo}/releases/latest`, {
+			headers: {
+				Accept: "application/vnd.github+json",
+				"User-Agent": "xcsh/version-check",
+				...(token ? { Authorization: `Bearer ${token}` } : {}),
+			},
+			signal: AbortSignal.timeout(15_000),
 		});
-		if (!response.ok) return null;
+		if (!response.ok) {
+			console.error(`GitHub release lookup failed (HTTP ${response.status})`);
+			return null;
+		}
 		const data = (await response.json()) as { tag_name?: unknown };
 		return typeof data.tag_name === "string" ? parseTag(data.tag_name) : null;
 	} catch {
+		console.error("GitHub release lookup failed (transport or invalid response)");
 		return null;
 	}
 }
 
 const SEMVER_RE = /(\d+\.\d+\.\d+)/;
 
-async function fetchLatestNpmVersion(packageName: string): Promise<string | null> {
+export async function fetchLatestNpmVersion(
+	packageName: string,
+	fetcher: VersionFetch = fetch,
+): Promise<string | null> {
 	try {
-		const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`, {
+		const response = await fetcher(`https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`, {
 			headers: { Accept: "application/json", "User-Agent": "xcsh/version-check" },
+			signal: AbortSignal.timeout(15_000),
 		});
-		if (!response.ok) return null;
+		if (!response.ok) {
+			console.error(`npm version lookup failed (HTTP ${response.status})`);
+			return null;
+		}
 		const data = (await response.json()) as { version?: unknown };
 		return typeof data.version === "string" && SEMVER_RE.test(data.version) ? data.version : null;
 	} catch {
@@ -116,4 +139,4 @@ async function run() {
 	if (anyFailure || (anyDrift && !doUpdate)) process.exit(1);
 }
 
-await run();
+if (import.meta.main) await run();

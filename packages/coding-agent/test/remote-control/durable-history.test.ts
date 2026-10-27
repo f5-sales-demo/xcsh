@@ -9,6 +9,7 @@ import { RemoteSession, type SessionTarget } from "../../src/remote-control/sess
 import type { AgentSessionEvent } from "../../src/session/agent-session";
 import { SessionManager } from "../../src/session/session-manager";
 import itemsSchema from "./fixtures/ThreadItemsListResponse.json";
+import turnsSchema from "./fixtures/ThreadTurnsListResponse.json";
 
 const remotes: RemoteSession[] = [];
 afterEach(() => {
@@ -668,20 +669,21 @@ test("accepted steering retains its turn identity when the owner finishes before
 	expect(accepted).toBe(1);
 });
 
-test("a crashed incomplete turn becomes interrupted when resumed idle", () => {
+test("a crashed incomplete turn reports unknown outcome when resumed idle", () => {
 	const f = fixture();
 	f.emit({ type: "agent_start" });
 	f.message(user("unfinished"));
 	const activeId = f.remote.history()[0].id;
 	f.remote.dispose();
 	const resumed = fixture(f.manager);
-	expect(resumed.remote.history()[0]).toMatchObject({ id: activeId, status: "interrupted", completedAt: null });
+	expect(resumed.remote.history()[0]).toMatchObject({ id: activeId, status: "failed", completedAt: null });
+	expect(resumed.remote.history()[0].error?.message).toContain("outcome is unknown");
 	resumed.emit({ type: "agent_start" });
 	resumed.message(user("new work"));
-	expect(resumed.remote.history().map(value => value.status)).toEqual(["interrupted", "inProgress"]);
+	expect(resumed.remote.history().map(value => value.status)).toEqual(["failed", "inProgress"]);
 	resumed.message(assistant("new result"));
 	resumed.emit({ type: "agent_end" });
-	expect(resumed.remote.history().map(value => value.status)).toEqual(["interrupted", "completed"]);
+	expect(resumed.remote.history().map(value => value.status)).toEqual(["failed", "completed"]);
 });
 
 test("a successful provider retry clears the earlier failed attempt in the same turn", () => {
@@ -1218,4 +1220,287 @@ test("attachment during an active assistant stream hydrates one live item and ke
 	const after = remote.history()[0];
 	expect(after.items.map(item => item.id)).toEqual(initial.items.map(item => item.id));
 	expect(after.items.filter(item => item.type === "agentMessage")).toHaveLength(1);
+});
+
+test("paginated replay projects voice captions without duplicating canonical assistant items", async () => {
+	const f = fixture();
+	const voice = (id: string, role: "user" | "assistant", text: string) =>
+		f.manager.appendCustomEntry("remote-realtime", {
+			kind: "voiceTimeline",
+			item: { type: "transcriptSegment", id, realtimeSessionId: "voice-one", role, text },
+		});
+	f.manager.appendMessage(user("typed request") as never);
+	f.manager.appendMessage(assistant("typed response") as never);
+	f.manager.appendCustomEntry("remote-realtime", {
+		kind: "voiceTimeline",
+		item: { type: "realtimeSessionStarted", id: "voice-start", realtimeSessionId: "voice-one" },
+	});
+	// Input transcription is asynchronous and can finish after the matching response item.
+	f.manager.appendMessage(assistant("first answer") as never);
+	voice("voice-user-one", "user", "first question");
+	voice("voice-assistant-one", "assistant", "first answer");
+	voice("voice-user-two", "user", "follow-up question");
+	voice("voice-assistant-two", "assistant", "second answer");
+	f.manager.appendCustomEntry("remote-realtime", {
+		kind: "voiceTimeline",
+		item: {
+			type: "realtimeSessionClosed",
+			id: "voice-close",
+			realtimeSessionId: "voice-one",
+			outcome: "ended",
+		},
+	});
+
+	// Timeline-capable consumers retain the canonical voice-only stream.
+	expect(
+		f.remote
+			.history()
+			.flatMap(turn => turn.items)
+			.map(item => item.type),
+	).toEqual(["userMessage", "agentMessage", "agentMessage"]);
+	const timeline = (await f.remote.call("timeline", "thread/timeline/list", {
+		threadId: "durable",
+		limit: 100,
+	})) as { data: Array<{ type: string; item?: { type?: string; role?: string } }> };
+	expect(
+		timeline.data
+			.filter(row => row.type === "realtime" && row.item?.type === "transcriptSegment")
+			.map(row => row.item?.role),
+	).toEqual(["user", "assistant", "user", "assistant"]);
+
+	// Turns/items-only consumers receive the same conversation in order. The persisted
+	// assistant item wins over its matching voice caption, so it is emitted only once.
+	const turns = (await f.remote.call("turns", "thread/turns/list", {
+		threadId: "durable",
+		itemsView: "full",
+		sortDirection: "asc",
+		limit: 100,
+	})) as { data: Array<{ items: Record<string, unknown>[] }> };
+	const turnItems = turns.data.flatMap(turn => turn.items);
+	const ajv = new Ajv({ strict: false, validateFormats: false });
+	const validateTurns = ajv.compile(turnsSchema);
+	expect(validateTurns(turns), JSON.stringify(validateTurns.errors)).toBe(true);
+	expect(turnItems.map(item => item.type)).toEqual([
+		"userMessage",
+		"agentMessage",
+		"userMessage",
+		"agentMessage",
+		"userMessage",
+		"agentMessage",
+	]);
+	expect(
+		turnItems.map(item =>
+			item.type === "userMessage"
+				? ((item.content as Array<{ text: string }>)[0]?.text ?? "")
+				: (item.text as string),
+		),
+	).toEqual([
+		"typed request",
+		"typed response",
+		"first question",
+		"first answer",
+		"follow-up question",
+		"second answer",
+	]);
+
+	const items = (await f.remote.call("items", "thread/items/list", {
+		threadId: "durable",
+		sortDirection: "asc",
+		limit: 100,
+	})) as { data: Array<{ item: Record<string, unknown> }> };
+	const validateItems = ajv.compile(itemsSchema);
+	expect(validateItems(items), JSON.stringify(validateItems.errors)).toBe(true);
+	expect(items.data.map(row => row.item)).toEqual(turnItems);
+
+	const firstPage = (await f.remote.call("items-first-page", "thread/items/list", {
+		threadId: "durable",
+		sortDirection: "asc",
+		limit: 2,
+	})) as { data: Array<{ item: Record<string, unknown> }>; nextCursor: string | null };
+	expect(firstPage.data.map(row => row.item.type)).toEqual(["userMessage", "agentMessage"]);
+	expect(firstPage.nextCursor).not.toBeNull();
+	// A canonical item that appears after its caption must not replace the stable
+	// synthetic identity referenced by an already-issued pagination cursor.
+	f.manager.appendMessage(user("follow-up question") as never);
+	const secondPage = (await f.remote.call("items-second-page", "thread/items/list", {
+		threadId: "durable",
+		sortDirection: "asc",
+		limit: 2,
+		cursor: firstPage.nextCursor,
+	})) as { data: Array<{ item: Record<string, unknown> }>; nextCursor: string | null };
+	expect(secondPage.data.map(row => row.item.type)).toEqual(["userMessage", "agentMessage"]);
+	expect(secondPage.data.map(row => row.item.id)).toEqual(["voice-transcript-voice-user-one", turnItems[3]!.id]);
+	const thirdPage = (await f.remote.call("items-third-page", "thread/items/list", {
+		threadId: "durable",
+		sortDirection: "asc",
+		limit: 2,
+		cursor: secondPage.nextCursor,
+	})) as { data: Array<{ item: Record<string, unknown> }> };
+	expect(thirdPage.data.map(row => row.item.id)).toEqual([
+		"voice-transcript-voice-user-two",
+		"voice-transcript-voice-assistant-two",
+	]);
+});
+
+test("cold paginated history settles file results persisted before their tool calls", async () => {
+	const manager = SessionManager.inMemory("/tmp/history");
+	manager.appendCustomEntry("remote-history", { kind: "turnStarted", id: "ordered-turn", startedAtMs: 1000 });
+	manager.appendMessage(user("edit fixture") as never);
+	const patch = "@@ -1 +1,2 @@\n baseline\n+last turn change\n";
+	const result = {
+		role: "toolResult" as const,
+		toolCallId: "early-file-result",
+		toolName: "edit",
+		content: [{ type: "text" as const, text: "updated" }],
+		details: {
+			execution: {
+				kind: "fileChange",
+				status: "completed",
+				changes: [{ path: "/tmp/history/fixture.txt", type: "update", unifiedDiff: patch, movePath: null }],
+			},
+		},
+		isError: false,
+		timestamp: ++timestamp,
+	};
+	manager.appendMessage(result, { kind: "fileChange", cwd: "/tmp/history" });
+	const call = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+	call.content = [{ type: "toolCall", id: "early-file-result", name: "edit", arguments: {} }];
+	call.stopReason = "toolUse";
+	manager.appendMessage(call);
+	manager.appendMessage(assistant("done") as never);
+	manager.appendCustomEntry("remote-history", {
+		kind: "turnCompleted",
+		id: "ordered-turn",
+		status: "completed",
+		completedAtMs: 2000,
+	});
+	const f = fixture(manager);
+	const expected = {
+		type: "fileChange",
+		status: "completed",
+		changes: [{ path: "/tmp/history/fixture.txt", kind: { type: "update", move_path: null }, diff: patch }],
+	};
+	expect(f.remote.history()[0].items.find(item => item.type === "fileChange")).toMatchObject(expected);
+	const page = await f.remote.call("phone", "thread/items/list", { threadId: "durable", turnId: "ordered-turn" });
+	expect((page as any).data.find((row: any) => row.item.type === "fileChange").item).toMatchObject(expected);
+});
+
+test("phone Last turn history composes repeated edits into one net file patch", async () => {
+	const manager = SessionManager.inMemory("/tmp/history");
+	manager.appendCustomEntry("remote-history", { kind: "turnStarted", id: "net-turn", startedAtMs: 1000 });
+	manager.appendMessage(user("two edits") as never);
+	const patches = [
+		"@@ -1 +1,3 @@\n baseline\n+\n+last turn change\n\\ No newline at end of file\n",
+		"@@ -1,3 +1,2 @@\n baseline\n-\n last turn change\n\\ No newline at end of file\n",
+	];
+	for (const [index, patch] of patches.entries()) {
+		const id = `net-file-${index}`;
+		const call = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+		call.content = [{ type: "toolCall", id, name: "edit", arguments: {} }];
+		call.stopReason = "toolUse";
+		manager.appendMessage(call);
+		manager.appendMessage(
+			{
+				role: "toolResult",
+				toolCallId: id,
+				toolName: "edit",
+				content: [],
+				details: {
+					execution: {
+						kind: "fileChange",
+						status: "completed",
+						changes: [{ path: "/tmp/history/fixture.txt", type: "update", unifiedDiff: patch, movePath: null }],
+					},
+				},
+				isError: false,
+				timestamp: ++timestamp,
+			},
+			{ kind: "fileChange", cwd: "/tmp/history" },
+		);
+	}
+	manager.appendMessage(assistant("done") as never);
+	manager.appendCustomEntry("remote-history", {
+		kind: "turnCompleted",
+		id: "net-turn",
+		status: "completed",
+		completedAtMs: 2000,
+	});
+	const f = fixture(manager);
+	const canonical = f.remote.history()[0].items.filter(item => item.type === "fileChange");
+	expect(canonical.map(item => (item.changes as any[])[0].diff)).toEqual(patches);
+	const page = await f.remote.call("phone", "thread/items/list", { threadId: "durable", turnId: "net-turn" });
+	const changes = (page as any).data.flatMap((row: any) => (row.item.type === "fileChange" ? row.item.changes : []));
+	expect(changes).toHaveLength(1);
+	expect(changes[0].diff).toBe("@@ -1 +1,2 @@\n baseline\n+last turn change\n\\ No newline at end of file\n");
+});
+
+test("plan envelope stays out of text deltas and typed completion matches cold history", () => {
+	const f = fixture();
+	f.manager.appendModeChange("plan");
+	f.message(user("Plan without tools"));
+	const text = "PLAN-MODE-OK\n\n<proposed_plan>\n1. Read.\n2. Check.\n</proposed_plan>";
+	const message = assistant(text);
+	f.emit({ type: "message_start", message });
+	for (const type of ["text_delta", "text_end"])
+		f.emit({
+			type: "message_update",
+			assistantMessageEvent: { type, partial: message, contentIndex: 0, delta: text },
+		});
+	f.messages.push(message);
+	f.emit({ type: "message_end", message });
+	f.manager.appendMessage(message as never);
+	f.emit({ type: "agent_end" });
+	const completed = f.events.filter(e => e.method === "item/completed").map(e => e.params.item as any);
+	const plan = completed.find(i => i.type === "plan");
+	expect(plan).toMatchObject({ text: "1. Read.\n2. Check." });
+	const deltas = f.events.filter(e => e.method === "item/agentMessage/delta");
+	expect(deltas.map(e => e.params.delta).join("")).toBe("PLAN-MODE-OK\n\n");
+	expect(
+		f.events
+			.filter(e => e.method === "item/plan/delta")
+			.map(e => e.params.delta)
+			.join(""),
+	).toBe(plan.text);
+	const starts = f.events.filter(e => e.method === "item/started" && (e.params.item as any).id === plan.id);
+	expect(starts).toHaveLength(1);
+	expect(completed.filter(i => i.id === plan.id)).toHaveLength(1);
+	expect(f.remote.history()[0].items.find(i => i.type === "plan")).toEqual(plan);
+	expect(f.events.find(e => e.method === "turn/completed")?.params.turn).toEqual(f.remote.history()[0]);
+});
+
+test("plan stream attachment does not leak an incomplete envelope or change completion identity", () => {
+	const manager = SessionManager.inMemory("/tmp/plan-attachment");
+	manager.appendModeChange("plan");
+	manager.appendCustomEntry("remote-history", { kind: "turnStarted", id: "plan-turn", startedAtMs: 1000 });
+	const partial = assistant("<proposed_plan>\n1. Read.");
+	let listener: (event: any) => void = () => {};
+	const target = {
+		sessionId: "durable",
+		messages: [],
+		sessionManager: manager,
+		isStreaming: true,
+		activeStreamMessage: partial,
+		subscribe: (next: any) => {
+			listener = next;
+			return () => {};
+		},
+	} as unknown as SessionTarget;
+	const remote = new RemoteSession(target);
+	remotes.push(remote);
+	expect(JSON.stringify(remote.history())).not.toContain("proposed_plan");
+	const events: any[] = [];
+	remote.subscribe(e => events.push(e));
+	const final = assistant("<proposed_plan>\n1. Read.\n</proposed_plan>");
+	listener({ type: "message_update", assistantMessageEvent: { type: "text_end", partial: final, contentIndex: 0 } });
+	listener({ type: "message_end", message: final });
+	manager.appendMessage(final as never);
+	const plan = events.find(e => e.method === "item/completed" && e.params.item.type === "plan")?.params.item;
+	expect(plan?.text).toBe("1. Read.");
+	expect(
+		events
+			.filter(e => e.method === "item/plan/delta")
+			.map(e => e.params.delta)
+			.join(""),
+	).toBe("1. Read.");
+	expect(remote.history()[0].items.find(i => i.type === "plan")).toEqual(plan);
 });

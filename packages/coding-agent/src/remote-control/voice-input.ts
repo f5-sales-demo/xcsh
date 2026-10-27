@@ -1,14 +1,15 @@
 /** Pinned session/turn.rs and protocol/request_user_input.rs; see NOTICE.md. */
 import { prompt } from "@f5-sales-demo/pi-utils";
 import template from "../prompts/system/remote-voice-input.md" with { type: "text" };
+import ownedTemplate from "../prompts/system/remote-voice-owned-input.md" with { type: "text" };
 import type { InteractionRequest } from "./interactions";
 
 /** Convert the App Server request to the backing core event used as realtime context. */
-export function voiceInputText(request: InteractionRequest, callId: string): string {
+export function voiceInputText(request: InteractionRequest, callId: string, owned = false): string {
 	const params = request.params;
 	if (request.method !== "item/tool/requestUserInput")
 		return prompt
-			.render(template, {
+			.render(owned ? ownedTemplate : template, {
 				request: JSON.stringify({
 					type:
 						request.method === "item/commandExecution/requestApproval"
@@ -18,6 +19,7 @@ export function voiceInputText(request: InteractionRequest, callId: string): str
 					turn_id: params.turnId,
 					item_id: params.itemId,
 					reason: params.reason,
+					title: params.reason,
 					...(request.method === "item/commandExecution/requestApproval"
 						? { command: params.command, cwd: params.cwd }
 						: {}),
@@ -33,7 +35,7 @@ export function voiceInputText(request: InteractionRequest, callId: string): str
 		options?: unknown;
 	}>;
 	return prompt
-		.render(template, {
+		.render(owned ? ownedTemplate : template, {
 			request: JSON.stringify({
 				type: "request_user_input",
 				call_id: callId,

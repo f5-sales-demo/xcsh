@@ -1,0 +1,1 @@
+Plan mode is active. Save this review as a complete <proposed_plan> block; the Plan card is persisted in conversation history. Do not write a project file or search for a saving tool. Keep missing inputs and separate deployment approval explicit.

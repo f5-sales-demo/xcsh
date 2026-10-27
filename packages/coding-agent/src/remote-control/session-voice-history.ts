@@ -1,3 +1,4 @@
+import { projectCompatibilityHistory } from "./history";
 import type { SessionTarget } from "./session";
 import { VoiceHistory } from "./voice-history";
 import type { TimelineInput } from "./voice-timeline";
@@ -8,21 +9,30 @@ const owners = new WeakMap<SessionTarget, SessionVoiceHistory>();
 /** Realtime history belongs to the terminal session, across calls and adapter reattachment. */
 export class SessionVoiceHistory {
 	readonly history: VoiceHistory;
+	readonly #target: SessionTarget;
 	readonly #listeners = new Set<Listener>();
+	readonly #publishedVoiceTurnIds = new Set<string>();
 	readonly retireInputHook?: () => void;
 	constructor(
 		readonly sessionId: string,
 		target: SessionTarget,
 	) {
+		this.#target = target;
 		this.history = new VoiceHistory(
 			null,
 			async record => {
 				if (target.sessionId !== sessionId) throw new Error("Voice history storage owner changed");
+				await target.sessionManager.ensureOnDisk();
 				target.sessionManager.appendCustomEntry("remote-realtime", record);
 				await target.sessionManager.flush();
 			},
 			(method, params) => {
-				for (const listener of this.#listeners) listener(method, params);
+				this.#publish(method, params);
+				const item = params.item as Record<string, unknown> | undefined;
+				if (method === "thread/realtime/item/completed") {
+					if (item?.type === "realtimeSessionStarted") this.#seedPublishedVoiceTurns(target);
+					if (item?.type === "realtimeSessionClosed") this.#publishCompletedVoiceTurns(target);
+				}
 			},
 		);
 		this.retireInputHook = target.addBeforeUserInputHook?.(message => {
@@ -40,6 +50,36 @@ export class SessionVoiceHistory {
 				item: { id: "input-preparation", type: "userMessage", content },
 			});
 		});
+	}
+	#compatibilityTurns(target: SessionTarget) {
+		return projectCompatibilityHistory(
+			target.sessionId,
+			target.sessionManager.getBranch(),
+			false,
+			target.sessionManager.getCwd(),
+		);
+	}
+	#publish(method: string, params: Record<string, unknown>): void {
+		for (const listener of this.#listeners) listener(method, params);
+	}
+	#seedPublishedVoiceTurns(target: SessionTarget): void {
+		for (const turn of this.#compatibilityTurns(target))
+			if (turn.id.startsWith("voice-turn-")) this.#publishedVoiceTurnIds.add(turn.id);
+	}
+	#publishCompletedVoiceTurns(target: SessionTarget): void {
+		if (target.isStreaming) return;
+		for (const turn of this.#compatibilityTurns(target)) {
+			if (!turn.id.startsWith("voice-turn-") || this.#publishedVoiceTurnIds.has(turn.id)) continue;
+			this.#publishedVoiceTurnIds.add(turn.id);
+			this.#publish("turn/started", {
+				turn: { ...structuredClone(turn), items: [], status: "inProgress", completedAt: null, durationMs: null },
+			});
+			for (const item of turn.items) {
+				this.#publish("item/started", { turnId: turn.id, item: structuredClone(item) });
+				this.#publish("item/completed", { turnId: turn.id, item: structuredClone(item) });
+			}
+			this.#publish("turn/completed", { turn: structuredClone(turn) });
+		}
 	}
 	subscribe(listener: Listener): () => void {
 		this.#listeners.add(listener);
@@ -76,6 +116,7 @@ export class SessionVoiceHistory {
 			event = { type: "textDelta", turnId: params.turnId, itemId: params.itemId, delta: params.delta };
 		if (!event) {
 			forward(params);
+			if (method === "thread/realtime/closed") this.#publishCompletedVoiceTurns(this.#target);
 			return;
 		}
 		if (!this.history.engaged) {

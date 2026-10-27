@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 
 import { spawn } from "bun";
+import { runOwnedPhoneTests } from "./run-owned-phone-tests";
+import { runQualificationTests } from "./run-qualification-tests";
 
 /** Number of Bun file workers. Zero preserves the serial production path. */
 export type FileWorkers = number;
@@ -116,6 +118,12 @@ if (import.meta.main) {
 
 	const dependencyExitCode = await run(["bun", "run", "ensure:dependencies"]);
 	if (dependencyExitCode !== 0) process.exit(dependencyExitCode);
+
+	const phoneExitCode = await runOwnedPhoneTests();
+	if (phoneExitCode !== 0) process.exit(phoneExitCode);
+
+	const qualificationExitCode = await runQualificationTests();
+	if (qualificationExitCode !== 0) process.exit(qualificationExitCode);
 
 	const sourceRoot = Bun.env.XCSH_SOURCE_ROOT ?? new URL("..", import.meta.url).pathname;
 	if (shard === "native-independent") {

@@ -16,17 +16,42 @@ export async function openVoiceSocket(
 	headers: Record<string, string>,
 	handlers: VoiceHandlers,
 	trace: TraceSink | undefined = traceFromEnvironment("voice", VERSION),
+	signal?: AbortSignal,
 ): Promise<VoiceSocket> {
 	return new Promise((resolve, reject) => {
+		if (signal?.aborted) {
+			trace?.record("connection", "in", { type: "cancelled", opened: false });
+			trace?.close();
+			reject(new Error("Realtime connection cancelled"));
+			return;
+		}
 		const socket = new WebSocket(url, { headers });
 		let opened = false;
+		let cancelled = false;
+		const cancel = () => {
+			if (opened || cancelled) return;
+			cancelled = true;
+			clearTimeout(timeout);
+			signal?.removeEventListener("abort", cancel);
+			trace?.record("connection", "in", { type: "cancelled", opened: false });
+			trace?.close();
+			socket.close();
+			reject(new Error("Realtime connection cancelled"));
+		};
 		const timeout = setTimeout(() => {
+			signal?.removeEventListener("abort", cancel);
 			trace?.record("connection", "in", { type: "timeout" });
 			trace?.close();
 			socket.close();
 			reject(new Error("Realtime connection timeout"));
 		}, 15_000);
+		signal?.addEventListener("abort", cancel, { once: true });
 		socket.onopen = () => {
+			if (cancelled) {
+				socket.close();
+				return;
+			}
+			signal?.removeEventListener("abort", cancel);
 			clearTimeout(timeout);
 			opened = true;
 			trace?.record("connection", "in", { type: "open" });
@@ -44,11 +69,14 @@ export async function openVoiceSocket(
 			});
 		};
 		socket.onmessage = event => {
+			if (cancelled) return;
 			if (typeof event.data === "string") traceJson(trace, "realtime", "in", event.data);
 			else trace?.record("connection", "in", { type: "binary" });
 			handlers.message(typeof event.data === "string" ? event.data : "");
 		};
 		socket.onerror = event => {
+			if (cancelled) return;
+			signal?.removeEventListener("abort", cancel);
 			trace?.record("connection", "in", { type: "error", opened });
 			clearTimeout(timeout);
 			if (!opened)
@@ -62,6 +90,8 @@ export async function openVoiceSocket(
 			else handlers.closed();
 		};
 		socket.onclose = () => {
+			if (cancelled) return;
+			signal?.removeEventListener("abort", cancel);
 			trace?.record("connection", "in", { type: "closed", opened });
 			trace?.close();
 			clearTimeout(timeout);

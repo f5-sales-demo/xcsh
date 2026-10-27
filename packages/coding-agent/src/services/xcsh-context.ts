@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import {
 	ContextResolver,
 	getLocalXCSHActiveContextPath,
@@ -696,6 +697,22 @@ export class ContextService {
 			namespace: process.env[XCSH_NAMESPACE] || context.defaultNamespace,
 			revision: this.#activationRevision(context),
 		};
+	}
+
+	/** Verify an unchanged effective selection without writing pointers or exposing credentials. */
+	isCurrentActivation(
+		review: { name: string; apiUrl: string; namespace: string; revision: string },
+		cwd = getProjectDir(),
+	): boolean {
+		if (process.env[XCSH_API_URL] || !this.#activeContext || this.#activeContext.name !== review.name) return false;
+		const wanted = this.resolveTarget(this.#activeTarget ?? { name: review.name, source: "global" }, cwd);
+		const status = this.getStatus();
+		return (
+			isDeepStrictEqual(wanted, this.#validateContextShape(this.#activeContext, review.name)) &&
+			this.#activationRevision(wanted) === review.revision &&
+			status.activeContextUrl === review.apiUrl &&
+			status.activeContextNamespace === review.namespace
+		);
 	}
 
 	async activate(

@@ -13,6 +13,8 @@ crate-type = ["cdylib"]
 workspace = true
 
 [dependencies]
+xcsh-realtime-webrtc = { path = "../xcsh-realtime-webrtc" }
+futures = "0.3"
 openssl = { version = "=0.10.81", features = ["vendored"] }
 zeroize = "=1.9.1"
 openssl-sys = "=0.9.117"
