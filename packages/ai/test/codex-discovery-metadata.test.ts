@@ -12,6 +12,48 @@ const GPT_56_LEVELS: ReasoningEffortPreset[] = [
 ];
 
 describe("Codex model discovery metadata", () => {
+	it("preserves the live Terra contract when the version registry is unavailable", async () => {
+		const efforts: ReasoningEffortPreset["effort"][] = ["low", "medium", "high", "xhigh", "max", "ultra"];
+		const fetchFn = vi.fn(async (input: string | URL | Request) => {
+			if (String(input).includes("registry.npmjs.org")) return new Response(null, { status: 503 });
+			return Response.json({
+				models: [
+					{
+						slug: "gpt-6.1-terra",
+						display_name: "GPT-6.1 Terra",
+						visibility: "list",
+						supported_in_api: true,
+						context_window: 500_000,
+						max_context_window: 872_000,
+						default_reasoning_level: "low",
+						supported_reasoning_levels: efforts.map(effort => ({ effort, description: effort })),
+						input_modalities: ["text", "image"],
+						service_tiers: [{ id: "priority", name: "Fast" }],
+					},
+				],
+			});
+		});
+		const result = await fetchCodexModels({ accessToken: "synthetic", fetchFn: fetchFn as unknown as typeof fetch });
+		const model = result?.models[0];
+		expect(model).toMatchObject({
+			id: "gpt-6.1-terra",
+			name: "GPT-6.1 Terra",
+			provider: "openai-codex",
+			api: "openai-codex-responses",
+			visibility: "list",
+			publisher: "OpenAI",
+			family: "GPT-6.1",
+			tier: "Terra",
+			contextWindow: 500_000,
+			providerContextWindow: 872_000,
+			input: ["text", "image"],
+			serviceTiers: ["default", "priority"],
+		});
+		expect(model?.thinking?.defaultLevel).toBe("low");
+		expect(model?.thinking?.supportedLevels.map(level => level.effort)).toEqual(efforts);
+		const modelRequest = String(fetchFn.mock.calls[1]?.[0]);
+		expect(new URL(modelRequest).searchParams.get("client_version")).toBe("0.159.0");
+	});
 	it("normalizes object speed tiers and discovers cached reasoning support", async () => {
 		const fetchFn = (async () =>
 			Response.json({

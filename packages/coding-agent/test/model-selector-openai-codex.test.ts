@@ -53,6 +53,7 @@ describe("default ChatGPT subscription model picker presentation", () => {
 
 	it("renders all tiers and unassigned Astra in the ChatGPT provider tab without a synthetic alias", async () => {
 		const tiers = [
+			model("openai-codex", "gpt-6.1-terra", { name: "GPT-6.1 Terra" }),
 			model("openai-codex", "gpt-6-luna", { name: "GPT-6 Luna" }),
 			model("openai-codex", "gpt-5.6-terra"),
 			model("openai-codex", "gpt-6-sol", { name: "GPT-6 Sol" }),
@@ -87,11 +88,12 @@ describe("default ChatGPT subscription model picker presentation", () => {
 		const allModels = Bun.stripANSI(selector.render(180).join("\n"));
 		const normalizedModels = allModels.replace(/\s+/g, " ");
 		expect(allModels).toContain("ChatGPT");
+		expect(normalizedModels).toContain("GPT-6.1 Terra");
 		expect(normalizedModels).toContain("GPT-6 Luna");
 		expect(normalizedModels).toContain("GPT-5.6 Terra");
 		expect(normalizedModels).toContain("GPT-6 Sol");
 		expect(normalizedModels).toContain("GPT-6 Astra");
-		for (const id of ["gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra"]) {
+		for (const id of ["gpt-6.1-terra", "gpt-6-luna", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra"]) {
 			selector.getSearchInput().setValue("");
 			for (const character of id) selector.handleInput(character);
 			const detail = Bun.stripANSI(selector.render(120).join("\n"));

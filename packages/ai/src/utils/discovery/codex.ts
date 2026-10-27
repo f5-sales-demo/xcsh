@@ -8,7 +8,8 @@ import { isRecord } from "../../utils";
 const DEFAULT_MODEL_LIST_PATHS = ["/codex/models", "/models"] as const;
 const DEFAULT_CONTEXT_WINDOW = 272_000;
 const DEFAULT_MAX_TOKENS = 128_000;
-const DEFAULT_CODEX_CLIENT_VERSION = "0.99.0";
+// Terra discovery requires Codex 0.159.0 or later, including when npm is unreachable.
+const DEFAULT_CODEX_CLIENT_VERSION = "0.159.0";
 const NPM_CODEX_LATEST_URL = "https://registry.npmjs.org/@openai%2Fcodex/latest";
 
 const codexReasoningPresetSchema = z
