@@ -19,21 +19,37 @@ export class VoiceApprovalGate {
 	#candidate?: { signature: string; request: VoiceApproval };
 	#announced?: { signature: string; request: VoiceApproval };
 	#assistant = "";
+	#assistantEchoes = new Set<string>();
+	#assistantApprovalWord = false;
 	constructor(
 		private readonly pending: () => VoiceApproval[],
 		private readonly respond: (requestId: string, value: string) => boolean,
 	) {}
 	reset(): void {
+		this.#assistantEchoes.clear();
+		this.#assistantApprovalWord = false;
 		this.#announced = undefined;
 		this.#candidate = undefined;
 	}
 	assistantCompleted(text: string): void {
 		this.#assistant = normalized(text);
 		this.#candidate = undefined;
-		this.#announced = undefined;
 		const current = this.pending();
-		if (current.length !== 1 || !current[0]?.eligible || current[0].secret || !current[0].title.trim()) return;
+		if (current.length !== 1 || !current[0]?.eligible || current[0].secret || !current[0].title.trim()) {
+			this.reset();
+			return;
+		}
 		const request = current[0];
+		// Full-duplex acknowledgements can finish before the caller's answer. Keep
+		// an already-played announcement only while its owner and revision match.
+		if (this.#announced?.signature !== signature(request)) {
+			this.#announced = undefined;
+			this.#assistantEchoes.clear();
+			this.#assistantApprovalWord = false;
+		}
+		// A later acknowledgement must not make an earlier assistant answer eligible.
+		this.#assistantEchoes.add(this.#assistant);
+		this.#assistantApprovalWord ||= /\b(yes|no)\b/.test(this.#assistant);
 		if (this.#assistant.includes(normalized(request.title)))
 			this.#candidate = { signature: signature(request), request: { ...request } };
 	}
@@ -79,8 +95,8 @@ export class VoiceApprovalGate {
 			!complete ||
 			echoed ||
 			!decision ||
-			((kind === "approval" || kind === "plan") && /\b(yes|no)\b/.test(this.#assistant)) ||
-			(kind !== "approval" && this.#assistant === answer)
+			((kind === "approval" || kind === "plan") && this.#assistantApprovalWord) ||
+			(kind !== "approval" && this.#assistantEchoes.has(answer))
 		)
 			return false;
 		const current = this.pending();

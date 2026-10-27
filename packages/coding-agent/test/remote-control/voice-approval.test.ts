@@ -96,3 +96,24 @@ test("a completed selection uses exactly a current announced option and resolves
 	expect(gate.callerCompleted("second", "user", true)).toBe(true);
 	expect(received).toEqual(["Second"]);
 });
+
+test("unrelated assistant completion preserves a played approval for the unchanged owner", () => {
+	const f = fixture();
+	expect(f.gate.playbackCompleted("approval", 1)).toBe(true);
+	f.gate.assistantCompleted("All right.");
+	expect(f.gate.callerCompleted("yes", "user", true)).toBe(true);
+	expect(f.decisions).toEqual(["accept"]);
+});
+
+test("unrelated assistant completion cannot manufacture playback or preserve a revised request", () => {
+	const unplayed = fixture();
+	unplayed.gate.assistantCompleted("All right.");
+	expect(unplayed.gate.playbackCompleted("approval", 1)).toBe(false);
+	expect(unplayed.gate.callerCompleted("yes", "user", true)).toBe(false);
+	const revised = fixture();
+	expect(revised.gate.playbackCompleted("approval", 1)).toBe(true);
+	revised.set([{ ...request, revision: 2 }]);
+	revised.gate.assistantCompleted("All right.");
+	expect(revised.gate.callerCompleted("yes", "user", true)).toBe(false);
+	expect(revised.decisions).toEqual([]);
+});

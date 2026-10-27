@@ -77,6 +77,23 @@ still require a completed caller transcript; delegation cannot authorize them.
 Resolved spoken answers are retained in durable history, excluded from tail resubmission,
 and their repeated provider handoffs receive one retirement response per provider identity.
 
+## Spoken decision eligibility
+
+The xcsh interaction gate requires one current, non-secret prompt, its completed
+assistant announcement and actual playback before a completed caller answer can
+resolve it. An unrelated assistant acknowledgement can finish while the caller
+is answering. It preserves an already-played announcement only while the owner,
+workspace, request identity and revision still match. It cannot establish playback.
+Assistant answer echoes and approval suggestions remain ineligible across later
+acknowledgements. Partial, stale, ambiguous and secret responses retain their
+existing rejection checks; concurrent UI and speech resolve through the same owner.
+
+These are xcsh application adaptations, outside the pinned provider schemas.
+A synthesized speech-first race exposed announcement loss at the prior candidate;
+its failed private capture and confirmed cleanup remain preserved. Real-owner
+regressions cover the revised gate. Changed-artifact subscription qualification
+and physical audio acceptance remain separate requirements.
+
 ## Native package and isolated settings
 
 Qualification produces explicitly labeled voice-development artifacts without

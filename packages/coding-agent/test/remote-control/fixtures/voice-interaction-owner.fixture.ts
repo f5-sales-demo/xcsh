@@ -291,3 +291,38 @@ test.each([false, true])(
 		}
 	},
 );
+
+test.each([false, true])(
+	"unrelated assistant completion preserves the played current decision (plan=%s)",
+	async plan => {
+		const f = await fixture(false, plan);
+		try {
+			expect(f.playback).toEqual({ accepted: true });
+			voice.options.completedTranscript("assistant", "All right.");
+			expect(f.speech()).toBe(true);
+			if (plan) expect(f.decisions).toEqual(["implement"]);
+			else {
+				expect(await f.result).toBe("Beta");
+				expect(f.resolved).toHaveLength(1);
+			}
+			expect(await f.ui()).toEqual({ accepted: false });
+		} finally {
+			await f.close();
+		}
+	},
+);
+
+test.each([false, true])("intervening assistant answers cannot authorize the caller decision (plan=%s)", async plan => {
+	const f = await fixture(false, plan);
+	try {
+		expect(f.playback).toEqual({ accepted: true });
+		voice.options.completedTranscript("assistant", plan ? "Say yes." : "Beta");
+		voice.options.completedTranscript("assistant", "All right.");
+		expect(f.speech()).toBe(false);
+		if (plan) expect(f.decisions).toEqual([]);
+		else expect(f.broker.pending()).toHaveLength(1);
+		expect(await f.ui()).toEqual({ accepted: true });
+	} finally {
+		await f.close();
+	}
+});
