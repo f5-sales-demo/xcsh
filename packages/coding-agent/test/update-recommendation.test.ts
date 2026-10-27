@@ -622,7 +622,7 @@ describe("installer receipt contract", () => {
 		const workflow = fs.readFileSync(new URL("../../../.github/workflows/ci.yml", import.meta.url), "utf8");
 		expect(workflow).toContain("verify-standalone-install:");
 		expect(workflow).toContain("needs: [create-release, publish-npm]");
-		expect(workflow).toContain("os: [ubuntu-22.04, macos-14, windows-latest]");
+		expect(workflow).toContain("os: [ubuntu-22.04, macos-latest, windows-latest]");
 		expect(workflow).toContain('"$binary" self-update --force');
 		expect(workflow).toContain('"$binary" self-update --check --force');
 	});

@@ -40,7 +40,7 @@ describe("hosted Zig archive priming", () => {
 		const prime = workflow.jobs.prime;
 		expect(prime.if).toBe("github.ref == 'refs/heads/main'");
 		expect(prime.strategy["fail-fast"]).toBe(false);
-		expect(prime.strategy.matrix.os).toEqual(["macos-15-intel", "macos-14", "windows-latest"]);
+		expect(prime.strategy.matrix.os).toEqual(["macos-26-intel", "macos-latest", "windows-latest"]);
 		expect(prime["timeout-minutes"]).toBe(45);
 		expect(prime.steps.find(step => step.uses === "$/.github/actions/setup-zig")?.with).toEqual({
 			"cache-build": "false",

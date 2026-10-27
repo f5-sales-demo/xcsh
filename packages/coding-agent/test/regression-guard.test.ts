@@ -459,8 +459,8 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 
 		expect(smokeJob).toBe("");
 		expect(nativeJob).toContain("ubuntu-24.04");
-		expect(nativeJob).toContain("macos-15-intel");
-		expect(nativeJob).toContain("macos-14");
+		expect(nativeJob).toContain("macos-26-intel");
+		expect(nativeJob).toContain("macos-latest");
 		expect(nativeJob).toContain("windows-latest");
 		expect(nativeJob).toContain("uses: $/.github/actions/setup-zig");
 		expect(nativeJob).toContain("run: bash scripts/verify-self-hosted-tools.sh full");
@@ -531,9 +531,9 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 		expect(job).toContain("needs: [update-homebrew]");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 		expect(job).toContain("runs-on: ${{ matrix.os }}");
-		expect(job).toContain("os: macos-14");
+		expect(job).toContain("os: macos-latest");
 		expect(job).toContain("arch: arm64");
-		expect(job).toContain("os: macos-15-intel");
+		expect(job).toContain("os: macos-26-intel");
 		expect(job).toContain("arch: x64");
 	});
 
@@ -685,8 +685,8 @@ describe("macOS pkg release contract", () => {
 		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
 		const job = workflow.match(/\n {2}verify-macos-pkg:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
 		const script = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-macos-pkg.sh"), "utf8");
-		expect(job).toContain("macos-14");
-		expect(job).toContain("macos-15-intel");
+		expect(job).toContain("macos-latest");
+		expect(job).toContain("macos-26-intel");
 		expect(job).toContain("scripts/ci-verify-macos-pkg.sh");
 		expect(script).toContain("pkgutil --check-signature");
 		expect(script).toContain("xcrun stapler validate");
@@ -726,7 +726,7 @@ describe("protected CI enforces the macOS sibling-customer boundary", () => {
 	it("runs the real Seatbelt isolation probes after building the native addon", async () => {
 		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
 		const native = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}test:\n)/)?.[0] ?? "";
-		expect(native).toContain('{"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true}');
+		expect(native).toContain('{"os":"macos-latest","platform":"darwin","arch":"arm64","sandbox_check":true}');
 		expect(native).toContain("name: Seatbelt sibling-customer enforcement");
 		expect(native).toContain("if: matrix.platform == 'darwin' && matrix.sandbox_check");
 		expect(native).toContain("bun test packages/coding-agent/test/sandbox-isolation.test.ts");

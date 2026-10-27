@@ -8,6 +8,7 @@ import {
 	readManifestInputs,
 	runResourceOperation,
 } from "@f5-sales-demo/pi-resource-management";
+import { SingleAttemptTransport } from "@f5-sales-demo/xcsh-f5-core";
 import { kindResolver } from "../resource-management/index";
 
 export interface ResourceCliArgs {
@@ -93,6 +94,7 @@ export async function runResourceCli(args: ResourceCliArgs): Promise<void> {
 				? new ResourceClient({
 						apiUrl: env.apiUrl,
 						apiToken: env.apiToken,
+						transport: new SingleAttemptTransport(env.apiToken),
 						namespace: env.defaultNamespace ?? "",
 					})
 				: undefined;

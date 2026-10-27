@@ -67,7 +67,7 @@ bash scripts/install-tests/source-ref.sh
 section "Tarball install smoke"
 TARBALL_DIR="$WORK_DIR/tarballs"
 mkdir -p "$TARBALL_DIR"
-for pkg in utils natives ai agent tui stats resource-management coding-agent; do
+for pkg in utils natives ai agent tui stats resource-management f5-core coding-agent; do
   (
     cd "$ROOT_DIR/packages/$pkg"
     bun pm pack --destination "$TARBALL_DIR" --quiet >/dev/null
@@ -81,6 +81,7 @@ agent_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-agent-core-*.tgz)"
 tui_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-tui-*.tgz)"
 stats_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-xcsh-stats-*.tgz)"
 resource_mgmt_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-resource-management-*.tgz)"
+f5_core_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-xcsh-f5-core-*.tgz)"
 coding_agent_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-xcsh-[0-9]*.tgz)"
 
 # The package launcher requires the exact compiled release binary. During a
@@ -133,12 +134,13 @@ mkdir -p "$TARBALL_APP_DIR"
 			'@f5-sales-demo/pi-tui': '$tui_tgz',
 			'@f5-sales-demo/xcsh-stats': '$stats_tgz',
 			'@f5-sales-demo/pi-resource-management': '$resource_mgmt_tgz',
+			'@f5-sales-demo/xcsh-f5-core': '$f5_core_tgz',
 			'@f5-sales-demo/xcsh': '$coding_agent_tgz'
 		};
 		require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
 	"
 
-  bun add "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" "$stats_tgz" "$resource_mgmt_tgz" "$coding_agent_tgz"
+  bun add "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" "$stats_tgz" "$resource_mgmt_tgz" "$f5_core_tgz" "$coding_agent_tgz"
   XCSH_RELEASE_CACHE_DIR="$candidate_cache" smoke_cli ./node_modules/.bin/xcsh
 )
 

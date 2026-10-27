@@ -9,7 +9,8 @@
       "@f5-sales-demo/pi-resource-management",
       "@f5-sales-demo/xcsh-stats",
       "@f5-sales-demo/typescript-edit-benchmark",
-      "@f5-sales-demo/pi-utils"
+      "@f5-sales-demo/pi-utils",
+      "@f5-sales-demo/xcsh-f5-core"
     ],
     "native-dependent": [
       "@f5-sales-demo/pi-natives",

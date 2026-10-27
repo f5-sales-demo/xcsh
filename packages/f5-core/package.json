@@ -1,0 +1,52 @@
+{
+	"type": "module",
+	"name": "@f5-sales-demo/xcsh-f5-core",
+	"version": "23.9.5",
+	"description": "Node-compatible specification-backed F5 operations with bound plans and host approvals",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/f5-sales-demo/xcsh.git",
+		"directory": "packages/f5-core"
+	},
+	"engines": {
+		"node": ">=22"
+	},
+	"main": "./dist/index.cjs",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"bun": "./src/index.ts",
+			"import": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			},
+			"default": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"src"
+	],
+	"scripts": {
+		"build": "bun scripts/build.ts",
+		"prepack": "bun run build",
+		"test": "bun test",
+		"check": "biome check . && bun run check:types",
+		"check:types": "tsgo -p tsconfig.json --noEmit",
+		"lint": "biome lint .",
+		"fmt": "biome format --write .",
+		"pretest": "bun run build"
+	},
+	"dependencies": {
+		"@f5-sales-demo/pi-resource-management": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.2",
+		"dts-bundle-generator": "9.5.1"
+	}
+}

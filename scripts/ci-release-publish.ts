@@ -141,7 +141,7 @@ export interface PublishedPackage {
 export const publishWaves: readonly (readonly PublishPackage[])[] = [
 	platformPackageDirs,
 	[{ dir: "packages/utils" }, { dir: "packages/resource-management" }],
-	[{ dir: "packages/natives" }, { dir: "packages/ai" }],
+	[{ dir: "packages/natives" }, { dir: "packages/ai" }, { dir: "packages/f5-core" }],
 	[{ dir: "packages/tui" }, { dir: "packages/agent" }, { dir: "packages/stats" }],
 	[{ dir: "packages/coding-agent" }],
 ];

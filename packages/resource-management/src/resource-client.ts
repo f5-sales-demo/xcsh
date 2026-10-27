@@ -133,7 +133,7 @@ export class ResourceClient {
 
 		if (existing.error) return { status: "error", error: existing.error };
 
-		const diff = this.#computeManifestDiff(existing.body!, manifest);
+		const diff = computeManifestDiff(existing.body!, manifest);
 
 		if (!diff.hasDifferences) {
 			return { status: "unchanged", resource: existing.body! };
@@ -170,7 +170,7 @@ export class ResourceClient {
 
 		if (existing.error) return { status: "error", error: existing.error };
 
-		const diff = this.#computeManifestDiff(existing.body!, manifest);
+		const diff = computeManifestDiff(existing.body!, manifest);
 		if (!diff.hasDifferences) return { status: "unchanged", resource: existing.body! };
 		if (dryRun) return { status: "dry-run", action: "update", diff };
 		return this.#updateResource(manifest, resolved, namespace, diff, startMs);
@@ -281,29 +281,17 @@ export class ResourceClient {
 		}
 		if (existing.error) return { isNew: false, error: existing.error };
 
-		const diff = this.#computeManifestDiff(existing.body!, manifest);
+		const diff = computeManifestDiff(existing.body!, manifest);
 		return { diff, isNew: false };
 	}
 
-	#computeManifestDiff(serverResource: Record<string, unknown>, manifest: ResourceManifest): ResourceDiff {
-		const currentSpec = (serverResource.spec ?? {}) as Record<string, unknown>;
-		const filteredSpec = filterToManifestKeys(currentSpec, manifest.spec) as Record<string, unknown>;
-		const specDiff = computeResourceDiff(filteredSpec, manifest.spec);
-
-		const currentMeta = (serverResource.metadata ?? {}) as Record<string, unknown>;
-		const desiredMeta = manifest.rawObject.metadata as Record<string, unknown>;
-		const metaDiff = computeResourceDiff(
-			filterToManifestKeys(currentMeta, desiredMeta) as Record<string, unknown>,
-			desiredMeta,
-		);
-
-		return {
-			hasDifferences: specDiff.hasDifferences || metaDiff.hasDifferences,
-			added: [...specDiff.added, ...metaDiff.added],
-			removed: [...specDiff.removed, ...metaDiff.removed],
-			changed: [...specDiff.changed, ...metaDiff.changed],
-			unchangedCount: specDiff.unchangedCount + metaDiff.unchangedCount,
-		};
+	async inspectForMutation(
+		resolved: ResolvedKind,
+		name: string,
+		namespaceOverride?: string,
+	): Promise<{ status: number; body?: Record<string, unknown>; error?: ResourceError }> {
+		const namespace = namespaceOverride ?? this.#defaultNamespace;
+		return this.#fetchComparisonResource(this.#buildUrl(resolved.paths.get, namespace, name), resolved);
 	}
 
 	#resolveNamespace(manifest: ResourceManifest, override?: string): string {
@@ -472,4 +460,25 @@ function filterToManifestKeys(serverVal: unknown, manifestVal: unknown): unknown
 		}
 	}
 	return filtered;
+}
+
+export function computeManifestDiff(serverResource: Record<string, unknown>, manifest: ResourceManifest): ResourceDiff {
+	const currentSpec = (serverResource.spec ?? {}) as Record<string, unknown>;
+	const filteredSpec = filterToManifestKeys(currentSpec, manifest.spec) as Record<string, unknown>;
+	const specDiff = computeResourceDiff(filteredSpec, manifest.spec);
+
+	const currentMeta = (serverResource.metadata ?? {}) as Record<string, unknown>;
+	const desiredMeta = manifest.rawObject.metadata as Record<string, unknown>;
+	const metaDiff = computeResourceDiff(
+		filterToManifestKeys(currentMeta, desiredMeta) as Record<string, unknown>,
+		desiredMeta,
+	);
+
+	return {
+		hasDifferences: specDiff.hasDifferences || metaDiff.hasDifferences,
+		added: [...specDiff.added, ...metaDiff.added],
+		removed: [...specDiff.removed, ...metaDiff.removed],
+		changed: [...specDiff.changed, ...metaDiff.changed],
+		unchangedCount: specDiff.unchangedCount + metaDiff.unchangedCount,
+	};
 }

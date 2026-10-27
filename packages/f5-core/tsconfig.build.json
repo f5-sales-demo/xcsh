@@ -1,0 +1,18 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"emitDeclarationOnly": true,
+		"outDir": "dist",
+		"rootDir": "src",
+		"declarationMap": false,
+		"composite": false
+	},
+	"include": [
+		"src"
+	],
+	"exclude": [
+		"test",
+		"scripts"
+	]
+}
