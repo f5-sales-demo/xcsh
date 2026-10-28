@@ -51,6 +51,8 @@ export interface Args {
 	models?: string[];
 	tools?: string[];
 	noTools?: boolean;
+	/** Inert compatibility flag while the fork has no MCP runtime. */
+	noMcp?: boolean;
 	noLsp?: boolean;
 	noPty?: boolean;
 	hooks?: string[];
@@ -165,6 +167,9 @@ const APPLY: Record<LaunchFlagName, (result: Args, value: string | true) => void
 	},
 	"no-tools": r => {
 		r.noTools = true;
+	},
+	"no-mcp": r => {
+		r.noMcp = true;
 	},
 	"no-lsp": r => {
 		r.noLsp = true;
