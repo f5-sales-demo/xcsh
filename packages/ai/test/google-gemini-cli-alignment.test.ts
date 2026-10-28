@@ -38,11 +38,11 @@ function createContext(): Context {
 }
 
 describe("Google Gemini CLI alignment", () => {
-	it("uses Gemini CLI 0.65.0 in the default user agent", () => {
+	it("uses Gemini CLI 0.66.0 in the default user agent", () => {
 		const previousVersion = process.env.PI_AI_GEMINI_CLI_VERSION;
 		process.env.PI_AI_GEMINI_CLI_VERSION = "";
 		try {
-			expect(getGeminiCliUserAgent()).toContain("GeminiCLI/0.65.0/");
+			expect(getGeminiCliUserAgent()).toContain("GeminiCLI/0.66.0/");
 		} finally {
 			if (previousVersion === undefined) {
 				delete process.env.PI_AI_GEMINI_CLI_VERSION;
