@@ -416,7 +416,7 @@ const spacer = new Spacer(2); // 2 empty lines (default: 1)
 
 ### Image
 
-Renders images inline for terminals that support the Kitty graphics protocol (Kitty, Ghostty, WezTerm) or iTerm2 inline images. Falls back to a text placeholder on unsupported terminals.
+Renders images inline for terminals that support the Kitty graphics protocol (Kitty, Ghostty, WezTerm) or iTerm2 inline images. Falls back to a text placeholder on unsupported terminals. Inside Herdr, images require the server-provided `HERDR_KITTY_GRAPHICS=1` capability. Disabling graphics in Herdr selects the text fallback even when the outer terminal supports images.
 
 ```typescript
 interface ImageTheme {

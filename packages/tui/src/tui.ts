@@ -8,7 +8,7 @@ import { isKeyRelease, matchesKey } from "./keys";
 import { type MouseRoutable, routeSgrMouseInput } from "./mouse";
 import { setAlternateScreenActive, type Terminal } from "./terminal";
 import { ImageProtocol, setCellDimensions, setTerminalImageProtocol, TERMINAL } from "./terminal-capabilities";
-import { isInsideTerminalMultiplexer } from "./terminal-multiplexer";
+import { isInsideHerdr, isInsideTerminalMultiplexer } from "./terminal-multiplexer";
 import { extractSegments, getSegmenter, sliceByColumn, sliceWithWidth, visibleWidth } from "./utils";
 
 const SEGMENT_RESET = "\x1b[0m";
@@ -608,6 +608,8 @@ export class TUI extends Container {
 	}
 
 	#querySixelSupport(): void {
+		// Herdr negotiates Kitty delivery through its child capability, not host SIXEL probes.
+		if (isInsideHerdr()) return;
 		if (TERMINAL.imageProtocol) return;
 		if (process.platform !== "win32") return;
 		if (!Bun.env.WT_SESSION) return;
