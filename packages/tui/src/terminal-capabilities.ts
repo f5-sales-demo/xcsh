@@ -231,7 +231,12 @@ export function resolveTerminalId(env: NodeJS.ProcessEnv): TerminalId {
 export function resolveTerminalInfo(env: NodeJS.ProcessEnv, stdoutIsTTY: boolean): TerminalInfo {
 	const terminal = getTerminalInfo(resolveTerminalId(env));
 	const hyperlinks = shouldEnableTerminalHyperlinks(env, stdoutIsTTY, terminal.id);
-	const forcedImageProtocol = getForcedImageProtocol(env);
+	let forcedImageProtocol = getForcedImageProtocol(env);
+	if (isInsideHerdr(env)) {
+		// Herdr owns graphics delivery. Inherited host hints cannot override its opt-out.
+		if (!stdoutIsTTY || !hasHerdrKittyGraphics(env)) forcedImageProtocol = null;
+		else if (forcedImageProtocol === undefined) forcedImageProtocol = ImageProtocol.Kitty;
+	}
 	if (forcedImageProtocol !== undefined) {
 		return new TerminalInfo(
 			terminal.id,

@@ -146,6 +146,32 @@ describe("Herdr Kitty graphics capability", () => {
 		).toBeNull();
 	});
 
+	it("respects Herdr graphics opt-out despite inherited terminal hints and explicit overrides", () => {
+		for (const env of [
+			{ HERDR_ENV: "1", TERM_PROGRAM: "ghostty", GHOSTTY_RESOURCES_DIR: "/fixture" },
+			{ HERDR_ENV: "1", TERM: "screen-256color" },
+			{ HERDR_PANE_ID: "pane_1", TERM_PROGRAM: "iterm.app" },
+			{ HERDR_ENV: "1", TERM_PROGRAM: "ghostty", PI_FORCE_IMAGE_PROTOCOL: "kitty" },
+		]) {
+			const resolved = resolveTerminalInfo(env, true);
+			expect(resolved.imageProtocol).toBeNull();
+			const originalProtocol = terminal.imageProtocol;
+			terminal.imageProtocol = resolved.imageProtocol;
+			try {
+				expect(renderImage(BASE64_DUMMY, SQUARE_DIMENSIONS)).toBeNull();
+			} finally {
+				terminal.imageProtocol = originalProtocol;
+			}
+		}
+	});
+
+	it("uses the Herdr Kitty capability instead of inherited host image protocols", () => {
+		const env = { HERDR_ENV: "1", HERDR_KITTY_GRAPHICS: "1", TERM_PROGRAM: "iterm.app" };
+		expect(resolveTerminalInfo(env, true).imageProtocol).toBe(ImageProtocol.Kitty);
+		expect(resolveTerminalInfo({ ...env, PI_FORCE_IMAGE_PROTOCOL: "off" }, true).imageProtocol).toBeNull();
+		expect(resolveTerminalInfo(env, false).imageProtocol).toBeNull();
+	});
+
 	it("preserves explicit image-protocol override precedence", () => {
 		const env = { TERM: "xterm-256color", HERDR_ENV: "1", HERDR_KITTY_GRAPHICS: "1" };
 		expect(resolveTerminalInfo({ ...env, PI_FORCE_IMAGE_PROTOCOL: "off" }, true).imageProtocol).toBeNull();

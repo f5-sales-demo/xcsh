@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "15aad13c7c4ebf5bf444704dd0e90c65ec5abf75",
-  "fingerprint": "56a13da2d339df9a64f9fe42e1c27e7b40e3104727b73fe27c2b9b88ce91b532",
+  "revision": "f182620838d09590d751acc6919dd16466d5554d",
+  "fingerprint": "57783a932a23dde6df8479bf76a812308f23adc45fb067d3e4c6e21db30d8028",
   "counts": {
     "total": 244,
     "components": 102,
@@ -6857,7 +6857,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "fc9bd750e8af997f1a38e6b91c8f0f9cc4e9faad96c84dd75f11497c16578c06",
+      "sha256": "cde0e98199cce4285a4cffdae460805278482fd1edf90f4eb9360928c9d00acf",
       "exports": [
         "CellDimensions",
         "ImageDimensions",
@@ -7008,7 +7008,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "a63f717c9008d43ad8e3121aa0355a69bbce88261dde741310ecd125d8f7aea9",
+      "sha256": "da0269f8283b75f1e05e676ec2840d51781741a3b28316fb2ca340ef2ee20ff5",
       "exports": [
         "CURSOR_MARKER",
         "Component",

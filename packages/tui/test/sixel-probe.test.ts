@@ -9,6 +9,7 @@ type MutableTerminalInfo = {
 const terminalInfo = TERMINAL as unknown as MutableTerminalInfo;
 const originalProtocol = TERMINAL.imageProtocol;
 const originalWtSession = Bun.env.WT_SESSION;
+const originalHerdrEnv = Bun.env.HERDR_ENV;
 const stdinIsTtyDescriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
 const stdoutIsTtyDescriptor = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
 
@@ -29,8 +30,28 @@ describe("TUI SIXEL capability probe", () => {
 		terminalInfo.imageProtocol = originalProtocol;
 		if (originalWtSession === undefined) delete Bun.env.WT_SESSION;
 		else Bun.env.WT_SESSION = originalWtSession;
+		if (originalHerdrEnv === undefined) delete Bun.env.HERDR_ENV;
+		else Bun.env.HERDR_ENV = originalHerdrEnv;
 		restoreIsTty(process.stdin, stdinIsTtyDescriptor);
 		restoreIsTty(process.stdout, stdoutIsTtyDescriptor);
+	});
+
+	it("keeps Herdr graphics opt-out authoritative over Windows Terminal capability replies", () => {
+		if (process.platform !== "win32") return;
+		setTerminalImageProtocol(null);
+		Bun.env.HERDR_ENV = "1";
+		Bun.env.WT_SESSION = "test-wt-session";
+		Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true });
+		Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+		const terminal = new VirtualTerminal(80, 24);
+		const tui = new TUI(terminal);
+		try {
+			tui.start();
+			terminal.sendInput("\x1b[?1;2;4c\x1b[?2;1;0S");
+			expect(TERMINAL.imageProtocol).toBeNull();
+		} finally {
+			tui.stop();
+		}
 	});
 
 	it("enables SIXEL only after positive terminal capability response", () => {
