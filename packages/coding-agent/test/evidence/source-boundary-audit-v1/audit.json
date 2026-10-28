@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "f182620838d09590d751acc6919dd16466d5554d",
-  "fingerprint": "57783a932a23dde6df8479bf76a812308f23adc45fb067d3e4c6e21db30d8028",
+  "revision": "07e4f0994ff14705fccb7c9962fe2e8d441a2878",
+  "fingerprint": "19d6c8562b41d2090317acd88401200181f3d4e87e64ea0644d0aba9807ff724",
   "counts": {
     "total": 244,
     "components": 102,
@@ -502,7 +502,7 @@
       "kind": "integration",
       "ownership": "public-extension-contract",
       "domain": "extensions",
-      "sha256": "cd6e706a7bd499afac38e25a736d3eee66d0b0bd58dc801c507cc08dc372a9b9",
+      "sha256": "6d7de45887ad0ec9852e20010db80e0b9200c9231d551e85e46617d29b883381",
       "exports": [
         "BranchHandler",
         "ExtensionErrorListener",
@@ -6391,9 +6391,9 @@
         "packages/coding-agent/test/browser/user-agent-override.test.ts",
         "packages/coding-agent/test/chrome-cli.test.ts",
         "packages/coding-agent/test/cli/flag-spec.test.ts",
+        "packages/coding-agent/test/cli/herdr-native-flags.test.ts",
         "packages/coding-agent/test/compaction.test.ts",
-        "packages/coding-agent/test/context-completion.test.ts",
-        "packages/coding-agent/test/core/apply-patch-regression.test.ts"
+        "packages/coding-agent/test/context-completion.test.ts"
       ],
       "classification": "packages/tui/src/components/table.ts is individually classified as shared-rendering-primitive in the shared-components domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
