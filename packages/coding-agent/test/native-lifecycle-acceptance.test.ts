@@ -74,7 +74,7 @@ describe("native lifecycle acceptance contract", () => {
 		});
 		expect(contract.scenarios).toEqual(NATIVE_LIFECYCLE_SCENARIOS);
 		expect(contract.reporter).toEqual({
-			protocol: 27,
+			protocol: 28,
 			semantic_report_timeout_ms: 5_000,
 			ambiguous_retry_limit: 1,
 			capability_env: "HERDR_NATIVE_CAPABILITY",

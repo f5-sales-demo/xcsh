@@ -107,8 +107,8 @@ describe("Herdr protocol client", () => {
 		}
 	});
 
-	test("accepts protocol 27 lifecycle and recap capabilities while rejecting unreviewed future protocols", async () => {
-		for (const protocol of [26, 27]) {
+	test("accepts protocol 28 lifecycle and recap capabilities while rejecting unreviewed future protocols", async () => {
+		for (const protocol of [26, 27, 28]) {
 			const supported = await fakeHerdr(() => ({
 				type: "pong",
 				protocol,
@@ -125,7 +125,7 @@ describe("Herdr protocol client", () => {
 			}
 		}
 
-		const fake = await fakeHerdr(() => ({ type: "pong", protocol: 28, version: "future" }));
+		const fake = await fakeHerdr(() => ({ type: "pong", protocol: 29, version: "future" }));
 		try {
 			await expect(new HerdrClient(fake.socketPath).ensureProtocol()).rejects.toMatchObject({
 				code: "protocol_mismatch",
@@ -135,7 +135,24 @@ describe("Herdr protocol client", () => {
 		}
 	});
 
-	test.each([18, 27])("accepts protocol %i with semantic tracking capability v1", async protocol => {
+	test("sends ordinary JSON API requests after protocol 28 negotiation", async () => {
+		const fake = await fakeHerdr(request =>
+			request.method === "ping"
+				? { type: "pong", protocol: 28, version: "0.20.0", capabilities: { agent_recaps: 1 } }
+				: { type: "workspace_list", workspaces: [] },
+		);
+		try {
+			const client = new HerdrClient(fake.socketPath);
+			expect((await client.request("workspace.list", {})).type).toBe("workspace_list");
+			expect(client.protocolVersion).toBe(28);
+			expect(client.capabilityVersion("agent_recaps")).toBe(1);
+			expect(fake.requests.map(request => request.method)).toEqual(["ping", "workspace.list"]);
+		} finally {
+			await fake.close();
+		}
+	});
+
+	test.each([18, 27, 28])("accepts protocol %i with semantic tracking capability v1", async protocol => {
 		const fake = await fakeHerdr(request =>
 			request.method === "ping"
 				? {
