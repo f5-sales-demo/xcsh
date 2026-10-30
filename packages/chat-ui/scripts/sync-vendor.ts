@@ -35,8 +35,8 @@ const GENERATED_FROM = "@f5-sales-demo/xcsh-chat-ui";
 /** The manifest committed alongside a vendored copy. */
 export interface VendorManifest {
 	generatedFrom: string;
-	/** Posix relative path → sha256 hex of the file's bytes. */
-	files: Record<string, string>;
+	/** Explicit content hashes, separate from filenames that may contain "token". */
+	files: { sha256: string; path: string }[];
 }
 
 function sha256(content: Buffer | string): string {
@@ -81,9 +81,9 @@ export function buildManifest(srcDir: string = SRC_DIR): VendorManifest {
 		if (!generated.includes(`source sha256 ${fingerprint}`))
 			throw new Error("Stale code presentation adapter; run gen-code-presentation before vendoring");
 	}
-	const files: Record<string, string> = {};
+	const files: VendorManifest["files"] = [];
 	for (const rel of listSourceFiles(srcDir)) {
-		files[rel] = sha256(fs.readFileSync(path.join(srcDir, rel)));
+		files.push({ sha256: sha256(fs.readFileSync(path.join(srcDir, rel))), path: rel });
 	}
 	return { generatedFrom: GENERATED_FROM, files };
 }
@@ -118,7 +118,27 @@ function readManifest(targetDir: string): VendorManifest | null {
 	const p = path.join(targetDir, MANIFEST_NAME);
 	if (!fs.existsSync(p)) return null;
 	try {
-		return JSON.parse(fs.readFileSync(p, "utf8")) as VendorManifest;
+		const raw = JSON.parse(fs.readFileSync(p, "utf8"));
+		if (raw?.generatedFrom !== GENERATED_FROM || !raw.files || typeof raw.files !== "object") return null;
+		// Existing committed vendors used a path-to-hash object. Keep them readable.
+		const files = Array.isArray(raw.files)
+			? raw.files
+			: Object.entries(raw.files).map(([path, sha256]) => ({ sha256, path }));
+		const seen = new Set<string>();
+		for (const file of files) {
+			if (
+				typeof file?.path !== "string" ||
+				!file.path ||
+				file.path.includes("\\") ||
+				file.path.split("/").some((part: string) => !part || part === "." || part === "..") ||
+				typeof file.sha256 !== "string" ||
+				!/^[0-9a-f]{64}$/.test(file.sha256) ||
+				seen.has(file.path)
+			)
+				return null;
+			seen.add(file.path);
+		}
+		return { generatedFrom: GENERATED_FROM, files };
 	} catch {
 		return null;
 	}
@@ -140,7 +160,7 @@ export function verifySelf(targetDir: string): VerifyResult {
 	const manifest = readManifest(targetDir);
 	if (!manifest) return { ok: false, problems: [`missing/unreadable ${MANIFEST_NAME} in ${targetDir}`] };
 	const problems: string[] = [];
-	for (const [rel, expected] of Object.entries(manifest.files)) {
+	for (const { path: rel, sha256: expected } of manifest.files) {
 		const full = path.join(targetDir, rel);
 		if (!fs.existsSync(full)) {
 			problems.push(`missing vendored file: ${rel}`);
@@ -149,8 +169,9 @@ export function verifySelf(targetDir: string): VerifyResult {
 		if (sha256(fs.readFileSync(full)) !== expected) problems.push(`hash mismatch (hand-edited?): ${rel}`);
 	}
 	const onDisk = new Set(listSourceFiles(targetDir));
+	const listed = new Set(manifest.files.map(file => file.path));
 	for (const rel of onDisk) {
-		if (!(rel in manifest.files)) problems.push(`stray vendored file not in manifest: ${rel}`);
+		if (!listed.has(rel)) problems.push(`stray vendored file not in manifest: ${rel}`);
 	}
 	return { ok: problems.length === 0, problems };
 }
@@ -164,14 +185,15 @@ export function verifySelf(targetDir: string): VerifyResult {
 export function verifySync(targetDir: string, srcDir: string = SRC_DIR): VerifyResult {
 	const manifest = readManifest(targetDir);
 	if (!manifest) return { ok: false, problems: [`missing/unreadable ${MANIFEST_NAME} in ${targetDir}`] };
-	const source = buildManifest(srcDir).files;
+	const source = new Map(buildManifest(srcDir).files.map(file => [file.path, file.sha256]));
+	const target = new Map(manifest.files.map(file => [file.path, file.sha256]));
 	const problems: string[] = [];
-	for (const [rel, srcHash] of Object.entries(source)) {
-		if (!(rel in manifest.files)) problems.push(`source added a file the vendor lacks: ${rel}`);
-		else if (manifest.files[rel] !== srcHash) problems.push(`source changed; vendor is stale: ${rel}`);
+	for (const [rel, srcHash] of source) {
+		if (!target.has(rel)) problems.push(`source added a file the vendor lacks: ${rel}`);
+		else if (target.get(rel) !== srcHash) problems.push(`source changed; vendor is stale: ${rel}`);
 	}
-	for (const rel of Object.keys(manifest.files)) {
-		if (!(rel in source)) problems.push(`source removed a file the vendor still has: ${rel}`);
+	for (const rel of target.keys()) {
+		if (!source.has(rel)) problems.push(`source removed a file the vendor still has: ${rel}`);
 	}
 	return { ok: problems.length === 0, problems };
 }
