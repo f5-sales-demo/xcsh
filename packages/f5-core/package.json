@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "@f5-sales-demo/xcsh-f5-core",
-	"version": "23.10.4",
+	"version": "23.10.5",
 	"description": "Node-compatible specification-backed F5 operations with bound plans and host approvals",
 	"license": "MIT",
 	"repository": {
