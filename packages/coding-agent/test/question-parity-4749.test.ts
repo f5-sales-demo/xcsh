@@ -53,7 +53,7 @@ test("restored async presentation stays out of model context", () => {
 test("Codex question replies retain exact Unicode multiline and literal shell text", () => {
 	const answer = "Montréal 東京\n$(touch never) `echo never`";
 	const text = createQuestionReply(asyncQuestionId("call", 0), "Audience?", answer);
-	expect(asyncAnswerSummary(text)).toBe(`Answer recorded: ${answer}`);
+	expect(asyncAnswerSummary(text)).toBe(`Answers recorded\n\nAudience? — ${answer}`);
 });
 
 test("async exposure requires root identity and catalog support including the legacy name", () => {

@@ -28,8 +28,8 @@ describe("buildManifest", () => {
 		const b = buildManifest();
 		expect(a).toEqual(b);
 		expect(a.generatedFrom).toBe("@f5-sales-demo/xcsh-chat-ui");
-		expect(Object.keys(a.files)).toEqual(listSourceFiles());
-		for (const h of Object.values(a.files)) expect(h).toMatch(/^[0-9a-f]{64}$/);
+		expect(a.files.map(file => file.path)).toEqual(listSourceFiles());
+		for (const file of a.files) expect(file.sha256).toMatch(/^[0-9a-f]{64}$/);
 	});
 });
 
@@ -90,12 +90,53 @@ describe("verifySync (upstream drift, source present)", () => {
 			vendor(dir);
 			// Simulate the source advancing by rewriting the target's manifest hash for one file.
 			const mPath = join(dir, MANIFEST_NAME);
-			const m = JSON.parse(readFileSync(mPath, "utf8")) as { files: Record<string, string> };
-			m.files["index.ts"] = "0".repeat(64);
+			const m = JSON.parse(readFileSync(mPath, "utf8")) as { files: { path: string; sha256: string }[] };
+			m.files.find(file => file.path === "index.ts")!.sha256 = "0".repeat(64);
 			writeFileSync(mPath, `${JSON.stringify(m, null, 2)}\n`);
 			const r = verifySync(dir);
 			expect(r.ok).toBe(false);
 			expect(r.problems.some(p => p.includes("index.ts"))).toBe(true);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("manifest compatibility and validation", () => {
+	test("reads legacy path-to-hash manifests and still detects tampering", () => {
+		const dir = tmp();
+		try {
+			vendor(dir);
+			const manifest = buildManifest();
+			writeFileSync(
+				join(dir, MANIFEST_NAME),
+				JSON.stringify({
+					generatedFrom: manifest.generatedFrom,
+					files: Object.fromEntries(manifest.files.map(file => [file.path, file.sha256])),
+				}),
+			);
+			expect(verifySelf(dir).ok).toBe(true);
+			expect(verifySync(dir).ok).toBe(true);
+			writeFileSync(join(dir, "index.ts"), "// tampered\n");
+			expect(verifySelf(dir).ok).toBe(false);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+	test("rejects duplicate paths, malformed hashes, and paths outside the vendor", () => {
+		const dir = tmp();
+		try {
+			vendor(dir);
+			const manifest = buildManifest();
+			for (const files of [
+				[manifest.files[0], manifest.files[0]],
+				[{ path: "index.ts", sha256: "invalid" }],
+				[{ path: "../index.ts", sha256: "0".repeat(64) }],
+			]) {
+				writeFileSync(join(dir, MANIFEST_NAME), JSON.stringify({ ...manifest, files }));
+				expect(verifySelf(dir).ok).toBe(false);
+				expect(verifySync(dir).ok).toBe(false);
+			}
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}

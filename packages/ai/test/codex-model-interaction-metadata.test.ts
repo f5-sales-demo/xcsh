@@ -197,3 +197,22 @@ describe("pinned Codex model-interaction metadata", () => {
 		);
 	});
 });
+
+it("does not invent live steering support from the Codex model name", () => {
+	const model = {
+		id: "gpt-6.1-sol",
+		provider: "openai-codex",
+		api: "openai-codex-responses",
+		contextWindow: 272_000,
+		maxTokens: 128_000,
+	} as Model<"openai-codex-responses">;
+	expect(applyCodexInteractionMetadata(model).compat?.supportsWebSocketSteering).not.toBe(true);
+	expect(
+		applyCodexInteractionMetadata({ ...model, compat: { supportsWebSocketSteering: true } }).compat
+			?.supportsWebSocketSteering,
+	).toBe(true);
+	expect(
+		applyCodexInteractionMetadata({ ...model, compat: { supportsWebSocketSteering: false } }).compat
+			?.supportsWebSocketSteering,
+	).toBe(false);
+});

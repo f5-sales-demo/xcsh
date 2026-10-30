@@ -253,7 +253,8 @@ export type AgentSessionEvent =
 			};
 			questionIds: string[];
 	  }
-	| { type: "interaction_error"; itemId: string; message: string }
+	| { type: "interaction_error"; itemId: string; message: string; failureId?: string }
+	| { type: "interaction_reply_queued"; itemId: string; questionId?: string }
 	| { type: "async_job_update"; jobId: string; details?: Record<string, unknown> }
 	| { type: "async_job_settled"; jobId: string; receiptId: string }
 	| TurnPhaseEvent
@@ -1051,6 +1052,7 @@ export class AgentSession {
 	}
 	async deliverAsyncAnswer(itemId: string, questionId: string, answer: string): Promise<void> {
 		const generation = this.#promptGeneration;
+		const wasStreaming = this.isStreaming;
 		const entry = this.sessionManager
 			.getBranch()
 			.find(
@@ -1064,10 +1066,25 @@ export class AgentSession {
 			entry?.type === "custom_message"
 				? ((entry.details as { item?: { questions?: { title: string }[] } }).item?.questions?.[index]?.title ?? "")
 				: "";
-		await this.prompt(createQuestionReply(questionId, question, answer), {
+		const replyText = createQuestionReply(questionId, question, answer);
+		await this.prompt(replyText, {
 			streamingBehavior: "steer",
 			expandPromptTemplates: false,
 		});
+		const atBoundary = this.agent.state.messages.some(
+			message =>
+				message.role === "user" &&
+				(typeof message.content === "string"
+					? message.content
+					: message.content
+							.filter(part => part.type === "text")
+							.map(part => part.text)
+							.join("\n")) === replyText,
+		);
+		if (wasStreaming && !atBoundary) {
+			this.userInteractions.updateAnswerPresentation(itemId, questionId, "queued");
+			await this.#emitSessionEvent({ type: "interaction_reply_queued", itemId, questionId });
+		}
 		// A reply can be queued after the loop's final steering poll but before
 		// prompt finalization. Once the loop is idle, resume any reply it retained.
 		await this.agent.waitForIdle();
@@ -1076,12 +1093,29 @@ export class AgentSession {
 				? runWithContextExecution(this.#executionSnapshot, () => this.agent.continue())
 				: this.agent.continue());
 		}
+		if (this.#isPromptCurrent(generation)) {
+			if (this.agent.state.error)
+				this.reportInteractionFailure(
+					itemId,
+					new Error(this.agent.state.error),
+					this.agent.state.messages.findLast(message => message.role === "assistant")?.stopReason === "aborted"
+						? "interrupted"
+						: "failed",
+				);
+			else this.userInteractions.updateAnswerPresentation(itemId, questionId, "delivered");
+		}
 	}
-	reportInteractionFailure(itemId: string, _error: unknown): void {
+	reportInteractionFailure(itemId: string, error: unknown, state: "failed" | "interrupted" = "failed"): void {
+		this.userInteractions.updateAnswerPresentation(itemId, undefined, state);
+		logger.debug("Interaction reply delivery failed", {
+			itemId,
+			error: error instanceof Error ? error.message : String(error),
+		});
 		void this.#emitSessionEvent({
 			type: "interaction_error",
 			itemId,
-			message: "Unable to deliver the interaction reply",
+			message: state === "interrupted" ? "Answer delivery interrupted" : "Unable to deliver the interaction reply",
+			failureId: JSON.stringify([this.sessionId, this.#promptGeneration, itemId]),
 		});
 	}
 

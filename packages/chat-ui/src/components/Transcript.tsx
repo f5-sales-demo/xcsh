@@ -6,6 +6,8 @@
  * Chrome auto-scroll with a VS Code-style jump control).
  */
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { AnswerRecapView } from "../interactions/AnswerRecapView";
+import { asyncReplyRecap, questionToolRecap, unseenAnswerRecap } from "../interactions/answer-recap";
 import type { ChatMessage, ReactNode } from "../types";
 import { AssistantMessage, ErrorMessage, ThinkingIndicator, ToolMessage, UserMessage } from "./messages";
 
@@ -76,6 +78,7 @@ export function Transcript({
 
 	const lastId = messages.length > 0 ? messages[messages.length - 1].id : null;
 	const empty = messages.length === 0;
+	const seenReplies = new Set<string>();
 
 	useLayoutEffect(() => {
 		if (followRevision === undefined) return;
@@ -104,7 +107,13 @@ export function Transcript({
 				{brand}
 				{empty && emptyState
 					? emptyState
-					: messages.map(m => renderMessage(m, lastId, streaming, onRetry, thinkingLabel))}
+					: messages
+							.filter(
+								(message, index) =>
+									!message.failureId ||
+									!messages.slice(0, index).some(prior => prior.failureId === message.failureId),
+							)
+							.map(m => renderMessage(m, lastId, streaming, onRetry, thinkingLabel, seenReplies))}
 			</div>
 			{showFab && (
 				<button
@@ -127,7 +136,15 @@ function renderMessage(
 	streaming: boolean,
 	onRetry?: (text: string) => void,
 	thinkingLabel?: string,
+	seenReplies = new Set<string>(),
 ): ReactNode {
+	const question = questionToolRecap(m.tool, m.toolArgs, m.text, m.running, m.ok);
+	const recap = m.answerRecap ?? question?.recap ?? (m.role === "user" ? asyncReplyRecap(m.text) : undefined);
+	if (recap && m.role === "user") {
+		const unseen = unseenAnswerRecap(recap, seenReplies);
+		return unseen ? <AnswerRecapView key={m.id} recap={unseen} evidence={m.answerEvidence} /> : null;
+	}
+	if (recap) return <AnswerRecapView key={m.id} recap={recap} evidence={m.answerEvidence ?? question?.evidence} />;
 	if (m.role === "user") return <UserMessage key={m.id} text={m.text} />;
 	if (m.role === "tool")
 		return <ToolMessage key={m.id} tool={m.tool ?? "tool"} ok={m.ok ?? true} text={m.text} running={m.running} />;

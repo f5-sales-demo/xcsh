@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "revision": "07e4f0994ff14705fccb7c9962fe2e8d441a2878",
-  "fingerprint": "19d6c8562b41d2090317acd88401200181f3d4e87e64ea0644d0aba9807ff724",
+  "revision": "2fd1a4933bdc46541b1a8c31aae1d1063b8754f7",
+  "fingerprint": "f46829c6e4b8cfe6b0d8a0107f81e2a2cf8c9606dfa264617783276a35477fe8",
   "counts": {
-    "total": 244,
-    "components": 102,
+    "total": 245,
+    "components": 103,
     "integrations": 142
   },
   "audits": [
@@ -236,11 +236,11 @@
         "packages/coding-agent/test/modes/controllers/command-controller-memory.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/prompt-action-autocomplete.test.ts",
+        "packages/coding-agent/test/question-transcript.test.ts",
         "packages/coding-agent/test/request-user-input-polish.test.ts",
         "packages/coding-agent/test/reviewed-action-dialog.test.ts",
         "packages/coding-agent/test/selector-contextual-bindings.test.ts",
-        "packages/coding-agent/test/settings-chordtimeout.test.ts",
-        "packages/tui/test/cancellable-loader.test.ts"
+        "packages/coding-agent/test/settings-chordtimeout.test.ts"
       ],
       "classification": "packages/coding-agent/src/config/keybindings.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -1092,6 +1092,22 @@
         "packages/coding-agent/test/agent-dashboard.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/components/agent-dashboard.ts is individually classified as reviewed-mutation-adapter in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
+      "source": "packages/coding-agent/src/modes/components/answer-recap.ts",
+      "kind": "component",
+      "ownership": "read-only-renderer",
+      "domain": "core",
+      "sha256": "cdac210b3f32944516e7c5e4265925b59ba8744627acb97d07abe28d384ba958",
+      "exports": [
+        "AnswerRecapComponent"
+      ],
+      "interactionSignals": [
+        "render"
+      ],
+      "persistenceSignals": [],
+      "directTests": [],
+      "classification": "packages/coding-agent/src/modes/components/answer-recap.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/modes/components/assistant-message.ts",
@@ -2249,11 +2265,12 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "d48040d68024ce1195188469cd290c442116b827c2ffeea516ccdf9c03f23fe5",
+      "sha256": "eee92f2fac7f63cafac8afc984b74786d65ca52fceced489e99c3f8b18eedeb3",
       "exports": [
         "AsyncInputReply",
         "QuestionTranscriptComponent",
         "ResolvedAsyncQuestionReply",
+        "asyncBatchRecap",
         "parseAsyncInputReply",
         "resolveAsyncQuestionReply",
         "resolveAsyncQuestionReplyFromItem"
@@ -2956,7 +2973,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "35331fd03448d883f32ade3653f7e62853edfa50d430e7cb9b85cb6806929b97",
+      "sha256": "227fc4ba1a97f6f5d137bd3ac697c09deb36a80e6a16a76b815bf38d54534de0",
       "exports": [
         "ToolExecutionComponent",
         "ToolExecutionHandle",
@@ -3335,7 +3352,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "4041b45d406a7ad58143cc42a197958d9e4cdeebe9ec36421dd06ee08122a18b",
+      "sha256": "524706a1d957686da0c4b5a8e04b0418612921982cea091123e185ccf5101f2c",
       "exports": [
         "EventController"
       ],
@@ -4399,7 +4416,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "core",
-      "sha256": "2e457f8f91053062f1dbc0f6f297a9b213ce444b1e0750c33476b8b676f84a60",
+      "sha256": "3cbd6ff01e356d8c6c6fab60f1592edaea085dc0c7dca66b934534f331be9a0d",
       "exports": [
         "UiHelpers"
       ],
@@ -5320,13 +5337,13 @@
         "packages/coding-agent/test/agent-session-routing-turn.test.ts",
         "packages/coding-agent/test/agent-session-terraform-preflight.test.ts",
         "packages/coding-agent/test/agent-storage-sqlite-compat.test.ts",
+        "packages/coding-agent/test/answer-presentation-recovery.test.ts",
         "packages/coding-agent/test/archive-install.test.ts",
         "packages/coding-agent/test/args.test.ts",
         "packages/coding-agent/test/async-job-manager.test.ts",
         "packages/coding-agent/test/auto-config-read.test.ts",
         "packages/coding-agent/test/auto-config.test.ts",
-        "packages/coding-agent/test/autocomplete-max-visible.test.ts",
-        "packages/coding-agent/test/autoresearch-state.test.ts"
+        "packages/coding-agent/test/autocomplete-max-visible.test.ts"
       ],
       "classification": "packages/coding-agent/src/tools/read.ts is individually classified as tool-authority-boundary in the tools domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6489,6 +6506,7 @@
         "packages/coding-agent/test/agent-session-handoff.test.ts",
         "packages/coding-agent/test/agent-session-routing-rejection.test.ts",
         "packages/coding-agent/test/agent-session-routing-turn.test.ts",
+        "packages/coding-agent/test/answer-presentation-recovery.test.ts",
         "packages/coding-agent/test/async-job-cancellation.test.ts",
         "packages/coding-agent/test/bench-instant-extension.test.ts",
         "packages/coding-agent/test/browser/chat-handler.server-tools.test.ts",
@@ -6502,8 +6520,7 @@
         "packages/coding-agent/test/hook-editor.test.ts",
         "packages/coding-agent/test/host-software.test.ts",
         "packages/coding-agent/test/interaction-parity.test.ts",
-        "packages/coding-agent/test/internal-urls/console-field-metadata.test.ts",
-        "packages/coding-agent/test/internal-urls/fleet-resolve.test.ts"
+        "packages/coding-agent/test/internal-urls/console-field-metadata.test.ts"
       ],
       "classification": "packages/tui/src/events.ts is individually classified as runtime-lifecycle in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
@@ -6648,11 +6665,11 @@
         "packages/coding-agent/test/modes/controllers/command-controller-memory.test.ts",
         "packages/coding-agent/test/modes/controllers/command-controller-reports.test.ts",
         "packages/coding-agent/test/prompt-action-autocomplete.test.ts",
+        "packages/coding-agent/test/question-transcript.test.ts",
         "packages/coding-agent/test/request-user-input-polish.test.ts",
         "packages/coding-agent/test/reviewed-action-dialog.test.ts",
         "packages/coding-agent/test/searchable-select-list.test.ts",
-        "packages/coding-agent/test/selector-contextual-bindings.test.ts",
-        "packages/coding-agent/test/settings-chordtimeout.test.ts"
+        "packages/coding-agent/test/selector-contextual-bindings.test.ts"
       ],
       "classification": "packages/tui/src/keybindings.ts is individually classified as runtime-lifecycle in the settings domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },

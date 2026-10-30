@@ -2279,6 +2279,7 @@ class CodexWebSocketConnection {
 	#waiters: Array<() => void> = [];
 	#connectPromise?: Promise<void>;
 	#activeRequest = false;
+	#steeringUnsupported = false;
 	#steerWaiters = new Map<string, { resolve: (ack: CodexSteerAck) => void; reject: (error: Error) => void }>();
 
 	constructor(url: string, headers: Record<string, string>, options: CodexWebSocketConnectionOptions) {
@@ -2413,10 +2414,31 @@ class CodexWebSocketConnection {
 						waiter.resolve(
 							parsed.type === "response.steer.accepted" && steer?.id
 								? { accepted: true, id: steer.id }
-								: { accepted: false },
+								: {
+										accepted: false,
+										code: typeof parsed.code === "string" ? parsed.code : undefined,
+										message: typeof parsed.message === "string" ? parsed.message : undefined,
+									},
 						);
 					} else if (parsed.type === "response.steer.failed" && steer?.id)
 						this.#push(createCodexWebSocketTransportError("accepted steering was not committed"));
+					return;
+				}
+				// This rejection belongs to the sole in-flight steering submission,
+				// not to the independent response that is still streaming.
+				if (
+					parsed.type === "error" &&
+					parsed.code === "unsupported_native_inflight_message" &&
+					this.#steerWaiters.size === 1
+				) {
+					this.#steeringUnsupported = true;
+					const waiter = this.#steerWaiters.values().next().value!;
+					this.#steerWaiters.clear();
+					waiter.resolve({
+						accepted: false,
+						code: parsed.code,
+						message: typeof parsed.message === "string" ? parsed.message : undefined,
+					});
 					return;
 				}
 				this.#push(parsed);
@@ -2437,6 +2459,7 @@ class CodexWebSocketConnection {
 		previousResponseId: string,
 		input: import("./openai-codex/request-transformer").InputItem[],
 	): Promise<CodexSteerAck> {
+		if (this.#steeringUnsupported) return { accepted: false, code: "unsupported_native_inflight_message" };
 		if (!this.#socket || !this.isOpen()) throw new Error("Steering socket unavailable");
 		const id = previousResponseId;
 		const { promise, resolve, reject } = Promise.withResolvers<CodexSteerAck>();

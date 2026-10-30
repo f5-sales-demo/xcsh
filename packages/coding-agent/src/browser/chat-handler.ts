@@ -1,6 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { AssistantMessage, AssistantMessagePhase, ImageContent } from "@f5-sales-demo/pi-ai";
+import { questionToolRecap } from "../../../chat-ui/src/interactions/answer-recap";
+import { parseQuestionReplies } from "../../../chat-ui/src/interactions/async-answer";
 import { isInteractionCommand } from "../../../chat-ui/src/interactions/transport";
 import { parseModelString } from "../config/model-resolver";
 import { settings } from "../config/settings";
@@ -90,9 +92,11 @@ interface ActiveChat {
 	/** Wall-clock of the last chat_keepalive sent, to throttle liveness frames during
 	 * a long pre-first-token think (0 = none sent yet). */
 	lastKeepaliveAt: number;
+	references?: ChatDone["references"];
 }
 
 export class ChatHandler {
+	#questionArgs = new Map<string, unknown>();
 	#server: BridgeServer;
 	#session: AgentSession;
 	#activeChats = new Map<string, ActiveChat>();
@@ -132,6 +136,7 @@ export class ChatHandler {
 			if (event.type === "interaction")
 				this.#server.send({ type: "interaction_event", revision: event.event.revision, event: event.event });
 			if (event.type === "interaction_snapshot") this.#server.send(event);
+			if (event.type === "interaction_error") this.#server.send(event);
 			if (event.type === "plan_available" || event.type === "plan_resolved") this.#server.send(event);
 		});
 		this.#server.onMessage(msg => {
@@ -150,7 +155,15 @@ export class ChatHandler {
 					const chatId =
 						typeof Reflect.get(msg, "chatId") === "string" ? (Reflect.get(msg, "chatId") as string) : undefined;
 					let resumed: ActiveChat | undefined;
-					if (pending?.delivery === "async" && !this.busy && chatId && /^[A-Za-z0-9:_-]{1,128}$/.test(chatId)) {
+					if (
+						pending?.delivery === "async" &&
+						!this.#activeChats.size &&
+						chatId &&
+						/^[A-Za-z0-9:_-]{1,128}$/.test(chatId)
+					) {
+						// A previous prompt may still be finalizing. Only the reply's own
+						// model boundary can transfer output ownership to this sink.
+						let reachedBoundary = !this.#session.isStreaming;
 						resumed = {
 							id: chatId,
 							items: new Map(),
@@ -165,11 +178,25 @@ export class ChatHandler {
 						const chat = resumed;
 						this.#activeChats.set(chat.id, chat);
 						chat.unsubscribe = this.#session.subscribe(event => {
+							if (!reachedBoundary && event.type === "message_start" && event.message.role === "user") {
+								const content = event.message.content;
+								const text =
+									typeof content === "string"
+										? content
+										: content
+												.filter(part => part.type === "text")
+												.map(part => part.text)
+												.join("\n");
+								reachedBoundary = Boolean(
+									parseQuestionReplies(text)?.some(reply => reply.questionItemId === pending.questionId),
+								);
+							}
+							if (!reachedBoundary) return;
 							this.#handleSessionEvent(chat, event);
 							if (event.type === "agent_end") {
-								if (!chat.terminalSent) this.#sendTerminal(chat, { type: "chat_done", id: chat.id });
 								chat.unsubscribe();
 								this.#activeChats.delete(chat.id);
+								this.#scheduleOrphanedPendingReplay();
 							}
 						});
 					}
@@ -407,17 +434,30 @@ export class ChatHandler {
 
 	#handleSessionEvent(chat: ActiveChat, event: AgentSessionEvent): void {
 		if (chat.terminalSent) return;
+		if (event.type === "agent_end") {
+			this.#sendTerminal(chat, {
+				type: "chat_done",
+				id: chat.id,
+				...(chat.references?.length ? { references: chat.references } : {}),
+			});
+			return;
+		}
 
 		// TOOL-ACTIVITY STREAMING: forward tool execution events as chat_tool_notice
 		// so the panel shows inline activity cards ("catalog_workflow_runner: running…")
 		// instead of eternal "● ● ● thinking" during multi-step tool use.
 		if (event.type === "tool_execution_start" && "toolName" in event) {
+			const questionPresentation = questionToolRecap(event.toolName, event.args, "", true);
+			if (questionPresentation) this.#questionArgs.set(event.toolCallId, event.args);
 			this.#server.send({
 				type: "chat_tool_notice",
 				id: chat.id,
 				tool: String(event.toolName),
 				ok: true,
 				detail: `${event.toolName}: running…`,
+				toolCallId: event.toolCallId,
+				running: true,
+				...(questionPresentation ? { questionPresentation } : {}),
 			});
 			return;
 		}
@@ -434,12 +474,26 @@ export class ChatHandler {
 			// field made this always ok:true, so errored tools rendered ✓ and "failed"
 			// never fired. Read the real field.
 			const failed = "isError" in event && Boolean(event.isError);
+			const questionPresentation = questionToolRecap(
+				event.toolName,
+				this.#questionArgs.get(event.toolCallId),
+				event.result?.content
+					?.filter((part: { type: string }) => part.type === "text")
+					.map((part: { text?: string }) => part.text ?? "")
+					.join("\n") ?? "",
+				false,
+				!failed,
+			);
+			this.#questionArgs.delete(event.toolCallId);
 			this.#server.send({
 				type: "chat_tool_notice",
 				id: chat.id,
 				tool: String(event.toolName),
 				ok: !failed,
 				detail: `${event.toolName}: ${failed ? "failed" : "done"}`,
+				toolCallId: event.toolCallId,
+				running: false,
+				...(questionPresentation ? { questionPresentation } : {}),
 			});
 			return;
 		}
@@ -558,17 +612,12 @@ export class ChatHandler {
 				// INTERMEDIATE tool-use step: the agent loop emits message_end for this
 				// assistant message BEFORE running the tool. Do NOT terminate the turn here
 				// — that would drop the tool notices, the tool round-trip, and the post-tool
-				// narration under the terminalSent guard. The single chat_done fires on the
-				// FINAL assistant message_end below (normal completion), with the finally
+				// narration under the terminalSent guard. The single chat_done fires on
+				// agent_end, after the loop polls boundary replies, with the finally
 				// backstop in #handleChatRequest guaranteeing exactly-once terminal semantics.
 				return;
 			} else {
-				const references = extractReferences(msg);
-				this.#sendTerminal(chat, {
-					type: "chat_done",
-					id: chat.id,
-					...(references.length > 0 ? { references } : {}),
-				});
+				chat.references = extractReferences(msg);
 			}
 		}
 	}

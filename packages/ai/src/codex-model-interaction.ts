@@ -150,9 +150,6 @@ export function applyCodexInteractionMetadata<TApi extends Api>(
 	const budget = resolveCodexContextBudget(model.id, "standard", advertisedLimit)!;
 	return {
 		...model,
-		...(model.provider === "openai-codex" && model.id === "gpt-6.1-sol"
-			? { compat: { supportsWebSocketSteering: true, ...model.compat } as Model<TApi>["compat"] }
-			: {}),
 		thinking:
 			model.provider === "openai-codex"
 				? (model.thinking ?? interaction.thinking)

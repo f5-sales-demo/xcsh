@@ -114,6 +114,12 @@ export interface ChatToolNoticeMsg {
 	tool: string;
 	ok: boolean;
 	detail?: string;
+	toolCallId?: string;
+	running?: boolean;
+	questionPresentation?: {
+		recap: import("../../../../chat-ui/src/interactions/answer-recap").AnswerRecap;
+		evidence: string;
+	};
 }
 
 // ---------------------------------------------------------------------------

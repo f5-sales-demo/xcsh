@@ -1,11 +1,46 @@
 import { expect, test } from "bun:test";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Transcript } from "../src/components/Transcript";
 import type { ChatMessage } from "../src/types";
 
 function msg(over: Partial<ChatMessage> & { id: string; role: ChatMessage["role"] }): ChatMessage {
 	return { text: "", ...over };
 }
+
+test("question results present original topics and tradeoffs with safe disclosure", async () => {
+	render(<Transcript messages={[msg({
+		id: "question", role: "tool", tool: "request_user_input",
+		text: '{"answers":{"audience":{"answers":["Developers (Recommended)"]}}}',
+		toolArgs: { questions: [{ id: "audience", header: "Audience", question: "Who?",
+			options: [{ label: "Developers (Recommended)", description: "Requires technical detail." }] }] },
+	} as any)]} streaming={false} />);
+	expect(screen.getByText("Answers recorded")).toBeDefined();
+	expect(screen.getByText("Audience — Developers")).toBeDefined();
+	expect(screen.getByText("Requires technical detail.")).toBeDefined();
+	const details = document.querySelector("details") as HTMLDetailsElement;
+	details.open = true;
+	fireEvent(details, new Event("toggle"));
+	await waitFor(() => expect(details.textContent).toContain("Who?"));
+});
+
+test("async acknowledgements show the asked question instead of accepted true", () => {
+	render(<Transcript messages={[msg({ id: "async", role: "tool", tool: "request_user_input_async",
+		text: '{"accepted":true}', toolArgs: { questions: [{ title: "Who is this for?", options: ["Developers"] }] },
+	} as any)]} streaming={false} />);
+	expect(screen.getByText("Questions asked")).toBeDefined();
+	expect(screen.getByText("Who is this for?")).toBeDefined();
+	expect(document.body.textContent).not.toContain("accepted");
+});
+
+test("errors deduplicate by failure identity while distinct failures remain visible", () => {
+	render(<Transcript messages={[
+		msg({ id: "one", role: "assistant", text: "Failure one", error: true, failureId: "same" } as any),
+		msg({ id: "two", role: "assistant", text: "Failure one", error: true, failureId: "same" } as any),
+		msg({ id: "three", role: "assistant", text: "Failure two", error: true, failureId: "different" } as any),
+	]} streaming={false} />);
+	expect(screen.getAllByText("Failure one")).toHaveLength(1);
+	expect(screen.getAllByText("Failure two")).toHaveLength(1);
+});
 
 test("renders user, assistant, and tool rows in the terminal gutter grid", () => {
 	const messages: ChatMessage[] = [
@@ -335,6 +370,6 @@ test("reduced motion keeps a text timeline on its first frame", async () => {
 test("correlated async replies render readable answer summaries", () => {
 	const text = `<send_user_message_question_reply>\n${JSON.stringify([{questionItemId: '["request_user_input_async","i",0]',question: "Protocol?", answer: "HTTP"}])}\n</send_user_message_question_reply>`;
 	render(<Transcript messages={[msg({ id: "reply", role: "user", text })]} streaming={false} />);
-	expect(screen.getByText("Answer recorded: HTTP")).toBeDefined();
+	expect(screen.getByText("Protocol? — HTTP")).toBeDefined();
 	expect(screen.queryByText(text)).toBeNull();
 });

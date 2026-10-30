@@ -282,14 +282,14 @@
       "fafc7cd0"
     ],
     "packages/coding-agent/src/modes/components/question-transcript.ts": [
-      "d48040d6",
-      "8024ce11",
-      "95188469",
-      "cd290c44",
-      "2116b827",
-      "c2ffeea5",
-      "16ccdf9c",
-      "03f23fe5"
+      "eee92f2f",
+      "ac7f63ca",
+      "fac8afc9",
+      "84b74786",
+      "d65ca52f",
+      "ceced489",
+      "e99c3f8b",
+      "18eedeb3"
     ],
     "packages/coding-agent/src/modes/components/request-user-input.ts": [
       "3856fa16",
@@ -442,14 +442,14 @@
       "15ff8c9e"
     ],
     "packages/coding-agent/src/modes/utils/ui-helpers.ts": [
-      "2e457f8f",
-      "91053062",
-      "f1dbc0f6",
-      "f297a9b2",
-      "13ce444b",
-      "1e0750c3",
-      "3476b8b6",
-      "76f84a60"
+      "3cbd6ff0",
+      "1e356d8c",
+      "6c6fab60",
+      "f1592eda",
+      "ea085dc0",
+      "c7dca66b",
+      "934534f3",
+      "31be9a0d"
     ],
     "packages/coding-agent/src/task/render.ts": [
       "f395a34f",
@@ -1539,31 +1539,13 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 110,
+      "line": 159,
       "sink": "selectorTranscriptFrame",
       "entry": "complete-question-transcript"
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 114,
-      "sink": "selectorProse",
-      "entry": "complete-question-transcript"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 122,
-      "sink": "selectorTranscriptFrame",
-      "entry": "complete-question-transcript"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 123,
-      "sink": "selectorProse",
-      "entry": "complete-question-transcript"
-    },
-    {
-      "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 124,
+      "line": 163,
       "sink": "selectorProse",
       "entry": "complete-question-transcript"
     },
@@ -2043,13 +2025,13 @@
     },
     {
       "file": "packages/coding-agent/src/modes/utils/ui-helpers.ts",
-      "line": 656,
+      "line": 659,
       "sink": "TruncatedText",
       "entry": "coding-agent-previews"
     },
     {
       "file": "packages/coding-agent/src/modes/utils/ui-helpers.ts",
-      "line": 660,
+      "line": 663,
       "sink": "TruncatedText",
       "entry": "coding-agent-previews"
     },

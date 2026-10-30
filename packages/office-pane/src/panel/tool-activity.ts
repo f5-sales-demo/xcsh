@@ -16,17 +16,25 @@ export interface ToolActivity {
 	readonly tool: string;
 	readonly running: boolean;
 	readonly ok: boolean;
+	readonly toolCallId?: string;
+	readonly questionPresentation?: ChatToolNoticeMsg["questionPresentation"];
 }
 
 /** Fold one `chat_tool_notice` into a turn's ordered activity list. */
 export function foldToolNotice(activities: readonly ToolActivity[], notice: ChatToolNoticeMsg): ToolActivity[] {
-	const idx = activities.findIndex(a => a.running && a.tool === notice.tool);
+	const idx = activities.findIndex(a =>
+		notice.toolCallId ? a.toolCallId === notice.toolCallId : a.running && a.tool === notice.tool,
+	);
+	const metadata = {
+		...(notice.toolCallId ? { toolCallId: notice.toolCallId } : {}),
+		...(notice.questionPresentation ? { questionPresentation: notice.questionPresentation } : {}),
+	};
 	if (idx >= 0) {
 		const next = activities.slice();
-		next[idx] = { ...next[idx], running: false, ok: notice.ok };
+		next[idx] = { ...next[idx], ...metadata, running: notice.running ?? false, ok: notice.ok };
 		return next;
 	}
-	return [...activities, { tool: notice.tool, running: true, ok: notice.ok }];
+	return [...activities, { tool: notice.tool, ...metadata, running: notice.running ?? true, ok: notice.ok }];
 }
 
 /**

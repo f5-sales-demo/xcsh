@@ -72,6 +72,131 @@ function identityConverter(messages: AgentMessage[]): Message[] {
 }
 
 describe("agentLoop with AgentMessage", () => {
+	it("preserves independent tool execution when a correlated reply arrives during a tool batch", async () => {
+		const reply = createUserMessage(
+			"<send_user_message_question_reply>\n" +
+				JSON.stringify([{ questionItemId: "q", question: "Who?", answer: "Developers" }]) +
+				"\n</send_user_message_question_reply>",
+		);
+		const queue: AgentMessage[] = [];
+		const executed: string[] = [];
+		const tool: AgentTool = {
+			name: "work",
+			label: "Work",
+			description: "Independent work",
+			parameters: Type.Object({}),
+			concurrency: "exclusive",
+			execute: async (id, _args, signal) => {
+				executed.push(id);
+				if (id === "one") queue.push(reply);
+				expect(signal?.aborted).toBe(false);
+				return { content: [{ type: "text", text: "Complete " + id }], details: {} };
+			},
+		};
+		let calls = 0;
+		const contexts: Message[][] = [];
+		const stream = agentLoop(
+			[createUserMessage("Start")],
+			{ systemPrompt: "", messages: [], tools: [tool] },
+			{
+				model: createModel(),
+				convertToLlm: identityConverter,
+				getSteeringMessages: async () => queue.splice(0),
+			},
+			undefined,
+			(_model, context) => {
+				contexts.push([...context.messages]);
+				const result = new MockAssistantStream();
+				const first = calls++ === 0;
+				queueMicrotask(() => {
+					const message = createAssistantMessage(
+						first
+							? [
+									{ type: "toolCall", id: "one", name: "work", arguments: {} },
+									{ type: "toolCall", id: "two", name: "work", arguments: {} },
+								]
+							: [{ type: "text", text: "Developers" }],
+						first ? "toolUse" : "stop",
+					);
+					result.push({ type: "done", reason: message.stopReason as "toolUse" | "stop", message });
+				});
+				return result;
+			},
+		);
+		for await (const _event of stream) {
+		}
+		expect(executed).toEqual(["one", "two"]);
+		expect(contexts[1].filter(message => message.role === "toolResult")).toHaveLength(2);
+		expect((await stream.result()).filter(message => message === reply)).toHaveLength(1);
+	});
+	it.each(["canonical", "legacy"])(
+		"delivers %s correlated replies once at the next boundary without live steering",
+		async kind => {
+			const text =
+				kind === "canonical"
+					? "<send_user_message_question_reply>\n" +
+						JSON.stringify([
+							{ questionItemId: "question-a", question: "Audience?", answer: "Developers" },
+							{ questionItemId: "question-b", question: "Format?", answer: "Email" },
+						]) +
+						"\n</send_user_message_question_reply>"
+					: JSON.stringify({
+							type: "user_input_reply",
+							itemId: "item",
+							questionId: "question",
+							answer: "Developers",
+						});
+			const reply = createUserMessage(text);
+			const queue: AgentMessage[] = [];
+			let calls = 0;
+			let liveClaims = 0;
+			const model = { ...createModel(), compat: { supportsWebSocketSteering: true } };
+			const contexts: Message[][] = [];
+			const config: AgentLoopConfig = {
+				model,
+				convertToLlm: identityConverter,
+				getSteeringMessages: async () => queue.splice(0),
+				waitForSteeringMessages: async () => {},
+				restoreSteeringMessages: messages => {
+					queue.unshift(...messages);
+				},
+			};
+			const streamFn: import("../src/types").StreamFn = (_model, context, options) => {
+				const stream = new MockAssistantStream();
+				contexts.push([...context.messages]);
+				const call = calls++;
+				queueMicrotask(async () => {
+					if (call === 0) {
+						queue.push(reply);
+						const claim = await options?.liveSteering?.claim(new AbortController().signal);
+						if (claim) {
+							liveClaims++;
+							claim.accept();
+						}
+					}
+					const message = createAssistantMessage([
+						{ type: "text", text: call === 0 ? "Independent work complete" : "Developers, Email" },
+					]);
+					stream.push({ type: "done", reason: "stop", message });
+				});
+				return stream;
+			};
+			const stream = agentLoop(
+				[createUserMessage("Start")],
+				{ systemPrompt: "", messages: [], tools: [] },
+				config,
+				undefined,
+				streamFn,
+			);
+			const events: AgentEvent[] = [];
+			for await (const event of stream) events.push(event);
+			expect(liveClaims).toBe(0);
+			expect(contexts).toHaveLength(2);
+			expect(contexts[1].filter(message => message.role === "user" && message.content === text)).toHaveLength(1);
+			expect((await stream.result()).filter(message => message === reply)).toHaveLength(1);
+			expect(events.filter(event => event.type === "message_end" && event.message === reply)).toHaveLength(1);
+		},
+	);
 	it("should emit events with AgentMessage types", async () => {
 		const context: AgentContext = {
 			systemPrompt: "You are helpful.",

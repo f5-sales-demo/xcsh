@@ -24,6 +24,77 @@ const item = {
 };
 
 describe("question transcript presentation", () => {
+	test("accepted async receipts render before model delivery and do not duplicate boundary replies", async () => {
+		const children: any[] = [];
+		const ctx = {
+			isInitialized: true,
+			statusLine: { invalidate() {} },
+			updateEditorTopBorder() {},
+			chatContainer: { addChild: (child: unknown) => children.push(child) },
+			ui: { requestRender() {}, terminal: { columns: 80, rows: 24 } },
+		};
+		const controller = new EventController(ctx as any);
+		const presentation = {
+			state: "recorded",
+			rows: [{ id: "reply", topic: "Audience", question: "Who?", answer: "Developers" }],
+		};
+		const event = {
+			type: "interaction",
+			event: { presentation, interaction: { id: "request" }, type: "resolved", reason: "answered" },
+		};
+		await controller.handleEvent(event as any);
+		await controller.handleEvent(event as any);
+		expect(children).toHaveLength(1);
+		expect(Bun.stripANSI(children[0].render(80).join("\n"))).toContain("Audience — Developers");
+	});
+
+	test("queued replies use all question titles and safe answers without raw envelopes", () => {
+		const raw =
+			"<send_user_message_question_reply>\n" +
+			JSON.stringify([
+				{ questionItemId: '["request_user_input_async","transport-item",0]', question: "Region?", answer: "東京" },
+				{
+					questionItemId: '["request_user_input_async","transport-item",1]',
+					question: "Details?",
+					answer: "line one\n  line two",
+				},
+			]) +
+			"\n</send_user_message_question_reply>";
+		const children: any[] = [];
+		const helpers = new UiHelpers({
+			session: { getQueuedMessages: () => ({ steering: [raw], followUp: [] }) },
+			compactionQueuedMessages: [],
+			pendingMessagesContainer: {
+				clear: () => {
+					children.length = 0;
+				},
+				addChild: (child: unknown) => children.push(child),
+			},
+			keybindings: { getDisplayString: () => "Alt+Up" },
+		} as any);
+		helpers.updatePendingMessagesDisplay();
+		const plain = Bun.stripANSI(children.flatMap(child => child.render(32)).join("\n"));
+		expect(plain).toContain("Queued for the next model");
+		expect(plain).toContain("Region?");
+		expect(plain).toContain("Details?");
+		expect(plain).toContain("line two");
+		expect(plain).not.toContain("send_user_message_question_reply");
+	});
+
+	test("a repeated interaction failure is shown once for its failure identity", async () => {
+		const showError = vi.fn();
+		const controller = new EventController({
+			isInitialized: true,
+			statusLine: { invalidate() {} },
+			updateEditorTopBorder() {},
+			showError,
+			ui: { requestRender() {} },
+		} as any);
+		const event = { type: "interaction_error", itemId: "call", failureId: "failure-one", message: "Delivery failed" };
+		await controller.handleEvent(event as any);
+		await controller.handleEvent(event as any);
+		expect(showError).toHaveBeenCalledTimes(1);
+	});
 	test("renders a compact themed async announcement with a clear action and no transport ids", () => {
 		const component = QuestionTranscriptComponent.pending(item);
 		const lines = component.render(80);
@@ -63,7 +134,7 @@ describe("question transcript presentation", () => {
 		);
 		expect(resolved?.question.title).toBe("Which region?");
 		const plain = Bun.stripANSI(QuestionTranscriptComponent.answered(resolved!).render(60).join("\n"));
-		expect(plain).toContain("Answer recorded");
+		expect(plain).toContain("Answers recorded");
 		expect(plain).toContain("Which region?");
 		expect(plain).toContain("Montréal");
 		expect(plain).not.toContain("transport-item");
@@ -87,7 +158,7 @@ describe("question transcript presentation", () => {
 		expect(plain).not.toContain("private-value");
 	});
 
-	test("presents free-form notes without the model-facing transport prefix", () => {
+	test("preserves a literal note-like prefix in canonical free text", () => {
 		const resolved = {
 			reply: {
 				type: "user_input_reply" as const,
@@ -101,7 +172,7 @@ describe("question transcript presentation", () => {
 		};
 		const plain = Bun.stripANSI(QuestionTranscriptComponent.answered(resolved).render(60).join("\n"));
 		expect(plain).toContain("final operator note");
-		expect(plain).not.toContain("user_note:");
+		expect(plain).toContain("user_note:");
 	});
 
 	test("does not correlate a user payload with a question that appears later in replay", () => {
@@ -134,8 +205,9 @@ describe("question transcript presentation", () => {
 		helpers.addMessageToChat(reply as any);
 		helpers.addMessageToChat(custom as any);
 		const replayed = Bun.stripANSI(children.flatMap(child => child.render(80)).join("\n"));
-		expect(replayed).toContain("send_user_message_question_reply");
-		expect(replayed).not.toContain("Answer recorded");
+		expect(replayed).not.toContain("send_user_message_question_reply");
+		expect(replayed).toContain("Where? — Montréal");
+		expect(replayed).not.toContain("Which region? — Montréal");
 	});
 
 	test("uses the summary for live announcements and correlated live or replayed replies", async () => {
@@ -176,7 +248,7 @@ describe("question transcript presentation", () => {
 		helpers.addMessageToChat(reply as any);
 		const replayed = Bun.stripANSI(children.flatMap(child => child.render(80)).join("\n"));
 		expect(replayed).toContain("Questions pending");
-		expect(replayed).toContain("Answer recorded");
+		expect(replayed).toContain("Answers recorded");
 		expect(replayed).not.toContain("transport-item");
 		expect(replayed).not.toContain("user_input_reply");
 
@@ -215,7 +287,25 @@ describe("question transcript presentation", () => {
 		expect(setEditorText).not.toHaveBeenCalled();
 		const live = Bun.stripANSI(liveChildren.flatMap(child => child.render(80)).join("\n"));
 		expect(live).toContain("/questions");
-		expect(live).toContain("Answer recorded");
+		expect(live).toContain("Answers recorded");
 		expect(live).not.toContain("user_input_reply");
 	});
+});
+
+test("legacy replies retain opaque identities and resolve original questions on history restoration", () => {
+	const answer = "東京\n  $(printf noop)";
+	const expected = { type: "user_input_reply" as const, itemId: item.id, questionId: "legacy-question", answer };
+	const parsed = parseAsyncInputReply(JSON.stringify(expected));
+	expect(parsed).toEqual(expected);
+	const restored = resolveAsyncQuestionReply(
+		[
+			{
+				role: "custom",
+				customType: "async-user-input",
+				details: { item, questionIds: ["legacy-question", "legacy-notes"] },
+			},
+		] as any,
+		parsed!,
+	);
+	expect(restored?.question.title).toBe("Which region?");
 });

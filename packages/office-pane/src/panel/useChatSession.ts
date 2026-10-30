@@ -1,3 +1,4 @@
+import type { AnswerRecapRecord } from "@f5-sales-demo/xcsh-chat-ui";
 /**
  * useChatSession — React hook that wires a Transport to accumulated TurnState.
  *
@@ -78,6 +79,8 @@ export interface AssistantTurn {
 	 *  (both host and engine tools), in call order. */
 	activities: ToolActivity[];
 	media?: ChatMediaContent[];
+	replyRequestId?: string;
+	answerRecaps?: AnswerRecapRecord[];
 }
 
 export type Turn = UserTurn | AssistantTurn;
@@ -150,6 +153,9 @@ export interface ChatSessionResult {
 	 *  {@link viewingId} is set — the archived one being read back. */
 	turns: Turn[];
 	send(text: string, opts?: SendOptions): void;
+	prepareAsyncReply(requestId: string): string | undefined;
+	recordAnswer(record: AnswerRecapRecord): void;
+	discardAsyncReply(chatId: string): void;
 	stop(): void;
 	retry(): void;
 	/** Start a fresh conversation: bank the outgoing one in {@link history}, clear
@@ -402,6 +408,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 							// A terminal frame settles any activity still marked running.
 							const activities = terminal ? settleActivities(turn.activities) : turn.activities;
 							return {
+								...turn,
 								kind: "assistant",
 								state: reduceChatTurn(turn.state, msg),
 								activities,
@@ -431,7 +438,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 					prev.map(turn =>
 						turn.kind === "assistant" && turn.state.id === msg.id
 							? {
-									kind: "assistant",
+									...turn,
 									state: turn.state,
 									activities: foldToolNotice(turn.activities, msg),
 									media: turn.media,
@@ -455,6 +462,68 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	const setViewing = useCallback((id: string | null) => {
 		viewingIdRef.current = id;
 		setViewingId(id);
+	}, []);
+
+	const recordAnswer = useCallback((record: AnswerRecapRecord) => {
+		setTurns(previous => {
+			let index = previous.findIndex(
+				turn => turn.kind === "assistant" && turn.answerRecaps?.some(value => value.id === record.id),
+			);
+			if (index < 0)
+				index = previous.findLastIndex(
+					turn =>
+						turn.kind === "assistant" &&
+						turn.activities.some(activity => activity.toolCallId === record.toolCallId),
+				);
+			if (index < 0) index = previous.findLastIndex(turn => turn.kind === "assistant");
+			if (index < 0) {
+				const id = `recap-${record.id}`;
+				return [
+					...previous,
+					{
+						kind: "assistant",
+						state: reduceChatTurn(initTurn(id), { type: "chat_done", id }),
+						activities: [],
+						answerRecaps: [record],
+					},
+				];
+			}
+			return previous.map((turn, position) =>
+				position === index && turn.kind === "assistant"
+					? {
+							...turn,
+							answerRecaps: turn.answerRecaps?.some(value => value.id === record.id)
+								? turn.answerRecaps.map(value => (value.id === record.id ? record : value))
+								: [...(turn.answerRecaps ?? []), record],
+						}
+					: turn,
+			);
+		});
+	}, []);
+
+	const prepareAsyncReply = useCallback((requestId: string): string | undefined => {
+		if (viewingIdRef.current) return undefined;
+		const current = turnsRef.current.findLast((turn): turn is AssistantTurn => turn.kind === "assistant");
+		if (current?.state.status === "streaming") return current.state.id;
+		const id = `c-answer-${++counterRef.current}`;
+		activeTurnIdRef.current = id;
+		const next: AssistantTurn = {
+			kind: "assistant",
+			state: initTurn(id),
+			activities: [],
+			media: [],
+			replyRequestId: requestId,
+		};
+		turnsRef.current = [...turnsRef.current, next];
+		setTurns(turnsRef.current);
+		return id;
+	}, []);
+	const discardAsyncReply = useCallback((chatId: string) => {
+		setTurns(previous =>
+			previous.filter(
+				turn => !(turn.kind === "assistant" && turn.state.id === chatId && turn.replyRequestId && !turn.state.text),
+			),
+		);
 	}, []);
 
 	const send = useCallback(
@@ -548,6 +617,8 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	);
 
 	const retry = useCallback(() => {
+		const latest = turnsRef.current.findLast((turn): turn is AssistantTurn => turn.kind === "assistant");
+		if (latest?.replyRequestId) return;
 		// Retry re-sends the last prompt AND its images (an image-only turn has empty
 		// text, so guard on either being present).
 		if (lastUserTextRef.current || (lastUserImagesRef.current?.length ?? 0) > 0) {
@@ -633,6 +704,9 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	return {
 		turns: visibleTurns,
 		send,
+		prepareAsyncReply,
+		recordAnswer,
+		discardAsyncReply,
 		stop,
 		retry,
 		newChat,

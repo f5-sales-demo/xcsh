@@ -1,8 +1,39 @@
 import type { Component } from "@f5-sales-demo/pi-tui";
+import {
+	type AnswerDelivery,
+	type AnswerRecap,
+	answerRecap,
+	asyncReplyRecap,
+} from "../../../../chat-ui/src/interactions/answer-recap";
 import { parseQuestionReplies } from "../../../../chat-ui/src/interactions/async-answer";
-import type { AsyncInputQuestion, AsyncQuestionItem } from "../../../../chat-ui/src/interactions/contract";
+import type {
+	AsyncInputQuestion,
+	AsyncQuestionItem,
+	InputQuestion,
+} from "../../../../chat-ui/src/interactions/contract";
 import { theme } from "../theme/theme";
+import { AnswerRecapComponent } from "./answer-recap";
 import { selectorProse, selectorTranscriptFrame } from "./selector-frame";
+
+export function asyncBatchRecap(
+	text: string,
+	batches: ReadonlyMap<string, { item: AsyncQuestionItem; questionIds: string[] }>,
+	state: AnswerDelivery = "recorded",
+): AnswerRecap | undefined {
+	const originals: InputQuestion[] = [];
+	for (const batch of batches.values()) {
+		batch.item.questions.forEach((question, index) => {
+			originals.push({
+				id: batch.questionIds[index]!,
+				header: question.title,
+				question: question.title,
+				isSecret: (question as { isSecret?: boolean }).isSecret,
+				options: question.options?.map(label => ({ label, description: "" })),
+			});
+		});
+	}
+	return asyncReplyRecap(text, originals, state);
+}
 
 export interface AsyncInputReply {
 	type: "user_input_reply";
@@ -23,6 +54,24 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 export function parseAsyncInputReply(text: string): AsyncInputReply | undefined {
+	try {
+		const legacy: unknown = JSON.parse(text);
+		if (
+			record(legacy) &&
+			legacy.type === "user_input_reply" &&
+			typeof legacy.itemId === "string" &&
+			typeof legacy.questionId === "string" &&
+			typeof legacy.answer === "string"
+		)
+			return {
+				type: "user_input_reply",
+				itemId: legacy.itemId,
+				questionId: legacy.questionId,
+				answer: legacy.answer,
+			};
+	} catch {
+		/* Canonical envelopes and ordinary user prose. */
+	}
 	const reply = parseQuestionReplies(text)?.[0];
 	if (!reply) return undefined;
 	let identity: unknown;
@@ -115,14 +164,23 @@ export class QuestionTranscriptComponent implements Component {
 				[`${theme.fg("contentAccent", "/questions")} to answer`],
 			);
 		}
-		const { question, reply, position, total } = this.state.resolved;
-		const answer = question.isSecret
-			? theme.fg("muted", "Answer hidden")
-			: reply.answer.replace(/^user_note:\s*/, "");
-		return selectorTranscriptFrame(width, "Answer recorded", `Question ${position + 1} of ${total}`, [
-			selectorProse(question.title),
-			selectorProse(`${theme.symbol("checkbox.checked")} ${answer}`),
-		]);
+		const { question, reply } = this.state.resolved;
+		return new AnswerRecapComponent(
+			answerRecap(
+				[
+					{
+						id: reply.questionId,
+						header: question.title,
+						question: question.title,
+						isSecret: question.isSecret,
+						options: question.options?.map(label => ({ label, description: "" })),
+					},
+				],
+				{ answers: { [reply.questionId]: { answers: [reply.answer] } } },
+				"recorded",
+				false,
+			),
+		).render(width);
 	}
 
 	invalidate(): void {}

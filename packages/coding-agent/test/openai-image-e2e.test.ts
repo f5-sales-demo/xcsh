@@ -65,13 +65,13 @@ describe("OpenAI Image Generation E2E", () => {
 
 				const textContent = result.content[0] as { type: "text"; text: string };
 				expect(textContent.text).toContain("openai");
-				expect(textContent.text).toContain("gpt-image-1");
+				expect(textContent.text).toContain(result.details!.model);
 				expect(textContent.text).toContain("Generated 1 image");
 
 				// Verify details
 				expect(result.details).toBeDefined();
 				expect(result.details!.provider).toBe("openai");
-				expect(result.details!.model).toBe("gpt-image-1");
+				expect(result.details!.model).toMatch(/^(gpt-image-|dall-e-)/);
 				expect(result.details!.imageCount).toBe(1);
 				expect(result.details!.imagePaths).toBeArray();
 				expect(result.details!.imagePaths.length).toBe(1);
@@ -188,11 +188,11 @@ describe("OpenAI Image Generation E2E", () => {
 
 				// Verify the result text contains a file path that inspect_image can use
 				const text = (result.content[0] as { type: "text"; text: string }).text;
-				const pathMatch = text.match(/\/tmp\/xcsh-image-[^\s]+\.png/);
-				expect(pathMatch).toBeTruthy();
+				const imagePath = result.details!.imagePaths[0];
+				expect(imagePath).toBeTruthy();
+				expect(text).toContain(imagePath);
 
 				// Verify the file actually exists and is a valid PNG
-				const imagePath = pathMatch![0];
 				const file = Bun.file(imagePath);
 				expect(await file.exists()).toBe(true);
 

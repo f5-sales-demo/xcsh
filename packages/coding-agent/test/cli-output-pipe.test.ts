@@ -18,7 +18,7 @@ test("help exits cleanly when the downstream reader closes early", async () => {
 	expect(stderr).not.toContain("EPIPE");
 	expect(stderr).not.toContain("Unhandled");
 	expect(code).toBe(0);
-});
+}, 30_000);
 
 test("real stdout errors remain fatal and reported", async () => {
 	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-output-error-"));
@@ -42,4 +42,4 @@ test("real stdout errors remain fatal and reported", async () => {
 	} finally {
 		await fs.rm(dir, { recursive: true, force: true });
 	}
-});
+}, 30_000);

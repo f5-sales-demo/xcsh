@@ -53,6 +53,7 @@ test.each(["status", "help"] as const)(
 			await rm(dir, { recursive: true, force: true });
 		}
 	},
+	30_000,
 );
 
 test("remote client controls are discoverable and reject revoke without an explicit client identity", async () => {

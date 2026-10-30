@@ -151,6 +151,23 @@ export async function build(): Promise<void> {
 		target: "browser",
 		format: "esm",
 		minify: true,
+		plugins: [
+			{
+				name: "compact-panel-stylesheet",
+				setup(builder) {
+					builder.onLoad({ filter: /\/chat-ui\/src\/theme\/panel\.css\.ts$/ }, async ({ path }) => {
+						const source = await Bun.file(path).text();
+						const start = source.indexOf("export const PANEL_CSS");
+						// Keep CSS documentation in source; ship the same declarations without
+						// editorial comments inside the injected stylesheet string.
+						return {
+							loader: "ts",
+							contents: source.slice(0, start) + source.slice(start).replace(/\/\*[\s\S]*?\*\//g, ""),
+						};
+					});
+				},
+			},
+		],
 		sourcemap: "none",
 		naming: "[dir]/[name].[ext]",
 		// React (and much of the ecosystem) branches on this at runtime. Without

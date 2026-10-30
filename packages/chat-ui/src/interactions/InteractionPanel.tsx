@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { AnswerRecapView } from "./AnswerRecapView";
+import type { AnswerRecap, AnswerRecapRecord } from "./answer-recap";
 import type { ConversationPlan } from "./conversation-plan";
 import { PlanDecision } from "./PlanDecision";
 import { AsyncQuestionCard, QuestionCard } from "./QuestionCard";
@@ -11,14 +13,20 @@ export interface InteractionTransport {
 export function InteractionPanel({
 	transport,
 	onFollowTranscript,
+	onPresentation,
 }: {
 	transport: InteractionTransport;
 	onFollowTranscript?: () => void;
+	onPresentation?: (record: AnswerRecapRecord, fromSnapshot: boolean) => void;
 }) {
 	const [pending, setPending] = useState<PendingInteraction[]>([]);
 	const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
 	const [presented, setPresented] = useState<Set<string>>(() => new Set());
 	const [plan, setPlan] = useState<ConversationPlan>();
+	const [failures, setFailures] = useState<Map<string, string>>(() => new Map());
+	const [recaps, setRecaps] = useState<Map<string, { recap: AnswerRecap; evidence?: string }>>(() => new Map());
+	const presentationReceiver = useRef(onPresentation);
+	presentationReceiver.current = onPresentation;
 	const revision = useRef(-1);
 	const sessionId = useRef<string | undefined>(undefined);
 	const attempts = useRef(new Map<string, { serialized: string; responseId: string }>());
@@ -39,6 +47,8 @@ export function InteractionPanel({
 		setDismissed(new Set());
 		setPresented(new Set());
 		setPlan(undefined);
+		setFailures(new Map());
+		setRecaps(new Map());
 		attempts.current.clear();
 		const unsubscribe = transport.onMessage(message => {
 			if (!isInteractionFrame(message)) return;
@@ -47,6 +57,8 @@ export function InteractionPanel({
 					sessionId.current = message.sessionId;
 					setDismissed(new Set());
 					setPresented(new Set());
+					setFailures(new Map());
+					setRecaps(new Map());
 					revision.current = -1;
 					attempts.current.clear();
 					for (const receipt of receipts.current.values()) {
@@ -59,6 +71,14 @@ export function InteractionPanel({
 				revision.current = message.revision;
 				setPending(message.pending);
 				setPlan(message.plan);
+				for (const record of message.presentations ?? []) {
+					setRecaps(current =>
+						new Map(current).set(record.id, { recap: record.recap, evidence: record.evidence }),
+					);
+					presentationReceiver.current?.(record, true);
+				}
+			} else if (message.type === "interaction_error") {
+				setFailures(current => new Map(current).set(message.failureId ?? message.itemId, message.message));
 			} else if (message.type === "interaction_event") {
 				if (message.revision <= revision.current) return;
 				if (message.revision !== revision.current + 1) {
@@ -66,6 +86,24 @@ export function InteractionPanel({
 					return;
 				}
 				revision.current = message.revision;
+				if (message.event.presentation) {
+					presentationReceiver.current?.(
+						{
+							id: message.event.interaction.id,
+							recap: message.event.presentation,
+							evidence: message.event.presentationEvidence,
+							toolCallId: message.event.interaction.identity?.itemId,
+						},
+						false,
+					);
+					setRecaps(current =>
+						new Map(current).set(message.event.interaction.id, {
+							recap: message.event.presentation!,
+							evidence: message.event.presentationEvidence,
+						}),
+					);
+				}
+
 				setPending(current =>
 					message.event.type === "opened"
 						? [...current.filter(value => value.id !== message.event.interaction.id), message.event.interaction]
@@ -115,6 +153,15 @@ export function InteractionPanel({
 	}, [active]);
 	return (
 		<aside aria-label="Questions and plans">
+			{!onPresentation &&
+				[...recaps].map(([id, value]) => (
+					<AnswerRecapView key={id} recap={value.recap} evidence={value.evidence} />
+				))}
+			{[...failures].map(([id, message]) => (
+				<div key={id} role="alert">
+					{message}
+				</div>
+			))}
 			{pending
 				.filter(request => request.identity && (request.id === active || presented.has(request.id)))
 				.map(request => {

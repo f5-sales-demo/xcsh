@@ -14,6 +14,7 @@ import {
 	type TUI,
 } from "@f5-sales-demo/pi-tui";
 import { getProjectDir, logger } from "@f5-sales-demo/pi-utils";
+import { questionToolRecap } from "../../../../chat-ui/src/interactions/answer-recap";
 import { computeEditDiff, computeHashlineDiff, computePatchDiff, type DiffError, type DiffResult } from "../../edit";
 import { usablePluginView } from "../../extensibility/presentation-validity";
 import { theme } from "../../modes/theme/theme";
@@ -25,6 +26,7 @@ import { toolRenderers } from "../../tools/renderers";
 import { F5_TOOL_BORDER_COLOR, renderOutputBlock, renderStatusLine } from "../../tui";
 import { convertToPng } from "../../utils/image-convert";
 import { sanitizeWithImagePassthrough } from "../../utils/image-passthrough";
+import { AnswerRecapComponent } from "./answer-recap";
 import { renderDiff } from "./diff";
 import { dataSections, fallbackResultView, guardedComponent, PluginViewComponent } from "./plugin-view";
 
@@ -363,6 +365,14 @@ export class ToolExecutionComponent extends Container {
 	}
 
 	override render(width: number): string[] {
+		const question = questionToolRecap(
+			this.#toolName,
+			this.#args,
+			this.#getTextOutput(),
+			!this.#result || this.#isPartial,
+			!this.#result?.isError,
+		);
+		if (question) return new AnswerRecapComponent(question.recap, question.evidence, this.#expanded).render(width);
 		// For fallback tools (no custom renderer), regenerate text with the
 		// correct width at render-time instead of using the hardcoded default.
 		if (this.#usesFallbackText) {

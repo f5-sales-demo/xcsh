@@ -4,6 +4,9 @@
  * ToolMessage / a dedicated ToolUseContent panel); text → markdown; thinking →
  * the collapsible disclosure.
  */
+
+import { AnswerRecapView } from "../interactions/AnswerRecapView";
+import { questionToolRecap } from "../interactions/answer-recap";
 import type { ContentBlock } from "../types";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { ThinkingBlock } from "./ThinkingBlock";
@@ -18,8 +21,16 @@ export function ContentBlockRenderer({ block, isLast, busy }: ContentBlockRender
 	switch (block.type) {
 		case "text":
 			return <MarkdownRenderer className="body markdown-root" text={block.text} />;
-		case "tool_use":
-			return null;
+		case "tool_use": {
+			let args: unknown;
+			try {
+				args = block.input ? JSON.parse(block.input) : undefined;
+			} catch {
+				/* Incomplete streamed input. */
+			}
+			const question = questionToolRecap(block.toolName, args, block.output ?? "", block.running, block.ok);
+			return question ? <AnswerRecapView recap={question.recap} evidence={question.evidence} /> : null;
+		}
 		case "thinking":
 			return (
 				<ThinkingBlock

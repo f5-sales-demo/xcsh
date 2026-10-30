@@ -481,6 +481,91 @@ describe("codex live steering", () => {
 			{ role: "user", content: [{ type: "input_text", text: "one more thing" }] },
 		]);
 	});
+
+	it("preserves independent output and defers unsupported native steering without repeated submissions", async () => {
+		installSocket((frame, socket) => {
+			if (frame.type === "response.steer") {
+				socket.emit(
+					{
+						type: "error",
+						error: {
+							code: "unsupported_native_inflight_message",
+							message: "native lane cannot steer",
+						},
+					},
+					{ type: "response.completed", response: { id: "resp_1", status: "completed", usage: USAGE } },
+				);
+				return;
+			}
+			const id = creates().length === 1 ? "resp_1" : "resp_2";
+			socket.emit(
+				{ type: "response.created", response: { id } },
+				...messageFrames("msg-" + id, "Independent output"),
+			);
+			if (id === "resp_2")
+				socket.emit({ type: "response.completed", response: { id, status: "completed", usage: USAGE } });
+		});
+		const state = new Map<string, ProviderSessionState>();
+		const model = createGpt6Model();
+		const user: UserMessage = { role: "user", content: "Start", timestamp: 0 };
+		const steering = oneShotSteering("Keep this input");
+		const first = await streamOpenAICodexResponses(
+			model,
+			{ systemPrompt: SYSTEM, messages: [user] },
+			options(state, steering.source),
+		).result();
+		expect(first.stopReason).toBe("stop");
+		expect(steering.settled()).toBe("rejected");
+		const secondSteering = oneShotSteering("Later input");
+		await streamOpenAICodexResponses(
+			model,
+			{ systemPrompt: SYSTEM, messages: [user, first, { role: "user", content: "Keep this input", timestamp: 1 }] },
+			options(state, secondSteering.source),
+		).result();
+		expect(ScriptedWebSocket.sent.filter(frame => frame.type === "response.steer")).toHaveLength(1);
+		expect(creates()).toHaveLength(2);
+		expect(JSON.stringify(creates()[1]?.input)).toContain("Keep this input");
+	});
+	it("waits for a late acknowledgement before attaching the successor without replay", async () => {
+		installSocket((frame, socket) => {
+			if (frame.type === "response.create") {
+				socket.emit(
+					{ type: "response.created", response: { id: "resp_1" } },
+					...messageFrames("msg_1", "Independent work"),
+				);
+			} else if (frame.type === "response.steer") {
+				socket.emit({ type: "response.completed", response: { id: "resp_1", status: "completed", usage: USAGE } });
+				setTimeout(
+					() =>
+						socket.emit(
+							{ type: "response.steer.accepted", steer: { previous_response_id: "resp_1", id: "late_receipt" } },
+							{ type: "response.created", response: { id: "resp_2" } },
+							...messageFrames("msg_2", "Preference applied"),
+							{ type: "response.completed", response: { id: "resp_2", status: "completed", usage: USAGE } },
+						),
+					20,
+				);
+			}
+		});
+		const state = new Map<string, ProviderSessionState>();
+		const model = createGpt6Model();
+		const user: UserMessage = { role: "user", content: "Start", timestamp: 0 };
+		const steering = oneShotSteering("Preference");
+		const first = await streamOpenAICodexResponses(
+			model,
+			{ systemPrompt: SYSTEM, messages: [user] },
+			options(state, steering.source),
+		).result();
+		expect(steering.settled()).toBe("accepted");
+		const second = await streamOpenAICodexResponses(
+			model,
+			{ systemPrompt: SYSTEM, messages: [user, first, { role: "user", content: "Preference", timestamp: 1 }] },
+			options(state),
+		).result();
+		expect(second.content).toContainEqual(expect.objectContaining({ type: "text", text: "Preference applied" }));
+		expect(creates()).toHaveLength(1);
+		expect(ScriptedWebSocket.sent.filter(frame => frame.type === "response.steer")).toHaveLength(1);
+	});
 });
 
 describe("planSteeredRequest", () => {
