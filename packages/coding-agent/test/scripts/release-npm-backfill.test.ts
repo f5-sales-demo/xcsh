@@ -322,9 +322,11 @@ describe("release npm backfill workflow contract", () => {
 		expect(workflow).toContain("head_branch == $tag");
 		expect(workflow).toContain("head_sha == $tag_sha");
 		expect(workflow).toContain(".immutable == true");
-		expect(workflow).toContain('jq -e -f scripts/ci-release-source-jobs.jq <<<"$jobs"');
-		expect(workflow).toContain("/attempts/1/jobs?per_page=100");
-		expect(workflow).not.toContain(".run_attempt");
+
+		expect(workflow).toContain(
+			'bash scripts/ci-qualify-release-source.sh "$REPOSITORY" "$SOURCE_RUN_ID" "$last_attempt"',
+		);
+		expect(workflow).toContain(".run_attempt");
 
 		const sourceJobs = await fs.readFile(sourceJobsPath, "utf8");
 		expect(sourceJobs).toContain('"check"');
