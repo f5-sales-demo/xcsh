@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2fd1a4933bdc46541b1a8c31aae1d1063b8754f7",
+  "revision": "3cd8bdb6fb757ce01e767d3434e2a316e0d23190",
   "fingerprint": "f46829c6e4b8cfe6b0d8a0107f81e2a2cf8c9606dfa264617783276a35477fe8",
   "counts": {
     "total": 245,
@@ -1106,7 +1106,9 @@
         "render"
       ],
       "persistenceSignals": [],
-      "directTests": [],
+      "directTests": [
+        "packages/coding-agent/test/ci-release-interaction-sources.test.ts"
+      ],
       "classification": "packages/coding-agent/src/modes/components/answer-recap.ts is individually classified as read-only-renderer in the core domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
