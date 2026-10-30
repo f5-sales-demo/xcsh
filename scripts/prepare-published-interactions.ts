@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const modules = ["contract", "transport", "async-answer", "conversation-plan", "question-form"];
+const modules = ["contract", "transport", "async-answer", "conversation-plan", "question-form", "answer-recap", "question-reply"];
 
 /** Stage canonical headless UI contracts inside the npm artifact, then restore the checkout. */
 export function preparePublishedInteractionSources(packageRoot: string, sharedRoot: string): () => void {

@@ -13,8 +13,10 @@ describe("release Homebrew backfill workflow contract", () => {
 		expect(workflow).toContain("tag:");
 		expect(workflow).toContain("source_run_id:");
 		expect(workflow).toContain('.event == "push" and .head_branch == $tag and .head_sha == $tag_sha');
-		expect(workflow).toContain("/attempts/1/jobs?per_page=100");
-		expect(workflow).toContain("jq -e -f scripts/ci-release-source-jobs.jq");
+		expect(workflow).toContain(
+			'bash scripts/ci-qualify-release-source.sh "$REPOSITORY" "$SOURCE_RUN_ID" "$last_attempt"',
+		);
+
 		expect(workflow).toContain(".immutable == true");
 	});
 

@@ -81,3 +81,36 @@ state, and final recap updates enter process-local history immediately.
 Real Excel, Word and PowerPoint acceptance is explicitly deferred; shared Office
 rendering, adapter tests and builds are source evidence only. Published artifact
 installation and release convergence remain separate from these candidate checks.
+
+## Published client evidence
+
+Core v23.10.4 (`a57133f80637dda551d1114b9b0fc6f030b2060d`) was installed
+from the immutable Linux release artifact in an isolated prefix. The published
+CLI accepted one correlated answer using Ubuntu Codex Pro OAuth. Persisted
+records contain one canonical reply, a delivered state and audience-specific
+output. Installation preserved unrelated services.
+
+Chrome Store v1.33.4 program files match the GitHub release ZIP byte for byte;
+the Store manifest adds Google's standard update URL. The published package was
+loaded in an isolated headless profile with the public identity key added for
+unpacked registration. Shipped program bytes were unchanged. Reload restored one
+delivered recap at 240 pixels without overflow.
+
+VS Code 10.2610.30131016 was installed from the published VSIX in an isolated
+profile. The active extension restored the delivered recap and exact literal
+multiline answer with no pending question. Real Office acceptance remains deferred.
+
+## Immutable publication repair
+
+Issue #5106 tracks the v23.10.4 npm staging failure. Canonical packaging must
+include both `answer-recap` and its `question-reply` dependency. The regression
+packs actual shared interaction sources, removes the private UI workspace,
+imports the extracted artifact and verifies literal multiline recap rendering
+and checkout restoration.
+
+Recovery qualifies a complete successful prerequisite set from one attempt of
+the exact immutable source run. It retains duplicate Intel and Windows matrix
+jobs, handles pagination, and rejects missing, extra, failed or mixed-attempt
+prerequisites. A signing-only retry can retain a previously complete successful
+attempt. Run 41074781265 attempt 2 satisfies the unchanged prerequisite policy.
+Npm backfill reconciles existing exact versions before publishing missing ones.
