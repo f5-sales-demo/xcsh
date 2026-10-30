@@ -192,7 +192,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$NODE_AUTH_TOKEN"
-          printf '%s\\n' "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
+          printf '%s\n' "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
           packages=(
             @f5-sales-demo/pi-natives-linux-x64-gnu
             @f5-sales-demo/pi-natives-linux-arm64-gnu
