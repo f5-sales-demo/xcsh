@@ -37,7 +37,7 @@ canonical replies, concurrent tools and submissions, late replies, uncertain
 receipts, secret masking, literal paste, partial answers, safe expansion and
 restored presentation records.
 
-Chrome passed 446 tests. VS Code passed 1,397 tests. Shared regular and Markdown
+Chrome passed 449 tests. VS Code passed 1,397 tests. Shared regular and Markdown
 suites passed through their normal entrypoint. Vendor manifests now emit explicit
 path/hash records; legacy manifests remain readable, and malformed records,
 tampering and missing files fail integrity checks. Regenerated vendors passed
@@ -61,10 +61,23 @@ rendering retained the literal answer without horizontal overflow.
 Raw captures, session identities, provider traces and execution logs remain
 private under evidence identifier `private:question-recap-5101-20261030`.
 
-## Remaining acceptance boundaries
+Chrome candidate `70f0082` was loaded into the installed Chrome 156.0.8078.74
+binary in an isolated headless profile. The real extension connected over its
+normal WebSocket bridge to Ubuntu Codex Pro OAuth. A local fictional page fixture
+kept tenant resources outside the scenario. One model-selected async question
+accepted one literal multiline answer, reached delivered state, and produced
+output for the chosen audience. The backend conversation contained exactly one
+canonical reply. At 240 pixels, the recap retained all text without horizontal
+overflow; reloading the extension restored one safe delivered recap from the
+owner snapshot. General Chrome transcript storage remains process-local under
+its existing privacy policy.
 
-Installed Chrome acceptance awaits reconnection of the supported browser
-provider. Source/vendor tests do not establish installed Chrome behavior.
+Headless reload reproduced two activation races and a missed recap-history save.
+Regression tests failed before their fixes. Connection snapshots now reach late
+subscribers without replaying chat frames, sequential gate events use current
+state, and final recap updates enter process-local history immediately.
+
+## Remaining acceptance boundaries
 Real Excel, Word and PowerPoint acceptance is explicitly deferred; shared Office
 rendering, adapter tests and builds are source evidence only. Published artifact
 installation and release convergence remain separate from these candidate checks.
