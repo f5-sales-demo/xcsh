@@ -410,3 +410,15 @@ it("keeps the immutable tag's API snapshots during pinned publication", async ()
 		"bun scripts/generate-docs-index.ts && bun scripts/generate-build-info.ts && bun scripts/generate-console-catalog.ts",
 	);
 });
+
+it("writes exact newline-terminated npm auth records at publication and verification boundaries", async () => {
+	const workflow = await fs.readFile(workflowPath, "utf8");
+	const formats = [...workflow.matchAll(/^\s*printf '([^']+)' .*_authToken/gm)].map(match => match[1]!);
+	expect(formats).toHaveLength(2);
+	const record = "synthetic authentication record";
+	for (const format of formats) {
+		const child = Bun.spawnSync(["bash", "-c", 'printf "$1" "$2"', "_", format, record]);
+		expect(child.exitCode).toBe(0);
+		expect(child.stdout.toString()).toBe(`${record}\n`);
+	}
+});
