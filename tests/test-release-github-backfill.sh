@@ -49,7 +49,12 @@ grep -Fq 'SOURCE_RUN_ID: ${{ inputs.source_run_id }}' "$workflow" || fail "sourc
 grep -Fq '.event == "push" and .head_branch == $tag and .head_sha == $tag_sha' "$workflow" || fail "tag/run identity validation is missing"
 grep -Fq '/attempts/1/jobs?per_page=100' "$workflow" || fail "original attempt validation is missing"
 grep -Fq 'jq -e -f scripts/ci-release-source-jobs.jq' "$workflow" || fail "GitHub backfill source-run gate is missing"
-grep -Fq 'jq -e -f scripts/ci-release-source-jobs.jq' "$npm_workflow" || fail "npm backfill source-run gate is missing"
+grep -Fq 'bash scripts/ci-qualify-release-source.sh "$REPOSITORY" "$SOURCE_RUN_ID" "$last_attempt"' "$npm_workflow" ||
+  fail "npm backfill source-run gate is missing"
+qualifier="$repo_root/scripts/ci-qualify-release-source.sh"
+test -x "$qualifier" || fail "source prerequisite qualifier is not executable"
+grep -Fq 'jq -e -f "$script_dir/ci-release-source-jobs.jq"' "$qualifier" ||
+  fail "source prerequisite qualifier bypasses the required job policy"
 grep -Fq 'timeout-minutes: 90' "$npm_workflow" || fail "npm backfill timeout cannot cover registry propagation"
 grep -Fq 'npm dist-tag add "@f5-sales-demo/xcsh@${VERSION}" backfill' "$npm_workflow" ||
   fail "npm backfill must mark the verified immutable version"
