@@ -1,5 +1,5 @@
 /** Bundle the canonical browser policy for clients without workspace dependencies. */
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { codePresentationFingerprint } from "./code-presentation-fingerprint";
@@ -23,6 +23,12 @@ if (formatted.exitCode !== 0) throw new Error(formatted.stderr.toString());
 const bundle = formatted.stdout.toString();
 const temporary = await mkdtemp(join(tmpdir(), "xcsh-code-types-"));
 try {
+	// Generated vendors must satisfy consumer assist checks as well as formatting.
+	// Use the source policy without repository ignore patterns for emitted files.
+	const policy = JSON.parse(await readFile(resolve(import.meta.dir, "../../../biome.json"), "utf8"));
+	policy.files = { ...policy.files, includes: ["**"] };
+	policy.vcs = { ...policy.vcs, enabled: false };
+	await writeFile(join(temporary, "biome.json"), JSON.stringify(policy));
 	const typesProcess = Bun.spawnSync([
 		"tsgo",
 		"--ignoreConfig",
@@ -65,11 +71,20 @@ try {
 			} else await Bun.write(path, raw);
 			continue;
 		}
-		const format = Bun.spawnSync(["biome", "check", "--write", "--stdin-file-path", path], {
-			stdin: Buffer.from(raw),
-		});
-		if (format.exitCode !== 0) throw new Error(format.stderr.toString());
-		const contents = `${format.stdout.toString().trimEnd()}\n`;
+		let contents = raw;
+		// Biome can expose an export-spacing assist after its first formatting
+		// pass. Generate the stable form consumed by downstream checks.
+		for (let pass = 0; pass < 4; pass++) {
+			const format = Bun.spawnSync(
+				["biome", "check", "--write", "--config-path", temporary, "--stdin-file-path", path],
+				{ stdin: Buffer.from(contents) },
+			);
+			if (format.exitCode !== 0) throw new Error(format.stderr.toString());
+			const next = `${format.stdout.toString().trimEnd()}\n`;
+			if (next === contents) break;
+			if (pass === 3) throw new Error(`Generated formatting did not converge: ${path}`);
+			contents = next;
+		}
 		if (process.argv.includes("--check")) {
 			if ((await Bun.file(path).text()) !== contents) throw new Error(`Stale generated adapter: ${path}`);
 		} else await Bun.write(path, contents);

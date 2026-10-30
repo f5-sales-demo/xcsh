@@ -51,7 +51,8 @@ for (const format of ["esm", "cjs"] as const) {
 			expect(result.stderr.toString()).toBe("");
 			expect(result.exitCode).toBe(0);
 			const receipt = JSON.parse(result.stdout.toString());
-			expect(receipt).toMatchObject({ format, standalone: true, writes: 3, specification: "12.5.1" });
+			const pin = JSON.parse(readFileSync(new URL("../../../tools/spec-release.json", import.meta.url), "utf8"));
+			expect(receipt).toMatchObject({ format, standalone: true, writes: 3, specification: pin.version });
 		} finally {
 			rmSync(directory, { recursive: true, force: true });
 		}

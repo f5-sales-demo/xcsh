@@ -10,6 +10,15 @@ function harness() {
  const request = { id: "r", identity, kind: "request_user_input", title: "Scope", inputQuestions: [{ id: "scope", header: "Scope", question: "Which scope?", options: [{ label: "Small (Recommended)", description: "Less work" }, { label: "Large", description: "More work" }], isOther: true }] };
  return { transport, sent, request, receive: (message: unknown) => act(() => receive(message)) };
 }
+
+test("delivery failures use safe copy and appear once per failure identity", () => {
+	const h = harness();
+	render(<InteractionPanel transport={h.transport} />);
+	h.receive({ type: "interaction_error", itemId: "call", failureId: "failure", message: "Answer delivery failed." });
+	h.receive({ type: "interaction_error", itemId: "call", failureId: "failure", message: "Answer delivery failed." });
+	expect(screen.getAllByRole("alert")).toHaveLength(1);
+	expect(screen.getByRole("alert").textContent).toBe("Answer delivery failed.");
+});
 test("replayed snapshots retain notes and highlighting never sends an answer", async () => {
  const h = harness();
  render(<InteractionPanel transport={h.transport} />);
@@ -129,4 +138,39 @@ test("answer later keeps async questions pending and reopening never sends a def
 	expect(screen.getByText("Choose?")).toBeDefined();
 	expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Retained draft");
 	expect(h.sent).toHaveLength(1);
+});
+
+
+test("accepted async resolution supplies an immediate recap with original framing", () => {
+	const h = harness();
+	render(<InteractionPanel transport={h.transport} />);
+	const request = { ...h.request, kind: "input", delivery: "async", questionId: "question", inputQuestions: undefined, title: "Audience?" };
+	h.receive({ type: "interaction_snapshot", sessionId: "s", revision: 1, pending: [request] });
+	h.receive({ type: "interaction_event", revision: 2, event: { type: "resolved", interaction: request, reason: "answered",
+		presentation: { state: "recorded", rows: [{ id: "question", topic: "Audience?", question: "Audience?", answer: "Developers" }] },
+	} });
+	expect(screen.getByText("Answers recorded")).toBeDefined();
+	expect(screen.getByText("Audience? — Developers")).toBeDefined();
+});
+
+test("reconnect snapshots restore accepted recaps and send safe records to the transcript owner", () => {
+	const h = harness();
+	const records: unknown[] = [];
+	render(<InteractionPanel transport={h.transport} onPresentation={record => records.push(record)} />);
+	const record = { id: "answer", recap: { state: "queued", rows: [{ id: "q", topic: "Audience", question: "Who?", answer: "Developers" }] }, evidence: "safe" };
+	h.receive({ type: "interaction_snapshot", sessionId: "s", revision: 2, pending: [], presentations: [record] });
+	expect(records).toEqual([record]);
+	expect(screen.queryByText("Audience — Developers")).toBeNull();
+});
+
+test("old receipt events cannot roll back a restored delivery state", () => {
+	const h = harness();
+	const records: { recap: { state: string } }[] = [];
+	render(<InteractionPanel transport={h.transport} onPresentation={record => records.push(record)} />);
+	h.receive({ type: "interaction_snapshot", sessionId: "s", revision: 2, pending: [] });
+	const presentation = { state: "delivered", rows: [{ id: "q", topic: "Audience", question: "Who?", answer: "Developers" }] };
+	h.receive({ type: "interaction_event", revision: 3, event: { type: "resolved", interaction: h.request, reason: "answered", presentation } });
+	h.receive({ type: "interaction_event", revision: 2, event: { type: "resolved", interaction: h.request, reason: "answered", presentation: { ...presentation, state: "recorded" } } });
+	expect(records).toHaveLength(1);
+	expect(records[0]?.recap.state).toBe("delivered");
 });

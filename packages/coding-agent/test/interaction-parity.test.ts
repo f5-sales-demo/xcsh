@@ -2,6 +2,25 @@ import { describe, expect, test } from "bun:test";
 import { UserInteractions } from "../src/session/user-interactions";
 
 describe("shared interaction completion", () => {
+	test("accepted async input publishes a safe immediate recap while the model boundary remains pending", async () => {
+		const owner = new UserInteractions();
+		const events: any[] = [];
+		owner.subscribe(event => events.push(event));
+		const answer = owner.request({
+			kind: "input",
+			delivery: "async",
+			title: "Audience?",
+			options: ["Developers (Recommended)"],
+			questionId: "question",
+			isSecret: false,
+		});
+		owner.respond(owner.pending()[0].id, "Developers (Recommended)");
+		expect(events.at(-1).presentation).toMatchObject({
+			state: "recorded",
+			rows: [{ id: "question", topic: "Audience?", answer: "Developers" }],
+		});
+		expect(await answer).toBe("Developers (Recommended)");
+	});
 	test("external retries return the original receipt and cannot change the answer", async () => {
 		const owner = new UserInteractions();
 		const identity = { sessionId: "s", threadId: "t", turnId: "1", itemId: "i", generation: 2 };

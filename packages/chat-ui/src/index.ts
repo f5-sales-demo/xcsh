@@ -58,6 +58,15 @@ export { ToolUseContent, type ToolUseContentProps } from "./components/ToolUseCo
 export { Transcript, type TranscriptProps } from "./components/Transcript";
 // ── Shared hooks ──────────────────────────────────────────────────────────
 export { type UseMenuResult, useMenu } from "./components/useMenu";
+export { AnswerRecapView } from "./interactions/AnswerRecapView";
+export type { AnswerDelivery, AnswerRecap, AnswerRecapRecord, AnswerRecapRow } from "./interactions/answer-recap";
+export {
+	answerRecap,
+	asyncReplyRecap,
+	questionToolRecap,
+	recapText,
+	safeQuestionEvidence,
+} from "./interactions/answer-recap";
 export type { AsyncInputQuestion, InputQuestion, InputResponse } from "./interactions/contract";
 export { type ConversationPlan, PLAN_ACTIONS, type PlanAction } from "./interactions/conversation-plan";
 export { InteractionPanel, type InteractionTransport } from "./interactions/InteractionPanel";

@@ -21,6 +21,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import type { ModelRegistry } from "../config/model-registry";
 import type { CustomTool } from "../extensibility/custom-tools/types";
 import geminiImageDescription from "../prompts/tools/gemini-image.md" with { type: "text" };
+import { requestOpenAIImage } from "./openai-image-transport";
 import { resolveReadPath } from "./path-utils";
 
 const DEFAULT_MODEL = "gemini-3-pro-image-preview";
@@ -191,21 +192,6 @@ interface GeminiGenerateContentResponse {
 	candidates?: GeminiCandidate[];
 	promptFeedback?: GeminiPromptFeedback;
 	usageMetadata?: GeminiUsageMetadata;
-}
-
-interface OpenAIImageResponseData {
-	b64_json: string;
-	revised_prompt?: string | null;
-}
-
-interface OpenAIImageResponse {
-	created: number;
-	data: OpenAIImageResponseData[];
-	usage?: {
-		total_tokens: number;
-		input_tokens: number;
-		output_tokens: number;
-	};
 }
 
 interface AntigravityRequest {
@@ -727,7 +713,8 @@ export const geminiImageTool: CustomTool<typeof geminiImageSchema, GeminiImageTo
 				const openaiPrompt = assemblePrompt(params);
 				const size = params.image_size ?? ctx.settings?.get("providers.imageSize") ?? DEFAULT_OPENAI_IMAGE_SIZE;
 				const quality = ctx.settings?.get("providers.imageQuality") ?? DEFAULT_OPENAI_IMAGE_QUALITY;
-				const baseUrl = $env.LITELLM_BASE_URL ?? $env.OPENAI_BASE_URL ?? "https://api.openai.com";
+				const gateway = apiKey.apiKey === getEnvApiKey("litellm");
+				const baseUrl = (gateway ? $env.LITELLM_BASE_URL : $env.OPENAI_BASE_URL) ?? "https://api.openai.com";
 
 				const requestBody = {
 					model: DEFAULT_OPENAI_IMAGE_MODEL,
@@ -737,30 +724,8 @@ export const geminiImageTool: CustomTool<typeof geminiImageSchema, GeminiImageTo
 					quality,
 				};
 
-				const response = await fetch(`${baseUrl}/openai/v1/images/generations`, {
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${apiKey.apiKey}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(requestBody),
-					signal: requestSignal,
-				});
-
-				const rawText = await response.text();
-				if (!response.ok) {
-					let message = rawText;
-					try {
-						const parsed = JSON.parse(rawText) as { error?: { message?: string } };
-						message = parsed.error?.message ?? message;
-					} catch {
-						// Keep raw text.
-					}
-					throw new Error(`OpenAI image request failed (${response.status}): ${message}`);
-				}
-
-				const data = JSON.parse(rawText) as OpenAIImageResponse;
-				const b64 = data.data?.[0]?.b64_json;
+				const generated = await requestOpenAIImage(baseUrl, apiKey.apiKey, requestBody, gateway, requestSignal);
+				const b64 = generated?.data;
 				if (!b64) {
 					return {
 						content: [{ type: "text", text: "No image data returned from OpenAI." }],
@@ -774,29 +739,30 @@ export const geminiImageTool: CustomTool<typeof geminiImageSchema, GeminiImageTo
 					};
 				}
 
-				const image: InlineImageData = { data: b64, mimeType: "image/png" };
+				const image: InlineImageData = { data: b64, mimeType: generated!.mimeType };
 				const imagePaths = await saveImagesToTemp([image]);
-				const revisedPrompt = data.data[0]?.revised_prompt ?? undefined;
+				const revisedPrompt = generated?.revisedPrompt;
+				const model = generated!.model;
 
 				return {
 					content: [
 						{
 							type: "text",
-							text: buildResponseSummary(provider, DEFAULT_OPENAI_IMAGE_MODEL, imagePaths, revisedPrompt),
+							text: buildResponseSummary(provider, model, imagePaths, revisedPrompt),
 						},
 					],
 					details: {
 						provider,
-						model: DEFAULT_OPENAI_IMAGE_MODEL,
+						model: model,
 						imageCount: 1,
 						imagePaths,
 						images: [image],
 						responseText: revisedPrompt,
-						usage: data.usage
+						usage: generated?.usage
 							? {
-									promptTokenCount: data.usage.input_tokens,
-									candidatesTokenCount: data.usage.output_tokens,
-									totalTokenCount: data.usage.total_tokens,
+									promptTokenCount: generated?.usage.input_tokens,
+									candidatesTokenCount: generated?.usage.output_tokens,
+									totalTokenCount: generated?.usage.total_tokens,
 								}
 							: undefined,
 					},

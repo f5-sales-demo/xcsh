@@ -4,7 +4,8 @@
  * gutter + the message body (see `.row`/`.gutter` in panel.css.ts).
  */
 import { type ReactNode, useEffect, useState } from "react";
-import { asyncAnswerSummary } from "../interactions/async-answer";
+import { AnswerRecapView } from "../interactions/AnswerRecapView";
+import { type AnswerRecap, asyncReplyRecap } from "../interactions/answer-recap";
 import { GLYPHS } from "../theme/tokens";
 import { toolActivityLabel } from "../tools/activity-label";
 import type { ChatMediaContent, ChatMediaFrame, ChatReference } from "../types";
@@ -111,13 +112,16 @@ function RichMedia({ media }: { media: ChatMediaContent }) {
 
 export interface UserMessageProps {
 	text: string;
+	recap?: AnswerRecap;
+	evidence?: string;
 }
 
-export function UserMessage({ text }: UserMessageProps) {
+export function UserMessage({ text, recap: supplied, evidence }: UserMessageProps) {
+	const recap = supplied ?? asyncReplyRecap(text);
 	return (
 		<div className="msg-user">
 			<GutterRow glyph={GLYPHS.userGutter} glyphClass="g-user">
-				<div className="body user-body">{asyncAnswerSummary(text) ?? text}</div>
+				<div className="body user-body">{recap ? <AnswerRecapView recap={recap} evidence={evidence} /> : text}</div>
 			</GutterRow>
 		</div>
 	);

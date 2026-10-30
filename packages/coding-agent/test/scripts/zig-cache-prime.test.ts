@@ -81,6 +81,12 @@ async function downloadFixture(
 	await mkdir(tools);
 	await writeFile(path.join(tools, "sleep"), '#!/bin/sh\nprintf "%s\\n" "$1" >> "$ZIG_TEST_DELAYS"\n');
 	await chmod(path.join(tools, "sleep"), 0o755);
+	if (process.platform === "darwin") {
+		// RUNNER_OS simulates Linux and Git Bash too; Darwin's sha256sum has
+		// a different stdin interface. Keep real checksum verification portable.
+		await writeFile(path.join(tools, "sha256sum"), '#!/bin/sh\nexec shasum -a 256 "$@"\n');
+		await chmod(path.join(tools, "sha256sum"), 0o755);
+	}
 	if (mode === "warm" || mode === "corrupt-cache") {
 		await mkdir(path.dirname(destination), { recursive: true });
 		await writeFile(destination, mode === "warm" ? payload : "corrupt");

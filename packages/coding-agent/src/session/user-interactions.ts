@@ -2,6 +2,13 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import {
+	type AnswerDelivery,
+	type AnswerRecap,
+	type AnswerRecapRecord,
+	answerRecap,
+	safeQuestionEvidence,
+} from "../../../chat-ui/src/interactions/answer-recap";
+import {
 	type AsyncInputQuestion,
 	type AsyncQuestionItem,
 	type InputQuestion,
@@ -44,6 +51,9 @@ export interface UserInteractionEvent {
 	type: "opened" | "resolved";
 	interaction: UserInteraction;
 	reason?: InteractionResolution;
+	/** Safe display metadata; never substituted for the accepted answer. */
+	presentation?: AnswerRecap;
+	presentationEvidence?: string;
 }
 export interface InteractionIdentity {
 	sessionId: string;
@@ -165,8 +175,35 @@ export class UserInteractions {
 	pending(): UserInteraction[] {
 		return [...this.#pending.values()].map(value => copy(value.interaction));
 	}
-	snapshot(): { revision: number; pending: UserInteraction[] } {
-		return { revision: this.#revision, pending: this.pending() };
+	snapshot(): { revision: number; pending: UserInteraction[]; presentations?: AnswerRecapRecord[] } {
+		const records = new Map<string, AnswerRecapRecord>();
+		for (const event of this.#events)
+			if (event.presentation)
+				records.set(event.interaction.id, {
+					id: event.interaction.id,
+					recap: event.presentation,
+					evidence: event.presentationEvidence,
+					toolCallId: event.interaction.identity?.itemId ?? event.interaction.toolCallId,
+				});
+		const presentations = structuredClone([...records.values()]);
+		return { revision: this.#revision, pending: this.pending(), ...(presentations.length ? { presentations } : {}) };
+	}
+	updateAnswerPresentation(itemId: string, questionId: string | undefined, state: AnswerDelivery): void {
+		const latest = new Map<string, UserInteractionEvent>();
+		for (const event of this.#events) if (event.presentation) latest.set(event.interaction.id, event);
+		for (const event of latest.values()) {
+			const interaction = event.interaction;
+			if (
+				(interaction.identity?.itemId ?? interaction.toolCallId ?? interaction.id) !== itemId ||
+				(questionId !== undefined && interaction.questionId !== questionId) ||
+				event.presentation?.state === state
+			)
+				continue;
+			this.#emit("resolved", interaction, "answered", undefined, {
+				recap: { ...event.presentation!, state },
+				evidence: event.presentationEvidence,
+			});
+		}
 	}
 	replay(after: number): {
 		reset: boolean;
@@ -216,13 +253,57 @@ export class UserInteractions {
 			this.#listeners.delete(listener);
 		};
 	}
-	#emit(type: UserInteractionEvent["type"], interaction: UserInteraction, reason?: InteractionResolution): void {
+	#emit(
+		type: UserInteractionEvent["type"],
+		interaction: UserInteraction,
+		reason?: InteractionResolution,
+		value?: unknown,
+		provided?: { recap: AnswerRecap; evidence?: string },
+	): void {
+		const id = interaction.questionId ?? interaction.id;
+		const presentation =
+			provided?.recap ??
+			(type === "resolved" && reason === "answered" && interaction.delivery === "async" && typeof value === "string"
+				? answerRecap(
+						[
+							{
+								id,
+								header: interaction.title,
+								question: interaction.title,
+								isSecret: interaction.isSecret,
+								options: interaction.options?.map(label => ({ label, description: "" })),
+							},
+						],
+						{ answers: { [id]: { answers: [value] } } },
+						"recorded",
+						false,
+					)
+				: undefined);
 		const event: UserInteractionEvent = {
 			contract: "xcsh.interaction.v1",
 			revision: ++this.#revision,
 			type,
 			interaction: copy(interaction),
 			...(reason ? { reason } : {}),
+			...(presentation ? { presentation } : {}),
+			...(presentation
+				? {
+						presentationEvidence: provided
+							? provided.evidence
+							: safeQuestionEvidence(
+									[
+										{
+											id,
+											header: interaction.title,
+											question: interaction.title,
+											isSecret: interaction.isSecret,
+											options: interaction.options?.map(label => ({ label, description: "" })),
+										},
+									],
+									{ answers: { [id]: { answers: [value as string] } } },
+								),
+					}
+				: {}),
 		};
 		this.#events.push(event);
 		if (this.#events.length > 1024) this.#events.shift();
@@ -305,6 +386,7 @@ export class UserInteractions {
 					"resolved",
 					interaction,
 					reason ?? (failure ? "owner_lost" : value === undefined ? "dismissed" : "answered"),
+					value,
 				);
 				if (failure) reject(failure.error);
 				else resolve(value as T | undefined);

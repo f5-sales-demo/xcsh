@@ -88,6 +88,13 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 			tool: a.tool,
 			ok: a.ok,
 			running: a.running,
+			...(a.toolCallId ? { toolCallId: a.toolCallId } : {}),
+			...(a.questionPresentation
+				? {
+						answerRecap: a.questionPresentation.recap,
+						answerEvidence: a.questionPresentation.evidence,
+					}
+				: {}),
 		}));
 		// A completed turn carries the sources it cited (F5 docs / console links),
 		// which reduce.ts folds onto TurnState.references from the chat_done frame.
@@ -103,7 +110,14 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 						...(references ? { references } : {}),
 						...(t.media && t.media.length > 0 ? { media: t.media } : {}),
 					};
-		return [...toolRows, body];
+		const answerRows: ChatMessage[] = (t.answerRecaps ?? []).map(record => ({
+			id: `answer-${record.id}`,
+			role: "user",
+			text: "",
+			answerRecap: record.recap,
+			answerEvidence: record.evidence,
+		}));
+		return [...toolRows, ...answerRows, ...(t.state.text || !answerRows.length ? [body] : [])];
 	});
 
 	// A connect-level error isn't reflected in any assistant turn — surface it.
@@ -115,7 +129,11 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 	// Enable Retry on the last row when it is an error, there is something to
 	// resend, and the reason is retryable on the same (still-open) transport.
 	const last = msgs[msgs.length - 1];
-	if (last?.error && lastUserText && retryable(reason)) last.retryText = lastUserText;
+	const latestAssistant = turns.findLast(
+		(turn): turn is Extract<Turn, { kind: "assistant" }> => turn.kind === "assistant",
+	);
+	if (last?.error && lastUserText && retryable(reason) && !latestAssistant?.replyRequestId)
+		last.retryText = lastUserText;
 
 	return msgs;
 }

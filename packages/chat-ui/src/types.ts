@@ -49,6 +49,14 @@ export interface ChatMessage {
 	ok?: boolean;
 	/** tool rows only: the call is still in flight (renders a live spinner). */
 	running?: boolean;
+	/** Original safe question arguments retained by the host adapter. */
+	toolArgs?: unknown;
+	toolCallId?: string;
+	/** Stable identity shared by repeated notifications of the same failure. */
+	failureId?: string;
+	/** Safe presentation only; never included in provider input. */
+	answerRecap?: import("./interactions/answer-recap").AnswerRecap;
+	answerEvidence?: string;
 	/** Render this row as an error (system gutter, alert-red body). */
 	error?: boolean;
 	/** When set on the last message, the Transcript offers a Retry button. */
@@ -146,7 +154,7 @@ export interface SkillMenuItem {
 /** A rich assistant content block (text / tool_use / thinking). */
 export type ContentBlock =
 	| { type: "text"; text: string }
-	| { type: "tool_use"; toolName: string; input?: string; output?: string; running?: boolean }
+	| { type: "tool_use"; toolName: string; input?: string; output?: string; running?: boolean; ok?: boolean }
 	| { type: "thinking"; thinking: string; durationMs?: number };
 
 export type ToolUseBlock = Extract<ContentBlock, { type: "tool_use" }>;

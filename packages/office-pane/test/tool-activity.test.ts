@@ -7,6 +7,29 @@ function notice(tool: string, ok = true): ChatToolNoticeMsg {
 }
 
 describe("foldToolNotice", () => {
+	test("preserves recap metadata and pairs concurrent calls by identity with idempotent retries", () => {
+		const presentation = {
+			recap: {
+				state: "recorded" as const,
+				rows: [{ id: "a", topic: "Audience", question: "Who?", answer: "Developers" }],
+			},
+			evidence: "safe evidence",
+		};
+		const start = (toolCallId: string) => ({ ...notice("request_user_input"), toolCallId, running: true });
+		let activities = foldToolNotice([], start("one"));
+		activities = foldToolNotice(activities, start("two"));
+		const end = {
+			...notice("request_user_input"),
+			toolCallId: "one",
+			running: false,
+			questionPresentation: presentation,
+		};
+		activities = foldToolNotice(activities, end);
+		activities = foldToolNotice(activities, end);
+		expect(activities).toHaveLength(2);
+		expect(activities[0]).toMatchObject({ toolCallId: "one", running: false, questionPresentation: presentation });
+		expect(activities[1]).toMatchObject({ toolCallId: "two", running: true });
+	});
 	test("a first notice for a tool STARTS a running activity", () => {
 		const next = foldToolNotice([], notice("get_workbook_info"));
 		expect(next).toEqual([{ tool: "get_workbook_info", running: true, ok: true }]);

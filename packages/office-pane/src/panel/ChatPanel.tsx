@@ -165,6 +165,9 @@ export function ChatPanel({
 	const {
 		turns,
 		send,
+		prepareAsyncReply,
+		recordAnswer,
+		discardAsyncReply,
 		stop,
 		retry,
 		newChat,
@@ -195,10 +198,31 @@ export function ChatPanel({
 
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason }), [turns, status, reason]);
 	const streaming = status === "streaming";
-	const interactionTransport = useMemo(
-		() => ({ send: transport.send.bind(transport), onMessage: transport.onMessage.bind(transport) }),
-		[transport],
-	);
+	const interactionTransport = useMemo(() => {
+		const replies = new Map<string, string>();
+		return {
+			send: (message: import("@f5-sales-demo/xcsh-chat-ui").InteractionCommand) => {
+				if (message.type === "interaction_respond" && typeof message.value === "string") {
+					const chatId = replies.get(message.responseId) ?? prepareAsyncReply(message.requestId);
+					if (chatId) {
+						replies.set(message.responseId, chatId);
+						transport.send({ ...message, chatId });
+						return;
+					}
+				}
+				transport.send(message);
+			},
+			onMessage: (callback: (message: unknown) => void) =>
+				transport.onMessage(message => {
+					if (message.type === "interaction_receipt" && !message.accepted) {
+						const id = replies.get(message.responseId);
+						if (id) discardAsyncReply(id);
+						replies.delete(message.responseId);
+					}
+					callback(message);
+				}),
+		};
+	}, [transport, prepareAsyncReply, discardAsyncReply]);
 
 	// The "+" categories: photos + file/folder context + the web-search toggle always;
 	// Skills only when the engine reports skills.
@@ -498,6 +522,7 @@ export function ChatPanel({
 			{ready && !viewing ? (
 				<InteractionPanel
 					transport={interactionTransport}
+					onPresentation={recordAnswer}
 					onFollowTranscript={() => setTranscriptFollowRevision(value => value + 1)}
 				/>
 			) : null}

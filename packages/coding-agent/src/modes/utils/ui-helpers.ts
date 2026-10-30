@@ -1,10 +1,12 @@
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent, Message } from "@f5-sales-demo/pi-ai";
 import { Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
+import { unseenAnswerRecap } from "../../../../chat-ui/src/interactions/answer-recap";
 import type { AsyncQuestionItem } from "../../../../chat-ui/src/interactions/contract";
 import { settings } from "../../config/settings";
 import { projectDocumentationTranscript } from "../../internal-urls/public-citations";
 import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
+import { AnswerRecapComponent } from "../../modes/components/answer-recap";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
 import { BashExecutionComponent } from "../../modes/components/bash-execution";
 import { BranchSummaryMessageComponent } from "../../modes/components/branch-summary-message";
@@ -19,11 +21,7 @@ import {
 import { MediaMessageComponent } from "../../modes/components/media-message";
 import { PluginLifecycleText } from "../../modes/components/plugin-lifecycle";
 import { PythonExecutionComponent } from "../../modes/components/python-execution";
-import {
-	parseAsyncInputReply,
-	QuestionTranscriptComponent,
-	resolveAsyncQuestionReplyFromItem,
-} from "../../modes/components/question-transcript";
+import { asyncBatchRecap, QuestionTranscriptComponent } from "../../modes/components/question-transcript";
 import { ReadToolGroupComponent } from "../../modes/components/read-tool-group";
 import { RecapMessageComponent } from "../../modes/components/recap-message";
 import { SkillMessageComponent } from "../../modes/components/skill-message";
@@ -45,6 +43,7 @@ type QueuedMessages = {
 };
 
 export class UiHelpers {
+	#renderedAnswerIds = new Set<string>();
 	#asyncQuestionBatches = new Map<string, { item: AsyncQuestionItem; questionIds: string[] }>();
 	constructor(private ctx: InteractiveModeContext) {}
 
@@ -221,14 +220,12 @@ export class UiHelpers {
 			case "developer": {
 				const textContent = this.ctx.getUserMessageText(message);
 				if (textContent) {
-					const reply = message.role === "user" ? parseAsyncInputReply(textContent) : undefined;
-					const batch = reply ? this.#asyncQuestionBatches.get(reply.itemId) : undefined;
 					const resolved =
-						reply && batch ? resolveAsyncQuestionReplyFromItem(batch.item, batch.questionIds, reply) : undefined;
+						message.role === "user" ? asyncBatchRecap(textContent, this.#asyncQuestionBatches) : undefined;
 					if (resolved) {
-						this.ctx.chatContainer.addChild(
-							createSystemGutter(this.ctx.ui, QuestionTranscriptComponent.answered(resolved)),
-						);
+						const unseen = unseenAnswerRecap(resolved, this.#renderedAnswerIds);
+						if (!unseen) break;
+						this.ctx.chatContainer.addChild(createSystemGutter(this.ctx.ui, new AnswerRecapComponent(unseen)));
 						break;
 					}
 					const isSynthetic = message.role === "developer" ? true : (message.synthetic ?? false);
@@ -280,6 +277,7 @@ export class UiHelpers {
 	): void {
 		this.ctx.optimisticUserMessageSignature = undefined;
 		this.#asyncQuestionBatches.clear();
+		this.#renderedAnswerIds.clear();
 		for (const component of this.ctx.pendingTools.values()) component.stopAnimation?.();
 		this.ctx.pendingTools.clear();
 
@@ -652,6 +650,11 @@ export class UiHelpers {
 		if (allMessages.length > 0) {
 			this.ctx.pendingMessagesContainer.addChild(new Spacer(1));
 			for (const entry of allMessages) {
+				const recap = asyncBatchRecap(entry.message, this.#asyncQuestionBatches, "queued");
+				if (recap) {
+					this.ctx.pendingMessagesContainer.addChild(new AnswerRecapComponent(recap));
+					continue;
+				}
 				const queuedText = theme.fg("dim", `${entry.label}: ${entry.message}`);
 				this.ctx.pendingMessagesContainer.addChild(new TruncatedText(queuedText, 1, 0));
 			}

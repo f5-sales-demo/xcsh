@@ -35,6 +35,25 @@ function isStructuredInputReply(message: import("@f5-sales-demo/pi-ai").Message)
 					.map(part => part.text)
 					.join("\n");
 	try {
+		const envelope = /^<send_user_message_question_reply>\s*([\s\S]*?)\s*<\/send_user_message_question_reply>$/.exec(
+			text,
+		);
+		if (envelope) {
+			const replies: unknown = JSON.parse(envelope[1]!);
+			return (
+				Array.isArray(replies) &&
+				replies.length > 0 &&
+				replies.every(
+					reply =>
+						reply &&
+						typeof reply === "object" &&
+						!Array.isArray(reply) &&
+						typeof reply.questionItemId === "string" &&
+						typeof reply.question === "string" &&
+						typeof reply.answer === "string",
+				)
+			);
+		}
 		const reply = JSON.parse(text);
 		return (
 			reply?.type === "user_input_reply" &&
@@ -528,7 +547,6 @@ async function runLoop(
 							stream.push({ type: "message_start", message: accepted });
 							stream.push({ type: "message_end", message: accepted });
 						}
-						config.restoreSteeringMessages?.(live.deferred);
 					}
 				}
 				const steeringMessagesFromExecution = executionResult.steeringMessages;
@@ -604,7 +622,10 @@ async function runLoop(
 					...(recoveryToolChoiceServed ? { toolChoiceServed: true } : {}),
 				});
 
-				pendingMessages = steeringMessagesFromExecution ?? ((await config.getSteeringMessages?.()) || []);
+				pendingMessages = [
+					...(live?.deferred ?? []),
+					...(steeringMessagesFromExecution ?? ((await config.getSteeringMessages?.()) || [])),
+				];
 			}
 
 			return false;
@@ -992,9 +1013,11 @@ function createToolScheduler(
 		steeringCheck = (async () => {
 			const steering = await getSteeringMessages();
 			if (steering.length > 0) {
-				steeringMessages = steering;
-				interruptState.triggered = true;
-				steeringAbortController.abort();
+				steeringMessages = [...(steeringMessages ?? []), ...steering];
+				if (steering.some(message => message.role !== "user" || !isStructuredInputReply(message))) {
+					interruptState.triggered = true;
+					steeringAbortController.abort();
+				}
 			}
 		})().finally(() => {
 			steeringCheck = null;

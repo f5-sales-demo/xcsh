@@ -1,9 +1,11 @@
 import { INTENT_FIELD } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
 import { Loader, Spacer, TERMINAL } from "@f5-sales-demo/pi-tui";
+import { unseenAnswerRecap } from "../../../../chat-ui/src/interactions/answer-recap";
 import { PLAN_ACTIONS } from "../../../../chat-ui/src/interactions/conversation-plan";
 import { settings } from "../../config/settings";
 import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
+import { AnswerRecapComponent } from "../../modes/components/answer-recap";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
 import {
 	createStreamingAssistantGutter,
@@ -11,11 +13,7 @@ import {
 	createToolGutter,
 	type GutterBlock,
 } from "../../modes/components/gutter-block";
-import {
-	parseAsyncInputReply,
-	QuestionTranscriptComponent,
-	resolveAsyncQuestionReplyFromItem,
-} from "../../modes/components/question-transcript";
+import { asyncBatchRecap, QuestionTranscriptComponent } from "../../modes/components/question-transcript";
 import { ReadToolGroupComponent } from "../../modes/components/read-tool-group";
 import { RecapMessageComponent } from "../../modes/components/recap-message";
 import { TodoReminderComponent } from "../../modes/components/todo-reminder";
@@ -30,6 +28,7 @@ import { setSessionTerminalTitle, subscribeSessionTitle } from "../../utils/titl
 import { HookSelectorComponent } from "../components/hook-selector";
 
 export class EventController {
+	#interactionFailures = new Set<string>();
 	#lastReadGroup: ReadToolGroupComponent | undefined = undefined;
 	#lastReadGroupGutter: GutterBlock<ReadToolGroupComponent> | undefined = undefined;
 	#lastThinkingCount = 0;
@@ -43,6 +42,8 @@ export class EventController {
 	#backgroundCompletionPending = false;
 	#pendingGutters = new Map<string, GutterBlock<any>>();
 	#readGroupAggregator = new ReadGroupOutcomeAggregator();
+	#renderedAnswerIds = new Set<string>();
+	#answerComponents = new Map<string, { itemId?: string; component: AnswerRecapComponent }>();
 	#asyncQuestionBatches = new Map<
 		string,
 		{ item: Extract<AgentSessionEvent, { type: "async_user_input" }>["item"]; questionIds: string[] }
@@ -168,6 +169,40 @@ export class EventController {
 		this.ctx.updateEditorTopBorder();
 
 		switch (event.type) {
+			case "interaction": {
+				const recap = event.event.presentation;
+				if (!recap) break;
+				const unseen = unseenAnswerRecap(recap, this.#renderedAnswerIds);
+				if (!unseen) break;
+				const component = new AnswerRecapComponent(
+					unseen,
+					event.event.presentationEvidence,
+					this.ctx.toolOutputExpanded,
+				);
+				for (const row of unseen.rows)
+					this.#answerComponents.set(row.id, {
+						itemId: event.event.interaction.toolCallId,
+						component,
+					});
+				this.ctx.chatContainer.addChild(createSystemGutter(this.ctx.ui, component));
+				this.ctx.ui.requestRender();
+				break;
+			}
+			case "interaction_reply_queued":
+				if (event.questionId) this.#answerComponents.get(event.questionId)?.component.setDelivery("queued");
+				this.ctx.updatePendingMessagesDisplay();
+				this.ctx.ui.requestRender();
+				break;
+			case "interaction_error": {
+				for (const answer of this.#answerComponents.values())
+					if (answer.itemId === event.itemId) answer.component.setDelivery("failed");
+				const identity = event.failureId ?? event.itemId;
+				if (this.#interactionFailures.has(identity)) break;
+				this.#interactionFailures.add(identity);
+				this.ctx.showError(event.message);
+				this.ctx.ui.requestRender();
+				break;
+			}
 			case "recap_created":
 				this.ctx.chatContainer.addChild(new RecapMessageComponent(event.recap));
 				this.ctx.ui.requestRender();
@@ -255,10 +290,11 @@ export class EventController {
 					this.ctx.ui.requestRender();
 				} else if (event.message.role === "user") {
 					const textContent = this.ctx.getUserMessageText(event.message);
-					const reply = parseAsyncInputReply(textContent);
-					const batch = reply ? this.#asyncQuestionBatches.get(reply.itemId) : undefined;
-					const resolved =
-						reply && batch ? resolveAsyncQuestionReplyFromItem(batch.item, batch.questionIds, reply) : undefined;
+					const resolved = asyncBatchRecap(textContent, this.#asyncQuestionBatches);
+					if (resolved) {
+						for (const row of resolved.rows) this.#answerComponents.get(row.id)?.component.markBoundary();
+						this.ctx.updatePendingMessagesDisplay();
+					}
 					const imageCount =
 						typeof event.message.content === "string"
 							? 0
@@ -268,9 +304,9 @@ export class EventController {
 					this.#resetReadGroup();
 					if (this.ctx.optimisticUserMessageSignature !== signature) {
 						if (resolved) {
-							this.ctx.chatContainer.addChild(
-								createSystemGutter(this.ctx.ui, QuestionTranscriptComponent.answered(resolved)),
-							);
+							const unseen = unseenAnswerRecap(resolved, this.#renderedAnswerIds);
+							if (!unseen) break;
+							this.ctx.chatContainer.addChild(createSystemGutter(this.ctx.ui, new AnswerRecapComponent(unseen)));
 						} else this.ctx.addMessageToChat(event.message);
 					}
 					this.ctx.optimisticUserMessageSignature = undefined;

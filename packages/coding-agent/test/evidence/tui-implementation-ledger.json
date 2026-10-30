@@ -10144,6 +10144,44 @@
     },
     {
       "surface": {
+        "id": "source:packages/coding-agent/src/modes/components/answer-recap.ts",
+        "source": "packages/coding-agent/src/modes/components/answer-recap.ts",
+        "kind": "component"
+      },
+      "status": "in-progress",
+      "adapter": "Shared deterministic answer recap data rendered as literal wrapped terminal text.",
+      "reviewPolicy": "Presentation only. Original questions, answer values and transport ownership remain authoritative.",
+      "states": [
+        "pending",
+        "recorded",
+        "queued",
+        "failed",
+        "interrupted",
+        "partial",
+        "secret",
+        "multiline",
+        "narrow"
+      ],
+      "tests": [
+        "packages/chat-ui/test/answer-recap.test.ts",
+        "packages/coding-agent/test/question-transcript.test.ts"
+      ],
+      "persistence": [
+        "Recaps derive from original question metadata and accepted payloads; no recap enters model context."
+      ],
+      "captures": [
+        "Task-owned Herdr normal and narrow terminal captures retained privately."
+      ],
+      "visualVerdicts": [
+        "80-column and 40-column choices, tradeoffs and multiline notes were readable; final publication and installed-client verification remain pending."
+      ],
+      "fingerprint": "769f995fc22d87f401059e99f9774d201c2dea33977a3080cf9de87892b6a56c",
+      "notes": [
+        "Question recap presentation improvement; frozen question contract target remains unchanged."
+      ]
+    },
+    {
+      "surface": {
         "id": "source:packages/coding-agent/src/modes/components/assistant-message.ts",
         "source": "packages/coding-agent/src/modes/components/assistant-message.ts",
         "kind": "component"

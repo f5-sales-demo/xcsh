@@ -46,6 +46,43 @@ describe("errorText", () => {
 });
 
 describe("turnsToMessages", () => {
+	test("a failed async continuation cannot retry the earlier user request", () => {
+		const turn = {
+			...assistant("reply", "", { status: "error", reason: "provider-5xx" }),
+			replyRequestId: "question",
+		};
+		const messages = turnsToMessages({
+			turns: [user("original", "Earlier request"), turn],
+			status: "error",
+			reason: "provider-5xx",
+		});
+		expect(messages.at(-1)?.retryText).toBeUndefined();
+	});
+	test("carries safe question presentation and tool-call identity into the shared transcript", () => {
+		const presentation = {
+			recap: {
+				state: "recorded" as const,
+				rows: [{ id: "a", topic: "Audience", question: "Who?", answer: "Developers" }],
+			},
+			evidence: "safe evidence",
+		};
+		const turns = [
+			assistant("turn", "", {}, [
+				{
+					tool: "request_user_input",
+					running: false,
+					ok: true,
+					toolCallId: "call",
+					questionPresentation: presentation,
+				} as any,
+			]),
+		];
+		expect(turnsToMessages({ turns, status: "done" })[0]).toMatchObject({
+			toolCallId: "call",
+			answerRecap: presentation.recap,
+			answerEvidence: presentation.evidence,
+		});
+	});
 	test("maps a user turn to a user row and an assistant turn to an assistant row", () => {
 		const turns: Turn[] = [user("u-1", "hello"), assistant("c-1", "hi there")];
 		const msgs = turnsToMessages({ turns, status: "done" });
