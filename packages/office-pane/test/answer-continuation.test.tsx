@@ -50,3 +50,22 @@ test("safe answer records survive history banking and update once without sendin
 	act(() => result.current.newChat());
 	expect(JSON.stringify(result.current.history)).toContain("Developers");
 });
+
+test("new chats reject old recap snapshots and late updates while retaining archived answers", async () => {
+	const transport = new MockTransport();
+	const { result } = renderHook(() => useChatSession(transport));
+	await act(async () => { await Promise.resolve(); });
+	act(() => result.current.send("Original task"));
+	const request = transport.sent.find(message => message.type === "chat_request") as { id: string };
+	act(() => transport.emit({ type: "chat_tool_notice", id: request.id, tool: "request_user_input_async", toolCallId: "old-call", ok: true }));
+	const record = { id: "old-receipt", toolCallId: "old-call", recap: { state: "delivered" as const, rows: [{ id: "q", topic: "Audience", question: "Who?", answer: "Developers" }] } };
+	act(() => result.current.recordAnswer(record));
+	expect(JSON.stringify(result.current.turns)).toContain("Developers");
+	act(() => result.current.newChat());
+	act(() => { result.current.recordAnswer(record, true); result.current.recordAnswer(record); });
+	expect(result.current.turns).toEqual([]);
+	expect(JSON.stringify(result.current.history)).toContain("Developers");
+	act(() => result.current.send("Fresh task"));
+	act(() => result.current.recordAnswer(record));
+	expect(JSON.stringify(result.current.turns)).not.toContain("Developers");
+});

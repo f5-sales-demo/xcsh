@@ -13,11 +13,15 @@ import type { AgentSession, AgentSessionEvent } from "../src/session/agent-sessi
 
 // Enhanced harness: prompt resolution is controllable (resolve/reject on demand)
 // so we can simulate slow turns, provider errors, and timing-dependent scenarios.
-function harness(opts: { promptMs?: number; promptRejects?: string; initialStreamingTailMs?: number } = {}) {
+function harness(
+	opts: { promptMs?: number; promptRejects?: string; initialStreamingTailMs?: number; resetAccepted?: boolean } = {},
+) {
 	const sent: Record<string, unknown>[] = [];
 	let onMsg: (m: Record<string, unknown>) => void = () => {};
 	let onDisc: () => void = () => {};
 	let aborted = false;
+	let resets = 0;
+	let prompts = 0;
 	let isStreaming = (opts.initialStreamingTailMs ?? 0) > 0;
 	const server = {
 		serveKind: "office",
@@ -49,7 +53,12 @@ function harness(opts: { promptMs?: number; promptRejects?: string; initialStrea
 			},
 		},
 		subscribe: (_cb: (e: AgentSessionEvent) => void) => () => {},
+		newSession: async () => {
+			resets++;
+			return opts.resetAccepted !== false;
+		},
 		prompt: async () => {
+			prompts++;
 			if (opts.promptMs) await new Promise(r => setTimeout(r, opts.promptMs));
 			if (opts.promptRejects) throw new Error(opts.promptRejects);
 		},
@@ -61,6 +70,8 @@ function harness(opts: { promptMs?: number; promptRejects?: string; initialStrea
 		fire: (m: Record<string, unknown>) => onMsg(m),
 		disconnect: () => onDisc(),
 		wasAborted: () => aborted,
+		resets: () => resets,
+		prompts: () => prompts,
 		errors: () => sent.filter(f => f.type === "chat_error"),
 		dones: () => sent.filter(f => f.type === "chat_done"),
 		notices: () => sent.filter(f => f.type === "chat_tool_notice"),
@@ -135,6 +146,30 @@ function multiTurnHarness(behaviors: Array<(emit: (e: AgentSessionEvent) => void
 }
 
 describe("ChatHandler turn matrix", () => {
+	it("conversation boundaries reset the session rather than only model messages", async () => {
+		const h = harness();
+		new ChatHandler(h.server, h.session).attach();
+		h.fire({ ...req("c-old"), history_hint: "old-chat" });
+		await waitFor(() => h.dones().some(done => done.id === "c-old"));
+		h.fire({ ...req("c-same"), history_hint: "old-chat" });
+		await waitFor(() => h.dones().some(done => done.id === "c-same"));
+		expect(h.resets()).toBe(0);
+		h.fire({ ...req("c-fresh"), history_hint: "fresh-chat" });
+		await waitFor(() => h.dones().some(done => done.id === "c-fresh"));
+		expect(h.resets()).toBe(1);
+		expect(h.prompts()).toBe(3);
+	});
+
+	it("a declined conversation reset does not submit into the previous conversation", async () => {
+		const h = harness({ resetAccepted: false });
+		new ChatHandler(h.server, h.session).attach();
+		h.fire({ ...req("c-old"), history_hint: "old-chat" });
+		await waitFor(() => h.dones().some(done => done.id === "c-old"));
+		h.fire({ ...req("c-fresh"), history_hint: "fresh-chat" });
+		await waitFor(() => h.errors().some(error => error.id === "c-fresh"));
+		expect(h.prompts()).toBe(1);
+		expect(h.dones().some(done => done.id === "c-fresh")).toBe(false);
+	});
 	// ── Happy path ──────────────────────────────────────────────────────────────
 	it("1. normal turn: request → chat_done (no errors)", async () => {
 		const h = harness();

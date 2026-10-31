@@ -315,11 +315,6 @@ export class ChatHandler {
 			return;
 		}
 
-		if (req.history_hint && req.history_hint !== this.#activeHistoryHint) {
-			this.#session.agent.replaceMessages([]);
-			this.#activeHistoryHint = req.history_hint;
-		}
-
 		const chat: ActiveChat = {
 			id,
 			items: new Map(),
@@ -361,6 +356,12 @@ export class ChatHandler {
 			mimeType: img.mimeType,
 		}));
 		try {
+			if (req.history_hint && req.history_hint !== this.#activeHistoryHint) {
+				if (this.#activeHistoryHint === undefined) this.#session.agent.replaceMessages([]);
+				else if (!(await this.#session.newSession())) throw new Error("Conversation reset was declined");
+				this.#activeHistoryHint = req.history_hint;
+			}
+
 			// Select the native provider-side descriptor from the ACTIVE model on every
 			// turn. This must happen after a model switch and before prompt() transmits a
 			// payload; an unsupported API is rejected locally instead of receiving another

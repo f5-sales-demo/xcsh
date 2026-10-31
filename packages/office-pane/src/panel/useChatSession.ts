@@ -126,7 +126,7 @@ function settleForArchive(turns: Turn[]): Turn[] {
 		const settled: TurnState = turn.state.text
 			? { ...turn.state, status: "done" }
 			: { ...turn.state, status: "done", text: "Stopped before a response arrived." };
-		return { kind: "assistant", state: settled, activities: settleActivities(turn.activities), media: turn.media };
+		return { ...turn, state: settled, activities: settleActivities(turn.activities) };
 	});
 }
 
@@ -154,7 +154,7 @@ export interface ChatSessionResult {
 	turns: Turn[];
 	send(text: string, opts?: SendOptions): void;
 	prepareAsyncReply(requestId: string): string | undefined;
-	recordAnswer(record: AnswerRecapRecord): void;
+	recordAnswer(record: AnswerRecapRecord, historical?: boolean): void;
 	discardAsyncReply(chatId: string): void;
 	stop(): void;
 	retry(): void;
@@ -464,7 +464,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		setViewingId(id);
 	}, []);
 
-	const recordAnswer = useCallback((record: AnswerRecapRecord) => {
+	const recordAnswer = useCallback((record: AnswerRecapRecord, historical = false) => {
 		setTurns(previous => {
 			let index = previous.findIndex(
 				turn => turn.kind === "assistant" && turn.answerRecaps?.some(value => value.id === record.id),
@@ -475,6 +475,9 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 						turn.kind === "assistant" &&
 						turn.activities.some(activity => activity.toolCallId === record.toolCallId),
 				);
+			// Snapshots and identified replies belong to the turn that asked the question.
+			// A late record must not create a turn in a newly cleared conversation.
+			if (index < 0 && (historical || record.toolCallId)) return previous;
 			if (index < 0) index = previous.findLastIndex(turn => turn.kind === "assistant");
 			if (index < 0) {
 				const id = `recap-${record.id}`;
