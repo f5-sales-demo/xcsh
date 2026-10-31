@@ -351,7 +351,7 @@ describe("progressive context loading", () => {
 		}
 	});
 
-	it("treats missing model-registry auth storage as unavailable provider policy", async () => {
+	it("keeps generic async questions available without native provider policy", async () => {
 		const tempDir = path.join(os.tmpdir(), `xcsh-missing-registry-auth-${Snowflake.next()}`);
 		tempDirs.push(tempDir);
 		fs.mkdirSync(tempDir, { recursive: true });
@@ -385,7 +385,7 @@ describe("progressive context loading", () => {
 
 		try {
 			expect(session.getActiveToolNames()).toContain("task");
-			expect(session.getActiveToolNames()).not.toContain("request_user_input_async");
+			expect(session.getActiveToolNames()).toContain("request_user_input_async");
 			expect(session.getActiveToolNames()).toContain("deferred_weather");
 		} finally {
 			await session.dispose();

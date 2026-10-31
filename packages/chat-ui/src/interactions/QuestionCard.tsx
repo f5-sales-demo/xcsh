@@ -50,106 +50,140 @@ export function QuestionCard({ requestId, questions, onRespond, onInterrupt, isB
 		return () => clearInterval(timer);
 	}, [form, isBlocking, send]);
 	return (
-		<section aria-label="User input" data-request-id={requestId}>
+		<section className="question-card" aria-label="User input" data-request-id={requestId}>
 			{form.countdown(Date.now()) !== undefined ? (
 				<p>Continuing automatically in {form.countdown(Date.now())}s</p>
 			) : null}
 			{form.confirming ? (
 				<>
-					<h3>{INPUT_COPY.confirm}</h3>
-					<button type="button" disabled={sending} onClick={() => void send(form.finish())}>
-						{INPUT_COPY.proceed}
-					</button>
-					<button
-						type="button"
-						onClick={() => {
-							form.goBack();
-							render(null);
-						}}
-					>
-						{INPUT_COPY.back}
-					</button>
+					<h3 className="question-title">{INPUT_COPY.confirm}</h3>
+					<div className="question-actions">
+						<button
+							className="question-primary"
+							type="button"
+							disabled={sending}
+							onClick={() => void send(form.finish())}
+						>
+							{INPUT_COPY.proceed}
+						</button>
+						<button
+							type="button"
+							onClick={() => {
+								form.goBack();
+								render(null);
+							}}
+						>
+							{INPUT_COPY.back}
+						</button>
+					</div>
 				</>
 			) : (
 				<>
-					<header>
-						{form.question.header} · {form.index + 1}/{questions.length}
-					</header>
-					<p>{form.question.question}</p>
-					{form.options.map((option, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: Choices retain their source order and position for the lifetime of a request.
-						<label key={`${index}:${option.label}`} style={{ display: "block" }}>
-							<input
-								type="radio"
-								name={requestId}
-								checked={form.draft.highlighted === index}
-								onChange={() => {
-									form.selectOption(index);
-									render(null);
-								}}
-							/>
-							{option.label}
-							<small style={{ display: "block" }}>{option.description}</small>
+					<div className="question-content">
+						<header className="question-meta">
+							<strong>{form.question.header}</strong>
+							<span>
+								{form.index + 1}/{questions.length}
+							</span>
+						</header>
+						<p className="question-title" id={`${requestId}-question`}>
+							{form.question.question}
+						</p>
+						<div className="question-options" role="radiogroup" aria-labelledby={`${requestId}-question`}>
+							{form.options.map((option, index) => (
+								<label
+									// biome-ignore lint/suspicious/noArrayIndexKey: Choices retain their source order and position for the lifetime of a request.
+									key={`${index}:${option.label}`}
+									className={`question-option${form.draft.highlighted === index ? " selected" : ""}`}
+								>
+									<input
+										type="radio"
+										name={requestId}
+										aria-labelledby={`${requestId}-option-${index}`}
+										aria-describedby={`${requestId}-description-${index}`}
+										checked={form.draft.highlighted === index}
+										onChange={() => {
+											form.selectOption(index);
+											render(null);
+										}}
+									/>
+									<span className="question-option-copy">
+										<span id={`${requestId}-option-${index}`}>{option.label}</span>
+										<small id={`${requestId}-description-${index}`}>{option.description}</small>
+									</span>
+								</label>
+							))}
+						</div>
+						<label className="question-notes" htmlFor={`${requestId}-notes-${form.index}`}>
+							<span>{form.options.length ? INPUT_COPY.notes : INPUT_COPY.answer}</span>
+							{form.question.isSecret ? (
+								<input
+									id={`${requestId}-notes-${form.index}`}
+									type="password"
+									disabled={sending}
+									value={form.draft.notes}
+									onChange={event => {
+										form.editNotes(event.currentTarget.value);
+										render(null);
+									}}
+								/>
+							) : (
+								<textarea
+									id={`${requestId}-notes-${form.index}`}
+									rows={3}
+									disabled={sending}
+									value={form.draft.notes}
+									onChange={event => {
+										form.editNotes(event.currentTarget.value);
+										render(null);
+									}}
+								/>
+							)}
 						</label>
-					))}
-					<label htmlFor={`${requestId}-notes-${form.index}`}>
-						{form.options.length ? INPUT_COPY.notes : INPUT_COPY.answer}
-						{form.question.isSecret ? (
-							<input
-								id={`${requestId}-notes-${form.index}`}
-								type="password"
-								value={form.draft.notes}
-								onChange={event => {
-									form.editNotes(event.currentTarget.value);
-									render(null);
-								}}
-							/>
-						) : (
-							<textarea
-								id={`${requestId}-notes-${form.index}`}
-								value={form.draft.notes}
-								onChange={event => {
-									form.editNotes(event.currentTarget.value);
-									render(null);
-								}}
-							/>
-						)}
-					</label>
-					{questions.length > 1 ? (
-						<>
-							<button
-								type="button"
-								onClick={() => {
-									form.moveQuestion(-1);
-									render(null);
-								}}
-							>
-								Previous question
+					</div>
+					<div className="question-footer">
+						{questions.length > 1 ? (
+							<div className="question-navigation">
+								<button
+									type="button"
+									onClick={() => {
+										form.moveQuestion(-1);
+										render(null);
+									}}
+								>
+									Previous question
+								</button>
+								<button
+									type="button"
+									onClick={() => {
+										form.moveQuestion(1);
+										render(null);
+									}}
+								>
+									Next question
+								</button>
+							</div>
+						) : null}
+						<div className="question-actions">
+							<button className="question-primary" type="button" disabled={sending} onClick={submit}>
+								{sending
+									? "Sending…"
+									: form.index === questions.length - 1 && questions.length > 1
+										? "Submit all"
+										: "Submit answer"}
 							</button>
-							<button
-								type="button"
-								onClick={() => {
-									form.moveQuestion(1);
-									render(null);
-								}}
-							>
-								Next question
+							<button type="button" disabled={sending} onClick={onInterrupt}>
+								Interrupt
 							</button>
-						</>
-					) : null}
-					<button type="button" disabled={sending} onClick={submit}>
-						{sending
-							? "Sending…"
-							: form.index === questions.length - 1 && questions.length > 1
-								? "Submit all"
-								: "Submit answer"}
-					</button>
-					<button type="button" disabled={sending} onClick={onInterrupt}>
-						Interrupt
-					</button>
+						</div>
+					</div>
 				</>
 			)}
-			{error ? <p role="alert">{error}</p> : null}
+			{error ? (
+				<p className="question-error" role="alert">
+					{error}
+				</p>
+			) : null}
 		</section>
 	);
 }
@@ -180,32 +214,57 @@ export function AsyncQuestionCard({
 		}
 	};
 	return (
-		<section aria-label="Pending question">
-			<p>{title}</p>
-			{options?.map((option, index) => (
+		<section className="question-card" aria-label="Pending question">
+			<div className="question-content">
+				<p className="question-title">{title}</p>
+				<div className="question-options">
+					{options?.map((option, index) => (
+						<button
+							className={`question-option${choice === option && !text ? " selected" : ""}`}
+							type="button"
+							// biome-ignore lint/suspicious/noArrayIndexKey: Choices retain their source order and position for the lifetime of a request.
+							key={`${index}:${option}`}
+							aria-pressed={choice === option && !text}
+							onClick={() => {
+								setChoice(option);
+								setText("");
+							}}
+						>
+							{option}
+						</button>
+					))}
+				</div>
+				<label className="question-notes">
+					<span>{options?.length ? "Custom answer (optional)" : "Your answer"}</span>
+					<textarea
+						aria-label="Your answer"
+						rows={3}
+						disabled={sending}
+						value={text}
+						onChange={event => setText(event.currentTarget.value)}
+					/>
+				</label>
+			</div>
+			<div className="question-actions">
 				<button
+					className="question-primary"
 					type="button"
-					// biome-ignore lint/suspicious/noArrayIndexKey: Choices retain their source order and position for the lifetime of a request.
-					key={`${index}:${option}`}
-					aria-pressed={choice === option && !text}
-					onClick={() => {
-						setChoice(option);
-						setText("");
-					}}
+					disabled={sending || !(text || choice).trim()}
+					onClick={() => void submit()}
 				>
-					{option}
+					Submit answer
 				</button>
-			))}
-			<textarea aria-label="Your answer" value={text} onChange={event => setText(event.currentTarget.value)} />
-			<button type="button" disabled={sending || !(text || choice).trim()} onClick={() => void submit()}>
-				Submit answer
-			</button>
-			{onDismiss ? (
-				<button type="button" disabled={sending} onClick={onDismiss}>
-					Answer later
-				</button>
+				{onDismiss ? (
+					<button type="button" disabled={sending} onClick={onDismiss}>
+						Answer later
+					</button>
+				) : null}
+			</div>
+			{error ? (
+				<p className="question-error" role="alert">
+					{error}
+				</p>
 			) : null}
-			{error ? <p role="alert">{error}</p> : null}
 		</section>
 	);
 }

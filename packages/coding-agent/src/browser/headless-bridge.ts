@@ -13,6 +13,7 @@
  */
 import { getProjectDir, getXCSHConfigDir, logger } from "@f5-sales-demo/pi-utils";
 import { parseModelString } from "../config/model-resolver";
+import type { Settings } from "../config/settings";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
 import { createAgentSession } from "../sdk";
 import { ContextService } from "../services/xcsh-context";
@@ -22,12 +23,7 @@ import { resolveBridgeTls } from "./bridge-cert";
 import { ChatHandler } from "./chat-handler";
 import { isPickPath, type PathPicked } from "./chat-protocol";
 import { type BridgeServer, type BridgeSessionInfo, OFFICE_PORT_RANGE, startBridgeServer } from "./extension-bridge";
-import {
-	BROWSER_TOOL_NAMES,
-	createExtensionBridgeTools,
-	EXTENSION_AGENT_TOOL_NAMES,
-	OFFICE_TOOL_NAMES,
-} from "./extension-bridge-tools";
+import { BROWSER_TOOL_NAMES, createExtensionBridgeTools, EXTENSION_AGENT_TOOL_NAMES } from "./extension-bridge-tools";
 import { pickPathNative } from "./native-picker";
 import { setSharedBridgeServer } from "./provider";
 
@@ -95,7 +91,7 @@ export function sessionInfoForOfficeServe(): {
 export interface HeadlessBridgeDeps {
 	/** Set the browser-provider env, init Settings + ContextService + provider
 	 *  persistence, and quiet startup; returns the project cwd for the session. */
-	initEnv: () => Promise<{ cwd: string }>;
+	initEnv: (kind?: "office" | "worker") => Promise<{ cwd: string; settings?: Settings }>;
 	resolveBridgeTls: typeof resolveBridgeTls;
 	startBridgeServer: typeof startBridgeServer;
 	setSharedBridgeServer: typeof setSharedBridgeServer;
@@ -107,8 +103,8 @@ export interface HeadlessBridgeDeps {
 }
 
 const defaultDeps: HeadlessBridgeDeps = {
-	initEnv: async () => {
-		process.env.XCSH_BROWSER_PROVIDER = "extension";
+	initEnv: async (kind = "office") => {
+		if (kind === "worker") process.env.XCSH_BROWSER_PROVIDER = "extension";
 		const cwd = getProjectDir();
 		const { Settings, settings } = await import("../config/settings");
 		await Settings.init({ cwd });
@@ -124,7 +120,7 @@ const defaultDeps: HeadlessBridgeDeps = {
 		initializeWithSettings(settings);
 		// Quiet startup: skip the welcome screen + blocking plugin "Fix now?" prompts.
 		settings.override("startup.quiet", true);
-		return { cwd };
+		return { cwd, settings };
 	},
 	resolveBridgeTls,
 	startBridgeServer,
@@ -144,8 +140,8 @@ export async function startHeadlessChatBridge(
 	deps: HeadlessBridgeDeps = defaultDeps,
 	options: HeadlessBridgeOptions = { kind: "office" },
 ): Promise<HeadlessChatBridge> {
-	const { cwd } = await deps.initEnv();
 	const kind = options.kind ?? "office";
+	const { cwd, settings } = await deps.initEnv(kind);
 
 	// Provision the wss cert before binding (warm boot = on-disk cache hit);
 	// `undefined` (offline) → the bridge starts ws-only.
@@ -188,6 +184,8 @@ export async function startHeadlessChatBridge(
 				});
 			({ session } = await logger.time("session:createAgentSession", create));
 		} else {
+			const officeSettings = await settings?.cloneForCwd(cwd);
+			officeSettings?.override("interactions.waitingInDefault", true);
 			const officeDefault = parseModelString(DEFAULT_MODEL_ROLE);
 			if (!officeDefault) {
 				throw new Error("Invalid baked Office default model selector");
@@ -195,13 +193,11 @@ export async function startHeadlessChatBridge(
 			({ session } = await deps.createAgentSession({
 				cwd,
 				hasUI: false,
+				settings: officeSettings,
 				modelPattern: DEFAULT_MODEL_ROLE,
 				thinkingLevel: officeDefault.thinkingLevel,
 				sessionManager: SessionManager.inMemory(cwd),
-				toolNames: [...OFFICE_TOOL_NAMES],
 				customTools: [],
-				enableLsp: false,
-				disableExtensionDiscovery: true,
 				bundledExtensions: ["sandbox-guard"],
 			}));
 		}

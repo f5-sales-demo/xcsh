@@ -198,6 +198,18 @@ describe("ChatHandler turn matrix", () => {
 		expect(h.errors()).toEqual([]);
 	});
 
+	it("reconnected clients drain a request queued behind independent streaming work", async () => {
+		const h = harness({ initialStreamingTailMs: 10 });
+		const handler = new ChatHandler(h.server, h.session);
+		handler.attach();
+		h.disconnect();
+		h.fire(req("c-reconnected"));
+		await flush(40);
+		expect(h.dones().filter(done => done.id === "c-reconnected")).toHaveLength(1);
+		expect(h.errors()).toEqual([]);
+		handler.dispose();
+	});
+
 	// ── Error conditions ────────────────────────────────────────────────────────
 	it("5. bridge disconnect mid-turn → bridge-disconnected (classified)", async () => {
 		const h = harness();

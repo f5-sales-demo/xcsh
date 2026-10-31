@@ -152,7 +152,7 @@ export function InteractionPanel({
 		if (active) setPresented(current => (current.has(active) ? current : new Set([...current, active])));
 	}, [active]);
 	return (
-		<aside aria-label="Questions and plans">
+		<aside className="interaction-panel" aria-label="Questions and plans">
 			{!onPresentation &&
 				[...recaps].map(([id, value]) => (
 					<AnswerRecapView key={id} recap={value.recap} evidence={value.evidence} />

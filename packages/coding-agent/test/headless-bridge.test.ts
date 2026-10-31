@@ -1,16 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { type BridgeServer, OFFICE_PORT_RANGE } from "../src/browser/extension-bridge";
-import {
-	BROWSER_TOOL_NAMES,
-	EXTENSION_AGENT_TOOL_NAMES,
-	OFFICE_TOOL_NAMES,
-} from "../src/browser/extension-bridge-tools";
+import { BROWSER_TOOL_NAMES, EXTENSION_AGENT_TOOL_NAMES } from "../src/browser/extension-bridge-tools";
 import {
 	type HeadlessBridgeDeps,
 	sessionInfoForOfficeServe,
 	startHeadlessChatBridge,
 } from "../src/browser/headless-bridge";
 import type { PickResult } from "../src/browser/native-picker";
+import { Settings } from "../src/config/settings";
 
 /** A minimal BridgeServer double recording the calls the bootstrap makes. */
 function makeFakeBridge() {
@@ -40,6 +37,7 @@ function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean; pick?: PickRes
 	const { bridge, calls, sent, fire } = makeFakeBridge();
 	const log: string[] = [];
 	const pickCalls: Array<"file" | "folder"> = [];
+	const settings = Settings.isolated();
 	let sessionOpts: Record<string, unknown> | undefined;
 	let chatCtor: { bridge: unknown; session: unknown } | undefined;
 	const handler = { attached: false, disposed: false };
@@ -60,7 +58,7 @@ function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean; pick?: PickRes
 
 	let bridgeOpts: unknown;
 	const deps: HeadlessBridgeDeps = {
-		initEnv: async () => ({ cwd: "/tmp/office-serve" }),
+		initEnv: async () => ({ cwd: "/tmp/office-serve", settings }),
 		resolveBridgeTls: (async () => opts.tls) as HeadlessBridgeDeps["resolveBridgeTls"],
 		startBridgeServer: (async (_port?: number, o?: unknown) => {
 			log.push("startBridge");
@@ -92,6 +90,7 @@ function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean; pick?: PickRes
 		log,
 		handler,
 		pickCalls,
+		settings,
 		sessionOpts: () => sessionOpts,
 		bridgeOpts: () => bridgeOpts,
 		chatCtor: () => chatCtor,
@@ -113,9 +112,7 @@ describe("startHeadlessChatBridge", () => {
 		});
 		expect(h.calls).toContain("setShared:same");
 
-		// ONE headless Office session, scoped to the minimal general tool set (NO
-		// browser builtin tools — they'd be hallucinated in a document task pane;
-		// document tools arrive at runtime via set_host_tools), no LSP/discovery.
+		// Office uses the normal SDK tool surface; document tools arrive at runtime.
 		const o = h.sessionOpts();
 		expect(o?.hasUI).toBe(false);
 		// Sideload is deterministic even when the operator's global default or last
@@ -123,20 +120,17 @@ describe("startHeadlessChatBridge", () => {
 		// configure and are intentionally not encoded in this bootstrap default.
 		expect(o?.modelPattern).toBe("litellm/gpt-6.1-sol:medium");
 		expect(o?.thinkingLevel).toBe("medium");
-		expect(o?.enableLsp).toBe(false);
-		expect(o?.disableExtensionDiscovery).toBe(true);
-		// Office session carries NO browser tools — no builtins beyond OFFICE_TOOL_NAMES
-		// and no bridge-proxying browser custom tools (they'd be hallucinated in a pane).
+		// An explicit allowlist excluded acknowledged Office tools from both active
+		// tools and discovery. Standard SDK defaults admit the runtime host tools
+		// and the full utility tool set, including extension/plugin tools.
+		expect(o?.toolNames).toBeUndefined();
+		expect((o?.settings as Settings | undefined)?.get("interactions.waitingInDefault")).toBe(true);
+		expect(o?.settings).not.toBe(h.settings);
+		expect(h.settings.get("interactions.waitingInDefault")).toBe(false);
+		expect(o?.enableLsp).toBeUndefined();
+		expect(o?.disableExtensionDiscovery).toBeUndefined();
 		expect(o?.customTools).toEqual([]);
-		expect(o?.toolNames).toEqual([...OFFICE_TOOL_NAMES]);
-		// Full CLI-parity tools ARE scoped in (bash/read/write for az/gh + file work).
-		for (const name of ["bash", "read", "write", "edit", "inspect_image"]) {
-			expect(o?.toolNames as string[]).toContain(name);
-		}
-		// No browser builtin tool leaks into the Office session.
-		for (const name of BROWSER_TOOL_NAMES.filter(name => !name.startsWith("request_user_input")))
-			expect(o?.toolNames as string[]).not.toContain(name);
-		// The bundled filesystem sandbox loads even though discovery is disabled —
+		// The bundled filesystem sandbox remains loaded —
 		// the CLI's safety net for the now-enabled bash/read/write tools.
 		expect(o?.bundledExtensions).toEqual(["sandbox-guard"]);
 		// Office prompts and replies can contain document/customer data. The headless

@@ -9,7 +9,7 @@ import { ChatHandler } from "../src/browser/chat-handler";
 import type { BridgeServer } from "../src/browser/extension-bridge";
 import type { AgentSession } from "../src/session/agent-session";
 
-type WebSearchModelApi = "anthropic-messages" | "openai-completions";
+type WebSearchModelApi = "anthropic-messages" | "openai-completions" | "openai-responses";
 
 function harness(initialModelApi: WebSearchModelApi) {
 	const sent: Record<string, unknown>[] = [];
@@ -115,4 +115,20 @@ test("without web_search, no serverTools are attached (default turn is unchanged
 	await flush();
 	expect(h.promptCalls).toHaveLength(1);
 	expect(h.promptCalls[0].options?.serverTools).toBeUndefined();
+});
+
+test("Responses web search reaches prompt with the native Responses tool", async () => {
+	const h = harness("openai-responses");
+	new ChatHandler(h.server, h.session).attach();
+	h.fire({
+		type: "chat_request",
+		id: "c-responses",
+		text: "search",
+		context: null,
+		mode: "educational",
+		web_search: true,
+	});
+	await flush();
+	expect(h.promptCalls).toHaveLength(1);
+	expect(h.promptCalls[0].options?.serverTools).toEqual([{ type: "web_search" }]);
 });

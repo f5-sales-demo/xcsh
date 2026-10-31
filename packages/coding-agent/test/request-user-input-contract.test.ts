@@ -110,3 +110,29 @@ test("async replies retain the originating item and per-question identity", asyn
 		["call", '["request_user_input_async","call",1]', "two"],
 	]);
 });
+
+test("async questions work with a configured Responses model without experimental catalog flags", async () => {
+	const { owner, tool } = session(false);
+	tool.getModel = () => ({ provider: "litellm", id: "gpt-6.1-sol", api: "openai-responses" });
+	const result = await new RequestUserInputAsyncTool(tool).execute("responses-call", {
+		questions: [{ title: "Audience?", options: ["Developers", "Executives"] }],
+	});
+	expect(result.content).toEqual([{ type: "text", text: '{"accepted":true}' }]);
+	expect(owner.pending()[0].questionId).toBe('["request_user_input_async","responses-call",0]');
+	owner.cancelAll();
+});
+
+test("waiting questions enabled in Default mode remain blocking until an explicit answer", async () => {
+	const { owner, tool } = session(false);
+	tool.settings = { get: (path: string) => path === "interactions.waitingInDefault" };
+	const pending = new RequestUserInputTool(tool).execute("default-waiting", input);
+	try {
+		expect(owner.pending()[0].isBlocking).toBe(true);
+		const response = { answers: { scope: { answers: ["Small (Recommended)"] } } };
+		expect(owner.respond(owner.pending()[0].id, response)).toBe(true);
+		expect((await pending).content).toEqual([{ type: "text", text: JSON.stringify(response) }]);
+	} finally {
+		owner.cancelAll();
+		await pending.catch(() => {});
+	}
+});
