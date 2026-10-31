@@ -8,7 +8,7 @@ export function AnswerRecapView({ recap, evidence }: { recap: AnswerRecap; evide
 			<strong>{DELIVERY_COPY[recap.state]}</strong>
 			{recap.rows.map(row => (
 				<div key={row.id} style={{ marginTop: 8 }}>
-					{recap.state === "pending" || recap.state === "asked" ? (
+					{recap.state === "pending" || recap.state === "asked" || recap.state === "rejected" ? (
 						row.question
 					) : (
 						<>
