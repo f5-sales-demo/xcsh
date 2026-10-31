@@ -2,7 +2,15 @@ import { INPUT_COPY, type InputQuestion, type InputResponse } from "./contract";
 import { parseQuestionReplies } from "./question-reply";
 
 /** Presentation data only. Never substitute this for model-facing answers. */
-export type AnswerDelivery = "pending" | "asked" | "recorded" | "queued" | "delivered" | "failed" | "interrupted";
+export type AnswerDelivery =
+	| "pending"
+	| "asked"
+	| "rejected"
+	| "recorded"
+	| "queued"
+	| "delivered"
+	| "failed"
+	| "interrupted";
 export interface AnswerRecapRow {
 	id: string;
 	topic: string;
@@ -35,6 +43,7 @@ export function unseenAnswerRecap(recap: AnswerRecap, seen: Set<string>): Answer
 export const DELIVERY_COPY: Record<AnswerDelivery, string> = {
 	pending: "Questions pending",
 	asked: "Questions asked",
+	rejected: "Question request failed",
 	recorded: "Answers recorded",
 	queued: "Queued for the next model response",
 	delivered: "Answers delivered",
@@ -81,7 +90,7 @@ export function recapText(recap: AnswerRecap): string {
 	return [
 		DELIVERY_COPY[recap.state],
 		...recap.rows.map(value =>
-			recap.state === "pending" || recap.state === "asked"
+			recap.state === "pending" || recap.state === "asked" || recap.state === "rejected"
 				? value.question
 				: [
 						value.topic + " — " + value.answer,
@@ -150,10 +159,11 @@ export function questionToolRecap(
 	ok = true,
 ): { recap: AnswerRecap; evidence: string } | undefined {
 	if (tool !== "request_user_input" && tool !== "request_user_input_async") return undefined;
+	const rejected = !ok && text.startsWith(`Validation failed for tool "${tool}":`);
 	const source = (args as { questions?: unknown[] } | undefined)?.questions;
 	if (!Array.isArray(source))
 		return {
-			recap: { state: ok ? "pending" : "failed", rows: [] },
+			recap: { state: ok ? "pending" : rejected ? "rejected" : "failed", rows: [] },
 			evidence: "Original question details unavailable; answer payload hidden.",
 		};
 	const questions: InputQuestion[] = source.flatMap((value, index) => {
@@ -186,13 +196,17 @@ export function questionToolRecap(
 	const state: AnswerDelivery = !ok
 		? /^(?:Interrupted|Aborted|Cancelled|Canceled)(?:[.!:]|$)/i.test(text.trim())
 			? "interrupted"
-			: "failed"
+			: rejected
+				? "rejected"
+				: "failed"
 		: response
 			? "recorded"
 			: tool === "request_user_input_async" && !running
 				? "asked"
 				: "pending";
-	const evidence = safeQuestionEvidence(questions, response);
+	const evidence =
+		safeQuestionEvidence(questions, response) +
+		(rejected ? "\n\nValidation: The question request did not match the question schema." : "");
 	return {
 		recap: answerRecap(questions, response, state),
 		evidence:
