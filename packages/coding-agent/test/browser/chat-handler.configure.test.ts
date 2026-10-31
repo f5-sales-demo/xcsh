@@ -52,12 +52,12 @@ class FakeModelRegistry {
 	registerProviderCalls: RegisterProviderCall[] = [];
 	runtimeApiKeys: Array<{ provider: string; apiKey: string }> = [];
 	// The models this registry can resolve, including current and legacy internal routes.
-	models: Array<{ provider: string; id: string }> = [
+	models: Array<{ provider: string; id: string; api?: string }> = [
 		{ provider: "litellm", id: "gpt-6-luna" },
 		{ provider: "litellm", id: "gpt-6-sol" },
 		{ provider: "litellm", id: "gpt-6-astra" },
-		{ provider: "litellm", id: "gpt-5.6-sol" },
-		{ provider: "litellm", id: "gpt-6.1-sol" },
+		{ provider: "litellm", id: "gpt-5.6-sol", api: "openai-completions" },
+		{ provider: "litellm", id: "gpt-6.1-sol", api: "openai-responses" },
 		{ provider: "anthropic", id: "claude-haiku-4-5" },
 		{ provider: "anthropic", id: "claude-sonnet-5" },
 		{ provider: "anthropic", id: "claude-opus-5-5" },
@@ -74,7 +74,7 @@ class FakeModelRegistry {
 		this.registerProviderCalls.push({ providerName, config, sourceId });
 	}
 
-	find(provider: string, modelId: string): { provider: string; id: string } | undefined {
+	find(provider: string, modelId: string): { provider: string; id: string; api?: string } | undefined {
 		return this.models.find(m => m.provider === provider && m.id === modelId);
 	}
 }
@@ -110,7 +110,7 @@ class FakeAgentSession {
 		) {
 			throw new Error(`No runtime API key for ${model.provider}`);
 		}
-		this.setModelCalls.push(model);
+		this.setModelCalls.push({ provider: model.provider, id: model.id });
 		this.model = model;
 	}
 	setThinkingLevel(level: string): void {
@@ -161,7 +161,7 @@ describe("ChatHandler configure frame (#2095)", () => {
 		expect(session.modelRegistry.registerProviderCalls).toHaveLength(1);
 		const call = session.modelRegistry.registerProviderCalls[0];
 		expect(call.providerName).toBe("litellm");
-		expect(call.config.baseUrl).toBe("https://f5ai.pd.f5net.com/api/v1");
+		expect(call.config.baseUrl).toBe("https://f5ai.pd.f5net.com/openai/v1");
 		expect(call.config.apiKey).toBe("<XC_API_TOKEN>");
 		expect(call.config.headers).toBeUndefined();
 		expect(call.sourceId).toBe("office-configure");
@@ -226,6 +226,25 @@ describe("ChatHandler configure frame (#2095)", () => {
 			"litellm/gpt-5.6-sol",
 			"anthropic/claude-opus-5",
 		]);
+	});
+
+	it("selects Responses or Chat Completions routes after each same-provider model switch", async () => {
+		const { server, session } = makeHandler();
+		for (const model of ["gpt-6.1-sol", "gpt-5.6-sol", "gpt-6.1-sol"]) {
+			server.emit({
+				type: "configure",
+				baseUrl: "https://127-0-0-1.local-ip.sh:8445/api/v1",
+				token: "test-key",
+				model,
+			});
+			await flush();
+		}
+		expect(session.modelRegistry.registerProviderCalls.map(call => call.config.baseUrl)).toEqual([
+			"https://127-0-0-1.local-ip.sh:8445/openai/v1",
+			"https://127-0-0-1.local-ip.sh:8445/api/v1",
+			"https://127-0-0-1.local-ip.sh:8445/openai/v1",
+		]);
+		expect(server.ofType("configure_ack")).toHaveLength(3);
 	});
 
 	it("(a2) fresh baseUrl configuration installs the runtime key before selecting the default model", async () => {

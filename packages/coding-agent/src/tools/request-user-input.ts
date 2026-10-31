@@ -93,7 +93,7 @@ export class RequestUserInputTool implements AgentTool<typeof requestUserInputSc
 			{
 				title: "Questions",
 				toolCallId: callId,
-				isBlocking: this.session.getPlanModeState?.()?.enabled === true,
+				isBlocking: true,
 				autoResolutionMs: null,
 				identity: this.session.getInteractionIdentity?.(callId),
 				inputQuestions: args.questions.map(question => ({ ...question, isOther: true, isSecret: false })),

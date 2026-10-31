@@ -50,8 +50,8 @@ test("question exposure and guidance follow model and mode transitions", async (
 	expect(session.getActiveToolNames()).toContain("request_user_input_async");
 	expect(session.systemPrompt).toContain("request_user_input_async");
 	await session.setModelTemporary(original);
-	expect(session.getActiveToolNames()).not.toContain("request_user_input_async");
-	expect(session.systemPrompt).not.toContain("request_user_input_async");
+	expect(session.getActiveToolNames()).toContain("request_user_input_async");
+	expect(session.systemPrompt).toContain("request_user_input_async");
 	session.setPlanModeState({ enabled: true } as any);
 	expect(session.getActiveToolNames()).toContain("request_user_input");
 	await session.setActiveToolsByName([]);
@@ -408,7 +408,7 @@ test("a pending manual model selection survives task abort", async () => {
 	expect(session.settings.getModelRole("default")).toBe(`${target.provider}/${target.id}`);
 });
 
-test("question discovery cannot bypass catalog, root, or explicit tool restrictions", async () => {
+test("question discovery supports provider APIs and respects explicit tool selection", async () => {
 	const asynchronous = tool("request_user_input_async");
 	const waiting = tool("request_user_input");
 	const { session, target } = await fixture({
@@ -418,8 +418,8 @@ test("question discovery cannot bypass catalog, root, or explicit tool restricti
 		]),
 		rebuildSystemPrompt: async names => names.join(","),
 	});
-	expect(session.getDiscoverableTools().map(tool => tool.name)).not.toContain(asynchronous.name);
-	expect(await session.activateDiscoveredTools([asynchronous.name])).toEqual([]);
+	expect(session.getDiscoverableTools().map(tool => tool.name)).toContain(asynchronous.name);
+	expect(await session.activateDiscoveredTools([asynchronous.name])).toEqual([asynchronous.name]);
 	await session.setModelTemporary({ ...target, experimentalSupportedTools: ["send_user_message_async"] });
 	expect(session.getDiscoverableTools().map(tool => tool.name)).toContain(asynchronous.name);
 	await session.setActiveToolsByName([]);

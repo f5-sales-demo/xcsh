@@ -136,7 +136,7 @@ const workspaceSandboxAvailable =
 	process.platform === "linux" &&
 	spawnSync(
 		"systemd-run",
-		["--user", "--quiet", "--wait", "--pipe", "--collect", "--", "sudo", "-n", "/usr/bin/bwrap", "--version"],
+		["--user", "--quiet", "--wait", "--pipe", "--collect", "--", "/usr/bin/bwrap", "--version"],
 		{ encoding: "utf8" },
 	).status === 0;
 
@@ -197,8 +197,25 @@ test.skipIf(!workspaceSandboxAvailable)(
 				result: { exitCode: 0, stdout: "", stderr: "" },
 			});
 			expect((await stat(inside)).isFile()).toBe(true);
+			expect((await stat(inside)).uid).toBe(process.getuid?.() ?? -1);
 			expect(events.at(-1)?.method).toBe("command/exec/outputDelta");
 			expect(Buffer.from(String(events.at(-1)?.params.deltaBase64), "base64").toString()).toBe("\0done");
+			const privilegeEventsStart = events.length;
+			expect(
+				await router.handle(
+					"phone",
+					request(12, "id -u; grep -E '^(CapEff|CapBnd|NoNewPrivs):' /proc/self/status", inside),
+				),
+			).toMatchObject({ result: { exitCode: 0 } });
+			const privileges = events
+				.slice(privilegeEventsStart)
+				.filter(event => event.method === "command/exec/outputDelta")
+				.map(event => Buffer.from(String(event.params.deltaBase64), "base64").toString())
+				.join("");
+			expect(privileges).toContain(`\0${process.getuid?.()}\n`);
+			expect(privileges).toMatch(/CapEff:\s+0+\n/);
+			expect(privileges).toMatch(/CapBnd:\s+0+\n/);
+			expect(privileges).toMatch(/NoNewPrivs:\s+1\n/);
 			const hostNetwork = await readlink("/proc/self/ns/net");
 			expect(await router.handle("phone", request(6, "readlink /proc/self/ns/net", inside))).toMatchObject({
 				result: { exitCode: 0 },

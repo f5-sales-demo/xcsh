@@ -258,7 +258,7 @@ export class ChatHandler {
 		});
 
 		this.#server.onDisconnected(() => {
-			this.#disposed = true;
+			// This client is gone; the handler still serves the next attached client.
 			this.#pendingRequest = null; // abandon any queued prompt — the bridge is gone
 			// Fail any in-flight host-tool call — the client that would answer it is gone.
 			this.#hostToolBridge.rejectAllPending("bridge disconnected before host tool completed");
@@ -686,7 +686,8 @@ export class ChatHandler {
 				// Origin-checked bridge (extension-bridge `isAllowedBridgeOrigin`), https is
 				// enforced here, and the token is session-only (never persisted to disk).
 				const gatewayRoot = requireHttpsUrl(msg.baseUrl);
-				const baseUrl = providerGatewayBaseUrl(gatewayRoot, provider);
+				const modelApi = registry.find(provider, modelId)?.api;
+				const baseUrl = providerGatewayBaseUrl(gatewayRoot, provider, modelApi);
 
 				// baseUrl + apiKey, no models[] → sets the in-memory runtime API key AND
 				// overrides the existing provider models' baseUrl/headers (reusing their
@@ -813,6 +814,8 @@ export function officeWebSearchServerTools(modelApi: string): Record<string, unk
 			return [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }];
 		case "openai-completions":
 			return [{ type: "web_search_preview" }];
+		case "openai-responses":
+			return [{ type: "web_search" }];
 		default:
 			throw new Error(`Office web search is unsupported for model API ${modelApi}`);
 	}
@@ -823,12 +826,18 @@ const OFFICE_GATEWAY_PROVIDER_PATHS = {
 	litellm: "/api/v1",
 } as const;
 
-/** Derive the selected provider's API base from a normalized gateway root. */
+/** Derive the selected model API's base from a normalized gateway root.
+ * Responses uses the same dedicated gateway route as auto-config. */
 export function providerGatewayBaseUrl(
 	gatewayRoot: string,
 	provider: keyof typeof OFFICE_GATEWAY_PROVIDER_PATHS,
+	modelApi?: string,
 ): string {
-	return `${gatewayRoot}${OFFICE_GATEWAY_PROVIDER_PATHS[provider]}`;
+	const path =
+		provider === "litellm" && modelApi === "openai-responses"
+			? "/openai/v1"
+			: OFFICE_GATEWAY_PROVIDER_PATHS[provider];
+	return `${gatewayRoot}${path}`;
 }
 
 /** SSRF guard and backward-compatible root normalizer for the `configure` frame's
