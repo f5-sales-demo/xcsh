@@ -1,3 +1,5 @@
+/// <reference path="./bun-imports.d.ts" />
+
 import type { HookAPI, HookFactory } from "./extensibility/hooks/types";
 import { HookEditorComponent, HookInputComponent, HookSelectorComponent } from "./modes/components";
 

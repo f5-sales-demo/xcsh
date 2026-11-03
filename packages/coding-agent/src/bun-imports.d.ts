@@ -20,3 +20,14 @@ declare module "*.py" {
 	const content: string;
 	export default content;
 }
+
+// Bun file imports expose the emitted asset path.
+declare module "*.sqlite.gz" {
+	const path: string;
+	export default path;
+}
+
+declare module "*.wasm" {
+	const path: string;
+	export default path;
+}

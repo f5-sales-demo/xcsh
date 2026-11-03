@@ -108,7 +108,8 @@
 		"src",
 		"README.md",
 		"CHANGELOG.md",
-		"src/internal-urls/.documentation-generated/terraform/terraform-documentation.sqlite.gz"
+		"src/internal-urls/.documentation-generated/terraform/terraform-documentation.sqlite.gz",
+		"bench/fixtures/documentation-oct7-retired.json"
 	],
 	"exports": {
 		".": {
