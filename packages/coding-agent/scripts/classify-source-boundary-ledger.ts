@@ -33,7 +33,7 @@ interface SourceAudit {
 	exports: string[];
 	interactionSignals: string[];
 	persistenceSignals: string[];
-	directTests: string[];
+	testCandidates: string[];
 	classification: string;
 }
 
@@ -45,7 +45,7 @@ interface DomainProfile {
 
 const root = resolve(import.meta.dir, "../../..");
 const ledgerPath = join(root, "packages/coding-agent/test/evidence/tui-implementation-ledger.json");
-const auditPath = join(root, "packages/coding-agent/test/evidence/source-boundary-audit-v1/audit.json");
+const auditPath = join(root, "packages/coding-agent/test/evidence/source-boundary-audit-v2/audit.json");
 const componentDirectory = "packages/coding-agent/test/evidence/component-boundaries-v1";
 const componentFingerprint = "95bbbb473ac835d03116a16acf4a9c841ac3f9bc9676fc2155f5204a2f3cddd5";
 
@@ -165,11 +165,10 @@ for (const entry of ledger.entries) {
 		throw new Error(`Required non-source row needs tailored evidence: ${entry.surface.id}`);
 	const audit = audits.get(entry.surface.source);
 	if (!audit) throw new Error(`Missing source audit: ${entry.surface.source}`);
-	if (audit.directTests.length === 0) throw new Error(`Source has no direct test: ${audit.source}`);
 	const profile = domainProfiles[audit.domain];
 	const componentEvidence = audit.kind === "component";
 	const captures = [
-		`packages/coding-agent/test/evidence/source-boundary-audit-v1/audit.json · ${audit.source} · sha256 ${audit.sha256}`,
+		`packages/coding-agent/test/evidence/source-boundary-audit-v2/audit.json · ${audit.source} · sha256 ${audit.sha256}`,
 		...profile.terminalDirectories.map(
 			directory =>
 				`packages/coding-agent/test/evidence/${directory} · complete 16-variant actual-terminal domain matrix`,
@@ -199,7 +198,6 @@ for (const entry of ledger.entries) {
 		reviewPolicy: ownershipPolicies[audit.ownership],
 		states: [...new Set([...profile.states, ...audit.interactionSignals, ...audit.persistenceSignals])],
 		tests: [
-			...audit.directTests,
 			"packages/coding-agent/test/tui-source-boundary-audit.test.ts",
 			"packages/coding-agent/test/component-boundary-contract.test.ts",
 		],
@@ -207,14 +205,14 @@ for (const entry of ledger.entries) {
 			ownershipPolicies[audit.ownership],
 			profile.terminalDirectories.length
 				? "Applicable domain matrices prove isolated cancellation/no-op, truthful outcomes, and reopen behavior."
-				: "No domain persistence is owned by this boundary; direct contract tests prove the non-mutating or caller-owned behavior.",
+				: "No domain persistence is owned by this boundary; direct contract tests must prove the non-mutating or caller-owned behavior before acceptance.",
 		],
 		captures,
 		visualVerdicts,
 		fingerprint,
 		notes: [
 			`Individually classified from current source SHA-256 ${audit.sha256}.`,
-			`Ownership: ${audit.ownership}; domain: ${audit.domain}; direct tests: ${audit.directTests.length}.`,
+			`Ownership: ${audit.ownership}; domain: ${audit.domain}; name-match candidates: ${audit.testCandidates.length}; these are not verified coverage.`,
 			"Complete-candidate convergence and final current-source gates remain pending.",
 		],
 	});

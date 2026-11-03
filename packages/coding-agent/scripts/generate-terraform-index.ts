@@ -134,7 +134,7 @@ export function generateTypeScript(
 			),
 		};
 		const encoded = gzipSync(JSON.stringify(hints), { level: 9 }).toString("base64");
-		return `// AUTO-GENERATED canonical Terraform navigation hints.\nimport { gunzipSync } from "node:zlib";\nimport type { CanonicalTerraformIndex } from "./terraform-types";\n// biome-ignore format: generated compressed navigation metadata\nconst payload = "${encoded}";\nexport const TERRAFORM_INDEX: CanonicalTerraformIndex = JSON.parse(gunzipSync(Buffer.from(payload, "base64")).toString("utf8"));\n`;
+		return `// AUTO-GENERATED canonical Terraform navigation hints.\nimport { gunzipSync } from "node:zlib";\nimport type { CanonicalTerraformIndex } from "./terraform-types";\n\n// biome-ignore format: generated compressed navigation metadata\nconst payload = "${encoded}";\nexport const TERRAFORM_INDEX: CanonicalTerraformIndex = JSON.parse(gunzipSync(Buffer.from(payload, "base64")).toString("utf8"));\n`;
 	}
 	const lines = [
 		"// AUTO-GENERATED — do not edit. Run `bun generate-terraform-index` to regenerate.",

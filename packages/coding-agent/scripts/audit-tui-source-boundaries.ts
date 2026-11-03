@@ -34,7 +34,8 @@ interface SourceAudit {
 	exports: string[];
 	interactionSignals: string[];
 	persistenceSignals: string[];
-	directTests: string[];
+	/** Name/symbol matches for follow-up; not verified imports or behavioral coverage. */
+	testCandidates: string[];
 	classification: string;
 }
 
@@ -43,7 +44,7 @@ const ledgerPath = join(root, "packages/coding-agent/test/evidence/tui-implement
 const args = process.argv.slice(2);
 const outputDirectory = resolve(
 	args.find(argument => !argument.startsWith("--")) ??
-		join(root, "packages/coding-agent/test/evidence/source-boundary-audit-v1"),
+		join(root, "packages/coding-agent/test/evidence/source-boundary-audit-v2"),
 );
 const checkOnly = args.includes("--check");
 const ledger = (await Bun.file(ledgerPath).json()) as { schemaVersion: 1; entries: TuiLedgerEntry[] };
@@ -147,11 +148,11 @@ for (const row of rows) {
 	const sha256 = createHash("sha256").update(bytes).digest("hex");
 	const stem = basename(source, ".ts");
 	const exports = exportedNames(sourceText);
-	const directTests = unique(
+	const testCandidates = unique(
 		tests
 			.filter(test => test.text.includes(stem) || exports.some(name => name.length > 3 && test.text.includes(name)))
 			.map(test => test.path),
-	).slice(0, 20);
+	);
 	const ownership = sourceOwnership(source, row.surface.kind, sourceText);
 	const domain = sourceDomain(source);
 	const interactionSignals = matchingSignals(sourceText, interactionExpressions);
@@ -172,7 +173,7 @@ for (const row of rows) {
 		exports,
 		interactionSignals,
 		persistenceSignals,
-		directTests,
+		testCandidates,
 		classification,
 	});
 	fingerprint.update(source).update(bytes).update(JSON.stringify({ ownership, domain }));
@@ -180,7 +181,8 @@ for (const row of rows) {
 
 fingerprint.update("audit-script").update(await Bun.file(import.meta.path).bytes());
 const result = {
-	schemaVersion: 1,
+	schemaVersion: 2,
+	testCoverageVerified: false,
 	revision: Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: root }).stdout.toString().trim(),
 	fingerprint: fingerprint.digest("hex"),
 	counts: {

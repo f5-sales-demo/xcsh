@@ -19,6 +19,8 @@ import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 
+from public_citation_render import render_public_citation_exports
+
 parser = argparse.ArgumentParser(
     description="Generate verified public citation destinations from pinned offline inputs"
 )
@@ -275,38 +277,28 @@ target = (
     repo
     / "packages/coding-agent/src/internal-urls/public-citation-destinations.generated.ts"
 )
-parts = [
-    "// Generated from verified release manifests and published sitemaps. Do not edit.",
-    "export const PUBLIC_CITATION_SOURCES = "
-    + json.dumps(source, separators=(",", ":"), ensure_ascii=False)
-    + " as const;",
-]
-for name, data in [
-    ("GENERAL_PUBLIC_DOCUMENTS", general),
-    ("TERRAFORM_PUBLIC_DOCUMENTS", provider_paths),
-    ("API_PUBLIC_DOMAINS", api_domains),
-    ("API_PUBLIC_OPERATIONS", api_operations),
-    ("API_PUBLIC_CATEGORIES", api_categories),
-]:
-    parts.append(
-        "export const "
-        + name
-        + ": Readonly<Record<string, "
-        + (
-            "string"
-            if name
-            in (
-                "TERRAFORM_PUBLIC_DOCUMENTS",
-                "API_PUBLIC_OPERATIONS",
-                "API_PUBLIC_CATEGORIES",
-            )
-            else "{ title: string; url: string }"
-        )
-        + ">> = "
-        + json.dumps(data, separators=(",", ":"), ensure_ascii=False, sort_keys=True)
-        + ";"
-    )
-target.write_text("\n".join(parts) + "\n")
+rendered = render_public_citation_exports(
+    source,
+    [
+        ("GENERAL_PUBLIC_DOCUMENTS", general),
+        ("TERRAFORM_PUBLIC_DOCUMENTS", provider_paths),
+        ("API_PUBLIC_DOMAINS", api_domains),
+        ("API_PUBLIC_OPERATIONS", api_operations),
+        ("API_PUBLIC_CATEGORIES", api_categories),
+    ],
+)
+# Replace only a complete rendered mapping; preserve the existing publication mode.
+with tempfile.NamedTemporaryFile(
+    prefix=".public-citation-", suffix=".ts", dir=target.parent, delete=False
+) as staged:
+    staged_name = pathlib.Path(staged.name)
+    try:
+        staged.write(rendered.encode())
+        staged.flush()
+        staged_name.chmod(target.stat().st_mode & 0o777 if target.exists() else 0o644)
+        staged_name.replace(target)
+    finally:
+        staged_name.unlink(missing_ok=True)
 audit = {
     "provider_sitemap_sha256": provider_sitemap_digest,
     "api_sitemap_sha256": api_sitemap_digest,

@@ -1,7 +1,7 @@
 import type { RankedProperty } from "./terraform-property-selection";
 export function refineRankedProperty(rows: readonly RankedProperty[], path: string, anchor: string): RankedProperty[] {
 	const block = rows[0];
-	if (!block || block.anchor !== "section") return [...rows];
+	if (block?.anchor !== "section") return [...rows];
 	const field = rows.find(
 		row =>
 			row.path === path &&
