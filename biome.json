@@ -37,6 +37,7 @@
 		}
 	},
 	"files": {
+		"maxSize": 5242880,
 		"includes": [
 			"packages/*/src/**/*.ts",
 			"packages/*/src/**/*.tsx",

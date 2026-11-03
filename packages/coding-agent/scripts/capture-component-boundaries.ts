@@ -85,7 +85,7 @@ interface Scenario {
 const root = resolve(import.meta.dir, "../../..");
 const output = resolve(process.argv[2] ?? join(root, "packages/coding-agent/test/evidence/component-boundaries-v1"));
 await mkdir(output, { recursive: true });
-const auditPath = join(root, "packages/coding-agent/test/evidence/source-boundary-audit-v1/audit.json");
+const auditPath = join(root, "packages/coding-agent/test/evidence/source-boundary-audit-v2/audit.json");
 const audit = (await Bun.file(auditPath).json()) as { fingerprint: string; audits: Array<{ sha256: string }> };
 const revision = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: root });
 if (revision.exitCode !== 0) throw new Error("Cannot establish capture revision");

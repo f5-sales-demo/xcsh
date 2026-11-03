@@ -4,7 +4,7 @@ import type { TuiLedgerEntry } from "./helpers/tui-surface-inventory";
 
 const root = resolve(import.meta.dir, "../../..");
 const ledgerPath = join(import.meta.dir, "evidence/tui-implementation-ledger.json");
-const auditPath = join(import.meta.dir, "evidence/source-boundary-audit-v1/audit.json");
+const auditPath = join(import.meta.dir, "evidence/source-boundary-audit-v2/audit.json");
 
 interface Audit {
 	source: string;
@@ -50,5 +50,18 @@ describe("TUI source-boundary audit", () => {
 			{ cwd: root },
 		);
 		expect(result.exitCode, result.stderr.toString()).toBe(0);
+	});
+	it("labels name matches as candidates rather than verified test coverage", async () => {
+		const report = (await Bun.file(auditPath).json()) as {
+			schemaVersion: number;
+			testCoverageVerified: boolean;
+			audits: Array<{ testCandidates?: string[]; directTests?: string[] }>;
+		};
+		expect(report.schemaVersion).toBe(2);
+		expect(report.testCoverageVerified).toBe(false);
+		for (const audit of report.audits) {
+			expect(Array.isArray(audit.testCandidates)).toBe(true);
+			expect(Object.hasOwn(audit, "directTests")).toBe(false);
+		}
 	});
 });

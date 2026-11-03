@@ -5,12 +5,12 @@ import type { TuiLedgerEntry } from "../test/helpers/tui-surface-inventory";
 interface Audit {
 	source: string;
 	sha256: string;
-	directTests: string[];
+	testCandidates: string[];
 }
 
 const root = resolve(import.meta.dir, "../../..");
 const ledgerPath = join(root, "packages/coding-agent/test/evidence/tui-implementation-ledger.json");
-const auditPath = join(root, "packages/coding-agent/test/evidence/source-boundary-audit-v1/audit.json");
+const auditPath = join(root, "packages/coding-agent/test/evidence/source-boundary-audit-v2/audit.json");
 const ledger = (await Bun.file(ledgerPath).json()) as { schemaVersion: 1; entries: TuiLedgerEntry[] };
 const auditReport = (await Bun.file(auditPath).json()) as { fingerprint: string; audits: Audit[] };
 const audits = new Map(auditReport.audits.map(audit => [audit.source, audit]));
@@ -136,7 +136,6 @@ for (const item of hookRows) {
 			"Draft-only public dialog. Escape, timeout, or abort returns without mutation; persistent work remains owned by the caller's Cancel-first reviewed action.",
 		states: item.lifecycle,
 		tests: [
-			...audit.directTests,
 			"packages/coding-agent/test/review-command-dialogs.test.ts",
 			"packages/coding-agent/test/native-lifecycle-acceptance.test.ts",
 			"packages/coding-agent/test/tui-source-boundary-audit.test.ts",
@@ -180,7 +179,6 @@ Object.assign(welcome, {
 		"Read-only startup presentation with no settings, session, credential, network, or external-process mutation.",
 	states: ["compact", "full-artwork", "resized", "narrow", "scrolled-transcript", "dark", "light", "unicode", "ascii"],
 	tests: [
-		...welcomeAudit.directTests,
 		"packages/coding-agent/test/welcome-component.test.ts",
 		"packages/coding-agent/test/welcome-logo.test.ts",
 		"packages/coding-agent/test/component-boundary-contract.test.ts",
