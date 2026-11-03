@@ -1,4 +1,3 @@
-# ruff: noqa: INP001
 """Generate public citation destinations from verified release assets and saved sitemap bytes.
 
 Usage: python3 packages/coding-agent/scripts/generate_public_citation_destinations.py
