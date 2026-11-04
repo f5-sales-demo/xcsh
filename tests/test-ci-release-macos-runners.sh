@@ -43,4 +43,26 @@ if jq -e -f "$validator" "$test_root/extra.json" >/dev/null; then
   fail "duplicate archived/current lane was accepted"
 fi
 
+jq '(.jobs[].name) |=
+  if . == "Native build (macos-latest, arm64)" then "Native build (macos-15, arm64)"
+  else . end' "$test_root/current.json" >"$test_root/pinned.json"
+jq -e -f "$validator" "$test_root/pinned.json" >/dev/null || fail "pinned macOS 15 ARM64 source run was rejected"
+for conclusion in failure cancelled; do
+  jq --arg conclusion "$conclusion" '(.jobs[] | select(.name == "Native build (macos-15, arm64)") | .conclusion) = $conclusion' \
+    "$test_root/pinned.json" >"$test_root/pinned-failed.json"
+  if jq -e -f "$validator" "$test_root/pinned-failed.json" >/dev/null; then
+    fail "unsuccessful pinned macOS lane was accepted"
+  fi
+done
+jq '.jobs |= map(select(.name != "Native build (macos-15, arm64)"))' \
+  "$test_root/pinned.json" >"$test_root/pinned-missing.json"
+if jq -e -f "$validator" "$test_root/pinned-missing.json" >/dev/null; then
+  fail "missing pinned macOS lane was accepted"
+fi
+jq '.jobs += [{name: "Native build (macos-latest, arm64)", conclusion: "success"}]' \
+  "$test_root/pinned.json" >"$test_root/pinned-duplicate.json"
+if jq -e -f "$validator" "$test_root/pinned-duplicate.json" >/dev/null; then
+  fail "duplicate pinned/latest ARM64 lane was accepted"
+fi
+
 echo "release macOS runner contract passed"

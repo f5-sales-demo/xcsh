@@ -220,11 +220,11 @@ jobs:
           {"os":"ubuntu-24.04","runner":"xcsh-compute","platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu"},
           {"os":"macos-26-intel","platform":"darwin","arch":"x64","variants":"baseline"},
           {"os":"macos-26-intel","platform":"darwin","arch":"x64","variants":"modern"},
-          {"os":"macos-latest","platform":"darwin","arch":"arm64","sandbox_check":true},
+          {"os":"macos-15","platform":"darwin","arch":"arm64","sandbox_check":true},
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"baseline"},
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"modern"}
           ]') || fromJSON('[
-          {"os":"macos-latest","platform":"darwin","arch":"arm64","sandbox_check":true}
+          {"os":"macos-15","platform":"darwin","arch":"arm64","sandbox_check":true}
           ]') }}
     runs-on: ${{ matrix.runner || matrix.os }}
     env:
