@@ -455,12 +455,12 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 			"utf8",
 		);
 		const smokeJob = workflow.match(/\n {2}setup-zig:\n[\s\S]*?(?=\n {2}native:\n)/)?.[0] ?? "";
-		const nativeJob = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}test:\n)/)?.[0] ?? "";
+		const nativeJob = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
 
 		expect(smokeJob).toBe("");
 		expect(nativeJob).toContain("ubuntu-24.04");
 		expect(nativeJob).toContain("macos-26-intel");
-		expect(nativeJob).toContain("macos-latest");
+		expect(nativeJob).toContain("macos-15");
 		expect(nativeJob).toContain("windows-latest");
 		expect(nativeJob).toContain("uses: $/.github/actions/setup-zig");
 		expect(nativeJob).toContain("run: bash scripts/verify-self-hosted-tools.sh full");
@@ -725,8 +725,20 @@ describe("macOS pkg release contract", () => {
 describe("protected CI enforces the macOS sibling-customer boundary", () => {
 	it("runs the real Seatbelt isolation probes after building the native addon", async () => {
 		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
-		const native = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}test:\n)/)?.[0] ?? "";
-		expect(native).toContain('{"os":"macos-latest","platform":"darwin","arch":"arm64","sandbox_check":true}');
+		const native = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
+		const matrices = [...native.matchAll(/fromJSON\('([\s\S]*?)'\)/g)].map(
+			match =>
+				JSON.parse(match[1]) as Array<{ os: string; platform: string; arch: string; sandbox_check?: boolean }>,
+		);
+		expect(matrices).toHaveLength(2);
+		for (const matrix of matrices) {
+			expect(matrix.filter(row => row.platform === "darwin" && row.arch === "arm64")).toEqual([
+				{ os: "macos-15", platform: "darwin", arch: "arm64", sandbox_check: true },
+			]);
+		}
+		expect(matrices[1]).toHaveLength(1);
+		expect(native).toContain("if: matrix.sandbox_check");
+		expect(native).toContain("name: Sandbox self-test inside live bash profile");
 		expect(native).toContain("name: Seatbelt sibling-customer enforcement");
 		expect(native).toContain("if: matrix.platform == 'darwin' && matrix.sandbox_check");
 		expect(native).toContain("bun test packages/coding-agent/test/sandbox-isolation.test.ts");
