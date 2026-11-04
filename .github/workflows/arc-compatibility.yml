@@ -45,12 +45,12 @@ jobs:
         run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
 
       - name: Install Rust and ARM64 target
-        uses: ./.github/actions/setup-rust
+        uses: $/.github/actions/setup-rust
         with:
           target: aarch64-unknown-linux-gnu
 
       - name: Set up Zig 0.16.0
-        uses: ./.github/actions/setup-zig
+        uses: $/.github/actions/setup-zig
 
       - name: Install workspace dependencies
         run: bash scripts/ci-bun-install.sh

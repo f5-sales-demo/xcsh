@@ -35,7 +35,7 @@ jobs:
           persist-credentials: false
 
       - name: Prime verified Zig 0.16.0 archive
-        uses: ./.github/actions/setup-zig
+        uses: $/.github/actions/setup-zig
         with:
           cache-build: 'false'
 
