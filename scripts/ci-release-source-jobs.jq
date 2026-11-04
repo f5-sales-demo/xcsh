@@ -19,7 +19,7 @@ def required_native_jobs:
 
 # Preserve validation of archived runs while accepting the current runner names.
 def native_job_name:
-  if . == "Native build (macos-latest, arm64)" then
+  if . == "Native build (macos-latest, arm64)" or . == "Native build (macos-15, arm64)" then
     "Native build (macos-14, arm64)"
   elif . == "Native build (macos-26-intel, x64)" then
     "Native build (macos-15-intel, x64)"

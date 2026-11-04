@@ -65,7 +65,7 @@ class CiCapacityContractTests(unittest.TestCase):
         verifier = (ROOT / "scripts/verify-self-hosted-tools.sh").read_text(
             encoding="utf-8"
         )
-        self.assertIn("uses: $/.github/actions/setup-bun", ci)
+        self.assertIn("uses: ./.github/actions/setup-bun", ci)
         self.assertNotIn("taiki-e/install-action@", ci)
         self.assertNotIn("sudo apt-get install --yes --no-install-recommends llvm", ci)
         for action in (setup_bun, setup_rust, setup_zig):
