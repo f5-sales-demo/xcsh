@@ -1,11 +1,11 @@
 // Generated from verified release manifests and published sitemaps. Do not edit.
 export const PUBLIC_CITATION_SOURCES = {
 	general: {
-		version: "content-20261009T041100Z",
-		digest: "a63ea0d57fadc6eac7d4b8d395f47ff4a6cd1ae8ba7c296651f0163b40a3d7a7",
+		version: "content-20261110T194938Z",
+		digest: "623c64115529279811b606b2b64f840a2ece46dd59158a4f2f6805261f39b23b",
 	},
 	terraform: {
-		version: "documentation-v15.15.6",
+		version: "documentation-v15.15.7",
 		digest: "4110fadb432e995783ba015ccd378c45a64cb4efb08c667d57571683ffad3a09",
 	},
 	api: {
@@ -1170,9 +1170,17 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Administration | F5 Distributed Cloud Technical Knowledge",
 		url: "https://docs.cloud.f5.com/docs-v2/administration",
 	},
+	"docs-cloud-f5-com/administration/how-to/user-mgmt/20quota": {
+		title: "Quota",
+		url: "https://docs.cloud.f5.com/docs-v2/administration/how-to/user-mgmt/%20quota",
+	},
 	"docs-cloud-f5-com/administration/how-tos/managed-services/config-tenant-msp-service": {
 		title: "Configure Tenants Using MSP Service",
 		url: "https://docs.cloud.f5.com/docs-v2/administration/how-tos/managed-services/config-tenant-msp-service",
+	},
+	"docs-cloud-f5-com/administration/how-tos/others/get-access-logs": {
+		title: "Collect Access Logs",
+		url: "https://docs.cloud.f5.com/docs-v2/administration/how-tos/others/get-access-logs",
 	},
 	"docs-cloud-f5-com/administration/how-tos/user-mgmt/general-management": {
 		title: "Tenant Overview",
@@ -1238,6 +1246,14 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Audit Logs & Alerts | F5 Distributed Cloud Technical Knowledge",
 		url: "https://docs.cloud.f5.com/docs-v2/audit-logs-and-alerts",
 	},
+	"docs-cloud-f5-com/audit-logs-and-alerts/prod-train/audit-trn-demo1": {
+		title: "Alerts, Logging and Auditing",
+		url: "https://docs.cloud.f5.com/docs-v2/audit-logs-and-alerts/prod-train/audit-trn-demo1",
+	},
+	"docs-cloud-f5-com/bigip-apm/prod-demo/bigip-demo1": {
+		title: "Demo Guide - F5 Hybrid and Multicloud Bot Defense using BIG-IP Advanced WAF and XC WAAP (Automation)",
+		url: "https://docs.cloud.f5.com/docs-v2/bigip-apm/prod-demo/bigip-demo1",
+	},
 	"docs-cloud-f5-com/bigip-apm/prod-demo/bigip-demo6": {
 		title: "F5 BIG-IP Access Policy Manager (APM) - Google Authenticator and Microsoft Authenticator",
 		url: "https://docs.cloud.f5.com/docs-v2/bigip-apm/prod-demo/bigip-demo6",
@@ -1245,6 +1261,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/bigip-apm/prod-demo/bigip-demo7": {
 		title: "Harnessing the power of F5 BIG-IP Access Policy Manager (APM) and Microsoft",
 		url: "https://docs.cloud.f5.com/docs-v2/bigip-apm/prod-demo/bigip-demo7",
+	},
+	"docs-cloud-f5-com/bigip-apm/prod-train/bigip-trn-demo1": {
+		title: "Hybrid Security Deployment Using BIG-IP and XC",
+		url: "https://docs.cloud.f5.com/docs-v2/bigip-apm/prod-train/bigip-trn-demo1",
 	},
 	"docs-cloud-f5-com/bigip-apm/prod-train/bigip-trn-demo2": {
 		title: "Classic BIG-IP Service Discovery",
@@ -1271,12 +1291,16 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		url: "https://docs.cloud.f5.com/docs-v2/bigip-utilities/services/irules",
 	},
 	"docs-cloud-f5-com/bot-defense": {
-		title: "Bot Defense | F5 Distributed Cloud Technical Knowledge",
+		title: "Bot and Risk Management | F5 Distributed Cloud Technical Knowledge",
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense",
 	},
 	"docs-cloud-f5-com/bot-defense/concepts/about-bot-defense": {
 		title: "Bot Defense overview",
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/concepts/about-bot-defense",
+	},
+	"docs-cloud-f5-com/bot-defense/concepts/about-sdk-integrator": {
+		title: "F5 Distributed Cloud Mobile SDK Integrator Overview",
+		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/concepts/about-sdk-integrator",
 	},
 	"docs-cloud-f5-com/bot-defense/configure-advanced/allowlist-policy": {
 		title: "Configure the Bot Allowlist Policy",
@@ -1291,7 +1315,7 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/configure-advanced/bot-on-http-load-balancer",
 	},
 	"docs-cloud-f5-com/bot-defense/configure-advanced/deploy-policy": {
-		title: "Deploy Policy Updates",
+		title: "Deploy policy updates",
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/configure-advanced/deploy-policy",
 	},
 	"docs-cloud-f5-com/bot-defense/configure-advanced/endpoint-policy": {
@@ -1338,9 +1362,25 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Configure on an HTTP load balancer (WAAP)",
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/configure/waap",
 	},
+	"docs-cloud-f5-com/bot-defense/how-tos/configure-bot-defense": {
+		title: "Bot Defense",
+		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/configure-bot-defense",
+	},
+	"docs-cloud-f5-com/bot-defense/how-tos/configure-device-intelligence": {
+		title: "Configure Device Intelligence",
+		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/configure-device-intelligence",
+	},
 	"docs-cloud-f5-com/bot-defense/how-tos/configure-rules": {
-		title: "Configure Bot Detection Rules",
+		title: "Configure bot detection rules",
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/configure-rules",
+	},
+	"docs-cloud-f5-com/bot-defense/how-tos/device-intelligence": {
+		title: "Device Intelligence overview",
+		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/device-intelligence",
+	},
+	"docs-cloud-f5-com/bot-defense/how-tos/investigate-devices": {
+		title: "Investigate and mitigate high-risk devices",
+		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/investigate-devices",
 	},
 	"docs-cloud-f5-com/bot-defense/how-tos/manage-bot-defense": {
 		title: "Manage Bot Defense Standard",
@@ -1359,7 +1399,7 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/manage-policies",
 	},
 	"docs-cloud-f5-com/bot-defense/how-tos/manage-rules": {
-		title: "Manage Bot Detection Rules",
+		title: "Manage bot detection rules",
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/manage-rules",
 	},
 	"docs-cloud-f5-com/bot-defense/how-tos/plan-bot-defense": {
@@ -1371,7 +1411,7 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/reference",
 	},
 	"docs-cloud-f5-com/bot-defense/how-tos/threat-intelligence-overview": {
-		title: "Bot Detection Rules Overview",
+		title: "Bot detection rules overview",
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/threat-intelligence-overview",
 	},
 	"docs-cloud-f5-com/bot-defense/overview-advanced": {
@@ -1397,6 +1437,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/bot-defense/plan-bot-advanced/web": {
 		title: "Protect web endpoints",
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/plan-bot-advanced/web",
+	},
+	"docs-cloud-f5-com/bot-defense/prod-train/bot-def-trn-demo1": {
+		title: "Bot Defense Advanced",
+		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/prod-train/bot-def-trn-demo1",
 	},
 	"docs-cloud-f5-com/bot-defense/quickstarts/bot-defense": {
 		title: "Configure Bot Defense Standard with the BIG-IP v14-16 Connector",
@@ -1427,7 +1471,7 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/test-bot-defense",
 	},
 	"docs-cloud-f5-com/bot-defense/test-bot-defense-advanced": {
-		title: "Test Your Bot Defense configuration",
+		title: "Test your Bot Defense configuration",
 		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/test-bot-defense-advanced",
 	},
 	"docs-cloud-f5-com/client-side-defense": {
@@ -1441,6 +1485,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/client-side-defense/how-tos/configure-csd": {
 		title: "Configure Client-Side Defense",
 		url: "https://docs.cloud.f5.com/docs-v2/client-side-defense/how-tos/configure-csd",
+	},
+	"docs-cloud-f5-com/client-side-defense/prod-demo/csd-demo1": {
+		title: "Introduction to F5 Distributed Cloud Client-Side Defense",
+		url: "https://docs.cloud.f5.com/docs-v2/client-side-defense/prod-demo/csd-demo1",
 	},
 	"docs-cloud-f5-com/content-delivery-network": {
 		title: "Content Delivery Network | F5 Distributed Cloud Technical Knowledge",
@@ -1466,6 +1514,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Experience Distributed Cloud CDN",
 		url: "https://docs.cloud.f5.com/docs-v2/content-delivery-network/prod-demo/cdn-demo1",
 	},
+	"docs-cloud-f5-com/content-delivery-network/prod-demo/cdn-demo2": {
+		title: "F5 Distributed Cloud CDN Brings Apps Closer to Edge Compute",
+		url: "https://docs.cloud.f5.com/docs-v2/content-delivery-network/prod-demo/cdn-demo2",
+	},
 	"docs-cloud-f5-com/content-delivery-network/services/cdn-overview": {
 		title: "Content Delivery Network",
 		url: "https://docs.cloud.f5.com/docs-v2/content-delivery-network/services/cdn-overview",
@@ -1489,6 +1541,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/ddos-and-transit-services/how-tos/network-firewall/l3l4-ddos-mitigation": {
 		title: "Set Up L3/L4 Routed DDoS Mitigation",
 		url: "https://docs.cloud.f5.com/docs-v2/ddos-and-transit-services/how-tos/network-firewall/l3l4-ddos-mitigation",
+	},
+	"docs-cloud-f5-com/ddos-and-transit-services/prod-demo/ddos-demo1": {
+		title: "F5 Distributed Cloud DDoS Mitigation Demo",
+		url: "https://docs.cloud.f5.com/docs-v2/ddos-and-transit-services/prod-demo/ddos-demo1",
 	},
 	"docs-cloud-f5-com/delegated-access": {
 		title: "Delegated Access | F5 Distributed Cloud Technical Knowledge",
@@ -1546,6 +1602,26 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Experience F5 Distributed Cloud Synthetic Monitoring for Application Performance",
 		url: "https://docs.cloud.f5.com/docs-v2/distributed-apps/prod-demo/dist-apps-demo1",
 	},
+	"docs-cloud-f5-com/distributed-apps/prod-train/dist-apps-trn-demo1": {
+		title: "API Security on Customer Edge",
+		url: "https://docs.cloud.f5.com/docs-v2/distributed-apps/prod-train/dist-apps-trn-demo1",
+	},
+	"docs-cloud-f5-com/distributed-apps/prod-train/dist-apps-trn-demo2": {
+		title: "Advanced Application Networking",
+		url: "https://docs.cloud.f5.com/docs-v2/distributed-apps/prod-train/dist-apps-trn-demo2",
+	},
+	"docs-cloud-f5-com/distributed-apps/prod-train/dist-apps-trn-demo3": {
+		title: "Application Management",
+		url: "https://docs.cloud.f5.com/docs-v2/distributed-apps/prod-train/dist-apps-trn-demo3",
+	},
+	"docs-cloud-f5-com/distributed-apps/prod-train/dist-apps-trn-demo4": {
+		title: "Application Networking",
+		url: "https://docs.cloud.f5.com/docs-v2/distributed-apps/prod-train/dist-apps-trn-demo4",
+	},
+	"docs-cloud-f5-com/distributed-apps/prod-train/dist-apps-trn-demo5": {
+		title: "Application Security",
+		url: "https://docs.cloud.f5.com/docs-v2/distributed-apps/prod-train/dist-apps-trn-demo5",
+	},
 	"docs-cloud-f5-com/dns-management": {
 		title: "DNS Management | F5 Distributed Cloud Technical Knowledge",
 		url: "https://docs.cloud.f5.com/docs-v2/dns-management",
@@ -1561,6 +1637,18 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/dns-management/how-to/observe/monitor-dns": {
 		title: "Monitor DNS",
 		url: "https://docs.cloud.f5.com/docs-v2/dns-management/how-to/observe/monitor-dns",
+	},
+	"docs-cloud-f5-com/dns-management/prod-demo/dns-man-demo1": {
+		title: "Experience F5 Distributed Cloud DNS",
+		url: "https://docs.cloud.f5.com/docs-v2/dns-management/prod-demo/dns-man-demo1",
+	},
+	"docs-cloud-f5-com/dns-management/prod-demo/dns-man-demo2": {
+		title: "Using F5 Distributed Cloud DNS for Primary/Secondary + DDoS & Security",
+		url: "https://docs.cloud.f5.com/docs-v2/dns-management/prod-demo/dns-man-demo2",
+	},
+	"docs-cloud-f5-com/dns-management/prod-demo/dns-man-demo3": {
+		title: "Experience F5 Distributed Cloud DNS Load Balancer",
+		url: "https://docs.cloud.f5.com/docs-v2/dns-management/prod-demo/dns-man-demo3",
 	},
 	"docs-cloud-f5-com/dns-management/quickstart/dns-services": {
 		title: "Configure DNS Services",
@@ -1580,7 +1668,7 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	},
 	"docs-cloud-f5-com/docs/how-to/advanced-security/bot-defense": {
 		title: "Bot Defense",
-		url: "https://docs.cloud.f5.com/docs-v2/docs/how-to/advanced-security/bot-defense",
+		url: "https://docs.cloud.f5.com/docs-v2/bot-defense/how-tos/configure-bot-defense",
 	},
 	"docs-cloud-f5-com/docs/how-to/advanced-security/configure-tls-fingerprints": {
 		title: "Configure TLS Fingerprinting",
@@ -1612,11 +1700,11 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	},
 	"docs-cloud-f5-com/docs/how-to/site-management/replace-node": {
 		title: "Replace Node in Customer Edge Site",
-		url: "https://docs.cloud.f5.com/docs-v2/docs/how-to/site-management/replace-node",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-to/site-management/replace-node",
 	},
 	"docs-cloud-f5-com/docs/how-to/site-management/site-local-ui-usage": {
 		title: "Access Site Local User Interface",
-		url: "https://docs.cloud.f5.com/docs-v2/docs/how-to/site-management/site-local-ui-usage",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-to/site-management/site-local-ui-usage",
 	},
 	"docs-cloud-f5-com/docs/how-to/user-mgmt/users": {
 		title: "User Management",
@@ -1690,6 +1778,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Configure TLS Fingerprinting",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/how-to/adv-security/configure-tls-fingerprints",
 	},
+	"docs-cloud-f5-com/multi-cloud-app-connect/how-to/adv-security/configure-tls-fingerprints/fingerprint-map": {
+		title: "TLS Fingerprints and Classes",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/how-to/adv-security/configure-tls-fingerprints/fingerprint-map",
+	},
 	"docs-cloud-f5-com/multi-cloud-app-connect/how-to/adv-security/configure-url-reputation": {
 		title: "Configure URL Reputation Service",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/how-to/adv-security/configure-url-reputation",
@@ -1754,6 +1846,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Monitor Service",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/how-to/observe/monitor-your-app-service",
 	},
+	"docs-cloud-f5-com/multi-cloud-app-connect/how-to/observe/monitor-your-app-waf": {
+		title: "Monitor Application Firewall",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/how-to/observe/monitor-your-app-waf",
+	},
 	"docs-cloud-f5-com/multi-cloud-app-connect/how-to/others/filters": {
 		title: "Manage Saved Filters",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/how-to/others/filters",
@@ -1782,6 +1878,18 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Experience Distributed Cloud App Connect",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/prod-demo/mcac-demo1",
 	},
+	"docs-cloud-f5-com/multi-cloud-app-connect/prod-demo/mcac-demo2": {
+		title: "F5 Distributed Cloud WAF Demo",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/prod-demo/mcac-demo2",
+	},
+	"docs-cloud-f5-com/multi-cloud-app-connect/prod-train/mcac-trn-demo1": {
+		title: "Advanced Application Networking",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/prod-train/mcac-trn-demo1",
+	},
+	"docs-cloud-f5-com/multi-cloud-app-connect/prod-train/mcac-trn-demo2": {
+		title: "Application Networking",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/prod-train/mcac-trn-demo2",
+	},
 	"docs-cloud-f5-com/multi-cloud-app-connect/prod-train/mcac-trn-demo3": {
 		title: "Automation - MCN App Connect",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-app-connect/prod-train/mcac-trn-demo3",
@@ -1794,9 +1902,21 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Customer Edge Deployment Models for Resiliency",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/concepts/ce-deploy-mods",
 	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/concepts/f5-distributed-cloud-private-interconnect": {
+		title: "F5 Distributed Cloud Private Interconnect",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/concepts/f5-distributed-cloud-private-interconnect",
+	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/faqs/smsv2-faqs": {
 		title: "Customer Edge - Secure Mesh Site FAQs",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/faqs/smsv2-faqs",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-to/adv-security/policer-and-protocol-policer": {
+		title: "Configure Policer and Protocol Policer",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-to/adv-security/policer-and-protocol-policer",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-to/advanced-networking/ip-address-allocators": {
+		title: "Create IP Address Allocators",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-to/advanced-networking/ip-address-allocators",
 	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/how-to/observe/monitor-cloud-connects": {
 		title: "Monitor Cloud Connects",
@@ -1842,13 +1962,41 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Deploy Secure Mesh Site v2 on VMware (ClickOps)",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-to/site-management/deploy-sms-vmw-clickops",
 	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-to/site-management/replace-node": {
+		title: "Replace Node in Customer Edge Site",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-to/site-management/replace-node",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-to/site-management/site-local-ui-usage": {
+		title: "Access Site Local User Interface",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-to/site-management/site-local-ui-usage",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/advanced-networking/bgp": {
+		title: "Configure BGP and BGP Routing Policy",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/advanced-networking/bgp",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/advanced-networking/public-ip-addresses": {
+		title: "Create Public IP Address",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/advanced-networking/public-ip-addresses",
+	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/advanced-networking/site-mesh-group": {
 		title: "Configure Site Mesh Group",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/advanced-networking/site-mesh-group",
 	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/advanced-networking/tunneling": {
+		title: "Configure Tunneling for CE Site",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/advanced-networking/tunneling",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/network-firewall/forward-proxy-policies": {
+		title: "Create Forward Proxy Policy",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/network-firewall/forward-proxy-policies",
+	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/network-firewall/network-firewall": {
 		title: "Create Network Firewall",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/network-firewall/network-firewall",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/network-firewall/network-policies": {
+		title: "Create Firewall Policy",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/network-firewall/network-policies",
 	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/networking/external-connectors": {
 		title: "Create External Connectors",
@@ -1857,6 +2005,18 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/networking/interfaces": {
 		title: "Create Network Interface",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/networking/interfaces",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/networking/network-connectors": {
+		title: "Create Network Connector",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/networking/network-connectors",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/networking/segmentation": {
+		title: "Create network segments",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/networking/segmentation",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/networking/virtual-networks": {
+		title: "Create virtual network",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/how-tos/networking/virtual-networks",
 	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/how-tos/others/global-log-streaming": {
 		title: "Set up the Global Log Receiver",
@@ -1869,6 +2029,38 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/multi-cloud-network-connect/integrations/integrating-cloud-mesh-with-ocp": {
 		title: "Integrating Distributed Cloud Mesh with Red Hat OCP",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/integrations/integrating-cloud-mesh-with-ocp",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/prod-demo/mcn-demo1": {
+		title: "Secure Multi-Cloud Networking (MCN) Demo",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/prod-demo/mcn-demo1",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/prod-demo/mcn-demo2": {
+		title: "Optimizing Multicloud Connectivity with F5 Distributed Cloud | Red Hat ROSA & EKS Demo",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/prod-demo/mcn-demo2",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/prod-demo/mcn-demo3": {
+		title: "How F5 Can Help Mitigate Threats Against Generative AI Applications",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/prod-demo/mcn-demo3",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/prod-demo/mcn-demo4": {
+		title: "Experience F5 Distributed Cloud Network Connect",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/prod-demo/mcn-demo4",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/prod-demo/mcn-demo5": {
+		title: "F5 Distributed Cloud Network Connect with Transit Routing",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/prod-demo/mcn-demo5",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/prod-train/mcn-trn-demo1": {
+		title: "Advanced Application Networking",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/prod-train/mcn-trn-demo1",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/prod-train/mcn-trn-demo2": {
+		title: "Advanced Networking",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/prod-train/mcn-trn-demo2",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/prod-train/mcn-trn-demo3": {
+		title: "Automation - MCN Network Connect",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/prod-train/mcn-trn-demo3",
 	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/reference/ce-contr-access": {
 		title: "F5 Customer Edge Controlled Access Guidance",
@@ -1915,8 +2107,16 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/reference/proxy-ce-ref",
 	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/troubleshooting/troubleshoot-site-smsv2": {
-		title: "Troubleshooting Guide for Secure Mesh Site v2 Deployments",
+		title: "Troubleshooting Secure Mesh Site v2 deployments",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/troubleshooting/troubleshoot-site-smsv2",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/volt-hw/hw-deployment-modes": {
+		title: "Hardware Deployment Modes",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/volt-hw/hw-deployment-modes",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/volt-hw/igw-data-sheet": {
+		title: "Volterra IGW Datasheet",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/volt-hw/igw-data-sheet",
 	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/volt-hw/igw-lcd": {
 		title: "IGW LCD",
@@ -1934,17 +2134,53 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "ISV 8000 Power Over Ethernet",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/volt-hw/isv-8000-power-over-ethernet",
 	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/volt-hw/isv-data-sheet": {
+		title: "Volterra ISV Datasheet",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/volt-hw/isv-data-sheet",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/volt-hw/isv-qs": {
+		title: "Industrial Server (ISV) Quick Start Guide",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/volt-hw/isv-qs",
+	},
 	"docs-cloud-f5-com/multi-cloud-network-connect/volt-hw/isv-user-manual": {
 		title: "Industrial Server 8000 series User Manual",
 		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/volt-hw/isv-user-manual",
+	},
+	"docs-cloud-f5-com/multi-cloud-network-connect/volt-hw/quickstart": {
+		title: "Quickstart",
+		url: "https://docs.cloud.f5.com/docs-v2/multi-cloud-network-connect/volt-hw/quickstart",
 	},
 	"docs-cloud-f5-com/nginx-one": {
 		title: "NGINX One | F5 Distributed Cloud Technical Knowledge",
 		url: "https://docs.cloud.f5.com/docs-v2/nginx-one",
 	},
+	"docs-cloud-f5-com/nginx-one/prod-demo/nginx-demo1": {
+		title: "Deliver and Secure GraphQL APIs with F5 NGINX",
+		url: "https://docs.cloud.f5.com/docs-v2/nginx-one/prod-demo/nginx-demo1",
+	},
+	"docs-cloud-f5-com/nginx-one/prod-demo/nginx-demo2": {
+		title: "Securing REST APIs with F5 NGINX",
+		url: "https://docs.cloud.f5.com/docs-v2/nginx-one/prod-demo/nginx-demo2",
+	},
+	"docs-cloud-f5-com/nginx-one/prod-demo/nginx-demo3": {
+		title: "Gain Detailed Visibility Into the Health and Performance of Your NGINX Instances",
+		url: "https://docs.cloud.f5.com/docs-v2/nginx-one/prod-demo/nginx-demo3",
+	},
+	"docs-cloud-f5-com/nginx-one/prod-demo/nginx-demo4": {
+		title: "NGINX One Overview",
+		url: "https://docs.cloud.f5.com/docs-v2/nginx-one/prod-demo/nginx-demo4",
+	},
+	"docs-cloud-f5-com/nginx-one/prod-demo/nginx-demo5": {
+		title: "Scan Your Environment for NGINX Instances",
+		url: "https://docs.cloud.f5.com/docs-v2/nginx-one/prod-demo/nginx-demo5",
+	},
 	"docs-cloud-f5-com/nginx-one/prod-demo/nginx-demo6": {
 		title: "Use Role-Based Access Control with Instance Manager",
 		url: "https://docs.cloud.f5.com/docs-v2/nginx-one/prod-demo/nginx-demo6",
+	},
+	"docs-cloud-f5-com/nginx-one/prod-train/nginx-trn-demo1": {
+		title: "Hybrid Security Deployment Using NGINX and XC",
+		url: "https://docs.cloud.f5.com/docs-v2/nginx-one/prod-train/nginx-trn-demo1",
 	},
 	"docs-cloud-f5-com/nginx-one/quickstarts/nginx-one": {
 		title: "NGINX One Console",
@@ -1969,6 +2205,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/observability/how-tos/synthetic-monitoring/tls-report": {
 		title: "View Synthetic Monitor TLS Report",
 		url: "https://docs.cloud.f5.com/docs-v2/observability/how-tos/synthetic-monitoring/tls-report",
+	},
+	"docs-cloud-f5-com/observability/prod-train/obsv-trn-demo1": {
+		title: "Alerts, Logging and Auditing",
+		url: "https://docs.cloud.f5.com/docs-v2/observability/prod-train/obsv-trn-demo1",
 	},
 	"docs-cloud-f5-com/observability/quick-start/http-syn-mon": {
 		title: "HTTP(s) Synthetic Monitor",
@@ -1997,6 +2237,14 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/platform/changelogs/main-and-dep": {
 		title: "Maintenance and Deployment Schedules",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/changelogs/main-and-dep",
+	},
+	"docs-cloud-f5-com/platform/changelogs/node-lts-changelog": {
+		title: "Node Long Term Software (LTS) Releases",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/changelogs/node-lts-changelog",
+	},
+	"docs-cloud-f5-com/platform/changelogs/node-os-changelog": {
+		title: "Node Operating System and Software Changelogs",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/changelogs/node-os-changelog",
 	},
 	"docs-cloud-f5-com/platform/changelogs/node-sw-release-notes": {
 		title: "Node Operating System and Software Changelogs",
@@ -2074,6 +2322,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "F5 Distributed Cloud Services FAQs",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/faqs/generic-faq",
 	},
+	"docs-cloud-f5-com/platform/how-to/volt-automation/kubectl": {
+		title: "Kubectl",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/how-to/volt-automation/kubectl",
+	},
 	"docs-cloud-f5-com/platform/how-to/volt-automation/terraform": {
 		title: "Terraform",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/how-to/volt-automation/terraform",
@@ -2086,9 +2338,29 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Distributed Cloud Mesh",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/overview/mesh",
 	},
+	"docs-cloud-f5-com/platform/overview/shape": {
+		title: "Shape Device ID",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/overview/shape",
+	},
 	"docs-cloud-f5-com/platform/overview/volt-share": {
 		title: "VoltShare",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/overview/volt-share",
+	},
+	"docs-cloud-f5-com/platform/prod-train/plat-trn-demo1": {
+		title: "Hybrid Security Deployment Using BIG-IP and XC",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/prod-train/plat-trn-demo1",
+	},
+	"docs-cloud-f5-com/platform/prod-train/plat-trn-demo2": {
+		title: "Hybrid Security Deployment Using NGINX and XC",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/prod-train/plat-trn-demo2",
+	},
+	"docs-cloud-f5-com/platform/prod-train/plat-trn-demo3": {
+		title: "Automation - Introduction and Prerequisite Config",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/prod-train/plat-trn-demo3",
+	},
+	"docs-cloud-f5-com/platform/prod-train/plat-trn-demo4": {
+		title: "Automation and Tools",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/prod-train/plat-trn-demo4",
 	},
 	"docs-cloud-f5-com/platform/quickstart/get-started-on-console": {
 		title: "Get Started with Distributed Cloud Console",
@@ -2134,9 +2406,17 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Early Access Feature References",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/reference/f5xc-early-access-feature-references",
 	},
+	"docs-cloud-f5-com/platform/reference/legal-policy-reference": {
+		title: "Legal Policy Reference",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/reference/legal-policy-reference",
+	},
 	"docs-cloud-f5-com/platform/reference/network-cloud-ref": {
 		title: "F5 Distributed Cloud Services IP Address and Domain Reference for Firewall or Proxy Settings",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/reference/network-cloud-ref",
+	},
+	"docs-cloud-f5-com/platform/reference/network-rules-ref": {
+		title: "Volterra Network Rule Reference",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/reference/network-rules-ref",
 	},
 	"docs-cloud-f5-com/platform/reference/node-service-reference": {
 		title: "Node Serviceability Commands Reference",
@@ -2162,9 +2442,21 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Virtual Kubernetes API Compatibility",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/reference/vk8s-api-compatibility",
 	},
+	"docs-cloud-f5-com/platform/reference/waf-anomaly-detection": {
+		title: "Set up WAF Anomaly Detection",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/reference/waf-anomaly-detection",
+	},
+	"docs-cloud-f5-com/platform/reference/waf-rules-reference": {
+		title: "WAF Core Rules Reference",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/reference/waf-rules-reference",
+	},
 	"docs-cloud-f5-com/platform/reference/wingman-api-reference": {
 		title: "Wingman API Reference",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/reference/wingman-api-reference",
+	},
+	"docs-cloud-f5-com/platform/services/infrastructure/app-infrastructure-protection": {
+		title: "App Infrastructure Protection",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/services/infrastructure/app-infrastructure-protection",
 	},
 	"docs-cloud-f5-com/platform/services/mesh/application-security": {
 		title: "Application Security",
@@ -2190,6 +2482,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "AI Assistant for MCN",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/support/ai-assistant/ai-mcn",
 	},
+	"docs-cloud-f5-com/platform/support/ai-assistant/ai-waap": {
+		title: "AI Assistant for WAAP",
+		url: "https://docs.cloud.f5.com/docs-v2/platform/support/ai-assistant/ai-waap",
+	},
 	"docs-cloud-f5-com/purchasing-and-billing": {
 		title: "Purchasing and Billing | F5 Distributed Cloud Technical Knowledge",
 		url: "https://docs.cloud.f5.com/docs-v2/purchasing-and-billing",
@@ -2210,6 +2506,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Billing Usage Types",
 		url: "https://docs.cloud.f5.com/docs-v2/purchasing-and-billing/purchase-bill/billing-usage",
 	},
+	"docs-cloud-f5-com/purchasing-and-billing/purchase-bill/tax-exempt-billing": {
+		title: "Tax Exempt Billing",
+		url: "https://docs.cloud.f5.com/docs-v2/purchasing-and-billing/purchase-bill/tax-exempt-billing",
+	},
 	"docs-cloud-f5-com/purchasing-and-billing/purchase-bill/ways-to-purch/fcp": {
 		title: "Flexible Consumption Program for Distributed Cloud",
 		url: "https://docs.cloud.f5.com/docs-v2/purchasing-and-billing/purchase-bill/ways-to-purch/fcp",
@@ -2222,6 +2522,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Term Subscription for Distributed Cloud",
 		url: "https://docs.cloud.f5.com/docs-v2/purchasing-and-billing/purchase-bill/ways-to-purch/ts",
 	},
+	"docs-cloud-f5-com/reference/api-ref": {
+		title: "API Reference",
+		url: "https://docs.cloud.f5.com/docs-v2/reference/api-ref",
+	},
 	"docs-cloud-f5-com/shared-configuration": {
 		title: "Shared Configuration | F5 Distributed Cloud Technical Knowledge",
 		url: "https://docs.cloud.f5.com/docs-v2/shared-configuration",
@@ -2229,6 +2533,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/shared-configuration/how-to/adv-security/configure-ip-prefix": {
 		title: "Configure IP Prefix Sets",
 		url: "https://docs.cloud.f5.com/docs-v2/shared-configuration/how-to/adv-security/configure-ip-prefix",
+	},
+	"docs-cloud-f5-com/shared-configuration/how-to/alerting/audit-logs": {
+		title: "Audit Logs",
+		url: "https://docs.cloud.f5.com/docs-v2/shared-configuration/how-to/alerting/audit-logs",
 	},
 	"docs-cloud-f5-com/shared-configuration/how-to/app-mgnt/default-workload-flavor": {
 		title: "Create Default Workload Flavor",
@@ -2254,6 +2562,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Integrating Distributed Cloud Services with Your Ticket Tracking System",
 		url: "https://docs.cloud.f5.com/docs-v2/shared-configuration/integrations/integrating-with-tts",
 	},
+	"docs-cloud-f5-com/shared-configuration/prod-train/shared-trn-demo1": {
+		title: "Alerts, Logging and Auditing",
+		url: "https://docs.cloud.f5.com/docs-v2/shared-configuration/prod-train/shared-trn-demo1",
+	},
 	"docs-cloud-f5-com/support-v2": {
 		title: "Support | F5 Distributed Cloud Technical Knowledge",
 		url: "https://docs.cloud.f5.com/docs-v2/support-v2",
@@ -2278,6 +2590,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Troubleshooting Console Assistant",
 		url: "https://docs.cloud.f5.com/docs-v2/support-v2/support/troubleshoot-console-assistant",
 	},
+	"docs-cloud-f5-com/support-v2/support/ts-ce": {
+		title: "Troubleshooting Site",
+		url: "https://docs.cloud.f5.com/docs-v2/support-v2/support/ts-ce",
+	},
 	"docs-cloud-f5-com/support/tnt-restrctn": {
 		title: "Enable Tenant Level Restriction",
 		url: "https://docs.cloud.f5.com/docs-v2/support/tnt-restrctn",
@@ -2285,6 +2601,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 	"docs-cloud-f5-com/voltshare": {
 		title: "VoltShare",
 		url: "https://docs.cloud.f5.com/docs-v2/voltshare",
+	},
+	"docs-cloud-f5-com/voltshare/images": {
+		title: "VoltShare Releases",
+		url: "https://docs.cloud.f5.com/docs-v2/voltshare/images",
 	},
 	"docs-cloud-f5-com/web-app-and-api-protection": {
 		title: "Web App & API Protection | F5 Distributed Cloud Technical Knowledge",
@@ -2366,9 +2686,29 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Monitor Web App & API Protection",
 		url: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection/how-to/observe/monitor-waap",
 	},
+	"docs-cloud-f5-com/web-app-and-api-protection/prod-demo/waap-demo1": {
+		title: "Experience Distributed Cloud API Security",
+		url: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection/prod-demo/waap-demo1",
+	},
 	"docs-cloud-f5-com/web-app-and-api-protection/prod-demo/waap-demo2": {
 		title: "F5 Distributed Cloud Web App and API Protection - API Discovery and Protection",
 		url: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection/prod-demo/waap-demo2",
+	},
+	"docs-cloud-f5-com/web-app-and-api-protection/prod-train/waap-trn-demo1": {
+		title: "API Security on Customer Edge",
+		url: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection/prod-train/waap-trn-demo1",
+	},
+	"docs-cloud-f5-com/web-app-and-api-protection/prod-train/waap-trn-demo2": {
+		title: "Application Security",
+		url: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection/prod-train/waap-trn-demo2",
+	},
+	"docs-cloud-f5-com/web-app-and-api-protection/prod-train/waap-trn-demo3": {
+		title: "Hybrid Security Deployment Using BIG-IP and XC",
+		url: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection/prod-train/waap-trn-demo3",
+	},
+	"docs-cloud-f5-com/web-app-and-api-protection/prod-train/waap-trn-demo4": {
+		title: "Hybrid Security Deployment Using NGINX and XC",
+		url: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection/prod-train/waap-trn-demo4",
 	},
 	"docs-cloud-f5-com/web-app-and-api-protection/quickstart/api-protection": {
 		title: "Setting Up API Protection",

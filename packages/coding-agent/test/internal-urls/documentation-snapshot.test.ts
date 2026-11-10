@@ -315,6 +315,69 @@ describe("offline documentation release", () => {
 		if (root) await rm(root, { recursive: true, force: true });
 	});
 
+	it("accepts partition-refresh aliases with validated provenance", async () => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const alias = {
+			path: "content/docs-cloud-f5-com/old/index.md",
+			target: "content/docs-cloud-f5-com/protect-applications/index.md",
+			url: "https://docs.cloud.f5.com/docs-v2/old",
+		};
+		const { pin } = await fixture(root, value => {
+			value.aliases = [alias];
+			value.refresh = {
+				artifact_sha256: "a".repeat(64),
+				baseline_receipt_sha256: "b".repeat(64),
+				baseline_tag: "content-20260925T214508Z",
+				preserved_descriptions: ["content/my-f5-com/K000000001/index.md"],
+				refreshed_sources: ["docs-cloud-f5-com"],
+			};
+		});
+		const snapshot = await verifyDocumentationRelease(root, pin);
+		expect(snapshot.aliases).toEqual([alias]);
+		const output = path.join(root, "refresh.sqlite");
+		await buildDocumentationIndex(snapshot, output);
+		const db = new Database(output, { readonly: true });
+		try {
+			expect(db.query("SELECT stable_path, target_stable_path FROM documentation_routes").all()).toEqual([
+				{ stable_path: "old", target_stable_path: "protect-applications" },
+			]);
+		} finally {
+			db.close();
+		}
+	});
+	it.each([
+		"digest",
+		"baseline",
+		"source",
+		"duplicate-source",
+		"missing-description",
+		"duplicate-description",
+		"extra",
+	])("rejects malformed refresh provenance %s", async kind => {
+		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
+		const refresh: Record<string, unknown> = {
+			artifact_sha256: "a".repeat(64),
+			baseline_receipt_sha256: "b".repeat(64),
+			baseline_tag: "content-20260925T214508Z",
+			preserved_descriptions: ["content/my-f5-com/K000000001/index.md"],
+			refreshed_sources: ["docs-cloud-f5-com"],
+		};
+		if (kind === "digest") refresh.artifact_sha256 = "invalid";
+		if (kind === "baseline") refresh.baseline_tag = "not-a-tag";
+		if (kind === "source") refresh.refreshed_sources = ["unknown"];
+		if (kind === "duplicate-source") refresh.refreshed_sources = ["docs-cloud-f5-com", "docs-cloud-f5-com"];
+		if (kind === "missing-description") refresh.preserved_descriptions = ["content/my-f5-com/missing/index.md"];
+		if (kind === "duplicate-description")
+			refresh.preserved_descriptions = [
+				"content/my-f5-com/K000000001/index.md",
+				"content/my-f5-com/K000000001/index.md",
+			];
+		if (kind === "extra") refresh.extra = true;
+		const { pin } = await fixture(root, value => {
+			value.refresh = refresh;
+		});
+		await expect(verifyDocumentationRelease(root, pin)).rejects.toThrow("refresh");
+	});
 	it("accepts verified enrichment and stores canonical aliases in the index", async () => {
 		root = await mkdtemp(path.join(os.tmpdir(), "xcsh-doc-release-"));
 		const alias = {
