@@ -100,6 +100,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run ci:check:full
+      - name: Verify notarization credential selection and privacy
+        run: python3 -m unittest tests.test_ci_notary_auth
       - name: Verify pre-commit TypeScript contract
         run: python3 -m unittest tests.test_pre_commit_ts_gate
 
@@ -925,10 +927,17 @@ jobs:
             exit 1
           fi
           echo "INSTALLER_SIGNING_IDENTITY=$INSTALLER_SIGNING_IDENTITY" >> "$GITHUB_ENV"
-      - name: Sign and notarize native addons
+      - name: Validate job-local notarization credentials
         env:
+          APPLE_NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_BASE64 }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER: ${{ secrets.APPLE_NOTARY_ISSUER }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: bash .controller/scripts/ci-notary-auth.sh "$KEYCHAIN_PATH" xcsh-ci-notary
+      - name: Sign and notarize native addons
+        env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
@@ -957,9 +966,8 @@ jobs:
           ZIP="$RUNNER_TEMP/natives-${RELEASE_ARCH}.zip"
           ditto -c -k packages/natives/native "$ZIP"
           NOTARY_OUTPUT=$(xcrun notarytool submit "$ZIP" \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_PASSWORD" \
-            --team-id "$APPLE_TEAM_ID" \
+            --keychain-profile xcsh-ci-notary \
+            --keychain "$KEYCHAIN_PATH" \
             --wait --output-format json)
           echo "$NOTARY_OUTPUT"
           jq -e '.status == "Accepted"' <<<"$NOTARY_OUTPUT" >/dev/null
@@ -1009,10 +1017,6 @@ jobs:
             exit 1
           fi
       - name: Notarize macOS Binary
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           BINARY_PATH="packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}"
           ZIP_PATH="$RUNNER_TEMP/xcsh-darwin-${RELEASE_ARCH}.zip"
@@ -1033,10 +1037,9 @@ jobs:
             echo "Notarization attempt $ATTEMPT/$MAX_ATTEMPTS..."
             NOTARY_EXIT=0
             NOTARY_OUTPUT=$(xcrun notarytool submit "$ZIP_PATH" \
-              --apple-id "$APPLE_ID" \
-              --password "$APPLE_PASSWORD" \
-              --team-id "$APPLE_TEAM_ID" \
-              --wait --verbose 2>&1) || NOTARY_EXIT=$?
+              --keychain-profile xcsh-ci-notary \
+              --keychain "$KEYCHAIN_PATH" \
+              --wait 2>&1) || NOTARY_EXIT=$?
             echo "$NOTARY_OUTPUT"
 
             if echo "$NOTARY_OUTPUT" | grep -q "status: Accepted"; then
@@ -1078,10 +1081,6 @@ jobs:
             --root packages/coding-agent/binaries \
             --layout release
       - name: Build, sign, notarize, and staple macOS package
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           if [ "$GITHUB_REF_TYPE" = tag ]; then
@@ -1103,9 +1102,8 @@ jobs:
           for attempt in 1 2 3; do
             notary_exit=0
             notary_output=$(xcrun notarytool submit "$pkg" \
-              --apple-id "$APPLE_ID" \
-              --password "$APPLE_PASSWORD" \
-              --team-id "$APPLE_TEAM_ID" \
+              --keychain-profile xcsh-ci-notary \
+              --keychain "$KEYCHAIN_PATH" \
               --wait) || notary_exit=$?
             echo "$notary_output"
             if [ "$notary_exit" -eq 0 ] && echo "$notary_output" | grep -q "status: Accepted"; then
