@@ -58,10 +58,10 @@
 		"zod": "4.5.4"
 	},
 	"devDependencies": {
-		"@types/bun": "1.4.2"
+		"@types/bun": "1.4.4"
 	},
 	"engines": {
-		"bun": ">=1.4.2"
+		"bun": ">=1.4.4"
 	},
 	"files": [
 		"src",

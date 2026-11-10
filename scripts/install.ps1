@@ -20,7 +20,7 @@ $Repo = "f5-sales-demo/xcsh"
 $Package = "@f5-sales-demo/xcsh"
 $InstallDir = if ($env:PI_INSTALL_DIR) { $env:PI_INSTALL_DIR } else { "$env:LOCALAPPDATA\xcsh" }
 $BinaryName = "xcsh-windows-x64.exe"
-$MinimumBunVersion = "1.4.2"
+$MinimumBunVersion = "1.4.4"
 
 function Test-BunInstalled {
     try {

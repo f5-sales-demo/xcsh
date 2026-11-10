@@ -46,7 +46,7 @@
 		"@f5-sales-demo/pi-resource-management": "workspace:*"
 	},
 	"devDependencies": {
-		"@types/bun": "1.4.2",
+		"@types/bun": "1.4.4",
 		"dts-bundle-generator": "9.5.1"
 	}
 }

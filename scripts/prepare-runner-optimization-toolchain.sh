@@ -47,7 +47,7 @@ verify_source_pins() {
   local source_toolchain
   source_toolchain=$(sed -nE 's/^channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml)
   test "$source_toolchain" = "$RUST_TOOLCHAIN"
-  grep -Fq 'expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.4.2}' scripts/ci-bun-install.sh
+  grep -Fq 'expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.4.4}' scripts/ci-bun-install.sh
 }
 
 install_legacy_toolchain() {

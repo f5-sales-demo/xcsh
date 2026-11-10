@@ -13,7 +13,7 @@ case "$scope" in bun | full) ;; *) usage ;; esac
 test "$(id -u)" -eq 1001
 tool_root=${XCSH_EXPECTED_TOOL_ROOT:-/usr/local}
 test "$(command -v bun)" = "$tool_root/bin/bun"
-test "$(bun --version)" = 1.4.2
+test "$(bun --version)" = 1.4.4
 
 [[ "$scope" == full ]] || exit 0
 

@@ -40,9 +40,9 @@ jobs:
           fi
           test ! -S /run/docker.sock
 
-      - name: Verify baked Bun 1.4.2
+      - name: Verify baked Bun 1.4.4
         shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
+        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.4
 
       - name: Install Rust and ARM64 target
         uses: $/.github/actions/setup-rust
