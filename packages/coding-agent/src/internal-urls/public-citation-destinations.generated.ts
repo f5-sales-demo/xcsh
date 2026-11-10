@@ -5,10 +5,13 @@ export const PUBLIC_CITATION_SOURCES = {
 		digest: "a63ea0d57fadc6eac7d4b8d395f47ff4a6cd1ae8ba7c296651f0163b40a3d7a7",
 	},
 	terraform: {
-		version: "documentation-v15.15.5",
+		version: "documentation-v15.15.6",
 		digest: "4110fadb432e995783ba015ccd378c45a64cb4efb08c667d57571683ffad3a09",
 	},
-	api: { version: "v12.5.2", digest: "12de78e5d1d6cb22dd21b633fa1163940612cb94a89e82120edfd5da1d145e91" },
+	api: {
+		version: "v12.5.2",
+		digest: "12de78e5d1d6cb22dd21b633fa1163940612cb94a89e82120edfd5da1d145e91",
+	},
 } as const;
 export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; url: string }>> = {
 	"community-f5-com/t/65170": {
@@ -267,7 +270,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "OWASP Automated Threats - OAT-005 Scalping",
 		url: "https://community.f5.com/t/70833",
 	},
-	"community-f5-com/t/70890": { title: "Out of the Shadows: API Discovery", url: "https://community.f5.com/t/70890" },
+	"community-f5-com/t/70890": {
+		title: "Out of the Shadows: API Discovery",
+		url: "https://community.f5.com/t/70890",
+	},
 	"community-f5-com/t/70911": {
 		title: "Detect and stop exfiltration attempts with F5 Distributed Cloud App Infrastructure Protection",
 		url: "https://community.f5.com/t/70911",
@@ -296,7 +302,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Securely connecting Kubernetes Microservices with F5 Distributed Cloud",
 		url: "https://community.f5.com/t/71162",
 	},
-	"community-f5-com/t/71172": { title: "Layer 7 Content Routing in F5 XC", url: "https://community.f5.com/t/71172" },
+	"community-f5-com/t/71172": {
+		title: "Layer 7 Content Routing in F5 XC",
+		url: "https://community.f5.com/t/71172",
+	},
 	"community-f5-com/t/71209": {
 		title: "Kubernetes architecture options with F5 Distributed Cloud Services",
 		url: "https://community.f5.com/t/71209",
@@ -305,7 +314,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Mitigating OWASP API Security Risk: Mass Assignment using F5 XC Platform",
 		url: "https://community.f5.com/t/71257",
 	},
-	"community-f5-com/t/71258": { title: "Setting up persistence in F5 XC", url: "https://community.f5.com/t/71258" },
+	"community-f5-com/t/71258": {
+		title: "Setting up persistence in F5 XC",
+		url: "https://community.f5.com/t/71258",
+	},
 	"community-f5-com/t/71266": {
 		title: "End-to-End Fraud and Risk Detection with F5 Distributed Cloud",
 		url: "https://community.f5.com/t/71266",
@@ -466,7 +478,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Enabling F5 Distributed Cloud Client-Side Defense in BIG-IP 17.1",
 		url: "https://community.f5.com/t/72321",
 	},
-	"community-f5-com/t/72363": { title: "Beyond REST:  Protecting GraphQL", url: "https://community.f5.com/t/72363" },
+	"community-f5-com/t/72363": {
+		title: "Beyond REST:  Protecting GraphQL",
+		url: "https://community.f5.com/t/72363",
+	},
 	"community-f5-com/t/72388": {
 		title: "Converting TCL-Based iRules to Distributed Cloud Service Policies and L7 Routes",
 		url: "https://community.f5.com/t/72388",
@@ -571,7 +586,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "F5 Hybrid Security Architectures (Part 5 - F5 XC, BIG-IP APM, CIS, and NGINX Ingress Controller)",
 		url: "https://community.f5.com/t/72948",
 	},
-	"community-f5-com/t/73012": { title: "APIs Everywhere", url: "https://community.f5.com/t/73012" },
+	"community-f5-com/t/73012": {
+		title: "APIs Everywhere",
+		url: "https://community.f5.com/t/73012",
+	},
 	"community-f5-com/t/73145": {
 		title: "Support of WAF Signature Staging in F5 Distributed Cloud (XC)",
 		url: "https://community.f5.com/t/73145",
@@ -648,7 +666,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Run AI LLMs Centrally and Protect AI Inferencing with F5 Distributed Cloud API Security",
 		url: "https://community.f5.com/t/74028",
 	},
-	"community-f5-com/t/74096": { title: "F5 TIC3.0 Capability Mappings", url: "https://community.f5.com/t/74096" },
+	"community-f5-com/t/74096": {
+		title: "F5 TIC3.0 Capability Mappings",
+		url: "https://community.f5.com/t/74096",
+	},
 	"community-f5-com/t/74133": {
 		title: "F5 XC vk8s open source nginx deployment on RE",
 		url: "https://community.f5.com/t/74133",
@@ -1609,7 +1630,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Virtual Kubernetes API Compatibility",
 		url: "https://docs.cloud.f5.com/docs-v2/platform/reference/vk8s-api-compatibility",
 	},
-	"docs-cloud-f5-com/docs/services": { title: "Services", url: "https://docs.cloud.f5.com/docs-v2/docs/services" },
+	"docs-cloud-f5-com/docs/services": {
+		title: "Services",
+		url: "https://docs.cloud.f5.com/docs-v2/docs/services",
+	},
 	"docs-cloud-f5-com/docs/services/mesh/ati": {
 		title: "Application Traffic Insight",
 		url: "https://docs.cloud.f5.com/docs-v2/application-traffic-insight/concepts/about-ati",
@@ -2258,7 +2282,10 @@ export const GENERAL_PUBLIC_DOCUMENTS: Readonly<Record<string, { title: string; 
 		title: "Enable Tenant Level Restriction",
 		url: "https://docs.cloud.f5.com/docs-v2/support/tnt-restrctn",
 	},
-	"docs-cloud-f5-com/voltshare": { title: "VoltShare", url: "https://docs.cloud.f5.com/docs-v2/voltshare" },
+	"docs-cloud-f5-com/voltshare": {
+		title: "VoltShare",
+		url: "https://docs.cloud.f5.com/docs-v2/voltshare",
+	},
 	"docs-cloud-f5-com/web-app-and-api-protection": {
 		title: "Web App & API Protection | F5 Distributed Cloud Technical Knowledge",
 		url: "https://docs.cloud.f5.com/docs-v2/web-app-and-api-protection",
@@ -33934,12 +33961,18 @@ export const API_PUBLIC_DOMAINS: Readonly<Record<string, { title: string; url: s
 		title: "Ai Services",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/ai_services/",
 	},
-	api: { title: "Api", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/api/" },
+	api: {
+		title: "Api",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/api/",
+	},
 	authentication: {
 		title: "Authentication",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/tenant_and_identity/",
 	},
-	bigip: { title: "Bigip", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/bigip/" },
+	bigip: {
+		title: "Bigip",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/bigip/",
+	},
 	billing_and_usage: {
 		title: "Billing And Usage",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/billing_and_usage/",
@@ -33952,7 +33985,10 @@ export const API_PUBLIC_DOMAINS: Readonly<Record<string, { title: string; url: s
 		title: "Bot And Threat Defense",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/bot_and_threat_defense/",
 	},
-	cdn: { title: "Cdn", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/cdn/" },
+	cdn: {
+		title: "Cdn",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/cdn/",
+	},
 	ce_management: {
 		title: "Ce Management",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/ce_management/",
@@ -33977,8 +34013,14 @@ export const API_PUBLIC_DOMAINS: Readonly<Record<string, { title: string; url: s
 		title: "Data Intelligence",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/data_intelligence/",
 	},
-	ddos: { title: "Ddos", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/ddos/" },
-	dns: { title: "Dns", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/dns/" },
+	ddos: {
+		title: "Ddos",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/ddos/",
+	},
+	dns: {
+		title: "Dns",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/dns/",
+	},
 	managed_kubernetes: {
 		title: "Managed Kubernetes",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/managed_kubernetes/",
@@ -33987,7 +34029,10 @@ export const API_PUBLIC_DOMAINS: Readonly<Record<string, { title: string; url: s
 		title: "Marketplace",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/marketplace/",
 	},
-	network: { title: "Network", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/network/" },
+	network: {
+		title: "Network",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/network/",
+	},
 	network_security: {
 		title: "Network Security",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/network_security/",
@@ -34004,7 +34049,10 @@ export const API_PUBLIC_DOMAINS: Readonly<Record<string, { title: string; url: s
 		title: "Observability",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/observability/",
 	},
-	other: { title: "Other", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/other/" },
+	other: {
+		title: "Other",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/other/",
+	},
 	rate_limiting: {
 		title: "Rate Limiting",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/rate_limiting/",
@@ -34017,13 +34065,22 @@ export const API_PUBLIC_DOMAINS: Readonly<Record<string, { title: string; url: s
 		title: "Service Mesh",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/service_mesh/",
 	},
-	shape: { title: "Shape", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/shape/" },
-	sites: { title: "Sites", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/sites/" },
+	shape: {
+		title: "Shape",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/shape/",
+	},
+	sites: {
+		title: "Sites",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/sites/",
+	},
 	statistics: {
 		title: "Statistics",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/statistics/",
 	},
-	support: { title: "Support", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/support/" },
+	support: {
+		title: "Support",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/support/",
+	},
 	telemetry_and_insights: {
 		title: "Telemetry And Insights",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/telemetry_and_insights/",
@@ -34040,7 +34097,10 @@ export const API_PUBLIC_DOMAINS: Readonly<Record<string, { title: string; url: s
 		title: "Users",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/tenant_and_identity/",
 	},
-	virtual: { title: "Virtual", url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/virtual/" },
+	virtual: {
+		title: "Virtual",
+		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/virtual/",
+	},
 	vpm_and_node_management: {
 		title: "Vpm And Node Management",
 		url: "https://f5-sales-demo.github.io/api-specs-enriched/api-reference/vpm_and_node_management/",
