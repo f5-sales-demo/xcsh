@@ -347,8 +347,10 @@ test.each([false, true])("TUI transcript file export is Cancel-first (confirm: %
 	expect(reviewText).toContain("Local diagnostic export");
 	expect(reviewText).toContain("Absent");
 	expect(reviewText).toContain("permissions 0600");
-	const destination = terminalValue(reviewText).match(/\/(?:private\/)?(?:var|tmp)\/\S+?-tui-transcript\.txt/)?.[0];
+	const filename = terminalValue(reviewText).match(/[0-9a-f]+-tui-transcript\.txt/)?.[0];
+	const destination = filename ? join(tmpdir(), filename) : undefined;
 	expect(destination).toBeDefined();
+	expectTerminalValue(reviewText, destination!);
 	if (confirm) h.input("\x1b[B");
 	h.input("\r");
 	await pending;
