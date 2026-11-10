@@ -54,7 +54,7 @@ sys.exit(int(os.environ["NOTARY_TEST_REJECT"]))
                 else None
             )
             leftovers = list(root.glob("xcsh-notary-key.*"))
-            assert leftovers == [], "Private key must be removed on every exit"
+            assert not leftovers, "Private key must be removed on every exit"
             for value in [
                 "FAKE_PRIVATE_KEY",
                 "FAKE_APP_PASSWORD",
