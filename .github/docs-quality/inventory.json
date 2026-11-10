@@ -2583,6 +2583,15 @@
           "purpose": "Document the versioned source-native acceptance command, its real PTY and provider controls, and the boundary between source evidence and downstream installed-artifact acceptance.",
           "readerQuestion": "How do I run the executable producer-native lifecycle acceptance scenarios?",
           "text": "Producer-native acceptance driver"
+        },
+        {
+          "text": "Private controls against a real Herdr server",
+          "readerQuestion": "How do I control a disposable producer against the real Herdr server?",
+          "purpose": "Describe the owner-private versioned producer interface and distinguish source evidence from full artifact and manager acceptance.",
+          "evidence": [
+            "herdr-acceptance-v1"
+          ],
+          "legacyConceptIds": []
         }
       ],
       "path": "docs/en/integrations-deployment/herdr.mdx",
@@ -2591,7 +2600,8 @@
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
-        "packages/coding-agent/test"
+        "packages/coding-agent/test",
+        "packages/coding-agent/src/lifecycle/herdr-acceptance-control.ts"
       ]
     },
     {

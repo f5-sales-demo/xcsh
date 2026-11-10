@@ -1,10 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import type { ExtensionAPI, ExtensionContext, UserPromptKind } from "@f5-sales-demo/xcsh";
 import { HERDR_PROTOCOL_MAX_VERSION, HerdrClient } from "../../../herdr/client";
 import { requestHerdrIdempotent } from "../../../herdr/retry";
 import { HERDR_SEMANTIC_REPORT_TIMEOUT_MS, requestSemanticReport } from "../../../herdr/semantic-report";
+import { HERDR_ACCEPTANCE_PLAN_ENV, HerdrAcceptanceControl } from "../../../lifecycle/herdr-acceptance-control";
 import { finalAnswerText } from "../../../session/final-answer";
 import { requestNativeLifecycleCancellation } from "./native-lifecycle-control";
 
@@ -399,6 +401,10 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// so frames must reach it in the order they were generated.
 	let queue: Promise<void> = Promise.resolve();
 	let latestContext: ExtensionContext | undefined;
+	let acceptance: HerdrAcceptanceControl | undefined;
+	let acceptanceReleaseGate: Promise<void> | undefined;
+	let resolveAcceptanceRelease: (() => void) | undefined;
+	let lastSemanticResponse: Record<string, unknown> | undefined;
 	let trackingWarningShown = false;
 
 	pi.setLabel(HERDR_AGENT_LABEL);
@@ -439,6 +445,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	const reportSemanticTurn = async (
 		state: "starting" | "working" | "waiting_input" | "completed" | "failed" | "cancelled" | "interrupted",
 		options: { result?: string; reason?: string } = {},
+		acknowledge?: (response: Record<string, unknown>) => void,
 	): Promise<boolean> => {
 		if (!executionBinding(paneId) || !activeSemanticTurn) return false;
 		const revision = ++semanticRevision;
@@ -452,10 +459,13 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 			...(options.reason === undefined ? {} : { reason: options.reason }),
 		};
 		pi.appendEntry(TURN_ENTRY_TYPE, { ...event, delivered: false });
-		return deliverSemanticEvent(event);
+		return deliverSemanticEvent(event, acknowledge);
 	};
 
-	const deliverSemanticEvent = async (event: PersistedTurn): Promise<boolean> => {
+	const deliverSemanticEvent = async (
+		event: PersistedTurn,
+		acknowledge?: (response: Record<string, unknown>) => void,
+	): Promise<boolean> => {
 		const socketPath = process.env.HERDR_SOCKET_PATH;
 		const binding = executionBinding(paneId);
 		if (
@@ -497,11 +507,20 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 					supportsNativeLifecycle(client.protocolVersion) && capability
 						? { ...baseFrame, native_capability: capability }
 						: baseFrame;
-				const response = await requestSemanticReport(client, TURN_REPORT_METHOD, frame);
+				const replaying = acceptance?.replayArmed;
+				const response = acceptance
+					? await acceptance.transport(frame, payload =>
+							replaying
+								? client.request(TURN_REPORT_METHOD, payload)
+								: requestSemanticReport(client, TURN_REPORT_METHOD, payload),
+						)
+					: await requestSemanticReport(client, TURN_REPORT_METHOD, frame);
+				lastSemanticResponse = response;
 				if (supportsNativeLifecycle(client.protocolVersion) && response.type !== "agent_turn") {
 					throw new Error("Herdr did not confirm the native turn journal write");
 				}
 				pi.appendEntry(TURN_ENTRY_TYPE, { ...event, delivered: true });
+				acknowledge?.(response);
 				delivered = true;
 				(latestContext as { ui?: ExtensionContext["ui"] } | undefined)?.ui?.setStatus("herdr-tracking", undefined);
 			} catch (err) {
@@ -667,6 +686,12 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		const latest = new Map<string, PersistedAction>();
 		for (const action of persistedActions(ctx)) {
 			if (
+				action.executionId === binding.executionId &&
+				action.sessionId === ctx.sessionManager?.getSessionId?.() &&
+				action.generation < binding.generation
+			)
+				continue;
+			if (
 				action.executionId !== binding.executionId ||
 				action.paneId !== binding.paneId ||
 				action.generation !== binding.generation
@@ -700,6 +725,19 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		nativeActionsEnabled =
 			registered && supportsNativeLifecycle(client?.protocolVersion) && nativeCapability() !== undefined;
 		if (nativeActionsEnabled) startActionPolling(ctx);
+		if (registered && process.env[HERDR_ACCEPTANCE_PLAN_ENV]) {
+			try {
+				acceptance = HerdrAcceptanceControl.forSession(process.env[HERDR_ACCEPTANCE_PLAN_ENV]!, sessionId);
+				if (acceptance)
+					acceptanceReleaseGate = new Promise<void>(resolve => {
+						resolveAcceptanceRelease = resolve;
+					});
+			} catch (error) {
+				ctx.abort();
+				ctx.shutdown();
+				throw error;
+			}
+		}
 	};
 
 	const finishSemanticTurn = async (
@@ -850,17 +888,24 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		if (refKey === lastSessionRefKey && sessionStartSource === undefined) {
 			return Promise.resolve();
 		}
-		lastSessionRefKey = refKey;
+		const startSource = pendingSessionStartSource;
 		const frame = {
 			pane_id: paneId,
 			source: HERDR_SOURCE,
 			agent: HERDR_AGENT_LABEL,
 			seq: seq++,
-			...(pendingSessionStartSource === undefined ? {} : { session_start_source: pendingSessionStartSource }),
+			...(startSource === undefined ? {} : { session_start_source: startSource }),
 			...sessionRef,
 		};
-		pendingSessionStartSource = undefined;
-		return enqueue(() => sendToHerdrSocket(socketPath, SESSION_METHOD, frame, onError));
+		return enqueue(async () => {
+			// A failed anchor is still pending. Caching it before acknowledgement
+			// suppresses the retry and leaves later recaps bound to the old session.
+			await requestHerdrIdempotent(getHerdrClient(socketPath), SESSION_METHOD, frame);
+			lastSessionRefKey = refKey;
+			if (pendingSessionStartSource === startSource && JSON.stringify(sessionRefFromContext(ctx)) === refKey) {
+				pendingSessionStartSource = undefined;
+			}
+		});
 	};
 
 	const clearSettledTurnReconcile = (): void => {
@@ -905,6 +950,14 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		const binding = executionBinding(paneId);
 		if (!binding) return;
 		const events = [...byRevision.values()].filter(event => {
+			// Continuations keep the session's predecessor journal as history. Only
+			// this generation may replay writes or ACKs with its native capability.
+			if (
+				event.executionId === binding.executionId &&
+				event.sessionId === ctx.sessionManager?.getSessionId?.() &&
+				event.generation < binding.generation
+			)
+				return false;
 			if (
 				event.executionId === binding.executionId &&
 				event.paneId === binding.paneId &&
@@ -935,15 +988,28 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	pi.on("recap_created", async (event, ctx) => {
 		const socketPath = process.env.HERDR_SOCKET_PATH;
 		if (!socketPath) return;
-		await reportSession(ctx);
-		await reportRecapAuthority(ctx);
-		const sessionFile = ctx.sessionManager?.getSessionFile?.();
+		const activeContext = latestContext?.sessionManager ? latestContext : ctx;
+		if (event.recap.sessionId !== activeContext.sessionManager?.getSessionId?.()) return;
+		await reportSession(activeContext);
+		if (latestContext?.sessionManager && event.recap.sessionId !== latestContext.sessionManager.getSessionId())
+			return;
+		await reportRecapAuthority(activeContext);
+		const sessionFile = activeContext.sessionManager?.getSessionFile?.();
 		const sessionRef =
 			typeof sessionFile === "string" && path.isAbsolute(sessionFile)
 				? sessionFile
-				: ctx.sessionManager?.getSessionId?.();
-		if (!sessionRef || event.recap.sessionId !== ctx.sessionManager?.getSessionId?.()) return;
+				: activeContext.sessionManager?.getSessionId?.();
+		if (!sessionRef) return;
 		await enqueue(async () => {
+			// A delayed recap callback can outlive a session switch. Recheck at the
+			// queue boundary so it cannot reclaim or report against the old authority.
+			const currentContext = latestContext?.sessionManager ? latestContext : activeContext;
+			const currentRef = sessionRefFromContext(currentContext);
+			if (
+				event.recap.sessionId !== currentContext.sessionManager?.getSessionId?.() ||
+				(currentRef?.agent_session_path ?? currentRef?.agent_session_id) !== sessionRef
+			)
+				return;
 			const client = getHerdrClient(socketPath);
 			await client.ensureSemanticProtocol();
 			if (client.capabilityVersion("agent_recaps") !== 1) return;
@@ -964,6 +1030,64 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	pi.on("before_agent_start", async (_event, ctx) => {
 		latestContext = ctx;
 		if (!activeSemanticTurn) await beginSemanticTurn(ctx);
+		if (!acceptance || !activeSemanticTurn) return;
+		try {
+			if (!ctx.hasUI) {
+				ctx.abort();
+				throw new Error("Herdr acceptance controls require interactive mode");
+			}
+			// This callback is awaited by the execution runner before model or tool
+			// work begins. turn_phase notifications are queued observations and cannot
+			// hold a real execution boundary on their own.
+			await report("working", undefined, ctx);
+			let boundaryResponse: Record<string, unknown> | undefined;
+			const boundaryRevision = semanticRevision + 1;
+			const delivered = await reportSemanticTurn("working", {}, response => {
+				boundaryResponse = response;
+			});
+			const turn = boundaryResponse?.turn as Record<string, unknown> | undefined;
+			if (
+				!delivered ||
+				turn?.state !== "working" ||
+				!Number.isSafeInteger(turn.revision) ||
+				turn.execution_id !== activeSemanticTurn.executionId ||
+				turn.pane_id !== paneId ||
+				turn.session_id !== activeSemanticTurn.sessionId ||
+				turn.generation !== activeSemanticTurn.generation ||
+				turn.turn_id !== activeSemanticTurn.turnId ||
+				turn.event_revision !== boundaryRevision
+			) {
+				ctx.abort();
+				ctx.shutdown();
+				throw new Error("Acceptance boundary lacks a real working journal acknowledgement");
+			}
+			const executable = fs.realpathSync(process.execPath);
+			await acceptance.workingBoundary(
+				{
+					execution_id: activeSemanticTurn.executionId,
+					pane_id: paneId,
+					session_id: activeSemanticTurn.sessionId,
+					generation: activeSemanticTurn.generation,
+					turn_id: activeSemanticTurn.turnId,
+					pid: process.pid,
+					executable,
+					executable_sha256: createHash("sha256").update(fs.readFileSync(executable)).digest("hex"),
+					journal_revision: turn.revision as number,
+				},
+				{
+					replay: async () => {
+						await reportSemanticTurn("working");
+					},
+					shutdown: () => {
+						ctx.abort();
+						ctx.shutdown();
+					},
+				},
+			);
+		} finally {
+			resolveAcceptanceRelease?.();
+			acceptanceReleaseGate = undefined;
+		}
 	});
 
 	pi.on("session_before_switch", async () => {
@@ -1072,7 +1196,13 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 			},
 			ttl_ms: PHASE_LABEL_TTL_MS,
 		});
-		if (event.phase === "idle") {
+		// Preserve queued native phases while holding the awaited execution hook;
+		// their semantic writes must not advance its advertised journal revision.
+		if (acceptanceReleaseGate) await acceptanceReleaseGate;
+		if (acceptance?.shutdownPending) {
+			// Teardown can emit cancelled before session_shutdown. The genuine
+			// shutdown callback owns interruption settlement for this cutpoint.
+		} else if (event.phase === "idle") {
 			await finishSemanticTurn("completed", { result: pendingSemanticResult });
 		} else if (event.phase === "error") {
 			await finishSemanticTurn("failed", { reason: "xcsh turn failed" });
@@ -1134,6 +1264,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		stopHeartbeat();
 		stopActionPolling();
 		await finishSemanticTurn("interrupted", { reason: "xcsh shut down before semantic settlement" });
+		acceptance?.observeShutdown(lastSemanticResponse);
 		await send(RELEASE_METHOD, {
 			pane_id: paneId,
 			source: HERDR_SOURCE,

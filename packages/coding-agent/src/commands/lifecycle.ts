@@ -1,5 +1,6 @@
 import * as path from "node:path";
-import { Command, Flags } from "@f5-sales-demo/pi-utils/cli";
+import { Args, Command, Flags } from "@f5-sales-demo/pi-utils/cli";
+import { runHerdrAcceptanceAction } from "../lifecycle/herdr-acceptance-control";
 import { nativeLifecycleContract } from "../lifecycle/native-acceptance";
 import {
 	NATIVE_LIFECYCLE_SCENARIOS,
@@ -10,8 +11,10 @@ import {
 /** Print the versioned producer contract consumed by native lifecycle drivers. */
 export default class Lifecycle extends Command {
 	static description = "Describe or execute the producer-native lifecycle acceptance driver";
+	static args = { action: Args.string({ description: "Owner-private acceptance-action" }) };
 
 	static flags = {
+		request: Flags.string({ description: "Owner-private acceptance action request file" }),
 		json: Flags.boolean({ description: "Print the machine-readable contract", default: false }),
 		scenario: Flags.string({
 			description: `Execute one native scenario (${NATIVE_LIFECYCLE_SCENARIOS.join(", ")})`,
@@ -23,8 +26,15 @@ export default class Lifecycle extends Command {
 	};
 
 	async run(): Promise<void> {
-		const { flags } = await this.parse(Lifecycle);
+		const { args, flags } = await this.parse(Lifecycle);
 		if (!flags.json) throw new Error("xcsh lifecycle requires --json");
+		if (args.action) {
+			if (args.action !== "acceptance-action" || !flags.request || flags.scenario)
+				throw new Error("Use xcsh lifecycle acceptance-action --request <file> --json");
+			process.stdout.write(`${JSON.stringify(await runHerdrAcceptanceAction(flags.request))}\n`);
+			return;
+		}
+		if (flags.request) throw new Error("--request requires acceptance-action");
 		if (!flags.scenario) {
 			process.stdout.write(`${JSON.stringify(nativeLifecycleContract())}\n`);
 			return;

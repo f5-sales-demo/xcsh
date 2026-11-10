@@ -1,0 +1,17 @@
+Candidate lifecycle contract (source candidate, not published acceptance):
+{"acceptance_control":{"version":1,"plan_env":"XCSH_HERDR_ACCEPTANCE_PLAN","command":["lifecycle","acceptance-action","--request","<owner-private-file>","--json"],"actions":["release","reconnect_replay","restart_loss"],"boundary":"registered producer working journal acknowledgement","requires":{"interactive":true,"platform":"linux"},"claims":"durable before effects; completed receipts replay; uncertain claims fail closed","capability_persistence":"never"},"version":3,"transport":"xcsh-json-session-v3","session_id":"^[0-9a-f]{16}$","session_dir":"absolute directory containing the canonical JSONL session","session_path":"<session-dir>/<timestamp>_<session-id>.jsonl","session_header_sha256":"SHA-256 of the exact first JSONL header line including its terminating LF byte","model":"configured non-secret model identifier","child":{"modes":{"non_interactive":"json","pty":"interactive"},"reduced_discovery_flags":["--no-memories","--no-skills","--no-rules","--no-lsp"]},"controls":{"resume":"--resume <exact-session-path>","cancel":"PtySession.interrupt() sends SIGINT to the native child process group","managed_cancel":"protocol 27 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession","await_user_v1":"--native-lifecycle-control await_user_v1 uses the ordinary interactive ExtensionUIController","local_operation_failure_v1":"--native-lifecycle-control local_operation_failure_v1 performs an owned missing-file read and propagates its native ENOENT failure","continuation":"write the continuation and Enter to the same native PTY","replay":"restart --resume <exact-session-path> with the same authenticated binding"},"native_launch_mapping":{"managed_turn_v1":{"argv":[],"backend_contract":"protocol-27 v3 current"},"await_user_v1":{"argv":["--native-lifecycle-control","await_user_v1"],"requires":{"interactive":true},"backend_contract":"typed lifecycle_mode extension required"},"local_operation_failure_v1":{"argv":["--native-lifecycle-control","local_operation_failure_v1"],"requires":{"interactive":false},"backend_contract":"typed lifecycle_mode extension required"}},"reporter":{"protocol":28,"semantic_report_timeout_ms":5000,"ambiguous_retry_limit":1,"capability_env":"HERDR_NATIVE_CAPABILITY","capability_persistence":"never","actions":["cancel:1:requested","cancel:1:safe_point","cancel:1:timed_out"]},"scenarios":["success","failure","await-continue","cancel","managed-cancel","managed-working-cancel","local-operation-failure","reply-loss-replay"]}
+
+Producer control unit verification:
+
+test/herdr-acceptance-control.test.ts:
+(pass) private Herdr acceptance controls > recovers an exact completed receipt when the projection file was never published [800.98ms]
+(pass) private Herdr acceptance controls > rejects accepted replay acknowledgements for another execution [0.37ms]
+(pass) private Herdr acceptance controls > claims before effects, replays the exact receipt, and rejects changed requests [6.11ms]
+(pass) private Herdr acceptance controls > retains uncertain claims across adapter restart without repeating an effect [4.29ms]
+(pass) private Herdr acceptance controls > discards an accepted response and redelivers the identical pending payload [0.23ms]
+(pass) private Herdr acceptance controls > rejects public and symlinked plan files [0.22ms]
+
+ 6 pass
+ 0 fail
+ 17 expect() calls
+Ran 6 tests across 1 file. [862.00ms]

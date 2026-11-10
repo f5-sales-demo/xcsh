@@ -4173,6 +4173,7 @@ export class AgentSession {
 		this.#sessionTransitions.assertAvailable();
 		this.#promptInFlightCount++;
 		this.#turnPhase.startTurn();
+		const phaseTurnId = this.#turnPhase.current.turnId;
 		const generation = this.#promptGeneration;
 		let settled = false;
 		let agentLoopStarted = false;
@@ -4370,7 +4371,14 @@ export class AgentSession {
 			)
 				void coordinateSessionTitle(this);
 		} catch (error) {
-			this.#turnPhase.settle(this.#findLastAssistantMessage()?.stopReason === "aborted" ? "aborted" : "error");
+			// Setup can be aborted before any assistant message exists. Its rejected
+			// preflight is cancellation, and a late rejection must not settle a newer
+			// visible turn after an abort/new-prompt cycle.
+			if (this.#turnPhase.current.turnId === phaseTurnId) {
+				const aborted =
+					this.#promptGeneration !== generation || this.#findLastAssistantMessage()?.stopReason === "aborted";
+				this.#turnPhase.settle(aborted ? "aborted" : "error");
+			}
 			settled = true;
 			// A prompt failure is not externally settled until lifecycle consumers
 			// have observed its terminal phase. In print mode the caller exits on the
@@ -4379,8 +4387,11 @@ export class AgentSession {
 			await this.#queuedExtensionEvents;
 			throw error;
 		} finally {
-			if (!agentLoopStarted && !settled) this.#turnPhase.settle("aborted");
-			this.#promptInFlightCount = Math.max(0, this.#promptInFlightCount - 1);
+			if (!agentLoopStarted && !settled && this.#turnPhase.current.turnId === phaseTurnId)
+				this.#turnPhase.settle("aborted");
+			if (generation === this.#promptGeneration) {
+				this.#promptInFlightCount = Math.max(0, this.#promptInFlightCount - 1);
+			}
 			this.#recaps.refresh();
 		}
 	}

@@ -28,7 +28,7 @@ Connection and framing failures surface as integration diagnostics. The client m
 ## What lifecycle state does xcsh publish?
 
 xcsh publishes native turn phases rather than inferring completion from terminal idleness or process
-exit. With a supported Herdr protocol through 26 and the advertised `agent_turn_journal` capability, a tracked
+exit. With a supported Herdr protocol through 28 and the advertised `agent_turn_journal` capability, a tracked
 execution publishes a persisted session/turn identity and a bounded semantic result to Herdr's
 durable journal. The existing 80-character metadata preview remains display-only and is never
 completion evidence.
@@ -40,7 +40,7 @@ The supported producer is the normal `xcsh` executable launched by Herdr's execu
 
 xcsh never guesses a generation: without both values it retains ordinary pane lifecycle reporting but emits no semantic journal event. A continuation must be launched with its newly allocated generation.
 
-Protocol 27 is the current producer-native contract. Herdr injects a one-time `HERDR_NATIVE_CAPABILITY` into the child. xcsh includes it only in authenticated turn-report and action requests; it is never written to the session journal, logs, diagnostics, or receipts.
+Protocol 28 is the current producer-native contract. Herdr injects a one-time `HERDR_NATIVE_CAPABILITY` into the child. xcsh includes it only in authenticated turn-report and action requests; it is never written to the session journal, logs, diagnostics, or receipts.
 Herdr does not authorize actions until the first `starting` report has been durably journaled and bound to the owned PTY, pane, session, generation, and turn.
 
 Each semantic report has a five-second deadline. xcsh retries exactly once only when timeout,
@@ -58,6 +58,41 @@ A lost ACK response is retried with the same action ID and revision, including a
 Session shutdown releases pane authority. It does not convert an unfinished turn into a successful completion.
 
 ### Producer-native acceptance driver
+
+#### Private controls against a real Herdr server
+
+The `acceptance_control` field of `xcsh lifecycle --json` advertises interface version 1.
+It supports interactive Linux producers admitted by a real Herdr server. Production launches
+remain unchanged. Only disposable test-server processes receive `XCSH_HERDR_ACCEPTANCE_PLAN`,
+an absolute path to an owner-private JSON plan. The plan declares `version: 1`, an absolute
+mode-0700 `control_directory`, and `approvals`. Each approval binds a canonical `session_id`,
+the producer's canonical executable path and SHA-256, and permitted actions from `release`,
+`reconnect_replay`, and `restart_loss`. Unlisted sessions do not activate the control.
+
+After real native registration and a working journal acknowledgement, the producer pauses in
+the execution runner's awaited `before_agent_start` hook. Its mode-0600 descriptor records
+the actual execution, pane, session, generation, turn, PID, executable identity, and observed
+journal revision. A private request copies that binding and the descriptor's control token,
+supplies a unique `action_key`, and names an approved action:
+
+```bash
+xcsh lifecycle acceptance-action --request /absolute/private/request.json --json
+```
+
+`reconnect_replay` creates a real pending progress event, withholds its accepted Herdr response
+at the producer transport boundary, and redelivers the identical payload. The receipt records
+matching payload digests and actual admitted/deduplicated acknowledgements. `release` lets
+the held execution continue. `restart_loss` invokes xcsh's genuine interactive shutdown path,
+settles interruption through `session_shutdown`, and verifies that the producer PID has exited
+before the released adapter returns its receipt. The controller may then restart only its owned
+Herdr server. A process exit without a completed producer receipt fails closed.
+
+Claims are committed before effects. Completed requests replay their exact receipt, including
+recovery from SQLite when receipt-file publication was interrupted. Different action keys are
+serialized and must bind the current working journal revision; uncertain claims never repeat
+an effect. The control token is private test authorization, separate from Herdr's native
+capability, which is never persisted. These controls provide producer evidence; full acceptance
+also requires immutable artifacts and a real manager consuming completion through its tools.
 
 `xcsh lifecycle --json` prints the version 3 machine-readable producer contract. To execute a source or installed
 producer check, supply a fresh absolute session directory, a normally configured model, and one scenario:

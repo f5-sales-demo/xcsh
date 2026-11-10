@@ -1,5 +1,10 @@
 import { HERDR_PROTOCOL_MAX_VERSION } from "../herdr/client";
 import { HERDR_SEMANTIC_REPORT_TIMEOUT_MS } from "../herdr/semantic-report";
+import {
+	HERDR_ACCEPTANCE_ACTIONS,
+	HERDR_ACCEPTANCE_PLAN_ENV,
+	HERDR_ACCEPTANCE_VERSION,
+} from "./herdr-acceptance-control";
 
 /**
  * Stable argv contract for the producer-owned native lifecycle driver.
@@ -59,6 +64,16 @@ export function nativeLifecycleChildArgv(options: NativeLifecycleChildOptions): 
 /** A public, machine-readable contract for controller/acceptance drivers. */
 export function nativeLifecycleContract(): Record<string, unknown> {
 	return {
+		acceptance_control: {
+			version: HERDR_ACCEPTANCE_VERSION,
+			plan_env: HERDR_ACCEPTANCE_PLAN_ENV,
+			command: ["lifecycle", "acceptance-action", "--request", "<owner-private-file>", "--json"],
+			actions: HERDR_ACCEPTANCE_ACTIONS,
+			boundary: "registered producer working journal acknowledgement",
+			requires: { interactive: true, platform: "linux" },
+			claims: "durable before effects; completed receipts replay; uncertain claims fail closed",
+			capability_persistence: "never",
+		},
 		version: NATIVE_LIFECYCLE_DRIVER_VERSION,
 		transport: "xcsh-json-session-v3",
 		session_id: "^[0-9a-f]{16}$",
