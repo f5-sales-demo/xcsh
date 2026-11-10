@@ -128,9 +128,9 @@ describe("the tagging workflow is wired to the check (#2487)", () => {
 			path.join(import.meta.dir, "../../../../.github/actions/setup-bun/action.yml"),
 			"utf8",
 		);
-		expect(source).toContain("Setup Bun 1.4.2");
+		expect(source).toContain("Setup Bun 1.4.4");
 		expect(source).toContain("uses: $/.github/actions/setup-bun");
-		expect(source).toContain('bun-version: "1.4.2"');
+		expect(source).toContain('bun-version: "1.4.4"');
 		expect(setupAction).toContain("oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6");
 	});
 

@@ -14,8 +14,8 @@ REPO="f5-sales-demo/xcsh"
 PACKAGE="@f5-sales-demo/xcsh"
 SOURCE_REPO_URL="${XCSH_SOURCE_REPO_URL:-https://github.com/${REPO}.git}"
 INSTALL_DIR="${PI_INSTALL_DIR:-$HOME/.local/bin}"
-MIN_BUN_VERSION="1.4.2"
-BUN_INSTALL_VERSION="1.4.2"
+MIN_BUN_VERSION="1.4.4"
+BUN_INSTALL_VERSION="1.4.4"
 
 # Parse arguments
 MODE=""

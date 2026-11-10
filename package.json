@@ -2,7 +2,7 @@
 	"name": "xcsh-monorepo",
 	"private": true,
 	"type": "module",
-	"packageManager": "bun@1.4.2",
+	"packageManager": "bun@1.4.4",
 	"workspaces": [
 		"packages/*"
 	],
@@ -78,7 +78,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.5.12",
 		"@bufbuild/protoc-gen-es": "2.14.1",
-		"@types/bun": "1.4.2",
+		"@types/bun": "1.4.4",
 		"@typescript/native-preview": "^7.0.0-dev.20260302.1",
 		"lint-staged": "17.4.1",
 		"prettier": "3.9.6",

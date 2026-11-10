@@ -40,9 +40,9 @@
 		"regexp-tree": "^0.1"
 	},
 	"devDependencies": {
-		"@types/bun": "1.4.2"
+		"@types/bun": "1.4.4"
 	},
 	"engines": {
-		"bun": ">=1.4.2"
+		"bun": ">=1.4.4"
 	}
 }

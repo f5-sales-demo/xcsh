@@ -4,7 +4,7 @@ inputs:
   bun-version:
     description: Required Bun version
     required: false
-    default: "1.4.2"
+    default: "1.4.4"
   no-cache:
     description: Forwarded to oven-sh/setup-bun on hosted runners
     required: false

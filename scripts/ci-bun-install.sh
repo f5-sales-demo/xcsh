@@ -2,7 +2,7 @@
 set -euo pipefail
 
 workspace=${1:-.}
-expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.4.2}
+expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.4.4}
 [[ "$(bun --version)" == "$expected_bun" ]] || {
   echo "Bun $expected_bun is required; found $(bun --version)" >&2
   exit 1
