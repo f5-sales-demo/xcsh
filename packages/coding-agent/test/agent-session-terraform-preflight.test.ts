@@ -157,6 +157,50 @@ describe("AgentSession Terraform preflight", () => {
 		expect(context).toContain("offline");
 		expect(context).toContain("do not downgrade");
 	});
+	it("does not settle a newer prompt when an aborted preflight rejects late", async () => {
+		let firstReady!: () => void;
+		let secondReady!: () => void;
+		const firstStarted = new Promise<void>(resolve => {
+			firstReady = resolve;
+		});
+		const secondStarted = new Promise<void>(resolve => {
+			secondReady = resolve;
+		});
+		let rejectFirst!: (error: Error) => void;
+		let releaseSecond!: (result: ProviderReleaseMetadata | null) => void;
+		let attempts = 0;
+		const current = createSession(async () => {
+			if (++attempts === 1) {
+				firstReady();
+				return new Promise((_resolve, reject) => {
+					rejectFirst = reject;
+				});
+			}
+			secondReady();
+			return new Promise(resolve => {
+				releaseSecond = resolve;
+			});
+		});
+		const phases: Array<{ phase: string; turnId: number }> = [];
+		current.subscribe(event => {
+			if (event.type === "turn_phase") phases.push(event);
+		});
+		const first = current.prompt("Write Terraform first").catch(() => undefined);
+		await firstStarted;
+		await current.abort();
+		const second = current.prompt("Write Terraform second");
+		await secondStarted;
+		const newer = phases.at(-1);
+		rejectFirst(new Error("late aborted preflight"));
+		await first;
+		expect(current.isStreaming).toBe(true);
+		expect(phases.at(-1)).toEqual(newer);
+		expect(newer?.phase).toBe("submitting");
+		releaseSecond(null);
+		await second;
+		expect(phases.at(-1)?.phase).toBe("idle");
+	});
+
 	it("cancels preflight during abort without inference or stale context", async () => {
 		let calls = 0;
 		let started!: () => void;
@@ -175,11 +219,17 @@ describe("AgentSession Terraform preflight", () => {
 			},
 		);
 		const pending = current.prompt("Write Terraform");
+		const phases: string[] = [];
+		current.subscribe(event => {
+			if (event.type === "turn_phase") phases.push(event.phase);
+		});
 		const caught = pending.catch(() => undefined);
 		await ready;
 		await current.abort();
 		await caught;
 		expect(calls).toBe(0);
+		expect(phases).toContain("cancelled");
+		expect(phases).not.toContain("error");
 		expect(current.messages.some(m => m.role === "custom" && m.customType === "terraform-preflight")).toBe(false);
 	});
 });

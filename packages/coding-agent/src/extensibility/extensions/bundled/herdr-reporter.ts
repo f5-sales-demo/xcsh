@@ -686,6 +686,12 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		const latest = new Map<string, PersistedAction>();
 		for (const action of persistedActions(ctx)) {
 			if (
+				action.executionId === binding.executionId &&
+				action.sessionId === ctx.sessionManager?.getSessionId?.() &&
+				action.generation < binding.generation
+			)
+				continue;
+			if (
 				action.executionId !== binding.executionId ||
 				action.paneId !== binding.paneId ||
 				action.generation !== binding.generation
@@ -944,6 +950,14 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		const binding = executionBinding(paneId);
 		if (!binding) return;
 		const events = [...byRevision.values()].filter(event => {
+			// Continuations keep the session's predecessor journal as history. Only
+			// this generation may replay writes or ACKs with its native capability.
+			if (
+				event.executionId === binding.executionId &&
+				event.sessionId === ctx.sessionManager?.getSessionId?.() &&
+				event.generation < binding.generation
+			)
+				return false;
 			if (
 				event.executionId === binding.executionId &&
 				event.paneId === binding.paneId &&
@@ -974,15 +988,28 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	pi.on("recap_created", async (event, ctx) => {
 		const socketPath = process.env.HERDR_SOCKET_PATH;
 		if (!socketPath) return;
-		await reportSession(ctx);
-		await reportRecapAuthority(ctx);
-		const sessionFile = ctx.sessionManager?.getSessionFile?.();
+		const activeContext = latestContext?.sessionManager ? latestContext : ctx;
+		if (event.recap.sessionId !== activeContext.sessionManager?.getSessionId?.()) return;
+		await reportSession(activeContext);
+		if (latestContext?.sessionManager && event.recap.sessionId !== latestContext.sessionManager.getSessionId())
+			return;
+		await reportRecapAuthority(activeContext);
+		const sessionFile = activeContext.sessionManager?.getSessionFile?.();
 		const sessionRef =
 			typeof sessionFile === "string" && path.isAbsolute(sessionFile)
 				? sessionFile
-				: ctx.sessionManager?.getSessionId?.();
-		if (!sessionRef || event.recap.sessionId !== ctx.sessionManager?.getSessionId?.()) return;
+				: activeContext.sessionManager?.getSessionId?.();
+		if (!sessionRef) return;
 		await enqueue(async () => {
+			// A delayed recap callback can outlive a session switch. Recheck at the
+			// queue boundary so it cannot reclaim or report against the old authority.
+			const currentContext = latestContext?.sessionManager ? latestContext : activeContext;
+			const currentRef = sessionRefFromContext(currentContext);
+			if (
+				event.recap.sessionId !== currentContext.sessionManager?.getSessionId?.() ||
+				(currentRef?.agent_session_path ?? currentRef?.agent_session_id) !== sessionRef
+			)
+				return;
 			const client = getHerdrClient(socketPath);
 			await client.ensureSemanticProtocol();
 			if (client.capabilityVersion("agent_recaps") !== 1) return;
@@ -1004,37 +1031,37 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		latestContext = ctx;
 		if (!activeSemanticTurn) await beginSemanticTurn(ctx);
 		if (!acceptance || !activeSemanticTurn) return;
-		if (!ctx.hasUI) {
-			ctx.abort();
-			throw new Error("Herdr acceptance controls require interactive mode");
-		}
-		// This callback is awaited by the execution runner before model or tool
-		// work begins. turn_phase notifications are queued observations and cannot
-		// hold a real execution boundary on their own.
-		await report("working", undefined, ctx);
-		let boundaryResponse: Record<string, unknown> | undefined;
-		const boundaryRevision = semanticRevision + 1;
-		const delivered = await reportSemanticTurn("working", {}, response => {
-			boundaryResponse = response;
-		});
-		const turn = boundaryResponse?.turn as Record<string, unknown> | undefined;
-		if (
-			!delivered ||
-			turn?.state !== "working" ||
-			!Number.isSafeInteger(turn.revision) ||
-			turn.execution_id !== activeSemanticTurn.executionId ||
-			turn.pane_id !== paneId ||
-			turn.session_id !== activeSemanticTurn.sessionId ||
-			turn.generation !== activeSemanticTurn.generation ||
-			turn.turn_id !== activeSemanticTurn.turnId ||
-			turn.event_revision !== boundaryRevision
-		) {
-			ctx.abort();
-			ctx.shutdown();
-			throw new Error("Acceptance boundary lacks a real working journal acknowledgement");
-		}
-		const executable = fs.realpathSync(process.execPath);
 		try {
+			if (!ctx.hasUI) {
+				ctx.abort();
+				throw new Error("Herdr acceptance controls require interactive mode");
+			}
+			// This callback is awaited by the execution runner before model or tool
+			// work begins. turn_phase notifications are queued observations and cannot
+			// hold a real execution boundary on their own.
+			await report("working", undefined, ctx);
+			let boundaryResponse: Record<string, unknown> | undefined;
+			const boundaryRevision = semanticRevision + 1;
+			const delivered = await reportSemanticTurn("working", {}, response => {
+				boundaryResponse = response;
+			});
+			const turn = boundaryResponse?.turn as Record<string, unknown> | undefined;
+			if (
+				!delivered ||
+				turn?.state !== "working" ||
+				!Number.isSafeInteger(turn.revision) ||
+				turn.execution_id !== activeSemanticTurn.executionId ||
+				turn.pane_id !== paneId ||
+				turn.session_id !== activeSemanticTurn.sessionId ||
+				turn.generation !== activeSemanticTurn.generation ||
+				turn.turn_id !== activeSemanticTurn.turnId ||
+				turn.event_revision !== boundaryRevision
+			) {
+				ctx.abort();
+				ctx.shutdown();
+				throw new Error("Acceptance boundary lacks a real working journal acknowledgement");
+			}
+			const executable = fs.realpathSync(process.execPath);
 			await acceptance.workingBoundary(
 				{
 					execution_id: activeSemanticTurn.executionId,

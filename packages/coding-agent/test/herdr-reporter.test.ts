@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as net from "node:net";
 import * as os from "node:os";
@@ -229,6 +230,84 @@ const metadataParams = (
 const baseSeq = (herdr: FakeHerdr): number => herdr.received[0]?.params.seq as number;
 
 describe("herdr-reporter extension", () => {
+	it.skipIf(process.platform !== "linux")(
+		"drains phase reporting when an approved working boundary fails acknowledgement",
+		async () => {
+			const directory = fs.mkdtempSync(path.join(os.tmpdir(), "herdr-acceptance-boundary-"));
+			const originalPlan = process.env.XCSH_HERDR_ACCEPTANCE_PLAN;
+			const executable = fs.realpathSync(process.execPath);
+			const plan = path.join(directory, "plan.json");
+			fs.writeFileSync(
+				plan,
+				JSON.stringify({
+					version: 1,
+					control_directory: directory,
+					approvals: [
+						{
+							session_id: "approved-session",
+							executable,
+							executable_sha256: createHash("sha256").update(fs.readFileSync(executable)).digest("hex"),
+							actions: ["release"],
+						},
+					],
+				}),
+				{ mode: 0o600 },
+			);
+			const herdr = await startFakeHerdr({
+				protocol: 28,
+				capabilities: { agent_turn_journal: true },
+				respond: request => {
+					if (request.method === "agent.turn.action.get") return { type: "agent_turn_action_list", actions: [] };
+					if (request.method === "agent.turn.report")
+						return {
+							type: "agent_turn",
+							admitted: true,
+							turn: {
+								...request.params,
+								revision: request.params.event_revision,
+								state: request.params.state === "working" ? "failed" : request.params.state,
+							},
+						};
+					return {};
+				},
+			});
+			const { pi, handlers } = makeMockPi();
+			let aborts = 0;
+			let shutdowns = 0;
+			const ctx = {
+				...sessionCtx("/tmp/approved-session.jsonl", "approved-session"),
+				hasUI: true,
+				abort: () => {
+					aborts++;
+				},
+				shutdown: () => {
+					shutdowns++;
+				},
+			} as ExtensionContext;
+			try {
+				process.env.HERDR_PANE_ID = "w1:p1";
+				process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+				process.env.HERDR_EXECUTION_ID = "approved-execution";
+				process.env.HERDR_EXECUTION_GENERATION = "0";
+				process.env.HERDR_NATIVE_CAPABILITY = "test-native-capability";
+				process.env.XCSH_HERDR_ACCEPTANCE_PLAN = plan;
+				herdrReporter(pi);
+				await expect(handlers.get("before_agent_start")!({}, ctx)).rejects.toThrow(
+					"working journal acknowledgement",
+				);
+				expect(aborts).toBe(1);
+				expect(shutdowns).toBe(1);
+				await handlers.get("turn_phase")?.({ type: "turn_phase", turnId: 1, phase: "cancelled" }, ctx);
+				expect(fs.readdirSync(directory).filter(file => file.endsWith(".sock"))).toEqual([]);
+			} finally {
+				await handlers.get("session_shutdown")?.({}, ctx);
+				if (originalPlan === undefined) delete process.env.XCSH_HERDR_ACCEPTANCE_PLAN;
+				else process.env.XCSH_HERDR_ACCEPTANCE_PLAN = originalPlan;
+				await herdr.close();
+				fs.rmSync(directory, { recursive: true, force: true });
+			}
+		},
+	);
 	const originalPaneId = process.env.HERDR_PANE_ID;
 	const originalSocket = process.env.HERDR_SOCKET_PATH;
 	const originalExecutionId = process.env.HERDR_EXECUTION_ID;
@@ -349,6 +428,128 @@ describe("herdr-reporter extension", () => {
 			const recap = herdr.received.find(frame => frame.method === "agent.recap.report");
 			expect(recap).toBeDefined();
 			expect(anchors[1]!.order).toBeLessThan(recap!.order);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("does not report a late recap from a replaced session context", async () => {
+		const herdr = await startFakeHerdr({ protocol: 28, capabilities: { agent_recaps: 1 } });
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+			herdrReporter(pi);
+			const oldContext = sessionCtx("/tmp/session-old.jsonl", "old-session");
+			const newContext = sessionCtx("/tmp/session-new.jsonl", "new-session");
+			await handlers.get("session_start")?.({}, oldContext);
+			await handlers.get("session_switch")?.({ reason: "new" }, newContext);
+			const afterSwitch = herdr.received.length;
+			await handlers.get("recap_created")?.(
+				{
+					type: "recap_created",
+					recap: {
+						id: "late-old-recap",
+						sessionId: "old-session",
+						trigger: "manual",
+						summary: "Old session recap",
+						completedTurnCount: 1,
+						createdAt: "2026-11-10T00:00:00.000Z",
+					},
+				},
+				oldContext,
+			);
+			expect(herdr.received.slice(afterSwitch)).toEqual([]);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("rechecks a queued recap when a session switch interleaves with its authority report", async () => {
+		const herdr = await startFakeHerdr({
+			protocol: 28,
+			capabilities: { agent_recaps: 1 },
+			delayMethods: new Map([["pane.report_agent", 25]]),
+		});
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+			herdrReporter(pi);
+			const oldContext = sessionCtx("/tmp/session-a.jsonl", "session-a");
+			const newContext = sessionCtx("/tmp/session-b.jsonl", "session-b");
+			await handlers.get("session_start")?.({}, oldContext);
+			const afterStart = herdr.received.length;
+			const recap = handlers.get("recap_created")?.(
+				{
+					type: "recap_created",
+					recap: {
+						id: "queued-recap",
+						sessionId: "session-a",
+						trigger: "manual",
+						summary: "Session A recap",
+						completedTurnCount: 1,
+						createdAt: "2026-11-10T00:00:00.000Z",
+					},
+				},
+				oldContext,
+			);
+			await waitFor(() => herdr.received.length > afterStart);
+			const switched = handlers.get("session_switch")?.({ reason: "new" }, newContext);
+			await Promise.all([recap, switched]);
+			expect(herdr.received.filter(frame => frame.method === "agent.recap.report")).toEqual([]);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("ignores valid predecessor history when a continuation owns a newer generation", async () => {
+		const herdr = await startFakeHerdr({ protocol: 28, capabilities: { agent_turn_journal: true } });
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			process.env.HERDR_EXECUTION_ID = "continuing-execution";
+			process.env.HERDR_EXECUTION_GENERATION = "1";
+			process.env.HERDR_NATIVE_CAPABILITY = "test-native-capability";
+			const prior = {
+				executionId: "continuing-execution",
+				paneId: "w1:p99",
+				sessionId: "same-session",
+				generation: 0,
+				turnId: "prior-turn",
+			};
+			const ctx = {
+				...sessionCtx("/tmp/continuation.jsonl", "same-session"),
+				sessionManager: {
+					getSessionFile: () => "/tmp/continuation.jsonl",
+					getSessionId: () => "same-session",
+					getEntries: () => [
+						{
+							type: "custom",
+							customType: "herdr.semantic-turn",
+							data: { ...prior, eventRevision: 3, state: "cancelled", delivered: true },
+						},
+						{
+							type: "custom",
+							customType: "herdr.semantic-action",
+							data: {
+								...prior,
+								backendExecutionId: "prior-backend",
+								actionId: "cancel",
+								actionRevision: 1,
+								state: "safe_point",
+								requestedAtUnixMs: 1,
+								ackDelivered: false,
+							},
+						},
+					],
+				},
+			} as unknown as ExtensionContext;
+			const { pi, handlers, debugCalls } = makeMockPi();
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, ctx);
+			expect(debugCalls).toEqual([]);
+			expect(herdr.received.filter(frame => frame.method.startsWith("agent.turn"))).toEqual([]);
 		} finally {
 			await herdr.close();
 		}
