@@ -205,7 +205,7 @@ describe.skipIf(isCI)("Stealth injected surfaces (real Chrome via Puppeteer)", (
 						hour: "numeric",
 						hour12: false,
 					}).format(at),
-					offset: new g.Date().getTimezoneOffset(),
+					offset: at.getTimezoneOffset(),
 					dateString: at.toString(),
 				});
 			});

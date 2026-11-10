@@ -316,6 +316,44 @@ describe("herdr-reporter extension", () => {
 		}
 	});
 
+	it("retries an unconfirmed session anchor before reporting a recap", async () => {
+		const errors = new Map([
+			["pane.report_agent_session", { code: "temporarily_unavailable", message: "anchor unavailable" }],
+		]);
+		const herdr = await startFakeHerdr({ protocol: 28, capabilities: { agent_recaps: 1 }, errorMethods: errors });
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+			herdrReporter(pi);
+			const ctx = sessionCtx("/tmp/unconfirmed-session.jsonl", "s1");
+			await handlers.get("session_start")?.({}, ctx);
+			errors.clear();
+			await handlers.get("recap_created")?.(
+				{
+					type: "recap_created",
+					recap: {
+						id: "r1",
+						sessionId: "s1",
+						trigger: "manual",
+						summary: "Recovered anchor",
+						completedTurnCount: 1,
+						createdAt: "2026-11-10T00:00:00.000Z",
+					},
+				},
+				ctx,
+			);
+			const anchors = herdr.received.filter(frame => frame.method === "pane.report_agent_session");
+			expect(anchors).toHaveLength(2);
+			expect(anchors[1]!.params.session_start_source).toBe("startup");
+			const recap = herdr.received.find(frame => frame.method === "agent.recap.report");
+			expect(recap).toBeDefined();
+			expect(anchors[1]!.order).toBeLessThan(recap!.order);
+		} finally {
+			await herdr.close();
+		}
+	});
+
 	it("reanchors recap authority after an xcsh session switch", async () => {
 		const herdr = await startFakeHerdr({ protocol: 27, capabilities: { agent_recaps: 1 } });
 		try {

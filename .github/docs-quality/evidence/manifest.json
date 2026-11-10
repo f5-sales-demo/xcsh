@@ -530,6 +530,20 @@
         "docs/en/index.mdx#Installation options",
         "docs/en/integrations-deployment/containers.mdx"
       ]
+    },
+    {
+      "id": "herdr-acceptance-v1",
+      "sourceDigest": "fc7bd11c64e7434958f826d5ad1c532c3fd460d3b63da7ea7143366b1fe546aa",
+      "xcshVersion": "23.10.8",
+      "command": "xcsh lifecycle --json; bun test --cwd packages/coding-agent test/herdr-acceptance-control.test.ts --max-concurrency 2",
+      "exitStatus": 0,
+      "verificationLevel": "executed-offline",
+      "cleanupResult": "unit-fixture-directories-removed",
+      "sections": [
+        "docs/en/integrations-deployment/herdr.mdx#Private controls against a real Herdr server"
+      ],
+      "receipt": ".github/docs-quality/evidence/herdr-acceptance-v1.txt",
+      "receiptSha256": "decef45af1ffc0bfada14d3a3b3fb9b5203014cf454e1e6b90fceef500fe5795"
     }
   ],
   "schemaVersion": 1
