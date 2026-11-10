@@ -633,7 +633,7 @@ export async function verifyDocumentationRelease(
 	const manifest = parseJson(manifestEntry.data, "documentation manifest");
 	exactKeys(
 		manifest,
-		[...MANIFEST_KEYS, ...(Object.hasOwn(manifest, "enrichment") ? ["enrichment"] : [])],
+		[...MANIFEST_KEYS, ...["enrichment", "aliases", "refresh"].filter(key => Object.hasOwn(manifest, key))],
 		"documentation manifest",
 	);
 	if (manifest.schema_version !== 2) throw new Error("documentation manifest schema version is invalid");
@@ -788,6 +788,7 @@ export async function verifyDocumentationRelease(
 		throw new Error("documentation manifest content member set mismatch");
 
 	const aliases: DocumentationRouteAlias[] = [];
+	const declaredAliases: unknown[] = [];
 	let enrichmentArtifactSha256: string | undefined;
 	if (Object.hasOwn(manifest, "enrichment")) {
 		const enrichment = object(manifest.enrichment, "enrichment");
@@ -795,47 +796,79 @@ export async function verifyDocumentationRelease(
 		enrichmentArtifactSha256 = string(enrichment.artifact_sha256, "enrichment artifact digest");
 		if (!SHA256.test(enrichmentArtifactSha256) || !Array.isArray(enrichment.aliases))
 			throw new Error("invalid enrichment digest or aliases");
-		const canonicalPaths = new Set(documents.map(d => d.archivePath));
-		const aliasPaths = new Set<string>();
-		for (const value of enrichment.aliases) {
-			const alias = object(value, "enrichment alias");
-			exactKeys(alias, ["path", "target", "url"], "enrichment alias");
-			const route = {
-				path: string(alias.path, "enrichment alias path"),
-				target: string(alias.target, "enrichment alias target"),
-				url: string(alias.url, "enrichment alias URL"),
-			};
-			try {
-				validateMemberName(route.path);
-				validateMemberName(route.target);
-			} catch (error) {
-				throw new Error("unsafe enrichment alias path", { cause: error });
-			}
-			if (
-				!route.path.endsWith("/index.md") ||
-				!route.target.endsWith("/index.md") ||
-				canonicalPaths.has(route.path) ||
-				aliasPaths.has(route.path) ||
-				!canonicalPaths.has(route.target)
-			)
-				throw new Error("conflicting, dangling, or chained enrichment alias");
-			const source = route.path.split("/")[1] as DocumentationSource;
-			if (
-				!/^content\/[a-z0-9-]+\/(?:[A-Za-z0-9_~.-]+\/)*index\.md$/.test(route.path) ||
-				!/^content\/[a-z0-9-]+\/(?:[A-Za-z0-9_~.-]+\/)*index\.md$/.test(route.target)
-			)
-				throw new Error("unsafe enrichment alias route");
-			if (
-				source === "docs-cloud-f5-com" &&
-				route.url !== `${SOURCE_ROOT_URLS[source]}/${stableDocumentPath(route.path, source)}`
-			)
-				throw new Error("enrichment alias URL does not match its route");
-			validateCorpusUrl(route.url, source, "enrichment alias URL");
-			aliasPaths.add(route.path);
-			aliases.push(route);
-		}
-		aliases.sort((a, b) => a.path.localeCompare(b.path));
+		declaredAliases.push(...enrichment.aliases);
 	}
+	if (Object.hasOwn(manifest, "aliases")) {
+		if (!Array.isArray(manifest.aliases)) throw new Error("invalid documentation aliases");
+		declaredAliases.push(...manifest.aliases);
+	}
+	if (Object.hasOwn(manifest, "refresh")) {
+		const refresh = object(manifest.refresh, "documentation refresh");
+		exactKeys(
+			refresh,
+			["artifact_sha256", "baseline_receipt_sha256", "baseline_tag", "preserved_descriptions", "refreshed_sources"],
+			"documentation refresh",
+		);
+		for (const key of ["artifact_sha256", "baseline_receipt_sha256"] as const)
+			if (!SHA256.test(string(refresh[key], `refresh ${key}`))) throw new Error("invalid refresh digest");
+		const baselineTag = string(refresh.baseline_tag, "refresh baseline tag");
+		if (!RELEASE_TAG.test(baselineTag) || baselineTag === pin.release_tag)
+			throw new Error("invalid refresh baseline tag");
+		if (
+			!Array.isArray(refresh.refreshed_sources) ||
+			!refresh.refreshed_sources.length ||
+			new Set(refresh.refreshed_sources).size !== refresh.refreshed_sources.length ||
+			refresh.refreshed_sources.some(source => !DOCUMENTATION_SOURCES.includes(source))
+		)
+			throw new Error("invalid refresh sources");
+		const paths = new Set(documents.map(document => document.archivePath));
+		if (
+			!Array.isArray(refresh.preserved_descriptions) ||
+			new Set(refresh.preserved_descriptions).size !== refresh.preserved_descriptions.length ||
+			refresh.preserved_descriptions.some(value => typeof value !== "string" || !paths.has(value))
+		)
+			throw new Error("invalid refresh preserved descriptions");
+	}
+	const canonicalPaths = new Set(documents.map(d => d.archivePath));
+	const aliasPaths = new Set<string>();
+	for (const value of declaredAliases) {
+		const alias = object(value, "enrichment alias");
+		exactKeys(alias, ["path", "target", "url"], "enrichment alias");
+		const route = {
+			path: string(alias.path, "enrichment alias path"),
+			target: string(alias.target, "enrichment alias target"),
+			url: string(alias.url, "enrichment alias URL"),
+		};
+		try {
+			validateMemberName(route.path);
+			validateMemberName(route.target);
+		} catch (error) {
+			throw new Error("unsafe enrichment alias path", { cause: error });
+		}
+		if (
+			!route.path.endsWith("/index.md") ||
+			!route.target.endsWith("/index.md") ||
+			canonicalPaths.has(route.path) ||
+			aliasPaths.has(route.path) ||
+			!canonicalPaths.has(route.target)
+		)
+			throw new Error("conflicting, dangling, or chained enrichment alias");
+		const source = route.path.split("/")[1] as DocumentationSource;
+		if (
+			!/^content\/[a-z0-9-]+\/(?:[A-Za-z0-9_~.-]+\/)*index\.md$/.test(route.path) ||
+			!/^content\/[a-z0-9-]+\/(?:[A-Za-z0-9_~.-]+\/)*index\.md$/.test(route.target)
+		)
+			throw new Error("unsafe enrichment alias route");
+		if (
+			source === "docs-cloud-f5-com" &&
+			route.url !== `${SOURCE_ROOT_URLS[source]}/${stableDocumentPath(route.path, source)}`
+		)
+			throw new Error("enrichment alias URL does not match its route");
+		validateCorpusUrl(route.url, source, "enrichment alias URL");
+		aliasPaths.add(route.path);
+		aliases.push(route);
+	}
+	aliases.sort((a, b) => a.path.localeCompare(b.path));
 
 	return {
 		archivePath,
