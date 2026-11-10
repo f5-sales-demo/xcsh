@@ -167,8 +167,8 @@ class CiCapacityContractTests(unittest.TestCase):
             ),
         )
         for pinned_value in (
-            "BUN_VERSION=1.4.2",
-            "BUN_SHA256=36368faef7527875d5ffa52e53cd48021741f2a83eb6208a8dd64068d422a913",
+            "BUN_VERSION=1.4.4",
+            "BUN_SHA256=bf8ccbfb2b0b80159e0f9a6d15c55317add8077534dbc6130a3edb52fccb395c",
             "ZIG_VERSION=0.16.0",
             "ZIG_SHA256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00",
             "RUST_TOOLCHAIN=nightly-2026-09-03",
