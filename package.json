@@ -82,6 +82,7 @@
 		"@typescript/native-preview": "^7.0.0-dev.20260302.1",
 		"lint-staged": "17.4.1",
 		"prettier": "3.9.6",
+		"typescript": "5.9.3",
 		"yaml": "2.9.0"
 	},
 	"lint-staged": {
