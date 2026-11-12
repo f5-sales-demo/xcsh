@@ -33,105 +33,105 @@
 	},
 	"provider": {
 		"repository": "f5-sales-demo/terraform-provider-xcsh",
-		"tag": "v15.15.7",
-		"commit": "3e073c8ea8241a58999c251621729f16030b653a",
+		"tag": "v15.16.2",
+		"commit": "72ea8e91c10429b9f3dd4776dcfe8b76b882c870",
 		"acceptance": "immutable",
 		"assets": {
-			"terraform-provider-xcsh_15.15.7_darwin_amd64.zip": {
-				"sha256": "c14d573d0659a32c56a93746b0d7da121b40b2d0c46a86a4c1b5dea50b002845",
-				"size_bytes": 25497967
+			"terraform-provider-xcsh_15.16.2_darwin_amd64.zip": {
+				"sha256": "b8fad4ceed32add1f96904c626ec8fe3e737de4e51a9ebf6c01a5d04aa37bc31",
+				"size_bytes": 25530503
 			},
-			"terraform-provider-xcsh_15.15.7_darwin_arm64.zip": {
-				"sha256": "2d20771e496cd467ee684d43b4ed10fb7844c5c8de1562def63e02ce20890b79",
-				"size_bytes": 23498677
+			"terraform-provider-xcsh_15.16.2_darwin_arm64.zip": {
+				"sha256": "0df781a1b339c1a117f1ea2f2cab9f1af9ff65b3ba01930e05fc2cce868ecf7e",
+				"size_bytes": 23519263
 			},
-			"terraform-provider-xcsh_15.15.7_freebsd_386.zip": {
-				"sha256": "632fbf84bc600b3657d2fa0a0cf6cef9511d0b8a219ed4a6e8b5be8acfb40a63",
-				"size_bytes": 21585654
+			"terraform-provider-xcsh_15.16.2_freebsd_386.zip": {
+				"sha256": "814d4ba853499bc2dac9b1ae3fbcf3dc249d1458d1cd731179af6cba090e1f1b",
+				"size_bytes": 21609489
 			},
-			"terraform-provider-xcsh_15.15.7_freebsd_amd64.zip": {
-				"sha256": "87df39d0a5db723c36cfcb57c6f6e3df18aaca0e8a555a541abe4714883b72c1",
-				"size_bytes": 25148948
+			"terraform-provider-xcsh_15.16.2_freebsd_amd64.zip": {
+				"sha256": "b7bd9eb7bca47e3a3433ef68efa0196810caf73df73f55b6b62318142d6bb08c",
+				"size_bytes": 25176691
 			},
-			"terraform-provider-xcsh_15.15.7_linux_386.zip": {
-				"sha256": "71d6e5d3855d382f30f76a74bb392d97f483e1758feb56da374ae22ceeeeb726",
-				"size_bytes": 21621728
+			"terraform-provider-xcsh_15.16.2_linux_386.zip": {
+				"sha256": "559cb87e10546922686f598c0deaa0e0d618beffd808d45c4553b3cafcbbdca4",
+				"size_bytes": 21647430
 			},
-			"terraform-provider-xcsh_15.15.7_linux_amd64.zip": {
-				"sha256": "2581a16c4f4997818f23e02336e730cfe005e7b935c5236490fea4bec27afe37",
-				"size_bytes": 25181612
+			"terraform-provider-xcsh_15.16.2_linux_amd64.zip": {
+				"sha256": "2f4ed2a942b409bac7c9701577fcf80ed5a1f0fbf0e464b261c0011516e5f32b",
+				"size_bytes": 25210376
 			},
-			"terraform-provider-xcsh_15.15.7_linux_arm.zip": {
-				"sha256": "6402187ed75dbb5c010405617a4cbe62a1146c2604859144e9779004dcfd023c",
-				"size_bytes": 24324134
+			"terraform-provider-xcsh_15.16.2_linux_arm.zip": {
+				"sha256": "d3ca6ea4c7b61273475f86e684c637ff70d0458e46f24646842fa4f998dad256",
+				"size_bytes": 24344483
 			},
-			"terraform-provider-xcsh_15.15.7_linux_arm64.zip": {
-				"sha256": "cf70fee6a41250ac91aff9d9f3b56b0b332952f3037c1651959151f085c559fa",
-				"size_bytes": 21929172
+			"terraform-provider-xcsh_15.16.2_linux_arm64.zip": {
+				"sha256": "ac2964d6843d403a3dc5487a0df357799396b5f43089126e9270dec297dd5e45",
+				"size_bytes": 21948418
 			},
-			"terraform-provider-xcsh_15.15.7_manifest.json": {
+			"terraform-provider-xcsh_15.16.2_manifest.json": {
 				"sha256": "95513584b227b9c7923e641aae986935821077b1eb4116845b5312ac412bbc72",
 				"size_bytes": 101
 			},
-			"terraform-provider-xcsh_15.15.7_SHA256SUMS": {
-				"sha256": "64674f794564940e561b6bd7726608f2a0963884e0d0a457820ee88dcc05ae6b",
+			"terraform-provider-xcsh_15.16.2_SHA256SUMS": {
+				"sha256": "9029ee438c2e026c1a2349d2297f90bf648aaac413b884a307c75c59d4581229",
 				"size_bytes": 1254
 			},
-			"terraform-provider-xcsh_15.15.7_SHA256SUMS.sig": {
-				"sha256": "30d3e966ee53f18f53984c5ed0c7bd70ea6b8d2e4a86391559205f5dfc0f9275",
+			"terraform-provider-xcsh_15.16.2_SHA256SUMS.sig": {
+				"sha256": "91ccd2233d9e8097246fbbe55460bdfa06bbf7f2d4350c6898562618923eecbe",
 				"size_bytes": 566
 			},
-			"terraform-provider-xcsh_15.15.7_windows_386.zip": {
-				"sha256": "f4c3d62299b5ddd49937f9bcd31adea4a2ac00988c1db7a670102957c24fa6f3",
-				"size_bytes": 23207527
+			"terraform-provider-xcsh_15.16.2_windows_386.zip": {
+				"sha256": "e3c3b7a35e971443bfc2a6854f9f70a9f3f39aaa02fef4d8c5ede931f523e8eb",
+				"size_bytes": 23234297
 			},
-			"terraform-provider-xcsh_15.15.7_windows_amd64.zip": {
-				"sha256": "1d5d72740ffda5b14fd92b51c5078bd2d7f48eff71e876e34c2d6c73fdf7f3ca",
-				"size_bytes": 25548704
+			"terraform-provider-xcsh_15.16.2_windows_amd64.zip": {
+				"sha256": "f6e88921032cc2bba91bd2769f9b31d4d11004698ce7fe0659d92fda24208aa2",
+				"size_bytes": 25581677
 			}
 		}
 	},
 	"terraform": {
 		"repository": "f5-sales-demo/terraform-provider-xcsh",
-		"tag": "documentation-v15.15.7",
-		"commit": "3e073c8ea8241a58999c251621729f16030b653a",
+		"tag": "documentation-v15.16.2",
+		"commit": "72ea8e91c10429b9f3dd4776dcfe8b76b882c870",
 		"acceptance": "immutable",
 		"assets": {
 			"canonical-documentation.tar.gz": {
-				"sha256": "4110fadb432e995783ba015ccd378c45a64cb4efb08c667d57571683ffad3a09",
-				"size_bytes": 46316258
+				"sha256": "9b29e17ff1dada1cdbc826d78a54f0c86c6390f9df779862d0051145465f1cbd",
+				"size_bytes": 46322493
 			},
 			"canonical-manifest.json": {
-				"sha256": "97984d6caf835c80b2d3fabfee52fb7749385226b5c8c9719aaf5414f034c5e0",
+				"sha256": "2185c1e0717e572ed951fb7333c3aaad327469e2d6d429f416bf92f5dfee9fcd",
 				"size_bytes": 7565728
 			},
 			"manifest.json": {
-				"sha256": "726c469e4f57bba3173eb031cb4e61489be34e2606e2dd4d8e0daa0c940b4ec9",
+				"sha256": "867ac8372603cb175b99e55291ef82f8adad1eefb3ce8301f5d74bfdbdd233b0",
 				"size_bytes": 70478860
 			},
 			"publication.json": {
-				"sha256": "783c3b2a91c8df567b29943db41ef382f8eb666752f0ec5d19e6e336a042b546",
+				"sha256": "a6268bcac50e6ca5b3cdf96d83230234aa53d7809d12744518dbd9dc4484b9f0",
 				"size_bytes": 1380
 			},
 			"registry-documentation.tar.gz": {
-				"sha256": "f05017ed28925f6b7711903837d95d0a3e7b1afbf6f2914e2c9df6b7d7e3587e",
-				"size_bytes": 9982010
+				"sha256": "8dc572310e731147a28f860d75a9b1e04bf64c24087708ca5109434b83a11eda",
+				"size_bytes": 9982254
 			},
 			"registry-manifest.json": {
-				"sha256": "c2d38aa639da8ab3eea603e1529026390ebda5c359ea2f4c05dd12a9b40444f6",
+				"sha256": "5fd569ceef97fd33d2fce42ec0e47c2bfc1099c96e7ee154aaf6a741ef053033",
 				"size_bytes": 237498
 			},
 			"registry-projection-manifest.json": {
-				"sha256": "fff09dfb0d877b901edf6aea39f2f7753ca84f4c3588030b4aecb00394224282",
+				"sha256": "581badafac5bcd5911c57a84d7516298850e5b7da4797adff0bd35405ce90d1d",
 				"size_bytes": 276722
 			},
 			"SHA256SUMS": {
-				"sha256": "ff10a1a116d4e95640ee49d99874c931fc35f3428ca2a0023b3236dc236721b3",
+				"sha256": "61a8df1b55c127e7179c3e0a5d1348b6ed39eb76e1c011e135a2ad49fd4e0360",
 				"size_bytes": 723
 			},
 			"terraform-docs.tar.gz": {
-				"sha256": "bf7c15514e4e578953c38aec1112198449e4aeb7be47d71cf21b67555d4828b5",
-				"size_bytes": 9858200
+				"sha256": "68e0b5510ad97f0a057caedf81dd9e54c36f8f115007d19ceb94b3c3a805d48c",
+				"size_bytes": 9857727
 			}
 		}
 	},
