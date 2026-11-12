@@ -20,7 +20,7 @@ interface DapSpawnOptions {
 /** Minimal write interface shared by Bun.FileSink and Bun TCP sockets. */
 interface DapWriteSink {
 	write(data: string | Uint8Array): number | Promise<number>;
-	flush(): number | void | Promise<number | void>;
+	flush(): number | void | Promise<number | undefined> | Promise<void>;
 }
 
 type DapEventHandler = (body: unknown, event: DapEventMessage) => void | Promise<void>;
