@@ -147,8 +147,7 @@ interface BuiltinSlashCommandSpec extends BuiltinSlashCommand {
 	handle: (
 		command: ParsedBuiltinSlashCommand,
 		runtime: BuiltinSlashCommandRuntime,
-		// biome-ignore lint/suspicious/noConfusingVoidType: void needed so handlers returning nothing are assignable
-	) => Promise<string | undefined> | string | void;
+	) => Promise<string | undefined> | Promise<void> | string | void;
 }
 
 export interface BuiltinSlashCommandRuntime {
