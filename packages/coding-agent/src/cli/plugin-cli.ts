@@ -1007,8 +1007,17 @@ async function handleLink(manager: PluginManager, paths: string[], flags: { json
 	}
 }
 
-async function handleDoctor(manager: PluginManager, flags: { json?: boolean; fix?: boolean }): Promise<void> {
-	const checks = await manager.doctor({ fix: flags.fix });
+async function handleDoctor(
+	manager: PluginManager,
+	flags: { json?: boolean; fix?: boolean; local?: boolean; scope?: "user" | "project" },
+): Promise<void> {
+	if (flags.local && flags.scope === "user") throw new CliUsageError("--local conflicts with --scope user");
+	const checks = await manager.doctor({
+		fix: flags.fix,
+		scope: flags.scope ?? (flags.local ? "project" : undefined),
+		projectInstalledRegistryPath: await resolveOrDefaultProjectRegistryPath(getProjectDir()),
+	});
+	if (checks.some(check => check.status === "error" && !check.fixed)) process.exitCode = 1;
 
 	if (flags.json) {
 		console.log(JSON.stringify(checks, null, 2));

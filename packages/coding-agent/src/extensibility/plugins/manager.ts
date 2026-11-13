@@ -11,6 +11,8 @@ import {
 	logger,
 } from "@f5-sales-demo/pi-utils";
 import { bunExecPath } from "../../bun-path";
+import { inspectMarketplacePlugins } from "./marketplace/doctor";
+import { getInstalledPluginsRegistryPath, getMarketplacesRegistryPath } from "./marketplace/registry";
 import { extractPackageName, parsePluginSpec } from "./parser";
 import type {
 	DoctorCheck,
@@ -477,7 +479,23 @@ export class PluginManager {
 	 * Run health checks on the plugin system.
 	 */
 	async doctor(options: DoctorOptions = {}): Promise<DoctorCheck[]> {
-		const checks: DoctorCheck[] = [];
+		const marketplace = await inspectMarketplacePlugins({
+			marketplacesRegistryPath: getMarketplacesRegistryPath(),
+			userRegistryPath: getInstalledPluginsRegistryPath(),
+			projectRegistryPath: options.projectInstalledRegistryPath,
+			scope: options.scope,
+		});
+		const checks = [...marketplace.checks];
+		if (options.scope === "project") {
+			if (!marketplace.hasInstallations)
+				checks.push({
+					name: "project_plugins",
+					status: "warning",
+					message: "No marketplace plugins installed in this project",
+				});
+			return checks;
+		}
+		if (marketplace.hasInstallations && !fs.existsSync(getPluginsPackageJson())) return checks;
 
 		// Check 1: Plugins directory exists
 		const pluginsDir = getPluginsDir();
