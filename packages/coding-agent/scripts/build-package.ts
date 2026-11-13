@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import path from "node:path";
+import { requireFreshPublicCitationSources } from "./corpus-sources";
 
 export interface PackageBuildOperations {
 	prepare: () => Promise<void>;
@@ -31,6 +32,7 @@ async function run(command: string[]): Promise<void> {
 }
 
 async function prepare(): Promise<void> {
+	await requireFreshPublicCitationSources();
 	await run(["bun", "run", "generate-build-info"]);
 	await run(["bun", "run", "generate-extension-capabilities"]);
 	await run(["bun", "run", "generate-api-catalog-qmd-index"]);

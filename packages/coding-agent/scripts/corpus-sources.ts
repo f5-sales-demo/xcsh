@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { PUBLIC_CITATION_SOURCES } from "../src/internal-urls/public-citation-destinations.generated";
 import { fetchTerraformSnapshot } from "./terraform-snapshot-download";
 
 export interface CorpusSource {
@@ -137,6 +138,24 @@ export function assertFreshCorpusSources(built: CorpusSources, latest: CorpusSou
 			throw new Error(`stale ${family} corpus source: refresh and rebuild before publication`);
 	}
 }
+type CitationFamily = "general" | "terraform" | "api";
+type CitationSources = Readonly<Partial<Record<CitationFamily, { readonly version: string; readonly digest: string }>>>;
+/** A current archive cannot publish citations attributed to an older or different snapshot. */
+export function assertFreshPublicCitationSources(sources: CorpusSources, citations: CitationSources): void {
+	const archives = {
+		general: "html-to-markdown-content.tar.gz",
+		terraform: "canonical-documentation.tar.gz",
+		api: `f5xc-api-specs-${sources.api.tag}.zip`,
+	};
+	for (const family of ["general", "terraform", "api"] as const) {
+		const source = sources[family];
+		const expected = source.assets[archives[family]];
+		if (!expected || citations[family]?.version !== source.tag || citations[family]?.digest !== expected.sha256)
+			throw new Error(
+				`stale ${family} public citation source: regenerate verified destinations before build and publication`,
+			);
+	}
+}
 export async function requireFreshCorpusSources(): Promise<CorpusSources> {
 	const built = JSON.parse(
 		await readFile(path.join(import.meta.dir, "../../../tools/corpus-sources.json"), "utf8"),
@@ -154,6 +173,12 @@ export async function requireFreshCorpusSources(): Promise<CorpusSources> {
 		);
 	}
 	return latest;
+}
+/** Snapshot preparation stays available when derived citations need regeneration. */
+export async function requireFreshPublicCitationSources(): Promise<CorpusSources> {
+	const sources = await requireFreshCorpusSources();
+	assertFreshPublicCitationSources(sources, PUBLIC_CITATION_SOURCES);
+	return sources;
 }
 export function assertSourceRecord(
 	source: CorpusSource,
