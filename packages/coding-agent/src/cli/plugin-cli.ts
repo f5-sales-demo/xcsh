@@ -733,19 +733,28 @@ async function handleInstall(
 	// marketplace plugin instead of a same-named public npm package.
 	const mktMgr = await makeMarketplaceManager();
 	const marketplaces = await mktMgr.listMarketplaces();
-	const preview = flags.dryRun ? await mktMgr.previewMarketplacePlugins() : undefined;
-	const refresh = preview ?? (await mktMgr.refreshMarketplaces());
+	const knownMarketplaces = new Set(marketplaces.map(m => m.name));
+	const qualifiedNames = packages.flatMap(spec => {
+		const target = classifyInstallTarget(spec, knownMarketplaces);
+		return target.type === "marketplace" ? [target.marketplace] : [];
+	});
+	// Qualified requests already identify their catalogs. Bare or mixed requests
+	// still need complete discovery to retain marketplace/npm ambiguity handling.
+	const selectedNames = qualifiedNames.length === packages.length ? [...new Set(qualifiedNames)] : undefined;
+	const preview = flags.dryRun ? await mktMgr.previewMarketplacePlugins(selectedNames) : undefined;
+	const refresh = preview ?? (await mktMgr.refreshMarketplaces(selectedNames));
 	const refreshWarning = formatMarketplaceRefreshWarning(refresh);
 	if (refreshWarning) console.error(chalk.yellow(refreshWarning));
-	const knownMarketplaces = new Set(marketplaces.map(m => m.name));
 	const catalogIndex = new Map<string, string[]>();
 	const listings = preview
 		? preview.plugins
 		: await Promise.all(
-				marketplaces.map(async mp => {
-					const plugins = await mktMgr.listAvailablePlugins(mp.name).catch(() => []);
-					return plugins.map(plugin => ({ marketplace: mp.name, plugin }));
-				}),
+				marketplaces
+					.filter(mp => !selectedNames || selectedNames.includes(mp.name))
+					.map(async mp => {
+						const plugins = await mktMgr.listAvailablePlugins(mp.name).catch(() => []);
+						return plugins.map(plugin => ({ marketplace: mp.name, plugin }));
+					}),
 			).then(groups => groups.flat());
 	for (const { marketplace, plugin } of listings) {
 		const sources = catalogIndex.get(plugin.name) ?? [];
