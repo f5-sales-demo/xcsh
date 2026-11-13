@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getBuiltinMarketplaceSnapshot } from "../../src/extensibility/plugins/marketplace/builtin";
 
 const PACKAGE_ROOT = path.resolve(import.meta.dir, "../..");
 const FIXTURE_DIR = path.join(import.meta.dir, "fixtures", "valid-marketplace");
@@ -14,6 +15,30 @@ function makeEnvironment(): { home: string; source: string } {
 	const source = path.join(root, "marketplace");
 	fs.mkdirSync(home, { recursive: true });
 	fs.cpSync(FIXTURE_DIR, source, { recursive: true });
+	// Exercise the real Git fetch/promotion path without contacting GitHub.
+	const builtin = path.join(root, "builtin");
+	fs.mkdirSync(path.join(builtin, ".xcsh-plugin"), { recursive: true });
+	fs.writeFileSync(path.join(builtin, ".xcsh-plugin", "marketplace.json"), getBuiltinMarketplaceSnapshot().json);
+	fs.writeFileSync(path.join(builtin, "fixture-marker"), "local built-in catalog\n");
+	for (const args of [
+		["init", "--quiet"],
+		["add", "."],
+		[
+			"-c",
+			"user.name=Fixture",
+			"-c",
+			"user.email=fixture@example.com",
+			"-c",
+			"commit.gpgsign=false",
+			"commit",
+			"--quiet",
+			"-m",
+			"test: local built-in catalog",
+		],
+	]) {
+		const result = Bun.spawnSync(["git", ...args], { cwd: builtin, stdout: "pipe", stderr: "pipe" });
+		if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+	}
 	return { home, source };
 }
 
@@ -35,7 +60,15 @@ async function runScript(
 	const script = `await (await import("./src/modes/theme/theme")).setTheme("xcsh-dark");\n${code}`;
 	const proc = Bun.spawn([process.execPath, "-e", script], {
 		cwd: PACKAGE_ROOT,
-		env: { ...process.env, HOME: home, TEST_MARKETPLACE_SOURCE: source },
+		env: {
+			...process.env,
+			HOME: home,
+			TEST_MARKETPLACE_SOURCE: source,
+			GIT_CONFIG_COUNT: "1",
+			GIT_CONFIG_KEY_0: `url.file://${path.join(home, "..", "builtin")}.insteadOf`,
+			GIT_CONFIG_VALUE_0: "https://github.com/f5-sales-demo/marketplace.git",
+			GIT_ALLOW_PROTOCOL: "file",
+		},
 		stdout: "pipe",
 		stderr: "pipe",
 	});
@@ -239,7 +272,10 @@ describe("interactive marketplace refresh surfaces", () => {
 			 });
 			 const marketplaces = await manager.listMarketplaces();
 			 if (marketplaces.length !== 1 || !marketplaces[0].builtIn) throw new Error("built-in marketplace missing");
-			 if (!render().includes("Recommended")) throw new Error(render());`,
+			 if (!render().includes("Recommended")) throw new Error(render());
+			 if (!render().includes("Plugin information is up to date.")) throw new Error(render());
+			 const marker = await Bun.file(getMarketplacesCacheDir() + "/f5-sales-demo-marketplace/fixture-marker").text();
+			 if (marker !== "local built-in catalog\\n") throw new Error("built-in catalog was not cloned from the local fixture");`,
 			home,
 			source,
 		);

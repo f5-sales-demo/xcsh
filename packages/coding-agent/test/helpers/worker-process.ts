@@ -1,3 +1,5 @@
+import { randomInt } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { probe } from "./bridge-probe";
 
 function captureOutput(stream: ReadableStream<Uint8Array>) {
@@ -21,7 +23,33 @@ function captureOutput(stream: ReadableStream<Uint8Array>) {
 	return { drained, text: () => tail };
 }
 
-/** Own one subprocess and ephemeral loopback port; retain startup evidence and reap before reuse. */
+const issuedPorts = new Set<number>();
+const [ephemeralStart, ephemeralEnd] =
+	process.platform === "linux"
+		? readFileSync("/proc/sys/net/ipv4/ip_local_port_range", "utf8").trim().split(/\s+/).map(Number)
+		: [49152, 65535];
+
+/** Avoid automatic outbound allocation while the child starts, and never reuse
+ * a port from another fixture in this process. An external explicit listener
+ * can still race the handoff; its startup error must remain visible.
+ */
+export function reserveWorkerPort(): number {
+	for (let attempt = 0; attempt < 1000; attempt++) {
+		const port = randomInt(10000, 30000);
+		if (issuedPorts.has(port) || (port >= ephemeralStart && port <= ephemeralEnd)) continue;
+		try {
+			const reservation = Bun.serve({ hostname: "127.0.0.1", port, fetch: () => new Response("reserved") });
+			reservation.stop(true);
+			issuedPorts.add(port);
+			return port;
+		} catch (error) {
+			if (!(error instanceof Error) || !/EADDRINUSE|address already in use|in use/i.test(error.message)) throw error;
+		}
+	}
+	throw new Error("No unused worker fixture port outside the automatic outbound range");
+}
+
+/** Own one subprocess and a dedicated loopback port; retain startup evidence and await closure. */
 export async function spawnWorkerProcess(
 	command: string[],
 	options: {
@@ -29,9 +57,7 @@ export async function spawnWorkerProcess(
 		env: Record<string, string | undefined>;
 	},
 ) {
-	const reservation = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("reserved") });
-	const port = reservation.port as number;
-	reservation.stop(true);
+	const port = reserveWorkerPort();
 	const proc = Bun.spawn(command, {
 		...options,
 		env: { ...options.env, XCSH_BRIDGE_PORT: String(port) },

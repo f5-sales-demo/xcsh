@@ -189,6 +189,10 @@ export interface InstallOptions {
 }
 
 export interface DoctorOptions {
+	/** Select marketplace installation scope; legacy npm checks belong to user scope. */
+	scope?: "user" | "project";
+	/** Source-resolved nearest project registry; no installation or migration. */
+	projectInstalledRegistryPath?: string;
 	/** Attempt automatic fixes */
 	fix?: boolean;
 }

@@ -22,7 +22,11 @@ Run `xcsh plugin discover` or the marketplace action shown by `xcsh plugin --hel
 
 ## How do I diagnose a plugin?
 
-Use `xcsh plugin list --json` and `xcsh plugin doctor`. Disable one plugin at a time when isolating startup or discovery failures.
+Use `xcsh plugin list --json` and `xcsh plugin doctor`. Doctor checks installed marketplace source directories, manifests, declared entrypoints, runtime requirements, and enabled dependencies in their effective scope. It also checks legacy npm dependencies when their package manifest exists.
+
+Use `xcsh plugin doctor --scope project` to inspect the current project and its required dependencies, or `--scope user` for user installations. Default diagnosis includes both scopes. `--json` returns structured checks and the same nonzero exit status as text output when unresolved errors remain. Diagnosis reads local installation data; `--fix` is required for a supported repair.
+
+Disable one plugin at a time when isolating startup or discovery failures.
 
 Installation copies executable code into the selected scope, so discovery is the review step and
 install is the side-effect boundary. After installation, use `xcsh plugin list --json` to confirm
