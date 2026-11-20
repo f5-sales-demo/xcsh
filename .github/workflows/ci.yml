@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-latest, macos-26-intel, windows-latest]
+        os: [ubuntu-24.04, macos-26, macos-26-intel, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -757,7 +757,7 @@ jobs:
         include:
           - os: macos-26-intel
             arch: x64
-          - os: macos-latest
+          - os: macos-26
             arch: arm64
     runs-on: ${{ matrix.os }}
     env:
@@ -1167,7 +1167,7 @@ jobs:
     needs: [build-release, build-sign-macos]
     # This job performs strict codesign verification after archive assembly.
     # Keep it on macOS; Linux cannot validate Developer ID signatures.
-    runs-on: macos-latest
+    runs-on: macos-26
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1244,7 +1244,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [create-release]
     # Downloaded cask archives are re-verified with strict codesign checks.
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1338,7 +1338,7 @@ jobs:
         include:
           - os: macos-26-intel
             arch: x64
-          - os: macos-latest
+          - os: macos-26
             arch: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -1390,7 +1390,7 @@ jobs:
         include:
           - os: macos-26-intel
             arch: x64
-          - os: macos-latest
+          - os: macos-26
             arch: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -1536,7 +1536,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-latest, windows-latest]
+        os: [ubuntu-22.04, macos-26, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
