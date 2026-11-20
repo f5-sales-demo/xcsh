@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "files": {
+    "answer-recap.ts": "114e42d0ba77001c838144d978411e74ee175fa9f0d6a452cb2361132d38ee1c",
+    "async-answer.ts": "ab6610686e3151a8d5beca09632f1d0bf33c4d2cbfc0e6d0768138f42e0f30e3",
+    "contract.ts": "82b0bf7a7998ff8c3c9f25eabbbede3b29babb43ad11270d341f947f3ae31b0e",
+    "conversation-plan.ts": "935b5fe0cf472dcce8702385e7e026689df3eb73c9fbcd3276e955cb9cac0916",
+    "question-form.ts": "a260ecb2f46d7b4d27a601b9490a56df5bd1a702535c4fc941d200b2209f8d3c",
+    "question-reply.ts": "4886fa533cb1ae2042e45f4250cdf46ae73cd0f4d5734e5e58e89a03d3524007",
+    "transport.ts": "82d8a4110f54b41411a78f4aecb63fb7dfc5e2e7a76dfe153a362f6bf498dbcb"
+  }
+}

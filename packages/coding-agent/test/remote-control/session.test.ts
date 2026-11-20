@@ -2,10 +2,10 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ConversationPlans } from "../../../chat-ui/src/interactions/conversation-plan";
 import { Settings } from "../../src/config/settings";
 import { RemoteSession, type SessionTarget } from "../../src/remote-control/session";
 import { UserInteractions } from "../../src/session/user-interactions";
+import { ConversationPlans } from "../../src/shared-interactions/conversation-plan";
 
 function fixture(
 	id: string,

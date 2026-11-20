@@ -4,8 +4,6 @@ import { open, realpath } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { getModelEffectiveContextWindow, type Model, type Usage } from "@f5-sales-demo/pi-ai";
-import { parseQuestionReplies } from "../../../chat-ui/src/interactions/async-answer";
-import { isInteractionCommand } from "../../../chat-ui/src/interactions/transport";
 import { filterCurrentBrowserModels } from "../config/model-catalog";
 import {
 	applyRemotePermissionProfile,
@@ -15,6 +13,8 @@ import {
 } from "../sandbox/remote-permissions";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { readRecaps } from "../session/recap";
+import { parseQuestionReplies } from "../shared-interactions/async-answer";
+import { isInteractionCommand } from "../shared-interactions/transport";
 import { coordinateSessionTitle, RESERVED_PROVISIONAL_TITLE, subscribeSessionTitle } from "../utils/title-generator";
 import { ProtocolError } from "./errors";
 import { updateFileHistoryItem } from "./file-changes";

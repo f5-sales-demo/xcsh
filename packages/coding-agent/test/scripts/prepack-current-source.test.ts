@@ -1,13 +1,35 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 test("normal prepack refreshes current source and citation bytes before packing", async () => {
 	const packageRoot = path.resolve(import.meta.dir, "../..");
 	const production = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
-	const fixture = await mkdtemp(path.join(tmpdir(), "current-prepack-"));
+	const fixtureRoot = await mkdtemp(path.join(tmpdir(), "current-prepack-"));
+	const fixture = path.join(fixtureRoot, "packages/coding-agent");
+	await mkdir(fixture, { recursive: true });
 	try {
+		const rootScripts = path.join(fixtureRoot, "scripts");
+		await mkdir(rootScripts);
+		for (const name of ["prepare-qmd-attribution.ts", "prepare-shared-interactions.ts"]) {
+			await copyFile(path.resolve(packageRoot, "../../scripts", name), path.join(rootScripts, name));
+		}
+		const sharedSource = path.join(fixtureRoot, "packages/chat-ui/src/interactions");
+		await mkdir(sharedSource, { recursive: true });
+		const canonicalSource = path.resolve(packageRoot, "../chat-ui/src/interactions");
+		for (const name of await readdir(canonicalSource)) {
+			if (name.endsWith(".ts")) await copyFile(path.join(canonicalSource, name), path.join(sharedSource, name));
+		}
+		await mkdir(path.join(fixture, "src/internal-urls"), { recursive: true });
+		await mkdir(path.join(fixture, "node_modules/@tobilu/qmd"), { recursive: true });
+		await writeFile(
+			path.join(fixture, "node_modules/@tobilu/qmd/package.json"),
+			JSON.stringify({
+				name: "@tobilu/qmd",
+				version: production.devDependencies["@tobilu/qmd"],
+			}),
+		);
 		const output = path.join(fixture, "packages");
 		await mkdir(output);
 		await mkdir(path.join(fixture, "scripts"));
@@ -30,6 +52,7 @@ test("normal prepack refreshes current source and citation bytes before packing"
 				version: "0.0.0",
 				files: ["corpus-version.txt", "citation-version.txt"],
 				scripts: { prepack: production.scripts.prepack },
+				devDependencies: { "@tobilu/qmd": production.devDependencies["@tobilu/qmd"] },
 			}),
 		);
 		const child = Bun.spawn([process.execPath, "pm", "pack", "--quiet", "--destination", output], {
@@ -53,6 +76,6 @@ test("normal prepack refreshes current source and citation bytes before packing"
 			expect(bytes).toBe("current");
 		}
 	} finally {
-		await rm(fixture, { recursive: true });
+		await rm(fixtureRoot, { recursive: true });
 	}
 }, 30_000);

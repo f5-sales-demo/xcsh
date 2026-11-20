@@ -1,8 +1,6 @@
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent, Message } from "@f5-sales-demo/pi-ai";
 import { Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
-import { unseenAnswerRecap } from "../../../../chat-ui/src/interactions/answer-recap";
-import type { AsyncQuestionItem } from "../../../../chat-ui/src/interactions/contract";
 import { settings } from "../../config/settings";
 import { projectDocumentationTranscript } from "../../internal-urls/public-citations";
 import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
@@ -33,6 +31,8 @@ import { ReadGroupOutcomeAggregator } from "../../modes/utils/read-group-outcome
 import { type CustomMessage, SKILL_PROMPT_MESSAGE_TYPE, type SkillPromptDetails } from "../../session/messages";
 import { readRecaps } from "../../session/recap";
 import type { SessionContext } from "../../session/session-manager";
+import { unseenAnswerRecap } from "../../shared-interactions/answer-recap";
+import type { AsyncQuestionItem } from "../../shared-interactions/contract";
 import { formatBytes, formatDuration } from "../../tools/render-utils";
 
 type TextBlock = { type: "text"; text: string };

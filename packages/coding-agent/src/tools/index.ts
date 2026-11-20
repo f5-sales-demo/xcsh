@@ -113,7 +113,7 @@ export interface ToolSession {
 	getInteractionIdentity?: (itemId: string) => import("../session/user-interactions").InteractionIdentity;
 	publishAsyncQuestions?: (
 		itemId: string,
-		questions: import("../../../chat-ui/src/interactions/contract").AsyncInputQuestion[],
+		questions: import("../shared-interactions/contract").AsyncInputQuestion[],
 		questionIds: string[],
 	) => void;
 	deliverAsyncAnswer?: (itemId: string, questionId: string, answer: string) => Promise<void>;

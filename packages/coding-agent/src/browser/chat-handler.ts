@@ -1,9 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { AssistantMessage, AssistantMessagePhase, ImageContent } from "@f5-sales-demo/pi-ai";
-import { questionToolRecap } from "../../../chat-ui/src/interactions/answer-recap";
-import { parseQuestionReplies } from "../../../chat-ui/src/interactions/async-answer";
-import { isInteractionCommand } from "../../../chat-ui/src/interactions/transport";
 import { parseModelString } from "../config/model-resolver";
 import { settings } from "../config/settings";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
@@ -24,6 +21,9 @@ import {
 import { LITELLM_LOGIN_MODEL_CHOICES } from "../modes/controllers/login-model";
 import { extractReferences } from "../references";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
+import { questionToolRecap } from "../shared-interactions/answer-recap";
+import { parseQuestionReplies } from "../shared-interactions/async-answer";
+import { isInteractionCommand } from "../shared-interactions/transport";
 import { EXTENSION_CAPABILITIES } from "./capabilities.generated";
 import {
 	type ChatDelta,

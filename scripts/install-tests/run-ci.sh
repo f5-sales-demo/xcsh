@@ -143,6 +143,7 @@ mkdir -p "$TARBALL_APP_DIR"
 
   bun add "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" "$stats_tgz" "$resource_mgmt_tgz" "$f5_core_tgz" "$coding_agent_tgz"
   XCSH_RELEASE_CACHE_DIR="$candidate_cache" smoke_cli ./node_modules/.bin/xcsh
+  bun "$ROOT_DIR/scripts/install-tests/sdk-import-smoke.ts" "$TARBALL_APP_DIR/node_modules/@f5-sales-demo/xcsh"
 )
 
 section "Platform package structure verification"

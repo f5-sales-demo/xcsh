@@ -1,5 +1,4 @@
 import { isDeepStrictEqual } from "node:util";
-import type { ConversationPlan, PlanAction } from "../../../chat-ui/src/interactions/conversation-plan";
 import type {
 	InteractionIdentity,
 	InteractionResolution,
@@ -7,6 +6,7 @@ import type {
 	UserInteractionEvent,
 	UserInteractions,
 } from "../session/user-interactions";
+import type { ConversationPlan, PlanAction } from "../shared-interactions/conversation-plan";
 
 interface Client {
 	ensureProtocol(): Promise<void>;
