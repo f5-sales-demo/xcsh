@@ -148,6 +148,34 @@ export function generateTypeScript(
 	return lines.filter(line => line !== undefined).join("\n");
 }
 
+export async function formatTerraformIndex(outputFile: string): Promise<void> {
+	const child = Bun.spawn(
+		[
+			process.execPath,
+			"x",
+			"--no-install",
+			"--bun",
+			"biome",
+			"format",
+			"--write",
+			"--files-max-size=10000000",
+			outputFile,
+		],
+		{
+			cwd: path.resolve(import.meta.dir, ".."),
+			stdin: "ignore",
+			stdout: "pipe",
+			stderr: "pipe",
+		},
+	);
+	const [code, stdout, stderr] = await Promise.all([
+		child.exited,
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+	]);
+	if (code !== 0) throw new Error(`Terraform index formatting failed (${code}):\n${stderr}${stdout}`);
+}
+
 async function main(): Promise<void> {
 	const sources = await requireFreshCorpusSources();
 	if (
@@ -162,7 +190,7 @@ async function main(): Promise<void> {
 	});
 	const output = generateTypeScript(loaded.data, loaded.providerTag, loaded.providerCommit);
 	await fs.writeFile(OUTPUT_FILE, output, "utf-8");
-	await Bun.$`bunx biome format --write --files-max-size=10000000 ${OUTPUT_FILE}`.quiet();
+	await formatTerraformIndex(OUTPUT_FILE);
 	console.log(`Generated ${OUTPUT_FILE}`);
 }
 
