@@ -79,11 +79,7 @@ export async function refreshCorpusSources(
 		sources.api.acceptance !== "immutable"
 	)
 		throw new Error("Corpus refresh requires immutable provider, documentation, and API releases");
-	const response = await request(
-		`https://github.com/${sources.terraform.repository}/releases/download/${sources.terraform.tag}/publication.json`,
-	);
-	if (!response.ok) throw new Error(`Documentation receipt download failed: ${response.status}`);
-	const bytes = Buffer.from(await response.arrayBuffer());
+	const bytes = Buffer.from(await downloadVerifiedCorpusAsset(sources.terraform, "publication.json", request));
 	const receipt = JSON.parse(bytes.toString());
 	const expected = sources.terraform.assets["publication.json"]!;
 	if (bytes.length !== expected.size_bytes || terraformHash(bytes) !== expected.sha256)

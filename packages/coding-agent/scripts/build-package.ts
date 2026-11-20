@@ -9,12 +9,22 @@ export interface PackageBuildOperations {
 }
 
 export async function runPackageBuild(operations: PackageBuildOperations): Promise<void> {
+	let failed = false;
+	let failure: unknown;
 	try {
 		await operations.prepare();
 		await operations.compile();
-	} finally {
-		await operations.reset();
+	} catch (error) {
+		failed = true;
+		failure = error;
 	}
+	try {
+		await operations.reset();
+	} catch (error) {
+		if (failed) throw new AggregateError([failure, error], "Package build and cleanup failed", { cause: failure });
+		throw error;
+	}
+	if (failed) throw failure;
 }
 
 const packageRoot = path.resolve(import.meta.dir, "..");

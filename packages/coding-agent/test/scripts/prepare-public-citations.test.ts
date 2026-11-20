@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import type { CorpusSource, CorpusSources } from "../../scripts/corpus-sources";
 import { preparePublicCitations } from "../../scripts/prepare-public-citations";
@@ -85,4 +85,44 @@ test("unavailable public sitemap prevents successful citation generation", async
 		}),
 	).rejects.toThrow("HTTP 503");
 	expect(called).toBe(false);
+});
+
+test("citation generation and cleanup failures retain both original causes", async () => {
+	const original = new Error("original citation generation failure");
+	const cleanup = new Error("original citation cleanup failure");
+	let directory = "";
+	let failure: unknown;
+	try {
+		await preparePublicCitations({
+			resolve: async () => sources,
+			request,
+			run: async root => {
+				directory = root;
+				throw original;
+			},
+			cleanup: async root => {
+				await rm(root, { recursive: true });
+				throw cleanup;
+			},
+		});
+	} catch (error) {
+		failure = error;
+	}
+	expect(failure).toBeInstanceOf(AggregateError);
+	expect((failure as AggregateError).errors).toContain(original);
+	expect((failure as AggregateError).errors).toContain(cleanup);
+	await expect(stat(directory)).rejects.toThrow();
+});
+test("cleanup failure after successful citation generation cannot report success", async () => {
+	await expect(
+		preparePublicCitations({
+			resolve: async () => sources,
+			request,
+			run: async () => {},
+			cleanup: async root => {
+				await rm(root, { recursive: true });
+				throw new Error("citation cleanup failure");
+			},
+		}),
+	).rejects.toThrow("citation cleanup failure");
 });

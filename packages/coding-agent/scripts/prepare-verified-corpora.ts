@@ -23,10 +23,14 @@ export async function prepareVerifiedCorpora(operations: CorpusPreparationOperat
 }
 
 const packageRoot = path.resolve(import.meta.dir, "..");
-async function run(command: readonly string[]): Promise<void> {
-	const child = Bun.spawn([...command], { cwd: packageRoot, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+async function run(command: readonly string[], directory = packageRoot): Promise<void> {
+	const child = Bun.spawn([...command], { cwd: directory, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
 	const code = await child.exited;
 	if (code !== 0) throw new Error(`Corpus preparation failed (${code}): ${command.join(" ")}`);
+}
+
+export async function runFreshCorpusCheck(directory = packageRoot): Promise<void> {
+	await run([process.execPath, "scripts/check-corpus-freshness.ts"], directory);
 }
 
 if (import.meta.main) {
@@ -38,6 +42,6 @@ if (import.meta.main) {
 		citations: () => preparePublicCitations(),
 		// Load newly generated exports in a separate process; the parent may have
 		// imported an older mapping before preparation began.
-		verify: () => run([process.execPath, "scripts/check-corpus-freshness.ts"]),
+		verify: () => runFreshCorpusCheck(),
 	});
 }

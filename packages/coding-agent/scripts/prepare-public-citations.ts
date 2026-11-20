@@ -3,39 +3,18 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { type CorpusSources, requireFreshCorpusSources } from "./corpus-sources";
 import { fetchTerraformSnapshot } from "./terraform-snapshot-download";
-import { type AssetRequest, downloadVerifiedCorpusAsset } from "./verified-corpus-asset";
+import { type AssetRequest, downloadCorpusBytes, downloadVerifiedCorpusAsset } from "./verified-corpus-asset";
 
 export interface PublicCitationPreparation {
 	resolve?: () => Promise<CorpusSources>;
 	request?: AssetRequest;
 	run?: (evidenceRoot: string) => Promise<void>;
+	/** Explicit source-test seam; normal preparation uses owned-directory removal. */
+	cleanup?: (evidenceRoot: string) => Promise<void>;
 }
 
 async function downloadSitemap(url: string, request: AssetRequest): Promise<Uint8Array> {
-	const response = await request(url);
-	if (!response.ok || !response.body) throw new Error(`Public sitemap download failed: HTTP ${response.status}`);
-	const reader = response.body.getReader();
-	const chunks: Uint8Array[] = [];
-	let length = 0;
-	try {
-		while (true) {
-			const next = await reader.read();
-			if (next.done) break;
-			length += next.value.byteLength;
-			if (length > 10 * 1024 * 1024) throw new Error("Public sitemap exceeds bounded size");
-			chunks.push(next.value);
-		}
-	} finally {
-		await reader.cancel();
-		reader.releaseLock();
-	}
-	const bytes = new Uint8Array(length);
-	let offset = 0;
-	for (const chunk of chunks) {
-		bytes.set(chunk, offset);
-		offset += chunk.byteLength;
-	}
-	return bytes;
+	return downloadCorpusBytes(url, 10 * 1024 * 1024, request);
 }
 
 async function runGenerator(evidenceRoot: string): Promise<void> {
@@ -61,8 +40,10 @@ export async function preparePublicCitations(options: PublicCitationPreparation 
 	const sources = await (options.resolve ?? requireFreshCorpusSources)();
 	const request = options.request ?? fetchTerraformSnapshot;
 	const root = await mkdtemp(path.join(tmpdir(), "xcsh-public-citations-"));
-	await chmod(root, 0o700);
+	let failed = false;
+	let failure: unknown;
 	try {
+		await chmod(root, 0o700);
 		await mkdir(path.join(root, "assessment"));
 		await writeFile(
 			path.join(root, "assessment/source-receipts.json"),
@@ -95,9 +76,20 @@ export async function preparePublicCitations(options: PublicCitationPreparation 
 				{ mode: 0o600 },
 			);
 		await (options.run ?? runGenerator)(root);
-	} finally {
-		await rm(root, { recursive: true, force: true });
+	} catch (error) {
+		failed = true;
+		failure = error;
 	}
+	try {
+		await (options.cleanup ?? (directory => rm(directory, { recursive: true, force: true })))(root);
+	} catch (error) {
+		if (failed)
+			throw new AggregateError([failure, error], "Public citation preparation and cleanup failed", {
+				cause: failure,
+			});
+		throw error;
+	}
+	if (failed) throw failure;
 }
 
 if (import.meta.main) await preparePublicCitations();
