@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "testCoverageVerified": false,
-  "revision": "99aff31d171a3fc36bb2f2dde078688fd0a22086",
+  "revision": "6077d5e6775af66ee26ccdb59b703d2d01060625",
   "fingerprint": "0f65e272a43677e9585550f93e4f17f3687e8fccbd0bc17e0a9435362416eac6",
   "counts": {
     "total": 246,
@@ -11214,6 +11214,7 @@
         "packages/coding-agent/test/sandbox-isolation.test.ts",
         "packages/coding-agent/test/scripts/api-spec-delivery.test.ts",
         "packages/coding-agent/test/scripts/api-spec-update-workflow.test.ts",
+        "packages/coding-agent/test/scripts/ci-workflow-contract.test.ts",
         "packages/coding-agent/test/scripts/console-catalog-predecessor.test.ts",
         "packages/coding-agent/test/scripts/performance-qualification.test.ts",
         "packages/coding-agent/test/scripts/reconcile-releases.test.ts",
@@ -14615,6 +14616,7 @@
         "packages/coding-agent/test/routing-profiler.test.ts",
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts",
+        "packages/coding-agent/test/scripts/ci-workflow-contract.test.ts",
         "packages/coding-agent/test/scripts/collect-dag-profile.test.ts",
         "packages/coding-agent/test/scripts/performance-qualification.test.ts",
         "packages/coding-agent/test/scripts/self-repository-harness.test.ts",

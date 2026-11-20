@@ -531,7 +531,7 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 		expect(job).toContain("needs: [update-homebrew]");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 		expect(job).toContain("runs-on: ${{ matrix.os }}");
-		expect(job).toContain("os: macos-latest");
+		expect(job).toContain("os: macos-26");
 		expect(job).toContain("arch: arm64");
 		expect(job).toContain("os: macos-26-intel");
 		expect(job).toContain("arch: x64");
@@ -685,7 +685,7 @@ describe("macOS pkg release contract", () => {
 		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
 		const job = workflow.match(/\n {2}verify-macos-pkg:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
 		const script = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-macos-pkg.sh"), "utf8");
-		expect(job).toContain("macos-latest");
+		expect(job).toContain("os: macos-26");
 		expect(job).toContain("macos-26-intel");
 		expect(job).toContain("scripts/ci-verify-macos-pkg.sh");
 		expect(script).toContain("pkgutil --check-signature");
