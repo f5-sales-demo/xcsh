@@ -1,11 +1,7 @@
 import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import { type Static, Type } from "@sinclair/typebox";
-import {
-	type AsyncInputQuestion,
-	asyncQuestionId,
-	createAsyncQuestionItem,
-} from "../../../chat-ui/src/interactions/contract";
 import asyncDescription from "../prompts/tools/request-user-input-async.md" with { type: "text" };
+import { type AsyncInputQuestion, asyncQuestionId, createAsyncQuestionItem } from "../shared-interactions/contract";
 import type { ToolSession } from ".";
 import { asyncQuestionsSupported } from "./question-eligibility";
 import { ToolAbortError, ToolError } from "./tool-errors";

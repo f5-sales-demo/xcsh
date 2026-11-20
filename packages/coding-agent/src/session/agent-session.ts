@@ -76,13 +76,6 @@ import {
 	Snowflake,
 	setNativeKillTree,
 } from "@f5-sales-demo/pi-utils";
-import { createQuestionReply, parseQuestionReplies } from "../../../chat-ui/src/interactions/async-answer";
-import { createAsyncQuestionItem } from "../../../chat-ui/src/interactions/contract";
-import {
-	type ConversationPlan,
-	ConversationPlans,
-	type PlanAction,
-} from "../../../chat-ui/src/interactions/conversation-plan";
 import type { AsyncJob, AsyncJobManager } from "../async";
 import type { Rule } from "../capability/rule";
 import { MODEL_ROLE_IDS, type ModelRegistry } from "../config/model-registry";
@@ -162,6 +155,9 @@ import { type RoutingEvent, sanitizeRoutingEvent } from "../routing/events";
 import { validateCustomPools } from "../routing/presets";
 import type { RoutingMode, RoutingOutcome } from "../routing/types";
 import { deobfuscateAssistantContent, deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
+import { createQuestionReply, parseQuestionReplies } from "../shared-interactions/async-answer";
+import { createAsyncQuestionItem } from "../shared-interactions/contract";
+import { type ConversationPlan, ConversationPlans, type PlanAction } from "../shared-interactions/conversation-plan";
 import { resolveThinkingLevelForModel, toReasoningEffort } from "../thinking";
 import type { ToolSession } from "../tools";
 import { wrapAsyncTool } from "../tools/async-tool";
@@ -249,7 +245,7 @@ export type AgentSessionEvent =
 				text: string;
 				phase: "final_answer";
 				delivery: "async";
-				questions: import("../../../chat-ui/src/interactions/contract").AsyncInputQuestion[];
+				questions: import("../shared-interactions/contract").AsyncInputQuestion[];
 			};
 			questionIds: string[];
 	  }
@@ -1043,7 +1039,7 @@ export class AgentSession {
 	}
 	publishAsyncQuestions(
 		itemId: string,
-		questions: import("../../../chat-ui/src/interactions/contract").AsyncInputQuestion[],
+		questions: import("../shared-interactions/contract").AsyncInputQuestion[],
 		questionIds: string[],
 	): void {
 		const item = createAsyncQuestionItem(itemId, questions);

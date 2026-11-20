@@ -33,14 +33,14 @@
 	"scripts": {
 		"prebuild": "bun ../../scripts/check-installed-dependencies.ts",
 		"build": "bun scripts/build-package.ts",
-		"precheck": "bun ../../scripts/check-installed-dependencies.ts",
+		"precheck": "bun ../../scripts/check-installed-dependencies.ts && bun ../../scripts/prepare-qmd-attribution.ts --check && bun ../../scripts/prepare-shared-interactions.ts --check",
 		"check": "biome check . && bun run format-prompts -- --check && bun run audit:tui-readability && bun run check:types",
 		"audit:tui-readability": "bun scripts/audit-tui-readability.ts --check",
 		"audit:tui-readability:write": "bun scripts/audit-tui-readability.ts --write",
 		"check:types": "bun run generate-build-info && tsc -p tsconfig.json --noEmit",
 		"lint": "biome lint .",
 		"check:bundle": "bun scripts/check-bundle.ts",
-		"pretest": "bun ../../scripts/check-installed-dependencies.ts && bun ../../scripts/ensure-dev-native.ts",
+		"pretest": "bun ../../scripts/check-installed-dependencies.ts && bun ../../scripts/prepare-qmd-attribution.ts && bun ../../scripts/prepare-shared-interactions.ts && bun ../../scripts/ensure-dev-native.ts",
 		"test": "bun run generate-build-info && bun scripts/bun-test-guarded.ts --max-concurrency=2",
 		"bench:routing-matrix": "bun scripts/bench-routing-matrix.ts",
 		"bench:copy-selector": "bun scripts/bench-copy-selector.ts",
@@ -61,10 +61,14 @@
 		"generate-terraform-index": "bun scripts/generate-terraform-index.ts",
 		"generate-console-catalog": "bun scripts/generate-console-catalog.ts",
 		"generate-console-field-metadata": "bun scripts/generate-console-field-metadata.ts",
-		"prepack": "bun scripts/generate-docs-index.ts && bun scripts/prepare-verified-corpora.ts && bun scripts/generate-build-info.ts && bun scripts/generate-console-catalog.ts && bun scripts/generate-console-field-metadata.ts",
+		"prepack": "bun ../../scripts/prepare-qmd-attribution.ts && bun ../../scripts/prepare-shared-interactions.ts && bun scripts/generate-docs-index.ts && bun scripts/prepare-verified-corpora.ts && bun scripts/generate-build-info.ts && bun scripts/generate-console-catalog.ts && bun scripts/generate-console-field-metadata.ts",
 		"generate-template": "bun scripts/generate-template.ts",
 		"check-workflow-field-coverage": "bun scripts/check-workflow-field-coverage.ts",
-		"generate-terraform-documentation-index": "bun scripts/generate-terraform-documentation-index.ts"
+		"generate-terraform-documentation-index": "bun scripts/generate-terraform-documentation-index.ts",
+		"prepare:shared-interactions": "bun ../../scripts/prepare-shared-interactions.ts",
+		"check:shared-interactions": "bun ../../scripts/prepare-shared-interactions.ts --check",
+		"prepare:qmd-attribution": "bun ../../scripts/prepare-qmd-attribution.ts",
+		"check:qmd-attribution": "bun ../../scripts/prepare-qmd-attribution.ts --check"
 	},
 	"dependencies": {
 		"@agentclientprotocol/sdk": "2.6.0",

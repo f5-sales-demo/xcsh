@@ -7,15 +7,15 @@ import {
 	type AnswerRecapRecord,
 	answerRecap,
 	safeQuestionEvidence,
-} from "../../../chat-ui/src/interactions/answer-recap";
+} from "../shared-interactions/answer-recap";
 import {
 	type AsyncInputQuestion,
 	type AsyncQuestionItem,
 	type InputQuestion,
 	type InputResponse,
 	validInputResponse,
-} from "../../../chat-ui/src/interactions/contract";
-import { isInteractionFrame, isInteractionIdentity } from "../../../chat-ui/src/interactions/transport";
+} from "../shared-interactions/contract";
+import { isInteractionFrame, isInteractionIdentity } from "../shared-interactions/transport";
 
 const toolCalls = new AsyncLocalStorage<string>();
 /** Bind only runtime tool UI calls; terminal administration has no tool identity. */

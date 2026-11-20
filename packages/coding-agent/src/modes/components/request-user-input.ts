@@ -1,6 +1,6 @@
 import { type Component, Editor, getKeybindings, matchesKey, type TUI, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
-import { INPUT_COPY, type InputQuestion, type InputResponse } from "../../../../chat-ui/src/interactions/contract";
-import { QuestionForm } from "../../../../chat-ui/src/interactions/question-form";
+import { INPUT_COPY, type InputQuestion, type InputResponse } from "../../shared-interactions/contract";
+import { QuestionForm } from "../../shared-interactions/question-form";
 import { getEditorTheme, theme } from "../theme/theme";
 import { keyHint, rawKeyHint } from "./keybinding-hints";
 import {

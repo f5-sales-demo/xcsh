@@ -282,24 +282,24 @@
       "fafc7cd0"
     ],
     "packages/coding-agent/src/modes/components/question-transcript.ts": [
-      "eee92f2f",
-      "ac7f63ca",
-      "fac8afc9",
-      "84b74786",
-      "d65ca52f",
-      "ceced489",
-      "e99c3f8b",
-      "18eedeb3"
+      "60c5331e",
+      "77bc83c7",
+      "183bc120",
+      "98007c6c",
+      "118603aa",
+      "e0a9f611",
+      "2fef164b",
+      "d0924d43"
     ],
     "packages/coding-agent/src/modes/components/request-user-input.ts": [
-      "3856fa16",
-      "bb1408c3",
-      "ab452887",
-      "d66a4254",
-      "6a8dc4a0",
-      "a20e2ec6",
-      "223854b0",
-      "e77e5ba9"
+      "d04fc520",
+      "50ad0673",
+      "47eb2877",
+      "39b6cb0e",
+      "64504895",
+      "65de3d0e",
+      "73d65a1d",
+      "d06d09d8"
     ],
     "packages/coding-agent/src/modes/components/reviewed-action-dialog.ts": [
       "cb43ee0e",
@@ -442,14 +442,14 @@
       "15ff8c9e"
     ],
     "packages/coding-agent/src/modes/utils/ui-helpers.ts": [
-      "3cbd6ff0",
-      "1e356d8c",
-      "6c6fab60",
-      "f1592eda",
-      "ea085dc0",
-      "c7dca66b",
-      "934534f3",
-      "31be9a0d"
+      "99ecac4b",
+      "b67554f0",
+      "a876158b",
+      "f7a4c3a1",
+      "b1b11c7c",
+      "bf702cdc",
+      "8ef5b60a",
+      "983f98e1"
     ],
     "packages/coding-agent/src/task/render.ts": [
       "f395a34f",
@@ -1539,13 +1539,13 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 159,
+      "line": 155,
       "sink": "selectorTranscriptFrame",
       "entry": "complete-question-transcript"
     },
     {
       "file": "packages/coding-agent/src/modes/components/question-transcript.ts",
-      "line": 163,
+      "line": 159,
       "sink": "selectorProse",
       "entry": "complete-question-transcript"
     },

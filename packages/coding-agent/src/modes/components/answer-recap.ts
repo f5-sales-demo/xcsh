@@ -1,9 +1,5 @@
 import { type Component, Text } from "@f5-sales-demo/pi-tui";
-import {
-	type AnswerDelivery,
-	type AnswerRecap,
-	DELIVERY_COPY,
-} from "../../../../chat-ui/src/interactions/answer-recap";
+import { type AnswerDelivery, type AnswerRecap, DELIVERY_COPY } from "../../shared-interactions/answer-recap";
 import { theme } from "../theme/theme";
 
 /** Text preserves submitted newlines and indentation; no markdown interpretation. */

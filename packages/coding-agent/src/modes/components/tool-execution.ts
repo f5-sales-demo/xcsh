@@ -14,10 +14,10 @@ import {
 	type TUI,
 } from "@f5-sales-demo/pi-tui";
 import { getProjectDir, logger } from "@f5-sales-demo/pi-utils";
-import { questionToolRecap } from "../../../../chat-ui/src/interactions/answer-recap";
 import { computeEditDiff, computeHashlineDiff, computePatchDiff, type DiffError, type DiffResult } from "../../edit";
 import { usablePluginView } from "../../extensibility/presentation-validity";
 import { theme } from "../../modes/theme/theme";
+import { questionToolRecap } from "../../shared-interactions/answer-recap";
 import { BASH_DEFAULT_PREVIEW_LINES } from "../../tools/bash";
 import { stripInternalArgs } from "../../tools/json-tree";
 import { PYTHON_DEFAULT_PREVIEW_LINES } from "../../tools/python";
