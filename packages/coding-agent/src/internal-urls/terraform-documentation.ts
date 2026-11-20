@@ -379,6 +379,10 @@ export async function verifyTerraformSnapshot(root: string, inputPin: TerraformP
 		}
 		let bytes = 0;
 		stream.on("data", chunk => {
+			if (!(chunk instanceof Uint8Array)) {
+				failure = new Error("Terraform archive produced a non-binary chunk");
+				return;
+			}
 			bytes += chunk.length;
 			total += chunk.length;
 			if (bytes > 4 * 1024 * 1024 || total > 1024 * 1024 * 1024)

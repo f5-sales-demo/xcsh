@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 
 import path from "node:path";
-import { requireFreshPublicCitationSources } from "./corpus-sources";
 
 export interface PackageBuildOperations {
 	prepare: () => Promise<void>;
@@ -32,31 +31,28 @@ async function run(command: string[]): Promise<void> {
 }
 
 async function prepare(): Promise<void> {
-	await requireFreshPublicCitationSources();
-	await run(["bun", "run", "generate-build-info"]);
-	await run(["bun", "run", "generate-extension-capabilities"]);
-	await run(["bun", "run", "generate-api-catalog-qmd-index"]);
-	await run(["bun", "run", "generate-documentation-index"]);
-	await run(["bun", "run", "generate-terraform-documentation-index"]);
+	await run([process.execPath, "run", "generate-build-info"]);
+	await run([process.execPath, "run", "generate-extension-capabilities"]);
+	await run([process.execPath, "scripts/prepare-verified-corpora.ts"]);
 	if (!(await Bun.file(path.join(packageRoot, "src/internal-urls/api-spec-index.generated.ts")).exists())) {
 		throw new Error("generated API specification index is missing");
 	}
-	await run(["bun", "--cwd=../stats", "scripts/generate-client-bundle.ts", "--generate"]);
-	await run(["bun", "--cwd=../office-pane", "scripts/generate-client-bundle.ts", "--generate"]);
-	await run(["bun", "--cwd=../natives", "run", "embed:native"]);
+	await run([process.execPath, "--cwd=../stats", "scripts/generate-client-bundle.ts", "--generate"]);
+	await run([process.execPath, "--cwd=../office-pane", "scripts/generate-client-bundle.ts", "--generate"]);
+	await run([process.execPath, "--cwd=../natives", "run", "embed:native"]);
 }
 
 async function compile(): Promise<void> {
-	await run(["bun", "scripts/build-binary.ts"]);
+	await run([process.execPath, "scripts/build-binary.ts"]);
 }
 
 async function reset(): Promise<void> {
 	const commands = [
-		["bun", "--cwd=../natives", "run", "embed:native", "--reset"],
-		["bun", "--cwd=../stats", "scripts/generate-client-bundle.ts", "--reset"],
-		["bun", "--cwd=../office-pane", "scripts/generate-client-bundle.ts", "--reset"],
-		["bun", "run", "generate-documentation-index", "--reset"],
-		["bun", "run", "generate-terraform-documentation-index", "--reset"],
+		[process.execPath, "--cwd=../natives", "run", "embed:native", "--reset"],
+		[process.execPath, "--cwd=../stats", "scripts/generate-client-bundle.ts", "--reset"],
+		[process.execPath, "--cwd=../office-pane", "scripts/generate-client-bundle.ts", "--reset"],
+		[process.execPath, "run", "generate-documentation-index", "--reset"],
+		[process.execPath, "run", "generate-terraform-documentation-index", "--reset"],
 	];
 	const failures: unknown[] = [];
 	for (const command of commands) {

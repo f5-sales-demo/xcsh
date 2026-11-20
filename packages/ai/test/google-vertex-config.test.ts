@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { hookFetch } from "@f5-sales-demo/pi-utils";
 import { getBundledModel } from "../src/models";
 import {
 	buildGoogleVertexClientOptions,
@@ -11,6 +12,7 @@ import {
 	readConfiguredGcloudProject,
 	resolveGoogleVertexLocation,
 	resolveGoogleVertexProject,
+	streamGoogleVertex,
 } from "../src/providers/google-vertex";
 import { mapOptionsForApi } from "../src/stream";
 import type { Model, SimpleStreamOptions } from "../src/types";
@@ -35,6 +37,39 @@ async function withoutProjectEnvironment(run: () => Promise<void>): Promise<void
 }
 
 describe("Google Vertex runtime configuration", () => {
+	it("sends the standalone bearer token through the current SDK without ambient ADC discovery", async () => {
+		const previous = Bun.env.GOOGLE_APPLICATION_CREDENTIALS;
+		Bun.env.GOOGLE_APPLICATION_CREDENTIALS = "/nonexistent/synthetic-adc-must-not-be-used.json";
+		let requests = 0;
+		using _hook = hookFetch((input, init) => {
+			const url = new URL(input instanceof Request ? input.url : String(input));
+			expect(url.hostname).toBe("aiplatform.googleapis.com");
+			expect(url.pathname).toContain("/projects/confirmed-project/locations/global/");
+			const headers = new Headers(input instanceof Request ? input.headers : init?.headers);
+			expect(headers.get("authorization")).toBe("Bearer isolated-vertex-oauth-token");
+			requests++;
+			return new Response(
+				`data: ${JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: "verified" }] }, finishReason: "STOP" }] })}\n\n`,
+				{ headers: { "content-type": "text/event-stream" } },
+			);
+		});
+		try {
+			const model = getBundledModel("google-vertex", "gemini-3.8-flash") as Model<"google-vertex">;
+			const result = await streamGoogleVertex(
+				model,
+				{ messages: [{ role: "user", content: "Verify SDK authorization", timestamp: 1 }] },
+				{ apiKey: "isolated-vertex-oauth-token", project: "confirmed-project", location: "global" },
+			).result();
+			expect(result.errorMessage).toBeUndefined();
+			expect(result.stopReason).toBe("stop");
+			expect(result.content).toContainEqual({ type: "text", text: "verified" });
+			expect(requests).toBe(1);
+		} finally {
+			if (previous === undefined) delete Bun.env.GOOGLE_APPLICATION_CREDENTIALS;
+			else Bun.env.GOOGLE_APPLICATION_CREDENTIALS = previous;
+		}
+	});
+
 	it("uses the standalone OAuth token through an explicit auth client", async () => {
 		const model = getBundledModel("google-vertex", "gemini-3.8-flash") as Model<"google-vertex">;
 		const clientOptions = buildGoogleVertexClientOptions(

@@ -26,7 +26,7 @@
 	"scripts": {
 		"build": "bun run build.ts",
 		"check": "biome check . && bun run check:types",
-		"check:types": "tsgo -p tsconfig.json --noEmit && tsgo -p tsconfig.client.json --noEmit",
+		"check:types": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit",
 		"test": "bun test --preload ./test/register-dom.ts --preload ./test/setup.ts",
 		"lint": "biome lint .",
 		"fix": "biome check --write --unsafe .",
@@ -38,19 +38,19 @@
 		"@f5-sales-demo/pi-agent-core": "workspace:*",
 		"@f5-sales-demo/xcsh": "workspace:*",
 		"@f5-sales-demo/xcsh-chat-ui": "workspace:*",
-		"react": "19.2.8",
-		"react-dom": "19.2.8"
+		"react": "19.3.1",
+		"react-dom": "19.3.1"
 	},
 	"devDependencies": {
-		"@happy-dom/global-registrator": "20.13.2",
+		"@happy-dom/global-registrator": "21.0.4",
 		"@testing-library/react": "16.3.3",
 		"@types/bun": "1.4.4",
-		"@types/office-js": "1.0.608",
-		"@types/react": "19.2.18",
-		"@types/react-dom": "19.2.7",
-		"ajv": "^8.17.1",
-		"office-addin-mock": "3.0.10",
-		"puppeteer": "25.10.0"
+		"@types/office-js": "1.0.617",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"ajv": "8.20.0",
+		"office-addin-mock": "4.0.1",
+		"puppeteer": "25.17.0"
 	},
 	"engines": {
 		"bun": ">=1.4.4"

@@ -4,6 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { $ } from "bun";
+import { markitNativeBundlePlugin } from "./markit-native-bundle";
 import { parseQmdSmokeOutput } from "./qmd-smoke-output";
 import { vertexBuildDefines } from "./vertex-build-credentials";
 
@@ -96,6 +97,7 @@ async function buildBinary(target: BinaryTarget): Promise<void> {
 		entrypoints: [path.join(repoRoot, entrypoint)],
 		compile: { target: target.target, outfile: path.join(repoRoot, target.outfile) },
 		root: repoRoot,
+		plugins: [markitNativeBundlePlugin(target.platform, target.arch)],
 		external: ["mupdf", "node-llama-cpp", "@node-llama-cpp/*"],
 		define: { PI_COMPILED: "true", ...vertexBuildDefines(Bun.env, true) },
 		throw: false,

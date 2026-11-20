@@ -29,6 +29,8 @@ let dir: string;
 beforeAll(async () => {
 	dir = mkdtempSync(join(tmpdir(), "office-pane-test-"));
 	await mkdir(join(dir, "assets"), { recursive: true });
+	await mkdir(join(dir, "fonts"), { recursive: true });
+	await writeFile(join(dir, "fonts/Temml.woff2"), "synthetic math font");
 	await writeFile(join(dir, "taskpane.html"), "<!DOCTYPE html><title>pane</title>");
 	await writeFile(join(dir, "taskpane.js"), "console.log('pane');");
 	await writeFile(join(dir, "manifest.json"), JSON.stringify({ id: "test" }));
@@ -185,6 +187,8 @@ describe("refusing when no pane bundle is available", () => {
 		const complete = mkdtempSync(join(tmpdir(), "office-pane-complete-"));
 		try {
 			await mkdir(join(complete, "assets"), { recursive: true });
+			await mkdir(join(complete, "fonts"), { recursive: true });
+			await writeFile(join(complete, "fonts/Temml.woff2"), "synthetic math font");
 			await writeFile(join(complete, "taskpane.html"), "<!DOCTYPE html>");
 			await writeFile(join(complete, "taskpane.js"), "console.log(1);");
 			await writeFile(join(complete, "assets", "color.png"), "png");
@@ -209,6 +213,19 @@ describe("refusing when no pane bundle is available", () => {
 			expect(await missingPaneFiles(partial)).toContain("taskpane.js");
 		} finally {
 			rmSync(partial, { recursive: true, force: true });
+		}
+	});
+
+	it("refuses a pane missing the served math font", async () => {
+		const noMath = mkdtempSync(join(tmpdir(), "office-pane-nomath-"));
+		try {
+			await writeFile(join(noMath, "taskpane.html"), "<!DOCTYPE html>");
+			await writeFile(join(noMath, "taskpane.js"), "console.log(1);");
+			await writeFile(join(noMath, "manifest.json"), "{}");
+			expect(await isCompletePane(noMath)).toBe(false);
+			expect(await missingPaneFiles(noMath)).toContain("fonts/Temml.woff2");
+		} finally {
+			rmSync(noMath, { recursive: true, force: true });
 		}
 	});
 
@@ -280,6 +297,8 @@ describe("refusing when no pane bundle is available", () => {
 		try {
 			const published = await publishCompletePane(target, async staging => {
 				await mkdir(join(staging, "assets"), { recursive: true });
+				await mkdir(join(staging, "fonts"), { recursive: true });
+				await writeFile(join(staging, "fonts/Temml.woff2"), "synthetic math font");
 				await writeFile(join(staging, "taskpane.html"), "<!DOCTYPE html>");
 				await writeFile(join(staging, "taskpane.js"), "console.log(1);");
 				await writeFile(join(staging, "assets", "color.png"), "png");

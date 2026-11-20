@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import {
-	type Agent,
-	type AgentSideConnection,
+	type AgentConnection,
+	type AgentContext,
 	type AuthenticateRequest,
 	type AuthenticateResponse,
 	type AvailableCommand,
@@ -20,7 +20,6 @@ import {
 	PROTOCOL_VERSION,
 	type PromptRequest,
 	type PromptResponse,
-	RequestError,
 	type ResumeSessionRequest,
 	type ResumeSessionResponse,
 	type SessionConfigOption,
@@ -33,7 +32,7 @@ import {
 	type SetSessionModeRequest,
 	type SetSessionModeResponse,
 	type Usage,
-} from "@agentclientprotocol/sdk";
+} from "@agentclientprotocol/sdk/unstable";
 import type { Model } from "@f5-sales-demo/pi-ai";
 import { logger, VERSION } from "@f5-sales-demo/pi-utils";
 import type { ExtensionUIContext } from "../../extensibility/extensions";
@@ -122,18 +121,30 @@ const acpExtensionUiContext: ExtensionUIContext = {
 	setToolsExpanded: () => {},
 };
 
-export class AcpAgent implements Agent {
-	#connection: AgentSideConnection;
+export type AcpAgentConnection = Pick<AgentConnection, "signal" | "closed" | "close"> & {
+	client: Pick<AgentContext, "notify">;
+};
+
+export interface AcpMediaReadRequest {
+	sessionId: string;
+	ref: string;
+	offset?: number;
+	length?: number;
+}
+
+export class AcpAgent {
+	#connection: AcpAgentConnection;
 	#initialSession: AgentSession | undefined;
 	#createSession: CreateAcpSession;
 	#sessions = new Map<string, ManagedSessionRecord>();
 	#disposePromise: Promise<void> | undefined;
 	#cleanupRegistered = false;
 
-	constructor(connection: AgentSideConnection, initialSession: AgentSession, createSession: CreateAcpSession) {
+	constructor(connection: AcpAgentConnection, initialSession: AgentSession, createSession: CreateAcpSession) {
 		this.#connection = connection;
 		this.#initialSession = initialSession;
 		this.#createSession = createSession;
+		this.#registerConnectionCleanup();
 	}
 
 	async initialize(_params: InitializeRequest): Promise<InitializeResponse> {
@@ -224,7 +235,7 @@ export class AcpAgent implements Agent {
 		return response;
 	}
 
-	async unstable_forkSession(params: ForkSessionRequest): Promise<ForkSessionResponse> {
+	async forkSession(params: ForkSessionRequest): Promise<ForkSessionResponse> {
 		this.#assertAbsoluteCwd(params.cwd);
 		const record = await this.#forkManagedSession(params);
 		const response: ForkSessionResponse = {
@@ -250,7 +261,7 @@ export class AcpAgent implements Agent {
 		if (params.modeId !== ACP_MODE_ID) {
 			throw new Error(`Unsupported ACP mode: ${params.modeId}`);
 		}
-		await this.#connection.sessionUpdate({
+		await this.#connection.client.notify("session/update", {
 			sessionId: record.session.sessionId,
 			update: this.#buildCurrentModeUpdate(),
 		});
@@ -280,7 +291,7 @@ export class AcpAgent implements Agent {
 		}
 
 		const configOptions = this.#buildConfigOptions(record.session);
-		await this.#connection.sessionUpdate({
+		await this.#connection.client.notify("session/update", {
 			sessionId: record.session.sessionId,
 			update: {
 				sessionUpdate: "config_option_update",
@@ -337,11 +348,7 @@ export class AcpAgent implements Agent {
 		}
 	}
 
-	async extMethod(method: string, params: { [key: string]: unknown }): Promise<{ [key: string]: unknown }> {
-		if (method !== "xcsh/media/read") throw RequestError.methodNotFound(method);
-		if (typeof params.sessionId !== "string" || typeof params.ref !== "string") {
-			throw RequestError.invalidParams({ method });
-		}
+	async readMedia(params: AcpMediaReadRequest): Promise<{ [key: string]: unknown }> {
 		const record = this.#getSessionRecord(params.sessionId);
 		return {
 			...(await readMediaAssetChunk(
@@ -356,17 +363,12 @@ export class AcpAgent implements Agent {
 		};
 	}
 
-	async extNotification(_method: string, _params: { [key: string]: unknown }): Promise<void> {
-		// JSON-RPC notifications have no response channel. Unknown extension notifications
-		// are intentionally ignored because this agent advertises no ACP extensions.
-	}
-
 	get signal(): AbortSignal {
 		return this.#connection.signal;
 	}
 
 	get closed(): Promise<void> {
-		return this.#connection.closed;
+		return this.#connection.closed.then(() => this.#disposeAllSessions());
 	}
 
 	#registerConnectionCleanup(): void {
@@ -377,7 +379,8 @@ export class AcpAgent implements Agent {
 		this.#connection.signal.addEventListener(
 			"abort",
 			() => {
-				void this.#disposeAllSessions();
+				// Observe the early abort rejection; `closed` still reports the shared failure.
+				void this.#disposeAllSessions().catch(error => logger.warn("ACP transport cleanup failed", { error }));
 			},
 			{ once: true },
 		);
@@ -523,7 +526,7 @@ export class AcpAgent implements Agent {
 		for (const notification of mapAgentSessionEventToAcpSessionUpdates(event, record.session.sessionId, {
 			getMessageId: message => this.#getLiveMessageId(record, message),
 		})) {
-			await this.#connection.sessionUpdate(notification);
+			await this.#connection.client.notify("session/update", notification);
 		}
 
 		if (event.type === "agent_end") {
@@ -738,7 +741,7 @@ export class AcpAgent implements Agent {
 			if (!record) {
 				return;
 			}
-			void this.#emitBootstrapUpdates(sessionId, record);
+			void this.#emitBootstrapUpdates(sessionId, record).catch(error => this.#connection.close(error));
 		}, 0);
 	}
 
@@ -746,14 +749,14 @@ export class AcpAgent implements Agent {
 		if (this.#sessions.get(sessionId) !== record) {
 			return;
 		}
-		await this.#connection.sessionUpdate({
+		await this.#connection.client.notify("session/update", {
 			sessionId,
 			update: {
 				sessionUpdate: "available_commands_update",
 				availableCommands: await this.#buildAvailableCommands(record.session),
 			},
 		});
-		await this.#connection.sessionUpdate({
+		await this.#connection.client.notify("session/update", {
 			sessionId,
 			update: {
 				sessionUpdate: "session_info_update",
@@ -769,7 +772,7 @@ export class AcpAgent implements Agent {
 		const contextUsage = record.session.getContextUsage();
 		if (contextUsage) {
 			const usageStats = record.session.sessionManager.getUsageStatistics();
-			await this.#connection.sessionUpdate({
+			await this.#connection.client.notify("session/update", {
 				sessionId,
 				update: {
 					sessionUpdate: "usage_update",
@@ -780,7 +783,7 @@ export class AcpAgent implements Agent {
 			});
 		}
 
-		await this.#connection.sessionUpdate({
+		await this.#connection.client.notify("session/update", {
 			sessionId,
 			update: {
 				sessionUpdate: "session_info_update",
@@ -858,7 +861,7 @@ export class AcpAgent implements Agent {
 		) as ReplayableMessage[];
 		for (const message of messages) {
 			for (const notification of this.#messageToReplayNotifications(record.session.sessionId, message)) {
-				await this.#connection.sessionUpdate(notification);
+				await this.#connection.client.notify("session/update", notification);
 			}
 		}
 	}
@@ -1188,48 +1191,39 @@ export class AcpAgent implements Agent {
 	}
 
 	async #disposeSessionRecord(record: ManagedSessionRecord): Promise<void> {
-		try {
-			await record.session.dispose();
-		} catch (error) {
-			logger.warn("Failed to dispose ACP session", { error });
-		}
+		await record.session.dispose();
 	}
 
 	async #disposeStandaloneSession(session: AgentSession): Promise<void> {
-		try {
-			await session.dispose();
-		} catch (error) {
-			logger.warn("Failed to dispose ACP session", { error });
-		}
+		await session.dispose();
 	}
 
-	async #disposeAllSessions(): Promise<void> {
-		if (this.#disposePromise) {
-			await this.#disposePromise;
-			return;
-		}
-
+	#disposeAllSessions(): Promise<void> {
+		if (this.#disposePromise) return this.#disposePromise;
 		this.#disposePromise = (async () => {
-			const records = Array.from(this.#sessions.entries());
+			const records = Array.from(this.#sessions.values());
 			this.#sessions.clear();
-			await Promise.all(
-				records.map(async ([sessionId, record]) => {
+			const results = await Promise.allSettled(
+				records.map(async record => {
 					try {
 						await this.#cancelPromptForClose(record);
+					} finally {
 						await this.#disposeSessionRecord(record);
-					} catch (error) {
-						logger.warn("Failed to clean up ACP session", { sessionId, error });
 					}
 				}),
 			);
-
+			const failures: unknown[] = results.flatMap(result => (result.status === "rejected" ? [result.reason] : []));
 			const initialSession = this.#initialSession;
 			this.#initialSession = undefined;
 			if (initialSession) {
-				await this.#disposeStandaloneSession(initialSession);
+				try {
+					await this.#disposeStandaloneSession(initialSession);
+				} catch (error) {
+					failures.push(error);
+				}
 			}
+			if (failures.length) throw new AggregateError(failures, "ACP session cleanup failed");
 		})();
-
-		await this.#disposePromise;
+		return this.#disposePromise;
 	}
 }

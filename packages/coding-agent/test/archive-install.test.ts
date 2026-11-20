@@ -19,7 +19,10 @@ async function fixture(
 	const archive = pack();
 	const parts: Uint8Array[] = [];
 	const output = (async () => {
-		for await (const part of archive) parts.push(part);
+		for await (const part of archive) {
+			if (!(part instanceof Uint8Array)) throw new Error("Fixture archive yielded a non-binary chunk");
+			parts.push(part);
+		}
 	})();
 	for (const entry of entries)
 		archive.entry(

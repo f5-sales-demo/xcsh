@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { hookFetch } from "@f5-sales-demo/pi-utils";
+import { FinishReason } from "@google/genai";
 import type { Context, Model } from "../src";
 import { streamGoogle } from "../src/providers/google";
+import { mapStopReason, mapStopReasonString } from "../src/providers/google-shared";
 import { streamGoogleVertex } from "../src/providers/google-vertex";
 
 const context: Context = {
@@ -33,11 +35,28 @@ function safetyResponse(): Response {
 }
 
 describe("Google raw stop reasons", () => {
-	it.skip("preserves a Vertex finish reason in the surfaced error contract", async () => {
+	it("reports resumable per-request token limits as length, not completed output", () => {
+		expect(mapStopReason(FinishReason.CONTINUATION)).toBe("length");
+		expect(mapStopReasonString(FinishReason.CONTINUATION)).toBe("length");
+	});
+	it.each([
+		FinishReason.MISSING_THOUGHT_SIGNATURE,
+		FinishReason.MALFORMED_RESPONSE,
+		FinishReason.ESCALATION,
+		FinishReason.PUP_LIMITED_DISABLED,
+		FinishReason.MODEL_ARMOR,
+	])("retains %s as an explicit error in typed and raw responses", reason => {
+		expect(mapStopReason(reason)).toBe("error");
+		expect(mapStopReasonString(reason)).toBe("error");
+	});
+
+	it("preserves a Vertex finish reason in the surfaced error contract", async () => {
 		using _hook = hookFetch(() => safetyResponse());
 
 		const message = await streamGoogleVertex(model("google-vertex"), context, {
 			apiKey: "test-api-key",
+			project: "synthetic-project",
+			location: "global",
 		}).result();
 
 		expect(message.stopReason).toBe("error");

@@ -14,8 +14,10 @@
  * Usage: `bun run build` (or `bun run build.ts`).
  */
 import * as fs from "node:fs/promises";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { gzipSync } from "node:zlib";
+import { PANEL_CSS } from "../chat-ui/src/theme/panel.css";
 
 const HERE = path.dirname(Bun.fileURLToPath(import.meta.url));
 const SRC = path.join(HERE, "src");
@@ -141,9 +143,36 @@ async function copyDir(srcDir: string, destDir: string): Promise<void> {
 	}
 }
 
+/** Compile the stylesheet and serve the exact math font through the existing asset route. */
+async function preparePanelAssets(): Promise<string> {
+	const fonts = [...PANEL_CSS.matchAll(/data:font\/woff2;base64,[A-Za-z0-9+/=]+/g)];
+	if (fonts.length !== 1) throw new Error("Expected one embedded math font in the panel stylesheet");
+	const fontUri = fonts[0][0];
+	const font = Buffer.from(fontUri.slice(fontUri.indexOf(",") + 1), "base64");
+	const vendorFont = await fs.readFile(path.join(HERE, "../chat-ui/node_modules/temml/dist/Temml.woff2"));
+	if (!font.equals(vendorFont)) throw new Error("Embedded math font differs from the installed Temml asset");
+	const temporary = await fs.mkdtemp(path.join(tmpdir(), "xcsh-office-styles-"));
+	try {
+		const source = path.join(temporary, "panel.css");
+		await fs.writeFile(source, PANEL_CSS);
+		const result = await Bun.build({ entrypoints: [source], target: "browser", minify: true });
+		if (!result.success || result.outputs.length !== 1) {
+			throw new AggregateError(result.logs, "Office stylesheet compilation failed");
+		}
+		const stylesheet = await result.outputs[0].text();
+		if (!stylesheet.includes(fontUri)) throw new Error("Compiled stylesheet lost the math font binding");
+		await fs.mkdir(path.join(DIST, "fonts"), { recursive: true });
+		await fs.writeFile(path.join(DIST, "fonts/Temml.woff2"), font);
+		return stylesheet.replace(fontUri, "./fonts/Temml.woff2");
+	} finally {
+		await fs.rm(temporary, { recursive: true, force: true });
+	}
+}
+
 export async function build(): Promise<void> {
 	await fs.rm(DIST, { recursive: true, force: true });
 	await fs.mkdir(DIST, { recursive: true });
+	const panelStylesheet = await preparePanelAssets();
 
 	const result = await Bun.build({
 		entrypoints: [path.join(SRC, "taskpane.tsx")],
@@ -155,16 +184,10 @@ export async function build(): Promise<void> {
 			{
 				name: "compact-panel-stylesheet",
 				setup(builder) {
-					builder.onLoad({ filter: /\/chat-ui\/src\/theme\/panel\.css\.ts$/ }, async ({ path }) => {
-						const source = await Bun.file(path).text();
-						const start = source.indexOf("export const PANEL_CSS");
-						// Keep CSS documentation in source; ship the same declarations without
-						// editorial comments inside the injected stylesheet string.
-						return {
-							loader: "ts",
-							contents: source.slice(0, start) + source.slice(start).replace(/\/\*[\s\S]*?\*\//g, ""),
-						};
-					});
+					builder.onLoad({ filter: /\/chat-ui\/src\/theme\/panel\.css\.ts$/ }, () => ({
+						loader: "ts",
+						contents: `export const PANEL_CSS = ${JSON.stringify(panelStylesheet)};`,
+					}));
 				},
 			},
 		],

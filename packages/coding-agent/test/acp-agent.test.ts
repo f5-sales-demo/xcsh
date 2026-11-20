@@ -3,10 +3,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { PromptRequest, SessionNotification } from "@agentclientprotocol/sdk";
-import { AgentSideConnection, ndJsonStream } from "@agentclientprotocol/sdk";
+import { ndJsonStream } from "@agentclientprotocol/sdk/unstable";
 import type { Model } from "@f5-sales-demo/pi-ai";
 import { getConfigRootDir, setAgentDir } from "@f5-sales-demo/pi-utils";
-import { AcpAgent } from "../src/modes/acp/acp-agent";
+import { AcpAgent, type AcpAgentConnection } from "../src/modes/acp/acp-agent";
+import { connectAcpAgent } from "../src/modes/acp/acp-app";
 import type { AgentSession, AgentSessionEvent } from "../src/session/agent-session";
 import { SessionManager } from "../src/session/session-manager";
 
@@ -213,6 +214,7 @@ interface AgentHarness {
 	agent: AcpAgent;
 	updates: SessionNotification[];
 	abortController: AbortController;
+	finishTransportClosure(): void;
 	sessions: FakeAgentSession[];
 	cwdA: string;
 	cwdB: string;
@@ -225,10 +227,12 @@ function getChunkMessageId(notification: SessionNotification): string | undefine
 }
 
 const cleanupRoots: string[] = [];
+const cleanupConnections: Array<() => Promise<void>> = [];
 const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
 const fallbackAgentDir = path.join(getConfigRootDir(), "agent");
 
 afterEach(async () => {
+	for (const close of cleanupConnections.splice(0)) await close();
 	if (originalAgentDir) {
 		setAgentDir(originalAgentDir);
 	} else {
@@ -254,14 +258,19 @@ async function createHarness(): Promise<AgentHarness> {
 
 	const updates: SessionNotification[] = [];
 	const abortController = new AbortController();
+	const transportClosure = Promise.withResolvers<void>();
 	const sessions: FakeAgentSession[] = [];
 	const connection = {
-		sessionUpdate: async (notification: SessionNotification) => {
-			updates.push(notification);
+		client: {
+			notify: async (method: string, params?: unknown) => {
+				if (method !== "session/update") throw new Error(`Unexpected notification: ${method}`);
+				updates.push(params as SessionNotification);
+			},
 		},
 		signal: abortController.signal,
-		closed: Promise.withResolvers<void>().promise,
-	} as unknown as AgentSideConnection;
+		close: (error?: unknown) => abortController.abort(error),
+		closed: transportClosure.promise,
+	} satisfies AcpAgentConnection;
 
 	const initialSession = new FakeAgentSession(cwdA);
 	sessions.push(initialSession);
@@ -275,6 +284,7 @@ async function createHarness(): Promise<AgentHarness> {
 		agent: new AcpAgent(connection, initialSession as unknown as AgentSession, factory),
 		updates,
 		abortController,
+		finishTransportClosure: () => transportClosure.resolve(),
 		sessions,
 		cwdA,
 		cwdB,
@@ -283,6 +293,17 @@ async function createHarness(): Promise<AgentHarness> {
 }
 
 describe("ACP agent", () => {
+	it("retains disposal failure when abort precedes transport closure", async () => {
+		const harness = await createHarness();
+		harness.sessions[0]!.dispose = async () => {
+			throw new Error("synthetic delayed-closure disposal failure");
+		};
+		harness.abortController.abort();
+		await Bun.sleep(10);
+		harness.finishTransportClosure();
+		await expect(harness.agent.closed).rejects.toThrow("ACP session cleanup failed");
+	});
+
 	it("supports multiple live ACP sessions with model and lifecycle handlers", async () => {
 		const harness = await createHarness();
 		const first = await harness.agent.newSession({ cwd: harness.cwdA, mcpServers: [] });
@@ -319,7 +340,7 @@ describe("ACP agent", () => {
 		firstSession?.sessionManager.appendMessage({ role: "user", content: "fork me", timestamp: Date.now() });
 		await firstSession?.sessionManager.flush();
 
-		const forked = await harness.agent.unstable_forkSession({
+		const forked = await harness.agent.forkSession({
 			sessionId: first.sessionId,
 			cwd: harness.cwdA,
 			mcpServers: [],
@@ -410,7 +431,7 @@ describe("ACP agent", () => {
  * advertising the capability.
  *
  * These tests speak real newline-delimited JSON-RPC over a real
- * `AgentSideConnection`, so an advertised-but-undispatchable capability fails.
+ * the current app connection, so an advertised-but-undispatchable capability fails.
  */
 const METHOD_NOT_FOUND = -32601;
 
@@ -444,7 +465,11 @@ async function* readNdJsonLines(readable: ReadableStream<Uint8Array>): AsyncGene
 
 async function createWireHarness(): Promise<{
 	request: (method: string, params: unknown) => Promise<JsonRpcResponse>;
+	notify: (method: string, params: unknown) => Promise<void>;
 	cwd: string;
+	close: () => Promise<void>;
+	initial: FakeAgentSession;
+	findSession: (sessionId: string) => FakeAgentSession;
 }> {
 	const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "xcsh-acp-wire-"));
 	cleanupRoots.push(root);
@@ -460,13 +485,18 @@ async function createWireHarness(): Promise<{
 	// is what it READS from — matching runAcpMode's wiring.
 	const transport = ndJsonStream(agentToClient.writable, clientToAgent.readable);
 	const initial = new FakeAgentSession(cwd);
-	new AgentSideConnection(
-		conn =>
-			new AcpAgent(conn, initial as unknown as AgentSession, async next => {
-				return new FakeAgentSession(next) as unknown as AgentSession;
-			}),
-		transport,
-	);
+	const sessions = [initial];
+	const connection = connectAcpAgent(transport, initial as unknown as AgentSession, async next => {
+		const session = new FakeAgentSession(next);
+		sessions.push(session);
+		return session as unknown as AgentSession;
+	});
+	const close = async () => {
+		connection.close();
+		await connection.closed;
+		await Bun.sleep(0);
+	};
+	cleanupConnections.push(close);
 
 	const writer = clientToAgent.writable.getWriter();
 	const lines = readNdJsonLines(agentToClient.readable);
@@ -474,6 +504,16 @@ async function createWireHarness(): Promise<{
 
 	return {
 		cwd,
+		close,
+		initial,
+		findSession: sessionId => {
+			const session = sessions.find(candidate => candidate.sessionId === sessionId);
+			if (!session) throw new Error("Unknown test session");
+			return session;
+		},
+		notify: async (method, params) => {
+			await writer.write(new TextEncoder().encode(`${JSON.stringify({ jsonrpc: "2.0", method, params })}\n`));
+		},
 		request: async (method, params) => {
 			const id = nextId++;
 			await writer.write(new TextEncoder().encode(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`));
@@ -492,7 +532,48 @@ async function createWireHarness(): Promise<{
 	};
 }
 
-describe("ACP dispatch over a real AgentSideConnection", () => {
+describe("ACP dispatch over the current SDK app connection", () => {
+	it("does not resolve transport closure before asynchronous session disposal completes", async () => {
+		const wire = await createWireHarness();
+		const gate = Promise.withResolvers<void>();
+		const dispose = wire.initial.dispose.bind(wire.initial);
+		wire.initial.dispose = async () => {
+			await gate.promise;
+			await dispose();
+		};
+		let closed = false;
+		const closing = wire.close().then(() => {
+			closed = true;
+		});
+		try {
+			await Bun.sleep(10);
+			expect(closed).toBe(false);
+		} finally {
+			gate.resolve();
+			await closing;
+		}
+		expect(wire.initial.disposed).toBe(true);
+	});
+
+	it("reports disposal failures instead of claiming a successful transport shutdown", async () => {
+		const wire = await createWireHarness();
+		wire.initial.dispose = async () => {
+			throw new Error("synthetic disposal failure");
+		};
+		try {
+			await expect(wire.close()).rejects.toThrow(/cleanup|disposal/i);
+		} finally {
+			const index = cleanupConnections.indexOf(wire.close);
+			if (index >= 0) cleanupConnections.splice(index, 1);
+		}
+	});
+
+	it("disposes the initial session when the connection closes before initialize", async () => {
+		const wire = await createWireHarness();
+		await wire.close();
+		expect(wire.initial.disposed).toBe(true);
+	});
+
 	it("dispatches every session capability advertised by initialize", async () => {
 		const wire = await createWireHarness();
 
@@ -506,9 +587,13 @@ describe("ACP dispatch over a real AgentSideConnection", () => {
 		const created = await wire.request("session/new", { cwd: wire.cwd, mcpServers: [] });
 		expect(created.error).toBeUndefined();
 		const sessionId = (created.result as { sessionId: string }).sessionId;
+		wire
+			.findSession(sessionId)
+			.sessionManager.appendMessage({ role: "user", content: "Fork this synthetic wire session", timestamp: 1 });
+		await wire.findSession(sessionId).sessionManager.flush();
 
 		// A capability we advertise but cannot dispatch is exactly what a
-		// renamed-but-optional `Agent` member produces.
+		// missing app handler produces.
 		const calls: Array<[string, unknown]> = [
 			["session/list", {}],
 			["session/resume", { sessionId, cwd: wire.cwd, mcpServers: [] }],
@@ -517,8 +602,78 @@ describe("ACP dispatch over a real AgentSideConnection", () => {
 		];
 		for (const [method, params] of calls) {
 			const response = await wire.request(method, params);
-			expect(response.error?.code, `${method} must be dispatchable`).not.toBe(METHOD_NOT_FOUND);
+			expect(response.error, `${method} must execute successfully`).toBeUndefined();
 		}
+	});
+
+	it("dispatches bounded media reads and rejects malformed extension params on the wire", async () => {
+		const wire = await createWireHarness();
+		await wire.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
+		const created = await wire.request("session/new", { cwd: wire.cwd, mcpServers: [] });
+		const sessionId = (created.result as { sessionId: string }).sessionId;
+		const session = wire.findSession(sessionId);
+		const blob = await session.sessionManager.putBlob(Buffer.from("media"));
+		session.sessionManager.appendMessage({
+			role: "media",
+			timestamp: 1,
+			media: {
+				version: 1,
+				id: `media_${blob.hash.slice(0, 24)}`,
+				kind: "image",
+				original: { ref: blob.ref, mimeType: "image/png", bytes: 5 },
+				provenance: { sourceType: "tool", source: "display_media" },
+				playback: { autoplay: false, loop: false, muted: true, fpsCap: 12 },
+			},
+		});
+		const read = await wire.request("_xcsh/media/read", { sessionId, ref: blob.ref, length: 3 });
+		expect(read.error).toBeUndefined();
+		expect(read.result).toMatchObject({ data: Buffer.from("med").toString("base64"), eof: false });
+		for (const params of [
+			null,
+			[],
+			{ ref: blob.ref },
+			{ sessionId, ref: blob.ref, offset: -1 },
+			{ sessionId, ref: blob.ref, length: "3" },
+		]) {
+			const invalid = await wire.request("_xcsh/media/read", params);
+			expect(invalid.error?.code).toBe(-32602);
+			expect(invalid.result).toBeUndefined();
+		}
+	});
+
+	it("propagates current SDK request cancellation to the active session", async () => {
+		const wire = await createWireHarness();
+		await wire.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
+		const created = await wire.request("session/new", { cwd: wire.cwd, mcpServers: [] });
+		const sessionId = (created.result as { sessionId: string }).sessionId;
+		const session = wire.findSession(sessionId);
+		const started = Promise.withResolvers<void>();
+		const released = Promise.withResolvers<void>();
+		let aborted = false;
+		session.prompt = async () => {
+			started.resolve();
+			await released.promise;
+		};
+		session.abort = async () => {
+			aborted = true;
+			released.resolve();
+		};
+		const response = wire.request("session/prompt", {
+			sessionId,
+			prompt: [{ type: "text", text: "Cancel this synthetic turn" }],
+		});
+		try {
+			await started.promise;
+			await wire.notify("$/cancel_request", { requestId: 3 });
+			await Bun.sleep(10);
+			expect(aborted).toBe(true);
+		} finally {
+			released.resolve();
+			await wire.notify("session/cancel", { sessionId });
+		}
+		const cancelled = await response;
+		expect(cancelled.error).toBeUndefined();
+		expect(cancelled.result).toMatchObject({ stopReason: "cancelled" });
 	});
 
 	it("does not silently succeed for a method outside AGENT_METHODS (control)", async () => {
@@ -551,7 +706,7 @@ describe("ACP media extension", () => {
 				playback: { autoplay: false, loop: false, muted: true, fpsCap: 12 },
 			},
 		});
-		const chunk = await harness.agent.extMethod("xcsh/media/read", {
+		const chunk = await harness.agent.readMedia({
 			sessionId: created.sessionId,
 			ref: blob.ref,
 			length: 3,
@@ -559,7 +714,7 @@ describe("ACP media extension", () => {
 		expect(chunk.data).toBe(Buffer.from("med").toString("base64"));
 		expect(chunk.eof).toBe(false);
 		await expect(
-			harness.agent.extMethod("xcsh/media/read", {
+			harness.agent.readMedia({
 				sessionId: created.sessionId,
 				ref: `blob:sha256:${"f".repeat(64)}`,
 			}),

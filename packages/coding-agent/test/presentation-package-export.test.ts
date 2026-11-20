@@ -14,7 +14,7 @@ test("a strict presentation consumer does not compile application dependencies",
 	const temp = mkdtempSync(join(tmpdir(), "xcsh-presentation-consumer-"));
 	try {
 		const modulePath = Bun.resolveSync("@f5-sales-demo/xcsh/presentation", import.meta.dir);
-		const packagePath = Bun.resolveSync("@typescript/native-preview/package.json", import.meta.dir);
+		const packagePath = Bun.resolveSync("typescript/package.json", import.meta.dir);
 		const manifest = JSON.parse(readFileSync(packagePath, "utf8"));
 		writeFileSync(
 			join(temp, "consumer.ts"),
@@ -38,7 +38,7 @@ test("a strict presentation consumer does not compile application dependencies",
 		);
 		const result = Bun.spawnSync([
 			process.execPath,
-			resolve(dirname(packagePath), manifest.bin.tsgo),
+			resolve(dirname(packagePath), manifest.bin.tsc),
 			"-p",
 			join(temp, "tsconfig.json"),
 		]);

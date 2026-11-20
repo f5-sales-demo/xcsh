@@ -8,7 +8,7 @@ describe("formatContent", () => {
 	// `flow` from `babel-ts`. `opaque type` is rejected by both `typescript` and `babel-ts`, so
 	// formatting it is positive proof that flow is the parser actually in use.
 	const flowOnlySyntax = "opaque type ID = string;\n";
-	// TS-only construct that flow still rejects, so it discriminates in the other direction.
+	// This syntax is accepted by current Flow as well as TypeScript; it tests .ts formatting.
 	const tsOnlySyntax = "abstract class A {\n  abstract m(): void;\n}\n";
 
 	it("pins .js files to the flow parser (no fallback to babel-ts)", async () => {
@@ -25,11 +25,12 @@ describe("formatContent", () => {
 		expect(result.formatted).toBe(flowOnlySyntax);
 	});
 
-	it("leaves TS-only syntax in a .js file unformatted", async () => {
-		const result = await formatContent("fixture.js", tsOnlySyntax);
+	it("leaves invalid syntax in a .js file unformatted", async () => {
+		const invalidSyntax = "const = ;\n";
+		const result = await formatContent("fixture.js", invalidSyntax);
 
 		expect(result.didFormat).toBe(false);
-		expect(result.formatted).toBe(tsOnlySyntax);
+		expect(result.formatted).toBe(invalidSyntax);
 	});
 
 	it("routes .ts files to the typescript parser", async () => {

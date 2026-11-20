@@ -6,7 +6,14 @@ import { codePresentationFingerprint } from "./code-presentation-fingerprint";
 
 const source = resolve(import.meta.dir, "../../utils/src/code-presentation.browser.ts");
 const dependencyRoot = resolve(import.meta.dir, "../../utils/node_modules");
-const notices = `highlight.js 11.11.1\n${await readFile(join(dependencyRoot, "highlight.js/LICENSE"), "utf8")}\nYAML 2.9.0\n${await readFile(join(dependencyRoot, "yaml/LICENSE"), "utf8")}`;
+const notices = (
+	await Promise.all(
+		["highlight.js", "yaml"].map(async dependency => {
+			const manifest = JSON.parse(await readFile(join(dependencyRoot, dependency, "package.json"), "utf8"));
+			return `${manifest.name} ${manifest.version}\n${await readFile(join(dependencyRoot, dependency, "LICENSE"), "utf8")}`;
+		}),
+	)
+).join("\n");
 const target = resolve(import.meta.dir, "../src/markdown/code-presentation.generated.min.js");
 const build = await Bun.build({ entrypoints: [source], target: "browser", format: "esm", minify: true });
 if (!build.success || build.outputs.length !== 1)
@@ -30,7 +37,7 @@ try {
 	policy.vcs = { ...policy.vcs, enabled: false };
 	await writeFile(join(temporary, "biome.json"), JSON.stringify(policy));
 	const typesProcess = Bun.spawnSync([
-		"tsgo",
+		"tsc",
 		"--ignoreConfig",
 		source,
 		"--declaration",
