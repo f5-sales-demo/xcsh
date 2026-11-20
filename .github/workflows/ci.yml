@@ -688,6 +688,12 @@ jobs:
           path: ~/.bun/install/cache
           key: bun-1.4.4-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
       - run: bash scripts/ci-bun-install.sh
+      - name: Install frozen optional dependencies for cross-compilation
+        run: bun install --cpu '*' --os '*' --frozen-lockfile --ignore-scripts
+      - name: Verify current native document cross-compilation
+        env:
+          XCSH_VERIFY_CROSS_TARGET: "1"
+        run: bun test packages/coding-agent/test/scripts/release-markit-targets.test.ts
       - name: Download canonical documentation index
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
