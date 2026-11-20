@@ -1,17 +1,11 @@
 import { untilAborted } from "@f5-sales-demo/pi-utils";
-import type { Markit, StreamInfo } from "@shiftlabs/markit";
 import { ToolAbortError } from "../tools/tool-errors";
+import { convertInMarkitWorker } from "./markit-worker-client";
 
 export interface MarkitConversionResult {
 	content: string;
 	ok: boolean;
 	error?: string;
-}
-
-let markitPromise: Promise<Markit> | undefined;
-function getMarkit(): Promise<Markit> {
-	if (!markitPromise) markitPromise = import("@shiftlabs/markit").then(({ Markit }) => new Markit());
-	return markitPromise;
 }
 
 function normalizeExtension(extension: string): string {
@@ -51,8 +45,11 @@ function finalizeConversion(markdown?: string): MarkitConversionResult {
 
 export async function convertFileWithMarkit(filePath: string, signal?: AbortSignal): Promise<MarkitConversionResult> {
 	try {
-		const result = await runMarkitConversion(async () => (await getMarkit()).convertFile(filePath), signal);
-		return finalizeConversion(result.markdown);
+		const markdown = await runMarkitConversion(
+			() => convertInMarkitWorker({ operation: "file", path: filePath }, signal),
+			signal,
+		);
+		return finalizeConversion(markdown);
 	} catch (error) {
 		if (error instanceof ToolAbortError) {
 			throw error;
@@ -67,17 +64,21 @@ export async function convertBufferWithMarkit(
 	signal?: AbortSignal,
 ): Promise<MarkitConversionResult> {
 	const normalizedExtension = normalizeExtension(extension);
-	const streamInfo: StreamInfo = {
-		extension: normalizedExtension,
-		filename: `input${normalizedExtension}`,
-	};
 
 	try {
-		const result = await runMarkitConversion(
-			async () => (await getMarkit()).convert(Buffer.from(buffer), streamInfo),
+		const markdown = await runMarkitConversion(
+			() =>
+				convertInMarkitWorker(
+					{
+						operation: "buffer",
+						data: Buffer.from(buffer).toString("base64"),
+						extension: normalizedExtension,
+					},
+					signal,
+				),
 			signal,
 		);
-		return finalizeConversion(result.markdown);
+		return finalizeConversion(markdown);
 	} catch (error) {
 		if (error instanceof ToolAbortError) {
 			throw error;

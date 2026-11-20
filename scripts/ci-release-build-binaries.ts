@@ -22,7 +22,7 @@ interface BinaryTarget {
 
 const repoRoot = path.join(import.meta.dir, "..");
 const binariesDir = path.join(repoRoot, "packages", "coding-agent", "binaries");
-const entrypoint = "./packages/coding-agent/src/cli.ts";
+const entrypoint = "./packages/coding-agent/src/cli-bootstrap.ts";
 const isDryRun = process.argv.includes("--dry-run");
 
 // Parse --platform flag to filter targets (e.g. --platform darwin or --platform linux,win32)

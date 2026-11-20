@@ -759,7 +759,7 @@ async function renderUrl(
 				let convertedText: string | null = null;
 				const converted = await convertWithMarkit(binary.buffer, conversionExtension, timeout, signal);
 				if (converted.ok) {
-					if (converted.content.trim().length > 50) {
+					if (converted.content.trim().length > 0) {
 						notes.push("Converted with markit");
 						convertedText = converted.content;
 					} else {
@@ -867,7 +867,7 @@ async function renderUrl(
 			const ext = getExtensionHint(finalUrl, binary.contentDisposition) || extHint;
 			const converted = await convertWithMarkit(binary.buffer, ext, timeout, signal);
 			if (converted.ok) {
-				if (converted.content.trim().length > 50) {
+				if (converted.content.trim().length > 0) {
 					notes.push("Converted with markit");
 					const output = finalizeOutput(converted.content);
 					return {

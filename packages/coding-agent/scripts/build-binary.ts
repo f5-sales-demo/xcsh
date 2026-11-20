@@ -15,7 +15,7 @@ const vertexEnvironment = credentials
 		}
 	: Bun.env;
 const result = await Bun.build({
-	entrypoints: [path.join(packageRoot, "src", "cli.ts")],
+	entrypoints: [path.join(packageRoot, "src", "cli-bootstrap.ts")],
 	compile: { outfile: path.join(packageRoot, "dist", "xcsh") },
 	root: repoRoot,
 	plugins: [markitNativeBundlePlugin()],
