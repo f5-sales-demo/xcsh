@@ -41,16 +41,16 @@
 			"www-f5-com"
 		]
 	},
-	"index": {
-		"qmd_version": "2.8.3",
-		"fingerprint": "b3ba08d648b90f63f5b95fa1ef87e35bbf2c9fd8bbb8841358ac82b0a2fc5f16",
-		"sha256": "105753803204578e9c253753886fcad5e584a6815957a7c103870473872bf971",
-		"size_bytes": 44445696
-	},
 	"packaging": {
 		"mode": "text-only-sqlite",
 		"text_manifest_sha256": "5f01e7a110d12dfc2425fb72af17eb63d05d3326c50dad293cd02005866ed998",
 		"source_media_count": 3461,
 		"bundled_media_count": 0
+	},
+	"index": {
+		"qmd_version": "2.8.3",
+		"fingerprint": "b3ba08d648b90f63f5b95fa1ef87e35bbf2c9fd8bbb8841358ac82b0a2fc5f16",
+		"sha256": "105753803204578e9c253753886fcad5e584a6815957a7c103870473872bf971",
+		"size_bytes": 44445696
 	}
 }
