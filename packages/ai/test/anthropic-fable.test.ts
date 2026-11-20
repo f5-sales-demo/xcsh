@@ -18,6 +18,8 @@ type FablePayload = {
 	thinking?: { type?: string };
 	output_config?: { effort?: string };
 	temperature?: number;
+	top_p?: number;
+	top_k?: number;
 	tool_choice?: { type?: string; name?: string };
 	tools?: Array<{ name: string; strict?: boolean; input_schema: Record<string, unknown> }>;
 };
@@ -52,6 +54,14 @@ async function capturePayload(
 }
 
 describe("Claude Fable transport", () => {
+	it.each(["claude-fable-5-1", "claude-sonnet-4-20250514"])(
+		"uses the current Messages schema without removed sampling fields for %s",
+		async id => {
+			const payload = await capturePayload({ ...fable(), id }, { temperature: 0, topP: 0.5, topK: 3 });
+			for (const field of ["temperature", "top_p", "top_k"]) expect(payload).not.toHaveProperty(field);
+		},
+	);
+
 	it.each(["claude-fable-5", "claude-fable-5-1"] as const)(
 		"keeps adaptive thinking on at high by default for %s and omits temperature",
 		async id => {

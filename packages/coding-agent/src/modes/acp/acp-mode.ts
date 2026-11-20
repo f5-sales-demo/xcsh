@@ -1,7 +1,7 @@
 import * as stream from "node:stream";
-import { AgentSideConnection, ndJsonStream } from "@agentclientprotocol/sdk";
+import { ndJsonStream } from "@agentclientprotocol/sdk/unstable";
 import type { AgentSession } from "../../session/agent-session";
-import { AcpAgent } from "./acp-agent";
+import { connectAcpAgent } from "./acp-app";
 
 export type AcpSessionFactory = (cwd: string) => Promise<AgentSession>;
 
@@ -9,7 +9,7 @@ export async function runAcpMode(session: AgentSession, createSession: AcpSessio
 	const input = stream.Writable.toWeb(process.stdout);
 	const output = stream.Readable.toWeb(process.stdin);
 	const transport = ndJsonStream(input, output);
-	const connection = new AgentSideConnection(conn => new AcpAgent(conn, session, createSession), transport);
+	const connection = connectAcpAgent(transport, session, createSession);
 	await connection.closed;
 	process.exit(0);
 }

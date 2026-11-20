@@ -54,7 +54,7 @@ const COMPILED_DIR_ROOT = path.join(os.tmpdir(), "xcsh-office-pane");
  * single marker accepts an interrupted build: `serve` would answer the page, then `manifest` and
  * `sideload` would fail with the same ENOENT this check exists to replace.
  */
-const PANE_REQUIRED_FILES = ["taskpane.html", "taskpane.js", "manifest.json"] as const;
+const PANE_REQUIRED_FILES = ["taskpane.html", "taskpane.js", "manifest.json", "fonts/Temml.woff2"] as const;
 
 /**
  * The assets a manifest says it needs, as dist-relative paths.

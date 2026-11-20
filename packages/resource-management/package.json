@@ -25,7 +25,7 @@
 	"types": "./src/index.ts",
 	"scripts": {
 		"check": "biome check . && bun run check:types",
-		"check:types": "tsgo -p tsconfig.json --noEmit",
+		"check:types": "tsc -p tsconfig.json --noEmit",
 		"generate-defaults": "bun run scripts/generate-defaults.ts && bun run fmt",
 		"lint": "biome lint .",
 		"test": "bun test",
@@ -33,7 +33,7 @@
 		"fmt": "biome format --write ."
 	},
 	"dependencies": {
-		"yaml": "2.9.0"
+		"yaml": "2.9.1"
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.4"

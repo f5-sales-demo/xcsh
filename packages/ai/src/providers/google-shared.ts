@@ -319,6 +319,7 @@ export function mapStopReason(reason: FinishReason): StopReason {
 		case FinishReason.STOP:
 			return "stop";
 		case FinishReason.MAX_TOKENS:
+		case FinishReason.CONTINUATION:
 			return "length";
 		case FinishReason.BLOCKLIST:
 		case FinishReason.PROHIBITED_CONTENT:
@@ -336,6 +337,11 @@ export function mapStopReason(reason: FinishReason): StopReason {
 		case FinishReason.UNEXPECTED_TOOL_CALL:
 		case FinishReason.NO_IMAGE:
 		case FinishReason.TOO_MANY_TOOL_CALLS:
+		case FinishReason.MISSING_THOUGHT_SIGNATURE:
+		case FinishReason.MALFORMED_RESPONSE:
+		case FinishReason.ESCALATION:
+		case FinishReason.PUP_LIMITED_DISABLED:
+		case FinishReason.MODEL_ARMOR:
 			return "error";
 		default: {
 			const _exhaustive: never = reason;
@@ -352,6 +358,7 @@ export function mapStopReasonString(reason: string): StopReason {
 		case "STOP":
 			return "stop";
 		case "MAX_TOKENS":
+		case "CONTINUATION":
 			return "length";
 		default:
 			return "error";

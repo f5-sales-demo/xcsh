@@ -91,6 +91,17 @@ describe("build.ts", () => {
 		expect(existsSync(join(DIST, "fonts", "MesloLGS-NF-Italic.ttf"))).toBe(true);
 		expect(existsSync(join(DIST, "fonts", "MesloLGS-NF-Bold-Italic.ttf"))).toBe(true);
 
+		// Math uses the exact published font as a served asset, keeping binary data
+		// out of JavaScript without dropping glyphs or relying on another host.
+		const mathFont = join(DIST, "fonts", "Temml.woff2");
+		expect(existsSync(mathFont)).toBe(true);
+		expect(
+			readFileSync(mathFont).equals(readFileSync(join(PKG, "../chat-ui/node_modules/temml/dist/Temml.woff2"))),
+		).toBe(true);
+		const mathBundle = readFileSync(join(DIST, "taskpane.js"), "utf8");
+		expect(mathBundle.includes("./fonts/Temml.woff2")).toBe(true);
+		expect(mathBundle.includes("data:font/woff2;base64,")).toBe(false);
+
 		// The copied manifest must still parse and keep the local-ip.sh page URL.
 		const manifest = JSON.parse(readFileSync(join(DIST, "manifest.json"), "utf8"));
 		expect(manifest.extensions[0].runtimes[0].code.page).toBe(

@@ -30,7 +30,7 @@
 		"gen-md-goldens": "bun scripts/gen-md-goldens.ts",
 		"sync-vendor": "bun scripts/sync-vendor.ts",
 		"check": "biome check . && bun run check:types && bun run gen-code-presentation --check",
-		"check:types": "tsgo -p tsconfig.json --noEmit && tsgo -p tsconfig.client.json --noEmit",
+		"check:types": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit",
 		"test": "bun scripts/test.ts",
 		"test:markdown": "bun test --preload ./test/markdown/register-jsdom.ts --preload ./test/setup.ts ./test/markdown",
 		"lint": "biome lint .",
@@ -39,23 +39,23 @@
 		"gen-code-presentation": "bun scripts/generate-code-presentation.ts"
 	},
 	"dependencies": {
-		"dompurify": "3.4.15",
-		"marked": "18.0.11",
-		"temml": "0.13.5"
+		"dompurify": "3.4.17",
+		"marked": "18.2.0",
+		"temml": "0.14.0"
 	},
 	"peerDependencies": {
 		"react": ">=18"
 	},
 	"devDependencies": {
-		"@happy-dom/global-registrator": "20.13.2",
+		"@happy-dom/global-registrator": "21.0.4",
 		"@testing-library/react": "16.3.3",
 		"@types/bun": "1.4.4",
 		"@types/jsdom": "30.0.0",
-		"jsdom": "30.0.1",
-		"@types/react": "19.2.18",
-		"@types/react-dom": "19.2.7",
-		"react": "19.2.8",
-		"react-dom": "19.2.8"
+		"jsdom": "31.0.0",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"react": "19.3.1",
+		"react-dom": "19.3.1"
 	},
 	"engines": {
 		"bun": ">=1.4.4"

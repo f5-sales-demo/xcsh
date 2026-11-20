@@ -206,7 +206,7 @@ The codebase uses Biome v2 for formatting and linting:
 | --- | --- |
 | `bun run dev` | Start the source development CLI |
 | `bun run build` | Build all workspaces that provide a build script |
-| `bun run check` | Biome check + `tsgo` type-check (read-only) |
+| `bun run check` | Biome check + `tsc` type-check (read-only) |
 | `bun run lint` | Biome lint only (read-only) |
 | `bun run fmt` | Biome format (modifies files) |
 | `bun run fix` | Biome auto-fix (modifies files) |

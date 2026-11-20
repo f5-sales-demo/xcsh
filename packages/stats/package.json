@@ -31,7 +31,7 @@
 		"build": "bun run build.ts",
 		"dev": "bun run src/index.ts",
 		"check": "biome check . && bun run check:types",
-		"check:types": "tsgo -p tsconfig.json --noEmit && tsgo -p tsconfig.client.json --noEmit",
+		"check:types": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit",
 		"lint": "biome lint .",
 		"test": "bun test",
 		"fix": "biome check --write --unsafe .",
@@ -40,20 +40,20 @@
 	"dependencies": {
 		"@f5-sales-demo/pi-ai": "workspace:*",
 		"@f5-sales-demo/pi-utils": "workspace:*",
-		"@tailwindcss/node": "4.3.3",
-		"chart.js": "^4.5",
-		"date-fns": "~4.4.0",
-		"lucide-react": "1.40.0",
-		"react": "19.2.8",
-		"react-chartjs-2": "^5.3",
-		"react-dom": "19.2.8"
+		"@tailwindcss/node": "4.3.5",
+		"chart.js": "4.6.1",
+		"date-fns": "4.4.0",
+		"lucide-react": "1.72.0",
+		"react": "19.3.1",
+		"react-chartjs-2": "5.3.1",
+		"react-dom": "19.3.1"
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.4",
-		"@types/react": "19.2.18",
-		"@types/react-dom": "19.2.7",
-		"postcss": "8.5.28",
-		"tailwindcss": "4.3.3"
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"postcss": "8.5.32",
+		"tailwindcss": "4.3.5"
 	},
 	"engines": {
 		"bun": ">=1.4.4"

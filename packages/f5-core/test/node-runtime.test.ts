@@ -78,7 +78,7 @@ approve: async plan => ({approved:false,planHash:plan.hash}),persist: async () =
 };
 new F5Core(host).dispose(); getCapabilities();`;
 		for (const extension of ["mts", "cts"]) writeFileSync(path.join(directory, `consumer.${extension}`), consumer);
-		const compiler = path.resolve(import.meta.dir, "../../../node_modules/.bin/tsgo");
+		const compiler = path.resolve(import.meta.dir, "../../../node_modules/.bin/tsc");
 		for (const resolution of ["Node16", "NodeNext"]) {
 			const result = Bun.spawnSync(
 				[

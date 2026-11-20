@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
   "testCoverageVerified": false,
-  "revision": "402e53f32c1a1c63fed557f2dc5c1ce54eae55f9",
-  "fingerprint": "2d6e0eb871b33a04b2b66ccad7ca8aa64ee9cb6d1ecf1e8ef8d9c7a09e2e6376",
+  "revision": "b821497035b9ce70a072c1c98fd034605ff5bf7c",
+  "fingerprint": "0f65e272a43677e9585550f93e4f17f3687e8fccbd0bc17e0a9435362416eac6",
   "counts": {
-    "total": 245,
+    "total": 246,
     "components": 103,
-    "integrations": 142
+    "integrations": 143
   },
   "audits": [
     {
@@ -1437,6 +1437,7 @@
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
         "packages/coding-agent/test/scoped-advisories.test.ts",
+        "packages/coding-agent/test/scripts/markit-native-bundle.test.ts",
         "packages/coding-agent/test/scripts/release-npm-backfill.test.ts",
         "packages/coding-agent/test/scripts/vertex-release-build-workflow.test.ts",
         "packages/coding-agent/test/scripts/zig-cache-prime.test.ts",
@@ -3243,9 +3244,11 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "46d3d54e00d02f59d6954f88a7f3959caaf0d59811b3a4746f707c8ad2aabe2d",
+      "sha256": "cfe0b35b1f88538788b8ae93434dd116c6e8583f3788e232482343db65fd3a75",
       "exports": [
-        "AcpAgent"
+        "AcpAgent",
+        "AcpAgentConnection",
+        "AcpMediaReadRequest"
       ],
       "interactionSignals": [
         "async-progress"
@@ -3258,6 +3261,22 @@
         "packages/coding-agent/test/acp-agent.test.ts"
       ],
       "classification": "packages/coding-agent/src/modes/acp/acp-agent.ts is individually classified as machine-protocol-contract in the protocols domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
+    },
+    {
+      "source": "packages/coding-agent/src/modes/acp/acp-app.ts",
+      "kind": "integration",
+      "ownership": "machine-protocol-contract",
+      "domain": "protocols",
+      "sha256": "69290c1075b5bebf3e4528c806032b0914712c4fc83021261bf68950f1bb0db3",
+      "exports": [
+        "connectAcpAgent"
+      ],
+      "interactionSignals": [],
+      "persistenceSignals": [],
+      "testCandidates": [
+        "packages/coding-agent/test/acp-agent.test.ts"
+      ],
+      "classification": "packages/coding-agent/src/modes/acp/acp-app.ts is individually classified as machine-protocol-contract in the protocols domain; persistence authority remains at its reviewed caller, explicit tool boundary, or protocol contract."
     },
     {
       "source": "packages/coding-agent/src/modes/acp/acp-event-mapper.ts",
@@ -3281,7 +3300,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "b253219649670777bcad67c22d54a979add5638743c137e09e825fc8fd5529fd",
+      "sha256": "dd717e188a15336cb14e3b382645018c4f2768e0edd3f3e2dfe2838f160cf412",
       "exports": [
         "AcpSessionFactory",
         "runAcpMode"
@@ -5997,6 +6016,7 @@
         "packages/coding-agent/test/sanitize-error-message.test.ts",
         "packages/coding-agent/test/scoped-advisories.test.ts",
         "packages/coding-agent/test/scripts/local-vertex-credentials.test.ts",
+        "packages/coding-agent/test/scripts/markit-worker.test.ts",
         "packages/coding-agent/test/scripts/release-npm-backfill.test.ts",
         "packages/coding-agent/test/scripts/release-staged-guard.test.ts",
         "packages/coding-agent/test/scripts/terminal-uat-profile.test.ts",
@@ -10872,7 +10892,7 @@
       "kind": "integration",
       "ownership": "tool-authority-boundary",
       "domain": "tools",
-      "sha256": "723bd91d9984fd412bad36b8819b8988a52158e40fc5d7754b66f92c2cd63e76",
+      "sha256": "d3a3fd1e48493417591c45d2c86ace0de7966ebebf14ebb9172bdf9d0f40a551",
       "exports": [
         "ParsedReadUrlTarget",
         "ReadUrlToolDetails",
@@ -12092,6 +12112,7 @@
       ],
       "persistenceSignals": [],
       "testCandidates": [
+        "packages/coding-agent/test/acp-agent.test.ts",
         "packages/coding-agent/test/agent-dashboard.test.ts",
         "packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts",
         "packages/coding-agent/test/agent-session-auto-compaction-x-initiator.test.ts",
@@ -12421,6 +12442,7 @@
         "packages/coding-agent/test/scripts/linux-install-integrity.test.ts",
         "packages/coding-agent/test/scripts/local-vertex-credentials.test.ts",
         "packages/coding-agent/test/scripts/macos-release-uat.test.ts",
+        "packages/coding-agent/test/scripts/markit-native-bundle.test.ts",
         "packages/coding-agent/test/scripts/npm-corpus-pack.test.ts",
         "packages/coding-agent/test/scripts/prepack-current-source.test.ts",
         "packages/coding-agent/test/scripts/prepare-public-citations.test.ts",
@@ -12634,7 +12656,6 @@
         "packages/coding-agent/test/plugin-presentation.test.ts",
         "packages/coding-agent/test/plugin-settings-drafts.test.ts",
         "packages/coding-agent/test/plugin-setup-presentation.test.ts",
-        "packages/coding-agent/test/presentation-package-export.test.ts",
         "packages/coding-agent/test/prompts/review-request.test.ts",
         "packages/coding-agent/test/provider-connection-preservation.test.ts",
         "packages/coding-agent/test/public-citation-generator.test.ts",
@@ -12654,7 +12675,6 @@
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/scripts/bun-test-guarded.test.ts",
         "packages/coding-agent/test/scripts/terraform-index-delivery.test.ts",
-        "packages/coding-agent/test/sdk-package-assets.test.ts",
         "packages/coding-agent/test/searchable-select-list.test.ts",
         "packages/coding-agent/test/session-manager/move-to.test.ts",
         "packages/coding-agent/test/session-observer-overlay.test.ts",
@@ -13064,6 +13084,7 @@
         "packages/coding-agent/test/scripts/macos-pkg.test.ts",
         "packages/coding-agent/test/scripts/macos-release-provenance.test.ts",
         "packages/coding-agent/test/scripts/macos-release-uat.test.ts",
+        "packages/coding-agent/test/scripts/markit-native-bundle.test.ts",
         "packages/coding-agent/test/scripts/npm-corpus-pack.test.ts",
         "packages/coding-agent/test/scripts/prepack-current-source.test.ts",
         "packages/coding-agent/test/scripts/prepare-verified-corpora.test.ts",
@@ -13471,6 +13492,7 @@
         "packages/coding-agent/test/scripts/linux-install-integrity.test.ts",
         "packages/coding-agent/test/scripts/linux-release-provenance.test.ts",
         "packages/coding-agent/test/scripts/local-vertex-credentials.test.ts",
+        "packages/coding-agent/test/scripts/markit-worker.test.ts",
         "packages/coding-agent/test/scripts/release-npm-backfill.test.ts",
         "packages/coding-agent/test/scripts/release-staged-guard.test.ts",
         "packages/coding-agent/test/scripts/terminal-uat-profile.test.ts",
@@ -14885,6 +14907,8 @@
         "packages/coding-agent/test/scripts/arc-runner-workflow-contract.test.ts",
         "packages/coding-agent/test/scripts/extension-capabilities-regression.test.ts",
         "packages/coding-agent/test/scripts/local-vertex-credentials.test.ts",
+        "packages/coding-agent/test/scripts/markit-native-bundle.test.ts",
+        "packages/coding-agent/test/scripts/markit-worker.test.ts",
         "packages/coding-agent/test/scripts/npm-corpus-pack.test.ts",
         "packages/coding-agent/test/scripts/published-npm-version.test.ts",
         "packages/coding-agent/test/scripts/recovery-result.test.ts",
@@ -15052,6 +15076,7 @@
         "packages/coding-agent/test/sandbox-enforce.test.ts",
         "packages/coding-agent/test/sandbox-isolation.test.ts",
         "packages/coding-agent/test/scoped-advisories.test.ts",
+        "packages/coding-agent/test/scripts/markit-native-bundle.test.ts",
         "packages/coding-agent/test/scripts/release-npm-backfill.test.ts",
         "packages/coding-agent/test/scripts/vertex-release-build-workflow.test.ts",
         "packages/coding-agent/test/scripts/zig-cache-prime.test.ts",
@@ -15135,6 +15160,8 @@
         "packages/coding-agent/test/remote-control/timeline.test.ts",
         "packages/coding-agent/test/remote-control/voice-timeline.test.ts",
         "packages/coding-agent/test/scripts/general-source-record.test.ts",
+        "packages/coding-agent/test/scripts/markit-native-bundle.test.ts",
+        "packages/coding-agent/test/scripts/markit-worker.test.ts",
         "packages/coding-agent/test/scripts/prepare-public-citations.test.ts",
         "packages/coding-agent/test/scripts/verified-corpus-asset.test.ts",
         "packages/coding-agent/test/scripts/verified-corpus-deadline.test.ts",
@@ -15433,6 +15460,7 @@
         "packages/coding-agent/test/scripts/macos-pkg.test.ts",
         "packages/coding-agent/test/scripts/macos-release-provenance.test.ts",
         "packages/coding-agent/test/scripts/macos-release-uat.test.ts",
+        "packages/coding-agent/test/scripts/markit-native-bundle.test.ts",
         "packages/coding-agent/test/scripts/performance-qualification.test.ts",
         "packages/coding-agent/test/scripts/prepare-public-citations.test.ts",
         "packages/coding-agent/test/scripts/recover-prebuilt-npm-index.test.ts",
@@ -17797,6 +17825,7 @@
         "packages/coding-agent/test/scoped-advisories.test.ts",
         "packages/coding-agent/test/scripts/installer-api-auth.test.ts",
         "packages/coding-agent/test/scripts/local-vertex-credentials.test.ts",
+        "packages/coding-agent/test/scripts/markit-worker.test.ts",
         "packages/coding-agent/test/scripts/release-npm-backfill.test.ts",
         "packages/coding-agent/test/scripts/release-staged-guard.test.ts",
         "packages/coding-agent/test/scripts/terminal-uat-profile.test.ts",

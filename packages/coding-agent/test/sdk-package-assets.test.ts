@@ -18,12 +18,12 @@ test("SDK Bun file imports retain precise string-path types", async () => {
 				"// @ts-expect-error Bun file paths cannot be assigned to numbers.\nconst numericDb: number = dbPath;\n" +
 				"// @ts-expect-error Bun file paths cannot be assigned to numbers.\nconst numericWasm: number = wasmPath;\n",
 		);
-		const tool = Bun.resolveSync("@typescript/native-preview/package.json", import.meta.dir);
+		const tool = Bun.resolveSync("typescript/package.json", import.meta.dir);
 		const manifest = JSON.parse(await readFile(tool, "utf8"));
 		const child = Bun.spawn(
 			[
 				process.execPath,
-				resolve(dirname(tool), manifest.bin.tsgo),
+				resolve(dirname(tool), manifest.bin.tsc),
 				"--ignoreConfig",
 				"--noEmit",
 				"--strict",
@@ -121,10 +121,10 @@ test("public SDK consumers load Bun asset types without local declarations", asy
 				files: [join(temp, "consumer.ts")],
 			}),
 		);
-		const tool = Bun.resolveSync("@typescript/native-preview/package.json", import.meta.dir);
+		const tool = Bun.resolveSync("typescript/package.json", import.meta.dir);
 		const manifest = JSON.parse(await readFile(tool, "utf8"));
 		const child = Bun.spawn(
-			[process.execPath, resolve(dirname(tool), manifest.bin.tsgo), "-p", join(temp, "tsconfig.json")],
+			[process.execPath, resolve(dirname(tool), manifest.bin.tsc), "-p", join(temp, "tsconfig.json")],
 			{ stdin: "ignore", stdout: "pipe", stderr: "pipe" },
 		);
 		const [out, err, code] = await Promise.all([

@@ -172,10 +172,6 @@ export function buildAnthropicHeaders(options: AnthropicHeaderOptions): Record<s
 
 type AnthropicCacheControl = { type: "ephemeral"; ttl?: "1h" | "5m" };
 
-type AnthropicSamplingParams = MessageCreateParamsStreaming & {
-	top_p?: number;
-	top_k?: number;
-};
 function getCacheControl(
 	baseUrl: string,
 	cacheRetention?: CacheRetention,
@@ -192,7 +188,7 @@ function getCacheControl(
 }
 
 // Stealth mode: Mimic Claude Code headers and tool prefixing.
-export const claudeCodeVersion = "2.1.323";
+export const claudeCodeVersion = "2.1.329";
 export const claudeToolPrefix: string = "proxy_";
 export const claudeCodeSystemInstruction = "You are a Claude agent, built on Anthropic's Claude Agent SDK.";
 
@@ -1631,7 +1627,7 @@ function buildParams(
 			(typeof requestedToolChoice === "object" && requestedToolChoice.type === "tool"))
 			? "auto"
 			: requestedToolChoice;
-	const params: AnthropicSamplingParams = {
+	const params: MessageCreateParamsStreaming = {
 		model: model.id,
 		messages: convertAnthropicMessages(
 			context.messages,
@@ -1641,16 +1637,6 @@ function buildParams(
 		max_tokens: options?.maxTokens || (model.maxTokens / 3) | 0,
 		stream: true,
 	};
-
-	if (!alwaysThinking && options?.temperature !== undefined) {
-		params.temperature = options.temperature;
-	}
-	if (options?.topP !== undefined) {
-		params.top_p = options.topP;
-	}
-	if (options?.topK !== undefined) {
-		params.top_k = options.topK;
-	}
 
 	if (context.tools) {
 		const forcedToolName =
@@ -1699,9 +1685,6 @@ function buildParams(
 				params.output_config = { effort };
 			}
 		}
-		// Anthropic requires temperature=1 when thinking is enabled; override any
-		// caller-supplied value (e.g. temperature=0 set for deterministic non-interactive mode).
-		if (!alwaysThinking) params.temperature = 1;
 	}
 
 	const metadataUserId = resolveAnthropicMetadataUserId(options?.metadata?.user_id, isOAuthToken);

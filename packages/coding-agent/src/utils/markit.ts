@@ -1,15 +1,12 @@
 import { untilAborted } from "@f5-sales-demo/pi-utils";
-import type { StreamInfo } from "markit-ai";
-import { Markit } from "markit-ai";
 import { ToolAbortError } from "../tools/tool-errors";
+import { convertInMarkitWorker } from "./markit-worker-client";
 
 export interface MarkitConversionResult {
 	content: string;
 	ok: boolean;
 	error?: string;
 }
-
-const markit = new Markit();
 
 function normalizeExtension(extension: string): string {
 	const trimmed = extension.trim().toLowerCase();
@@ -48,8 +45,11 @@ function finalizeConversion(markdown?: string): MarkitConversionResult {
 
 export async function convertFileWithMarkit(filePath: string, signal?: AbortSignal): Promise<MarkitConversionResult> {
 	try {
-		const result = await runMarkitConversion(() => markit.convertFile(filePath), signal);
-		return finalizeConversion(result.markdown);
+		const markdown = await runMarkitConversion(
+			() => convertInMarkitWorker({ operation: "file", path: filePath }, signal),
+			signal,
+		);
+		return finalizeConversion(markdown);
 	} catch (error) {
 		if (error instanceof ToolAbortError) {
 			throw error;
@@ -64,14 +64,21 @@ export async function convertBufferWithMarkit(
 	signal?: AbortSignal,
 ): Promise<MarkitConversionResult> {
 	const normalizedExtension = normalizeExtension(extension);
-	const streamInfo: StreamInfo = {
-		extension: normalizedExtension,
-		filename: `input${normalizedExtension}`,
-	};
 
 	try {
-		const result = await runMarkitConversion(() => markit.convert(Buffer.from(buffer), streamInfo), signal);
-		return finalizeConversion(result.markdown);
+		const markdown = await runMarkitConversion(
+			() =>
+				convertInMarkitWorker(
+					{
+						operation: "buffer",
+						data: Buffer.from(buffer).toString("base64"),
+						extension: normalizedExtension,
+					},
+					signal,
+				),
+			signal,
+		);
+		return finalizeConversion(markdown);
 	} catch (error) {
 		if (error instanceof ToolAbortError) {
 			throw error;

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getSessionsDir } from "@f5-sales-demo/pi-utils";
+import { getSessionsDir, resolveEquivalentPath } from "@f5-sales-demo/pi-utils";
 import { Settings } from "../src/config/settings";
 import { fenceVerdict } from "../src/sandbox/containment";
 import { applyRemotePermissionProfile, grantRemoteSandboxPath } from "../src/sandbox/remote-permissions";
@@ -161,7 +161,7 @@ describe("resolveSessionFence", () => {
 		const { mine } = tenants("extras");
 		// Named private-store descendants already retain operator access. The runtime grant still belongs in
 		// the cache key because it records the session-owned artifact root explicitly.
-		const artifacts = path.join(getSessionsDir(), "xcsh-artifacts-test");
+		const artifacts = resolveEquivalentPath(path.join(getSessionsDir(), "xcsh-artifacts-test"));
 		const without = resolveSessionFence(mine, reader({}))!;
 		const with_ = resolveSessionFence(mine, reader({}), { extraRoots: [artifacts] })!;
 		expect(without).not.toBe(with_);

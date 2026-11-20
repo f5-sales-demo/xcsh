@@ -16,6 +16,7 @@ import {
 	validateDocumentationGraph,
 } from "./documentation-metadata";
 import { DOCUMENTATION_SOURCES, type DocumentationSource } from "./documentation-resolve";
+import { QMD_VERSION } from "./qmd-version";
 import { canonicalizeSqliteHeader } from "./sqlite-canonical";
 
 const MIB = 1024 * 1024;
@@ -111,7 +112,7 @@ export interface DocumentationReleasePin {
 		readonly bundled_media_count: 0;
 	};
 	readonly index: {
-		readonly qmd_version: "2.8.3";
+		readonly qmd_version: string;
 		readonly fingerprint: string;
 		readonly sha256: string;
 		readonly size_bytes: number;
@@ -325,7 +326,7 @@ export function parseDocumentationReleasePin(value: unknown): DocumentationRelea
 
 	const indexValue = object(pin.index, "documentation index pin");
 	exactKeys(indexValue, ["qmd_version", "fingerprint", "sha256", "size_bytes"], "documentation index pin");
-	if (indexValue.qmd_version !== "2.8.3") throw new Error("documentation QMD version is invalid");
+	if (indexValue.qmd_version !== QMD_VERSION) throw new Error("documentation QMD version is invalid");
 	for (const field of ["fingerprint", "sha256"] as const) {
 		const digest = string(indexValue[field], `documentation index ${field}`);
 		if (digest !== "pending" && !SHA256.test(digest)) throw new Error(`documentation index ${field} is invalid`);
@@ -365,7 +366,7 @@ export function parseDocumentationReleasePin(value: unknown): DocumentationRelea
 		},
 		...(packaging ? { packaging } : {}),
 		index: {
-			qmd_version: "2.8.3",
+			qmd_version: QMD_VERSION,
 			fingerprint: indexValue.fingerprint as string,
 			sha256: indexValue.sha256 as string,
 			size_bytes: count(indexValue.size_bytes, "index.size_bytes"),
@@ -444,6 +445,8 @@ async function scanArchive(
 			const chunks: Buffer[] | undefined = collect(header.name) ? [] : undefined;
 			let bytes = 0;
 			stream.on("data", chunk => {
+				if (!(chunk instanceof Uint8Array))
+					return fail(new Error("documentation archive produced a non-binary chunk"));
 				const data = Buffer.from(chunk);
 				bytes += data.byteLength;
 				hash.update(data);

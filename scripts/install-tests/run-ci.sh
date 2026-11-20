@@ -23,6 +23,7 @@ smoke_cli() {
   local xcsh_bin="$1"
   "$xcsh_bin" --version
   "$xcsh_bin" --help >/dev/null
+  bun "$ROOT_DIR/scripts/install-tests/native-document-smoke.ts" "$xcsh_bin"
   "$xcsh_bin" stats --summary >/dev/null
   "$xcsh_bin" sandbox check
   XCSH_SMOKE_TEST_SPECS=1 "$xcsh_bin" >/dev/null

@@ -34,7 +34,7 @@
 	"scripts": {
 		"precheck": "bun ../../scripts/check-installed-dependencies.ts",
 		"check": "biome check . && bun run check:types",
-		"check:types": "tsgo -p tsconfig.json --noEmit",
+		"check:types": "tsc -p tsconfig.json --noEmit",
 		"lint": "biome lint .",
 		"pretest": "bun ../../scripts/check-installed-dependencies.ts",
 		"test": "bun test",
@@ -43,19 +43,19 @@
 		"generate-models": "bun scripts/generate-models.ts"
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "0.124.0",
-		"@aws-sdk/client-bedrock-runtime": "3.1127.0",
-		"@bufbuild/protobuf": "2.14.1",
+		"@anthropic-ai/sdk": "1.8.0",
+		"@aws-sdk/client-bedrock-runtime": "3.1168.0",
+		"@bufbuild/protobuf": "2.17.0",
 		"@f5-sales-demo/pi-utils": "workspace:*",
-		"@google/genai": "2.21.0",
+		"@google/genai": "3.3.0",
 		"@sinclair/typebox": "0.34.52",
-		"@smithy/node-http-handler": "4.12.1",
-		"ajv": "^8.20",
-		"ajv-formats": "^3.0",
-		"google-auth-library": "10.9.1",
-		"openai": "7.19.0",
-		"partial-json": "^0.1",
-		"zod": "4.5.4"
+		"@smithy/node-http-handler": "4.14.2",
+		"ajv": "8.20.0",
+		"ajv-formats": "3.0.1",
+		"google-auth-library": "11.3.4",
+		"openai": "7.56.0",
+		"partial-json": "0.1.7",
+		"zod": "4.6.7"
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.4"

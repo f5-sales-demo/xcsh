@@ -30,7 +30,7 @@
 	"scripts": {
 		"build": "bun scripts/build-native.ts",
 		"check": "biome check . && bun run check:types",
-		"check:types": "tsgo -p tsconfig.json --noEmit",
+		"check:types": "tsc -p tsconfig.json --noEmit",
 		"lint": "biome lint .",
 		"test": "bun scripts/test-native.ts",
 		"fix": "biome check --write --unsafe .",
@@ -39,7 +39,7 @@
 		"bench": "bun bench/grep.ts"
 	},
 	"devDependencies": {
-		"@napi-rs/cli": "3.9.0",
+		"@napi-rs/cli": "3.10.12",
 		"@types/bun": "1.4.4"
 	},
 	"engines": {
@@ -48,19 +48,29 @@
 	"napi": {
 		"binaryName": "pi_natives",
 		"triples": {
-			"x86_64-unknown-linux-gnu": { "platformArchABI": "linux-x64-gnu" },
-			"aarch64-unknown-linux-gnu": { "platformArchABI": "linux-arm64-gnu" },
-			"x86_64-apple-darwin": { "platformArchABI": "darwin-x64" },
-			"aarch64-apple-darwin": { "platformArchABI": "darwin-arm64" },
-			"x86_64-pc-windows-msvc": { "platformArchABI": "win32-x64-msvc" }
+			"x86_64-unknown-linux-gnu": {
+				"platformArchABI": "linux-x64-gnu"
+			},
+			"aarch64-unknown-linux-gnu": {
+				"platformArchABI": "linux-arm64-gnu"
+			},
+			"x86_64-apple-darwin": {
+				"platformArchABI": "darwin-x64"
+			},
+			"aarch64-apple-darwin": {
+				"platformArchABI": "darwin-arm64"
+			},
+			"x86_64-pc-windows-msvc": {
+				"platformArchABI": "win32-x64-msvc"
+			}
 		}
 	},
 	"optionalDependencies": {
-		"@f5-sales-demo/pi-natives-linux-x64-gnu": "21.10.1",
-		"@f5-sales-demo/pi-natives-linux-arm64-gnu": "21.10.1",
-		"@f5-sales-demo/pi-natives-darwin-x64": "21.10.1",
-		"@f5-sales-demo/pi-natives-darwin-arm64": "21.10.1",
-		"@f5-sales-demo/pi-natives-win32-x64-msvc": "21.10.1"
+		"@f5-sales-demo/pi-natives-linux-x64-gnu": "23.10.12",
+		"@f5-sales-demo/pi-natives-linux-arm64-gnu": "23.10.12",
+		"@f5-sales-demo/pi-natives-darwin-x64": "23.10.12",
+		"@f5-sales-demo/pi-natives-darwin-arm64": "23.10.12",
+		"@f5-sales-demo/pi-natives-win32-x64-msvc": "23.10.12"
 	},
 	"files": [
 		"native/*.js",

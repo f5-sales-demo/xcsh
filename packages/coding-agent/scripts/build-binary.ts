@@ -2,6 +2,7 @@
 
 import * as path from "node:path";
 import { localVertexCredentials } from "../../../scripts/local-vertex-credentials";
+import { markitNativeBundlePlugin } from "../../../scripts/markit-native-bundle";
 import { vertexBuildDefines } from "../../../scripts/vertex-build-credentials";
 
 const packageRoot = path.resolve(import.meta.dir, "..");
@@ -14,9 +15,10 @@ const vertexEnvironment = credentials
 		}
 	: Bun.env;
 const result = await Bun.build({
-	entrypoints: [path.join(packageRoot, "src", "cli.ts")],
+	entrypoints: [path.join(packageRoot, "src", "cli-bootstrap.ts")],
 	compile: { outfile: path.join(packageRoot, "dist", "xcsh") },
 	root: repoRoot,
+	plugins: [markitNativeBundlePlugin()],
 	external: ["mupdf", "node-llama-cpp", "@node-llama-cpp/*"],
 	define: {
 		PI_COMPILED: "true",
