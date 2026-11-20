@@ -1,6 +1,6 @@
 import { lstat, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, normalize } from "node:path";
-import { isInteractionIdentity } from "../../../chat-ui/src/interactions/transport";
+import { isInteractionIdentity } from "../shared-interactions/transport";
 import type { Enrollment } from "./enrollment";
 import { connectPeer, type LocalPeer, listenLocal } from "./ipc";
 import { ManagedRemoteSessions } from "./managed-sessions";

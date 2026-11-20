@@ -1,5 +1,5 @@
-import metadata from "../../node_modules/@tobilu/qmd/package.json";
+import metadata from "./qmd-attribution.generated.json";
 
-/** Actual installed identity, embedded for attribution; never selects a future release. */
+/** Build-time index generator identity, shipped for attribution without a runtime QMD dependency. */
 export const QMD_VERSION: string = metadata.version;
 if (!/^\d+\.\d+\.\d+(?:[-+].+)?$/.test(QMD_VERSION)) throw new Error("Installed QMD version is invalid");

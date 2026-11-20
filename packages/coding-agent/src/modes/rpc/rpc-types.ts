@@ -42,7 +42,7 @@ export type RpcCommand =
 			id?: string;
 			type: "plan_decide";
 			planId: string;
-			action: import("../../../../chat-ui/src/interactions/conversation-plan").PlanAction;
+			action: import("../../shared-interactions/conversation-plan").PlanAction;
 	  }
 	| {
 			id?: string;

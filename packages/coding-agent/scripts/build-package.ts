@@ -41,6 +41,8 @@ async function run(command: string[]): Promise<void> {
 }
 
 async function prepare(): Promise<void> {
+	await run([process.execPath, "../../scripts/prepare-qmd-attribution.ts"]);
+	await run([process.execPath, "../../scripts/prepare-shared-interactions.ts"]);
 	await run([process.execPath, "run", "generate-build-info"]);
 	await run([process.execPath, "run", "generate-extension-capabilities"]);
 	await run([process.execPath, "scripts/prepare-verified-corpora.ts"]);

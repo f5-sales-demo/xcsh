@@ -1,8 +1,6 @@
 import { INTENT_FIELD } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
 import { Loader, Spacer, TERMINAL } from "@f5-sales-demo/pi-tui";
-import { unseenAnswerRecap } from "../../../../chat-ui/src/interactions/answer-recap";
-import { PLAN_ACTIONS } from "../../../../chat-ui/src/interactions/conversation-plan";
 import { settings } from "../../config/settings";
 import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
 import { AnswerRecapComponent } from "../../modes/components/answer-recap";
@@ -24,6 +22,8 @@ import type { InteractiveModeContext, TodoPhase } from "../../modes/types";
 import { ReadGroupOutcomeAggregator } from "../../modes/utils/read-group-outcome-aggregator";
 import type { AgentSessionEvent } from "../../session/agent-session";
 import { calculatePromptTokens } from "../../session/compaction/compaction";
+import { unseenAnswerRecap } from "../../shared-interactions/answer-recap";
+import { PLAN_ACTIONS } from "../../shared-interactions/conversation-plan";
 import { setSessionTerminalTitle, subscribeSessionTitle } from "../../utils/title-generator";
 import { HookSelectorComponent } from "../components/hook-selector";
 

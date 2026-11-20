@@ -4,13 +4,9 @@ import {
 	type AnswerRecap,
 	answerRecap,
 	asyncReplyRecap,
-} from "../../../../chat-ui/src/interactions/answer-recap";
-import { parseQuestionReplies } from "../../../../chat-ui/src/interactions/async-answer";
-import type {
-	AsyncInputQuestion,
-	AsyncQuestionItem,
-	InputQuestion,
-} from "../../../../chat-ui/src/interactions/contract";
+} from "../../shared-interactions/answer-recap";
+import { parseQuestionReplies } from "../../shared-interactions/async-answer";
+import type { AsyncInputQuestion, AsyncQuestionItem, InputQuestion } from "../../shared-interactions/contract";
 import { theme } from "../theme/theme";
 import { AnswerRecapComponent } from "./answer-recap";
 import { selectorProse, selectorTranscriptFrame } from "./selector-frame";
