@@ -1,6 +1,25 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
+const MAX_OUTPUT_BYTES = 64 * 1024;
+async function captureOutput(stream: ReadableStream<Uint8Array>) {
+	const chunks: Uint8Array[] = [];
+	let observedBytes = 0;
+	let retainedBytes = 0;
+	for await (const chunk of stream) {
+		observedBytes += chunk.byteLength;
+		const remaining = MAX_OUTPUT_BYTES - retainedBytes;
+		if (remaining > 0) {
+			const retained = chunk.slice(0, remaining);
+			chunks.push(retained);
+			retainedBytes += retained.byteLength;
+		}
+	}
+	const bytes = Buffer.concat(chunks);
+	return { bytes, text: bytes.toString("utf8"), observedBytes, truncated: observedBytes > retainedBytes };
+}
 
 const candidate = process.argv[2];
 if (!candidate) throw new Error("A candidate CLI path is required");
@@ -29,10 +48,14 @@ const server = Bun.serve({
 	port: 0,
 	fetch: () => new Response(pdf, { headers: { "Content-Type": "application/pdf" } }),
 });
+let passed = false;
 try {
 	const child = Bun.spawn([binary, "read", `http://127.0.0.1:${server.port}/synthetic.pdf`], {
 		cwd: directory,
 		env: {
+			...(process.env.XCSH_RELEASE_CACHE_DIR !== undefined
+				? { XCSH_RELEASE_CACHE_DIR: process.env.XCSH_RELEASE_CACHE_DIR }
+				: {}),
 			PATH: process.env.PATH ?? "/usr/bin:/bin",
 			HOME: os.homedir(),
 			PI_CONFIG_DIR: path.join(directory, "config"),
@@ -46,14 +69,41 @@ try {
 	});
 	const [code, stdout, stderr] = await Promise.all([
 		child.exited,
-		new Response(child.stdout).text(),
-		new Response(child.stderr).text(),
+		captureOutput(child.stdout),
+		captureOutput(child.stderr),
 	]);
-	if (code !== 0 || !stdout.includes("Method: markit") || !stdout.includes("Synthetic document content.")) {
-		throw new Error(`Installed native document conversion failed (${code}): ${stderr}`);
+	const criteria = {
+		exitCodeZero: code === 0,
+		nativeMethodMatched: stdout.text.includes("Method: markit"),
+		contentMatched: stdout.text.includes("Synthetic document content."),
+	};
+	if (Object.values(criteria).some(matched => !matched) || stdout.truncated || stderr.truncated) {
+		const diagnostic = {
+			exitCode: code,
+			criteria,
+			stdoutSha256: createHash("sha256").update(stdout.bytes).digest("hex"),
+			stderrSha256: createHash("sha256").update(stderr.bytes).digest("hex"),
+			stdoutBytesObserved: stdout.observedBytes,
+			stderrBytesObserved: stderr.observedBytes,
+			stdoutTruncated: stdout.truncated,
+			stderrTruncated: stderr.truncated,
+			retainedDirectory: directory,
+		};
+		const failure = new Error(`NATIVE_DOCUMENT_SMOKE_FAILURE ${JSON.stringify(diagnostic)}`);
+		try {
+		await Promise.all([
+			writeFile(path.join(directory, "stdout.private.log"), stdout.bytes, { flag: "wx", mode: 0o600 }),
+			writeFile(path.join(directory, "stderr.private.log"), stderr.bytes, { flag: "wx", mode: 0o600 }),
+			writeFile(path.join(directory, "diagnostic.private.json"), JSON.stringify(diagnostic), { flag: "wx", mode: 0o600 }),
+		]);
+		} catch (writeError) {
+			throw new AggregateError([failure, writeError], "Native document conversion and evidence retention failed", { cause: failure });
+		}
+		throw failure;
 	}
+	passed = true;
 	console.log("Installed native document conversion passed");
 } finally {
 	server.stop(true);
-	await rm(directory, { recursive: true, force: true });
+	if (passed) await rm(directory, { recursive: true, force: true });
 }
