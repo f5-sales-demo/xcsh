@@ -4,6 +4,7 @@ import { parse } from "yaml";
 
 interface WorkflowJob {
 	name?: unknown;
+	strategy?: { matrix?: { os?: string[]; include?: Array<{ os: string; arch: string }> } };
 }
 
 interface WorkflowDocument {
@@ -34,4 +35,13 @@ test("CI installs cross targets into the repository-selected Rust toolchain", as
 	expect(setupAction).toContain('rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --no-self-update');
 	expect(setupAction).toContain('rustup target add "$RUST_TARGET" --toolchain "$RUST_TOOLCHAIN"');
 	expect(setupAction).not.toContain("rustup toolchain install --profile minimal --no-self-update");
+});
+
+test("current macOS ARM qualification and signing use the explicit supported route", async () => {
+	const source = await Bun.file(CI_WORKFLOW).text();
+	const workflow = parse(source) as WorkflowDocument;
+	expect(workflow.jobs?.["image-runtime"]?.strategy?.matrix?.os).toContain("macos-26");
+	const signer = workflow.jobs?.["build-sign-macos"]?.strategy?.matrix?.include?.find(row => row.arch === "arm64");
+	expect(signer?.os).toBe("macos-26");
+	expect(source).not.toContain("macos-latest");
 });
