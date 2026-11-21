@@ -8,6 +8,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { getPluginsLockfile, getPluginsNodeModules, getPluginsPackageJson, isEnoent } from "@f5-sales-demo/pi-utils";
 import { getConfigDirPaths } from "../../config";
+import {
+	validatePluginPackage,
+	validatePluginRegistry,
+	validatePluginRuntimeConfig,
+	validateProjectPluginOverrides,
+} from "./package-metadata";
 import type { InstalledPlugin, PluginManifest, PluginRuntimeConfig, ProjectPluginOverrides } from "./types";
 
 // =============================================================================
@@ -20,7 +26,7 @@ import type { InstalledPlugin, PluginManifest, PluginRuntimeConfig, ProjectPlugi
 async function loadRuntimeConfig(): Promise<PluginRuntimeConfig> {
 	const lockPath = getPluginsLockfile();
 	try {
-		return await Bun.file(lockPath).json();
+		return validatePluginRuntimeConfig(await Bun.file(lockPath).json());
 	} catch (err) {
 		if (isEnoent(err)) return { plugins: {}, settings: {} };
 		throw err;
@@ -33,10 +39,10 @@ async function loadRuntimeConfig(): Promise<PluginRuntimeConfig> {
 async function loadProjectOverrides(cwd: string): Promise<ProjectPluginOverrides> {
 	for (const overridesPath of getConfigDirPaths("plugin-overrides.json", { user: false, cwd })) {
 		try {
-			return await Bun.file(overridesPath).json();
+			return validateProjectPluginOverrides(await Bun.file(overridesPath).json());
 		} catch (err) {
 			if (isEnoent(err)) continue;
-			// JSON parse error - continue to next path
+			throw err;
 		}
 	}
 	return {};
@@ -54,7 +60,7 @@ export async function getEnabledPlugins(cwd: string): Promise<InstalledPlugin[]>
 	const pkgJsonPath = getPluginsPackageJson();
 	let pkg: { dependencies?: Record<string, string> };
 	try {
-		pkg = await Bun.file(pkgJsonPath).json();
+		pkg = validatePluginRegistry(await Bun.file(pkgJsonPath).json());
 	} catch (err) {
 		if (isEnoent(err)) return [];
 		throw err;
@@ -80,6 +86,7 @@ export async function getEnabledPlugins(cwd: string): Promise<InstalledPlugin[]>
 			throw err;
 		}
 
+		validatePluginPackage(pluginPkg, name);
 		const manifest: PluginManifest | undefined = pluginPkg.xcsh || pluginPkg.pi;
 
 		if (!manifest) {
@@ -89,7 +96,7 @@ export async function getEnabledPlugins(cwd: string): Promise<InstalledPlugin[]>
 
 		manifest.version = pluginPkg.version;
 
-		const runtimeState = runtimeConfig.plugins[name];
+		const runtimeState = Object.hasOwn(runtimeConfig.plugins, name) ? runtimeConfig.plugins[name] : undefined;
 
 		// Check if disabled globally
 		if (runtimeState && !runtimeState.enabled) {

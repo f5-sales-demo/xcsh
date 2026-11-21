@@ -8,11 +8,16 @@ import {
 	getProjectDir,
 	getProjectPluginOverridesPath,
 	isEnoent,
-	logger,
 } from "@f5-sales-demo/pi-utils";
 import { bunExecPath } from "../../bun-path";
 import { inspectMarketplacePlugins } from "./marketplace/doctor";
 import { getInstalledPluginsRegistryPath, getMarketplacesRegistryPath } from "./marketplace/registry";
+import {
+	validatePluginPackage,
+	validatePluginRegistry,
+	validatePluginRuntimeConfig,
+	validateProjectPluginOverrides,
+} from "./package-metadata";
 import { extractPackageName, parsePluginSpec } from "./parser";
 import type {
 	DoctorCheck,
@@ -66,11 +71,10 @@ export class PluginManager {
 	async #loadRuntimeConfig(): Promise<PluginRuntimeConfig> {
 		const lockPath = getPluginsLockfile();
 		try {
-			return await Bun.file(lockPath).json();
+			return validatePluginRuntimeConfig(await Bun.file(lockPath).json());
 		} catch (err) {
 			if (isEnoent(err)) return { plugins: {}, settings: {} };
-			logger.warn("Failed to load plugin runtime config", { path: lockPath, error: String(err) });
-			return { plugins: {}, settings: {} };
+			throw err;
 		}
 	}
 
@@ -89,11 +93,10 @@ export class PluginManager {
 	async #loadProjectOverrides(): Promise<ProjectPluginOverrides> {
 		const overridesPath = getProjectPluginOverridesPath(this.#cwd);
 		try {
-			return await Bun.file(overridesPath).json();
+			return validateProjectPluginOverrides(await Bun.file(overridesPath).json());
 		} catch (err) {
 			if (isEnoent(err)) return {};
-			logger.warn("Failed to load project plugin overrides", { path: overridesPath, error: String(err) });
-			return {};
+			throw err;
 		}
 	}
 
@@ -109,7 +112,7 @@ export class PluginManager {
 	async #ensurePackageJson(): Promise<void> {
 		const pkgJsonPath = getPluginsPackageJson();
 		try {
-			await Bun.file(pkgJsonPath).json();
+			validatePluginRegistry(await Bun.file(pkgJsonPath).json());
 		} catch (err) {
 			if (isEnoent(err)) {
 				await Bun.write(
@@ -267,7 +270,7 @@ export class PluginManager {
 		const pkgJsonPath = getPluginsPackageJson();
 		let pkg: { dependencies?: Record<string, string> };
 		try {
-			pkg = await Bun.file(pkgJsonPath).json();
+			pkg = validatePluginRegistry(await Bun.file(pkgJsonPath).json());
 		} catch (err) {
 			if (isEnoent(err)) return [];
 			throw err;
@@ -287,14 +290,17 @@ export class PluginManager {
 				if (isEnoent(err)) continue;
 				throw err;
 			}
+			validatePluginPackage(pluginPkg, name);
 			const manifest: PluginManifest = pluginPkg.xcsh || pluginPkg.pi || { version: pluginPkg.version };
 			manifest.version = pluginPkg.version;
 
-			const runtimeState = config.plugins[name] || {
-				version: pluginPkg.version,
-				enabledFeatures: null,
-				enabled: true,
-			};
+			const runtimeState = Object.hasOwn(config.plugins, name)
+				? config.plugins[name]
+				: {
+						version: pluginPkg.version,
+						enabledFeatures: null,
+						enabled: true,
+					};
 
 			// Apply project overrides
 			const isDisabledInProject = projectOverrides.disabled?.includes(name) ?? false;
@@ -327,17 +333,21 @@ export class PluginManager {
 			if (isEnoent(err)) throw new Error(`package.json not found at ${absolutePath}`);
 			throw err;
 		}
-		if (!pkg.name) {
-			throw new Error("package.json must have a name field");
-		}
-
+		const validated = validatePluginPackage(pkg);
+		pkg = validated;
+		const config = await this.#ensureConfigLoaded();
 		await this.#ensurePluginsDir();
+		await this.#ensurePackageJson();
+		const registry = validatePluginRegistry(await Bun.file(getPluginsPackageJson()).json());
+		registry.dependencies ??= {};
+		// A link belongs to the same registry used by list, loader, doctor and uninstall.
+		registry.dependencies[validated.name] = `file:${absolutePath}`;
 
-		const linkPath = path.join(getPluginsNodeModules(), pkg.name);
+		const linkPath = path.join(getPluginsNodeModules(), validated.name);
 
 		// Handle scoped packages
-		if (pkg.name.startsWith("@")) {
-			const scopeDir = path.join(getPluginsNodeModules(), pkg.name.split("/")[0]);
+		if (validated.name.startsWith("@")) {
+			const scopeDir = path.join(getPluginsNodeModules(), validated.name.split("/")[0]);
 			await fs.promises.mkdir(scopeDir, { recursive: true });
 		}
 
@@ -356,22 +366,23 @@ export class PluginManager {
 		const manifest: PluginManifest = pkg.xcsh || pkg.pi || { version: pkg.version };
 		manifest.version = pkg.version;
 
-		// Add to runtime config
-		const config = await this.#ensureConfigLoaded();
-		config.plugins[pkg.name] = {
-			version: pkg.version,
-			enabledFeatures: null,
-			enabled: true,
+		// Relinking changes the target/version, not the user's runtime selections or settings.
+		config.plugins[validated.name] = {
+			...(Object.hasOwn(config.plugins, validated.name)
+				? config.plugins[validated.name]
+				: { enabledFeatures: null, enabled: true }),
+			version: validated.version,
 		};
+		await Bun.write(getPluginsPackageJson(), JSON.stringify(registry, null, 2));
 		await this.#saveRuntimeConfig();
 
 		return {
-			name: pkg.name,
-			version: pkg.version,
+			name: validated.name,
+			version: validated.version,
 			path: absolutePath,
 			manifest,
-			enabledFeatures: null,
-			enabled: true,
+			enabledFeatures: config.plugins[validated.name].enabledFeatures,
+			enabled: config.plugins[validated.name].enabled,
 		};
 	}
 
@@ -384,7 +395,7 @@ export class PluginManager {
 	 */
 	async setEnabled(name: string, enabled: boolean): Promise<void> {
 		const config = await this.#ensureConfigLoaded();
-		if (!config.plugins[name]) {
+		if (!Object.hasOwn(config.plugins, name)) {
 			throw new Error(`Plugin ${name} not found in runtime config`);
 		}
 		config.plugins[name].enabled = enabled;
@@ -408,7 +419,7 @@ export class PluginManager {
 	 */
 	async setEnabledFeatures(name: string, features: string[] | null): Promise<void> {
 		const config = await this.#ensureConfigLoaded();
-		if (!config.plugins[name]) {
+		if (!Object.hasOwn(config.plugins, name)) {
 			throw new Error(`Plugin ${name} not found in runtime config`);
 		}
 
@@ -511,7 +522,7 @@ export class PluginManager {
 		let pkg: { dependencies?: Record<string, string> };
 		let hasPkgJson = true;
 		try {
-			pkg = await Bun.file(pkgJsonPath).json();
+			pkg = validatePluginRegistry(await Bun.file(pkgJsonPath).json());
 		} catch (err) {
 			if (isEnoent(err)) {
 				hasPkgJson = false;
@@ -568,6 +579,12 @@ export class PluginManager {
 					continue;
 				}
 				throw err;
+			}
+			try {
+				validatePluginPackage(pluginPkg, name);
+			} catch (error) {
+				checks.push({ name: `plugin:${name}`, status: "error", message: String(error) });
+				continue;
 			}
 			const hasManifest = !!(pluginPkg.xcsh || pluginPkg.pi);
 			const manifest: PluginManifest | undefined = pluginPkg.xcsh || pluginPkg.pi;
