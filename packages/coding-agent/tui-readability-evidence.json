@@ -142,14 +142,14 @@
       "2e3e06e0"
     ],
     "packages/coding-agent/src/modes/components/context-picker.ts": [
-      "554a30c7",
-      "0f9555fa",
-      "8df7aa61",
-      "1aeca6de",
-      "0bc63117",
-      "047045b7",
-      "c9c35ccd",
-      "e2759d46"
+      "25ee4cf6",
+      "ce7df1f9",
+      "3697b069",
+      "20e2d14c",
+      "1a74664d",
+      "504515d9",
+      "15062593",
+      "4ad5298f"
     ],
     "packages/coding-agent/src/modes/components/copy-selector.ts": [
       "a6db56bc",
@@ -482,14 +482,14 @@
       "43928c16"
     ],
     "packages/coding-agent/src/tools/bash-interactive.ts": [
-      "98a59132",
-      "b5e49782",
-      "6f6e4919",
-      "d52ca54f",
-      "73954aaa",
-      "bb93c608",
-      "981319c0",
-      "317e9c81"
+      "37980795",
+      "cbae545c",
+      "2450a73d",
+      "59dabcd9",
+      "8b3ff75b",
+      "fd7a2b24",
+      "f1b2987d",
+      "55e3e429"
     ],
     "packages/coding-agent/src/tools/bash.ts": [
       "6fa26ff5",
@@ -2133,19 +2133,13 @@
     },
     {
       "file": "packages/coding-agent/src/tools/bash-interactive.ts",
-      "line": 222,
+      "line": 225,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
     {
       "file": "packages/coding-agent/src/tools/bash-interactive.ts",
-      "line": 255,
-      "sink": "truncateToWidth",
-      "entry": "tool-output-previews"
-    },
-    {
-      "file": "packages/coding-agent/src/tools/bash-interactive.ts",
-      "line": 256,
+      "line": 258,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },
@@ -2157,7 +2151,13 @@
     },
     {
       "file": "packages/coding-agent/src/tools/bash-interactive.ts",
-      "line": 263,
+      "line": 262,
+      "sink": "truncateToWidth",
+      "entry": "tool-output-previews"
+    },
+    {
+      "file": "packages/coding-agent/src/tools/bash-interactive.ts",
+      "line": 266,
       "sink": "truncateToWidth",
       "entry": "tool-output-previews"
     },

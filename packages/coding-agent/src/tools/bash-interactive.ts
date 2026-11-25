@@ -12,10 +12,13 @@ import {
 } from "@f5-sales-demo/pi-tui";
 import type { Terminal as XtermTerminalType } from "@xterm/headless";
 import xterm from "@xterm/headless";
+import { Settings } from "../config/settings";
 import { fenceForNative } from "../exec/bash-executor";
 import { NON_INTERACTIVE_ENV } from "../exec/non-interactive-env";
 import type { Theme } from "../modes/theme/theme";
 import type { ContainmentFence } from "../sandbox/containment";
+import { captureContextExecution } from "../services/context-execution";
+import { RUNTIME_ENV_KEYS } from "../services/effective-f5-config";
 import { OutputSink, type OutputSummary } from "../session/streaming-output";
 import { sanitizeWithImagePassthrough } from "../utils/image-passthrough";
 import { formatStatusIcon, replaceTabs } from "./render-utils";
@@ -308,6 +311,7 @@ export async function runInteractiveBashPty(
 		fence: ContainmentFence | undefined;
 	},
 ): Promise<BashInteractiveResult> {
+	const environment = captureContextExecution(Settings.instance).environment;
 	const sink = new OutputSink({
 		artifactPath: options.artifactPath,
 		artifactId: options.artifactId,
@@ -368,9 +372,12 @@ export async function runInteractiveBashPty(
 						timeoutMs: options.timeoutMs,
 						env: {
 							...NON_INTERACTIVE_ENV,
+							...environment,
 							...options.env,
 						},
 						signal: options.signal,
+						unsetEnvPrefixes: ["XCSH_"],
+						preserveEnvKeys: [...RUNTIME_ENV_KEYS],
 						cols,
 						rows,
 						fence: fenceForNative(options.fence),

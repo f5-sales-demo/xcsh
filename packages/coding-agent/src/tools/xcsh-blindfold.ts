@@ -4,7 +4,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import template from "../prompts/tools/xcsh-blindfold.md" with { type: "text" };
 import { BLINDFOLD_OPERATIONS, BlindfoldService } from "../services/blindfold";
-import { currentContextExecution } from "../services/context-execution";
+import { captureContextExecution, currentContextExecution } from "../services/context-execution";
 import { ContextService } from "../services/xcsh-context";
 import type { ToolSession } from "./index";
 
@@ -66,10 +66,7 @@ export class XcshBlindfoldTool implements AgentTool<typeof blindfoldSchema> {
 			? {}
 			: admitted
 				? admitted.environment
-				: {
-						...(this.session.settings.get("bash.environment") as Record<string, string> | undefined),
-						...process.env,
-					};
+				: captureContextExecution(this.session.settings).environment;
 		const credentialSnapshot = env.XCSH_API_TOKEN;
 		const namespaceSnapshot = env.XCSH_NAMESPACE;
 		const guard = () => {
@@ -78,10 +75,7 @@ export class XcshBlindfoldTool implements AgentTool<typeof blindfoldSchema> {
 				? {}
 				: admitted
 					? admitted.environment
-					: {
-							...(this.session.settings.get("bash.environment") as Record<string, string> | undefined),
-							...process.env,
-						};
+					: captureContextExecution(this.session.settings).environment;
 			if (now.XCSH_API_TOKEN !== credentialSnapshot || now.XCSH_NAMESPACE !== namespaceSnapshot)
 				throw new Error("Blindfold context credentials or namespace changed; retry against the selected context");
 			if (

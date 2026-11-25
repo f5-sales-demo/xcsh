@@ -37,6 +37,10 @@ pub struct PtyStartOptions<'env> {
 	pub cwd: Option<String>,
 	/// Environment variables for this command.
 	pub env: Option<HashMap<String, String>>,
+	/// Remove inherited variables with these prefixes before applying command env.
+	pub unset_env_prefixes: Option<Vec<String>>,
+	/// Retain these keys even when matched by `unset_env_prefixes`.
+	pub preserve_env_keys: Option<Vec<String>>,
 	/// Timeout in milliseconds before cancelling.
 	pub timeout_ms: Option<u32>,
 	/// Abort signal for cancelling the operation.
@@ -70,6 +74,8 @@ struct PtyRunConfig {
 	command: String,
 	cwd: Option<String>,
 	env: Option<HashMap<String, String>>,
+	unset_env_prefixes: Option<Vec<String>>,
+	preserve_env_keys: Option<Vec<String>>,
 	cols: u16,
 	rows: u16,
 	/// Compiled seatbelt profile, present only when a fence was supplied.
@@ -144,6 +150,8 @@ impl PtySession {
 			command: options.command,
 			cwd: options.cwd,
 			env: options.env,
+			unset_env_prefixes: options.unset_env_prefixes,
+			preserve_env_keys: options.preserve_env_keys,
 			cols: options.cols.unwrap_or(120).clamp(20, 400),
 			rows: options.rows.unwrap_or(40).clamp(5, 200),
 			#[cfg(target_os = "macos")]
@@ -331,6 +339,20 @@ fn run_pty_sync(
 	cmd.arg(&config.command);
 	if let Some(cwd) = config.cwd.as_ref() {
 		cmd.cwd(cwd);
+	}
+	if let Some(prefixes) = config.unset_env_prefixes.as_ref() {
+		for (key, _) in std::env::vars_os() {
+			if prefixes
+				.iter()
+				.any(|prefix| key.to_string_lossy().starts_with(prefix))
+				&& !config
+					.preserve_env_keys
+					.as_ref()
+					.is_some_and(|keys| keys.iter().any(|name| key == std::ffi::OsStr::new(name)))
+			{
+				cmd.env_remove(key);
+			}
+		}
 	}
 	if let Some(env) = config.env.as_ref() {
 		for (key, value) in env {

@@ -246,7 +246,7 @@
 	"commands.context.sub.rename.description": "Rename a context",
 	"commands.context.sub.export.description": "Export a context (or all contexts) as JSON",
 	"commands.context.sub.import.description": "Import contexts from a file path or inline JSON",
-	"commands.context.sub.namespace.description": "Switch namespace within active context",
+	"commands.context.sub.namespace.description": "Select namespace for future work; saved defaults stay unchanged",
 	"commands.context.sub.env.description": "Manage environment variables",
 	"commands.context.sub.set.description": "Set environment variable(s)",
 	"commands.context.sub.unset.description": "Remove environment variable(s)",

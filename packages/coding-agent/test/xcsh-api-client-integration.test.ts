@@ -105,7 +105,7 @@ describe("ContextService API client integration", () => {
 		expect(client).not.toBeNull();
 	});
 
-	it("uses env-override token when XCSH_API_TOKEN is set", async () => {
+	it("uses saved context token despite inherited XCSH_API_TOKEN", async () => {
 		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT);
 		writeActiveContext(xcshConfigDir, INTEGRATION_TEST_CONTEXT.name);
 
@@ -126,13 +126,13 @@ describe("ContextService API client integration", () => {
 			const client = service.getApiClient();
 			expect(client).not.toBeNull();
 			await client!.listNamespaces();
-			expect(capturedAuthHeader).toBe("APIToken env-override-token");
+			expect(capturedAuthHeader).toBe("APIToken " + INTEGRATION_TEST_CONTEXT.apiToken);
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
 	});
 
-	it("uses env-override token on activate", async () => {
+	it("uses selected context token on activate despite inherited token", async () => {
 		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT);
 		writeContext(xcshContextsDir, INTEGRATION_TEST_CONTEXT_STAGING);
 		writeActiveContext(xcshConfigDir, INTEGRATION_TEST_CONTEXT.name);
@@ -155,7 +155,7 @@ describe("ContextService API client integration", () => {
 			const client = service.getApiClient();
 			expect(client).not.toBeNull();
 			await client!.listNamespaces();
-			expect(capturedAuthHeader).toBe("APIToken env-override-token");
+			expect(capturedAuthHeader).toBe("APIToken " + INTEGRATION_TEST_CONTEXT_STAGING.apiToken);
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

@@ -11,11 +11,16 @@ import {
 	getProjectDir,
 	setProjectDir,
 } from "@f5-sales-demo/pi-utils";
+import { defaultEditorTheme } from "../../../../tui/test/test-themes";
 import { _resetSettingsForTest, Settings } from "../../../src/config/settings";
+import { CustomEditor } from "../../../src/modes/components/custom-editor";
+import { StatusLineComponent } from "../../../src/modes/components/status-line";
 import { ContextCommandController } from "../../../src/modes/controllers/context-command-controller";
 import { getThemeByName, setThemeInstance } from "../../../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../../../src/modes/types";
+import { captureContextExecution } from "../../../src/services/context-execution";
 import { ContextService } from "../../../src/services/xcsh-context";
+import type { AgentSession } from "../../../src/session/agent-session";
 
 beforeAll(async () => setThemeInstance((await getThemeByName("xcsh-dark"))!));
 let directory = "";
@@ -46,11 +51,25 @@ afterEach(async () => {
 	await rm(directory, { recursive: true, force: true });
 });
 
-function harness(inputs: string[][]) {
+function harness(inputs: string[][], storedBorder = false) {
 	const screens: string[] = [];
 	const invalidateIntegration = vi.fn();
 	let current: Component | undefined;
-	const editor = { setText: vi.fn() };
+	const editor = storedBorder ? new CustomEditor(defaultEditorTheme) : { setText: vi.fn() };
+	const statusLine = storedBorder
+		? new StatusLineComponent({
+				state: { messages: [] },
+				getAsyncJobSnapshot: () => undefined,
+				sessionManager: { getCwd: () => directory, getUsageStatistics: () => ({}) },
+			} as unknown as AgentSession)
+		: { invalidate: vi.fn() };
+	if (statusLine instanceof StatusLineComponent)
+		statusLine.updateSettings({ preset: "custom", leftSegments: ["context_xcsh"], rightSegments: [] });
+	const updateEditorTopBorder = vi.fn(() => {
+		if (editor instanceof CustomEditor && statusLine instanceof StatusLineComponent)
+			editor.setTopBorder(statusLine.getTopBorder(78));
+	});
+	updateEditorTopBorder();
 	const ctx = {
 		editor,
 		editorContainer: {
@@ -66,8 +85,8 @@ function harness(inputs: string[][]) {
 				getAllRegisteredIntegrations: () => [{ invalidate: invalidateIntegration }],
 			},
 		},
-		statusLine: { invalidate: vi.fn() },
-		updateEditorTopBorder: vi.fn(),
+		statusLine,
+		updateEditorTopBorder,
 		ui: { terminal: { rows: 24 }, requestRender: vi.fn(), setFocus: vi.fn() },
 		showHookCustom: (
 			factory: (ui: unknown, theme: unknown, keys: unknown, done: (result: unknown) => void) => Component,
@@ -85,6 +104,7 @@ function harness(inputs: string[][]) {
 		controller: new ContextCommandController(ctx),
 		input: (value: string) => current?.handleInput?.(value),
 		text: () => Bun.stripANSI(current?.render(80).join("\n") ?? ""),
+		border: () => (editor instanceof CustomEditor ? Bun.stripANSI(editor.render(80).join("\n")) : ""),
 	};
 }
 
@@ -199,6 +219,135 @@ test("context namespace selection distinguishes effective state from the unchang
 	expect((await service.listContexts()).find(context => context.name === "demo")?.defaultNamespace).toBe(
 		"saved-default",
 	);
+});
+
+test("R2 inherited namespace yields to the applied context for future controller admissions", async () => {
+	const service = ContextService.instance;
+	await service.createContext({
+		name: "context-a",
+		apiUrl: "https://tenant-a.example.invalid",
+		apiToken: "synthetic-token",
+		defaultNamespace: "ns-old",
+	});
+	await service.activate("context-a");
+	process.env.XCSH_NAMESPACE = "ns-old";
+	const saved = fs.readFileSync(join(directory, "contexts", "context-a.json"), "utf8");
+	const h = harness([]);
+	await h.controller.handle({ name: "context", args: "namespace default", text: "/context namespace default" });
+	expect(service.activeNamespace).toBe("default");
+	expect(service.getStatus().activeContextNamespace).toBe("default");
+	expect(captureContextExecution(Settings.instance).environment.XCSH_NAMESPACE).toBe("default");
+	expect(h.ctx.showStatus).toHaveBeenCalledWith("Namespace default · future turns", { dim: false });
+	expect(fs.readFileSync(join(directory, "contexts", "context-a.json"), "utf8")).toBe(saved);
+	expect(process.env.XCSH_NAMESPACE).toBe("ns-old");
+});
+
+test("R1 R3 R8 explicit and guided namespace commands immediately refresh the stored editor border", async () => {
+	const service = ContextService.instance;
+	await service.createContext({
+		name: "context-a",
+		apiUrl: "https://tenant-a.example.invalid",
+		apiToken: "synthetic-token",
+		defaultNamespace: "ns-old",
+	});
+	await service.activate("context-a");
+	fs.writeFileSync(service.activeContextPath, "context-a");
+	const saved = fs.readFileSync(join(directory, "contexts", "context-a.json"), "utf8");
+	for (const guided of [false, true]) {
+		service.setNamespace("ns-old");
+		if (guided) process.env.XCSH_NAMESPACE = "ns-old";
+		const h = harness(guided ? [["\r"], ["\x01", "\x0b", "default", "\r"]] : [], true);
+		expect(h.border()).toContain("tenant-a:ns-old");
+		await h.controller.handle({
+			name: "context",
+			args: ["namespace default", "namespace"][Number(guided)]!,
+			text: "/context namespace",
+		});
+		expect(h.border()).toContain("tenant-a:default");
+		expect(h.border()).not.toContain("tenant-a:ns-old");
+		expect(service.getStatus().activeContextNamespace).toBe("default");
+		expect(h.ctx.showStatus).toHaveBeenCalledWith("Namespace default · future turns", { dim: false });
+		expect(fs.readFileSync(join(directory, "contexts", "context-a.json"), "utf8")).toBe(saved);
+		expect(fs.readFileSync(service.activeContextPath, "utf8")).toBe("context-a");
+	}
+});
+
+test("R4 R11 namespace selection preserves failed auth without network and listeners see coherent future state", async () => {
+	const previousFetch = globalThis.fetch;
+	try {
+		for (const offline of [false, true]) {
+			const request = vi.fn(async () => {
+				if (offline) throw new Error("synthetic offline");
+				return new Response("{}", { status: 401, headers: { "Content-Type": "application/json" } });
+			});
+			globalThis.fetch = request as unknown as typeof fetch;
+			const service = ContextService.instance;
+			if (!(await service.listContexts()).length)
+				await service.createContext({
+					name: "context-a",
+					apiUrl: "https://tenant-a.example.invalid",
+					apiToken: "synthetic-token",
+					defaultNamespace: "ns-old",
+				});
+			await service.activate("context-a");
+			await service.validateToken();
+			const status = service.getStatus();
+			expect(status.authStatus).toBe(offline ? "offline" : "auth_error");
+			request.mockClear();
+			const observations: string[] = [];
+			const listener = (context: { defaultNamespace: string }) => {
+				observations.push(context.defaultNamespace);
+				expect(service.getStatus().activeContextNamespace).toBe("default");
+				expect(service.getStatus().credentialSource).toBe("context");
+				expect(captureContextExecution(Settings.instance).environment.XCSH_NAMESPACE).toBe("default");
+			};
+			ContextService.onContextChange(listener);
+			try {
+				await harness([]).controller.handle({
+					name: "context",
+					args: "namespace default",
+					text: "/context namespace default",
+				});
+			} finally {
+				ContextService.offContextChange(listener);
+			}
+			expect(observations).toEqual(["default"]);
+			expect(service.getStatus()).toMatchObject({
+				authStatus: status.authStatus,
+				activeContextUrl: status.activeContextUrl,
+				activeContextTenant: status.activeContextTenant,
+			});
+			expect(request).not.toHaveBeenCalled();
+		}
+	} finally {
+		globalThis.fetch = previousFetch;
+	}
+});
+
+test("R9 repeated selection and guided cancellation preserve state; missing context fails safely", async () => {
+	const service = ContextService.instance;
+	expect(() => service.setNamespace("default")).toThrow("No active context");
+	await service.createContext({
+		name: "context-a",
+		apiUrl: "https://tenant-a.example.invalid",
+		apiToken: "synthetic-token",
+		defaultNamespace: "ns-old",
+	});
+	await service.activate("context-a");
+	const changed = vi.fn();
+	ContextService.onContextChange(changed);
+	try {
+		await harness([]).controller.handle({
+			name: "context",
+			args: "namespace ns-old",
+			text: "/context namespace ns-old",
+		});
+		await harness([["\x1b"]]).controller.handle({ name: "context", args: "namespace", text: "/context namespace" });
+		expect(service.activeNamespace).toBe("ns-old");
+		expect(changed).not.toHaveBeenCalled();
+	} finally {
+		ContextService.offContextChange(changed);
+	}
 });
 
 test("unsafe context link names are rejected before any pointer path is resolved or reviewed", async () => {

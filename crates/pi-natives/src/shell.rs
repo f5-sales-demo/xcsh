@@ -228,6 +228,8 @@ struct ShellRunConfig {
 	cwd: Option<String>,
 	/// Environment variables to apply for this command only.
 	env: Option<HashMap<String, String>>,
+	unset_env_prefixes: Option<Vec<String>>,
+	preserve_env_keys: Option<Vec<String>>,
 	/// Which paths this command may reach. `None` is unrestricted.
 	fence: Option<Arc<ContainmentFence>>,
 }
@@ -241,6 +243,10 @@ pub struct ShellRunOptions<'env> {
 	pub cwd: Option<String>,
 	/// Environment variables to apply for this command only.
 	pub env: Option<HashMap<String, String>>,
+	/// Remove cached or inherited variables with these prefixes before applying command env.
+	pub unset_env_prefixes: Option<Vec<String>>,
+	/// Retain these keys even when matched by `unset_env_prefixes`.
+	pub preserve_env_keys: Option<Vec<String>>,
 	/// Timeout in milliseconds before cancelling the command.
 	pub timeout_ms: Option<u32>,
 	/// Abort signal for cancelling the operation.
@@ -308,6 +314,8 @@ impl Shell {
 			command: options.command,
 			cwd: options.cwd,
 			env: options.env,
+			unset_env_prefixes: options.unset_env_prefixes,
+			preserve_env_keys: options.preserve_env_keys,
 			fence: options
 				.fence
 				.as_ref()
@@ -400,6 +408,10 @@ pub struct ShellExecuteOptions<'env> {
 	pub cwd: Option<String>,
 	/// Environment variables to apply for this command only.
 	pub env: Option<HashMap<String, String>>,
+	/// Remove cached or inherited variables with these prefixes before applying command env.
+	pub unset_env_prefixes: Option<Vec<String>>,
+	/// Retain these keys even when matched by `unset_env_prefixes`.
+	pub preserve_env_keys: Option<Vec<String>>,
 	/// Environment variables to apply once per session.
 	pub session_env: Option<HashMap<String, String>>,
 	/// Timeout in milliseconds before cancelling the command.
@@ -441,6 +453,8 @@ pub fn execute_shell<'env>(
 		command: options.command,
 		cwd: options.cwd,
 		env: options.env,
+		unset_env_prefixes: options.unset_env_prefixes,
+		preserve_env_keys: options.preserve_env_keys,
 		fence: options
 			.fence
 			.as_ref()
@@ -703,6 +717,31 @@ async fn run_shell_command(
 	params.process_group_policy = ProcessGroupPolicy::NewProcessGroup;
 	params.containment = options.fence.clone();
 	params.set_cancel_token(cancel_token.clone());
+
+	// Clear cached inherited values before the command overlay, including keys absent
+	// from the admitted environment. An empty value is not an absent variable.
+	if let Some(prefixes) = options.unset_env_prefixes.as_ref() {
+		let names: Vec<String> = session
+			.shell
+			.env()
+			.iter()
+			.filter(|(name, _)| {
+				prefixes.iter().any(|prefix| name.starts_with(prefix))
+					&& !options
+						.preserve_env_keys
+						.as_ref()
+						.is_some_and(|keys| keys.contains(name))
+			})
+			.map(|(name, _)| name.clone())
+			.collect();
+		for name in names {
+			session
+				.shell
+				.env_mut()
+				.unset(&name)
+				.map_err(|err| Error::from_reason(format!("Failed to clear command env: {err}")))?;
+		}
+	}
 
 	let mut env_scope_pushed = false;
 	if let Some(env) = options.env.as_ref() {

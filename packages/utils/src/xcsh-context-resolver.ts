@@ -217,7 +217,18 @@ export class ContextResolver {
 	}
 
 	resolve(cwd: string): Promise<ResolvedContext | null> {
-		// Priority 1: environment variables
+		// Priority 1: local .xcsh/contexts/
+		const localDir = this.findLocalContextsDir(cwd);
+		if (localDir) {
+			const localResult = this.#resolveFromDir("local", cwd);
+			if (localResult) return Promise.resolve(localResult);
+		}
+
+		// Priority 2: global saved selection.
+		const global = this.#resolveGlobal();
+		if (global) return Promise.resolve(global);
+
+		// Fallback: environment variables, only when no saved context resolves
 		const envUrl = process.env.XCSH_API_URL;
 		const envToken = process.env.XCSH_API_TOKEN;
 		if (envUrl && envToken) {
@@ -235,15 +246,7 @@ export class ContextResolver {
 			);
 		}
 
-		// Priority 2: local .xcsh/contexts/
-		const localDir = this.findLocalContextsDir(cwd);
-		if (localDir) {
-			const localResult = this.#resolveFromDir("local", cwd);
-			if (localResult) return Promise.resolve(localResult);
-		}
-
-		// Priority 3: global ~/.config/xcsh/contexts/
-		return Promise.resolve(this.#resolveGlobal());
+		return Promise.resolve(null);
 	}
 
 	/** Resolve an explicit identity without changing any saved active pointer. */

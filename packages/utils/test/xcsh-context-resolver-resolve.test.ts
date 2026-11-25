@@ -40,7 +40,7 @@ describe("ContextResolver.resolve", () => {
 		expect(result).toBeNull();
 	});
 
-	it("resolves env vars with highest priority", async () => {
+	it("resolves env vars when no saved context exists", async () => {
 		process.env.XCSH_API_URL = "https://env.example.com";
 		process.env.XCSH_API_TOKEN = "env-token";
 		const resolver = new ContextResolver({ paths: xcshContextPaths });
@@ -150,7 +150,7 @@ describe("ContextResolver.resolve", () => {
 		expect(result!.source).toBe("global");
 	});
 
-	it("returns env source even when local and global exist", async () => {
+	it("returns local saved source before conflicting inherited environment", async () => {
 		process.env.XCSH_API_URL = "https://env-wins.example.com";
 		process.env.XCSH_API_TOKEN = "env-token";
 
@@ -160,7 +160,8 @@ describe("ContextResolver.resolve", () => {
 
 		const resolver = new ContextResolver({ paths: xcshContextPaths });
 		const result = await resolver.resolve(projectDir);
-		expect(result!.source).toBe("env");
+		expect(result!.source).toBe("local");
+		expect(result!.context.apiUrl).toBe(localCtx.apiUrl);
 	});
 
 	it("rejects file with both 'context' and 'apiUrl'", async () => {

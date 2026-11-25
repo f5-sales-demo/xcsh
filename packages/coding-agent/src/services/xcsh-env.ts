@@ -17,7 +17,7 @@ import {
 	XCSH_NAMESPACE,
 	XCSH_TENANT,
 	XCSH_USERNAME,
-} from "@f5-sales-demo/pi-utils";
+} from "@f5-sales-demo/pi-utils/xcsh-env-names";
 
 export {
 	AUTH_ENV_KEYS,
@@ -43,11 +43,8 @@ export const RESERVED_ENV_MESSAGES: Readonly<Record<string, string>> = {
 };
 
 /**
- * True iff an env var is overriding a context-provided credential.
- * XCSH_API_URL alone is NOT an override — it is the signal that the user
- * wants to bypass contexts entirely (see ContextService.loadActive FR-102).
- * The "override" concept only applies to token/namespace supplied alongside
- * a loaded context.
+ * Legacy presence check for supplied token/namespace values. Presence does not
+ * establish authority: an applied context supersedes these inputs.
  */
 export function hasEnvOverride(): boolean {
 	return !!process.env[XCSH_API_TOKEN] || !!process.env[XCSH_NAMESPACE];

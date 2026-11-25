@@ -1,6 +1,5 @@
 import { Args, Command } from "@f5-sales-demo/pi-utils/cli";
 import { writeCliOutput } from "@f5-sales-demo/pi-utils/cli-output";
-
 import { BlindfoldService } from "../services/blindfold";
 import type { ContextService } from "../services/xcsh-context";
 import { blindfoldFlags, parseBlindfoldCli } from "./blindfold-args";
@@ -14,10 +13,11 @@ export async function runBlindfold(argv: string[], compatibility = false): Promi
 		let env: Record<string, string | undefined> = {};
 		if (!args.publicKey) {
 			const { Settings } = await import("../config/settings");
+			const { captureContextExecution } = await import("../services/context-execution");
 			const { ContextService } = await import("../services/xcsh-context");
 			await Settings.init({ cwd: process.cwd() });
 			context = await ContextService.getOrInit(undefined, process.cwd());
-			env = { ...(Settings.instance.get("bash.environment") as Record<string, string> | undefined), ...process.env };
+			env = captureContextExecution(Settings.instance).environment;
 		}
 		const service = new BlindfoldService({
 			env,

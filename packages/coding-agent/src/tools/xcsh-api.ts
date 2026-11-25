@@ -10,7 +10,7 @@ import { mutationContract, objectValue } from "../internal-urls/immutable-select
 import xcshApiDescription from "../prompts/tools/xcsh-api.md" with { type: "text" };
 import { SecretObfuscator } from "../secrets";
 import { type ContextEnv, createContextEnv } from "../services/context-env";
-import { currentContextExecution } from "../services/context-execution";
+import { captureContextExecution, currentContextExecution } from "../services/context-execution";
 import type { ToolSession } from ".";
 import { humanizeResourceType } from "./render-utils";
 import { checkImmutableMutation } from "./xcsh-api-replacement";
@@ -273,18 +273,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 	#resolveCredentials(): [string, string] {
 		return [
-			(
-				(currentContextExecution()
-					? currentContextExecution()!.environment.XCSH_API_URL
-					: process.env.XCSH_API_URL) ??
-				this.#contextEnv.get("XCSH_API_URL") ??
-				""
-			).replace(/\/+$/, ""),
-			(currentContextExecution()
-				? currentContextExecution()!.environment.XCSH_API_TOKEN
-				: process.env.XCSH_API_TOKEN) ??
-				this.#contextEnv.get("XCSH_API_TOKEN") ??
-				"",
+			(this.#contextEnv.get("XCSH_API_URL") ?? "").replace(/\/+$/, ""),
+			this.#contextEnv.get("XCSH_API_TOKEN") ?? "",
 		];
 	}
 
@@ -395,12 +385,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			}
 		} catch {
 			// Fall back to default namespace only
-			const def =
-				(currentContextExecution()
-					? currentContextExecution()!.environment.XCSH_NAMESPACE
-					: process.env.XCSH_NAMESPACE) ??
-				this.#contextEnv.get("XCSH_NAMESPACE") ??
-				"default";
+			const def = this.#contextEnv.get("XCSH_NAMESPACE") ?? "default";
 			allNs = [def];
 		}
 
@@ -464,13 +449,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		// File-based cache: reuse batch results across xcsh invocations (5-minute TTL).
 		// Prevents cumulative rate limiting when the benchmark runs multiple queries.
-		const ns =
-			params?.namespace ??
-			(currentContextExecution()
-				? currentContextExecution()!.environment.XCSH_NAMESPACE
-				: process.env.XCSH_NAMESPACE) ??
-			this.#contextEnv.get("XCSH_NAMESPACE") ??
-			"_default";
+		const ns = params?.namespace ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "_default";
 		const cachePath = batchCachePath(apiBase, contextName, apiToken, ns, paths, this.cacheDir);
 		try {
 			const cacheDir = path.dirname(cachePath);
@@ -915,12 +894,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			case 403:
 				return `Access denied${ctxHint}. The API token may lack the required role or permission for this operation. Check the token's role assignments in the F5 XC console.`;
 			case 404: {
-				const ns =
-					(currentContextExecution()
-						? currentContextExecution()!.environment.XCSH_NAMESPACE
-						: process.env.XCSH_NAMESPACE) ??
-					this.#contextEnv.get("XCSH_NAMESPACE") ??
-					"default";
+				const ns = this.#contextEnv.get("XCSH_NAMESPACE") ?? "default";
 				return `Resource not found in namespace \`${ns}\`${ctxHint}. Verify the resource name, or use POST to create it.`;
 			}
 			case 409:
@@ -942,6 +916,10 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 	}
 
 	async #execute(params: XcshApiParams, signal?: AbortSignal): Promise<XcshApiResult> {
+		if (params.contextName !== undefined && captureContextExecution(this.session.settings).authority !== "context")
+			return this.#errorResult(
+				"This work uses environment configuration. Select the requested saved context before querying resources.",
+			);
 		if (params.contextName !== undefined && params.contextName !== this.#contextEnv.getContextName()) {
 			return this.#errorResult(
 				"Context does not match the requested target. Complete xcsh_context activation and inspect its result before querying resources.\n" +
@@ -998,13 +976,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const isWildcard = batchPaths.length === 1 && batchPaths[0] === "*";
 			const resolved = isWildcard ? this.#loadListablePaths() : batchPaths;
 			if (resolved.length > 0) {
-				const batchNs =
-					params.params?.namespace ??
-					(currentContextExecution()
-						? currentContextExecution()!.environment.XCSH_NAMESPACE
-						: process.env.XCSH_NAMESPACE) ??
-					this.#contextEnv.get("XCSH_NAMESPACE") ??
-					"";
+				const batchNs = params.params?.namespace ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "";
 				// A wildcard batches all non-system namespaces in one tool call.
 				// Reduces multi-namespace queries from N+1 batch calls to 1.
 				if (batchNs === "*") {

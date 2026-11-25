@@ -34,7 +34,7 @@ export interface ParityFixture {
 // The shared, host-agnostic expectations.
 export const PARITY_FIXTURES: ParityFixture[] = [
 	{
-		name: "env vars win and are reduced to origin",
+		name: "saved local context wins conflicting inherited endpoint",
 		env: {
 			XCSH_API_URL: "https://env.example.com/web/home?iss=x#f",
 			XCSH_API_TOKEN: "env-tok",
@@ -49,7 +49,7 @@ export const PARITY_FIXTURES: ParityFixture[] = [
 			}),
 		},
 		localActive: "dev",
-		expect: { source: "env", apiUrl: "https://env.example.com", defaultNamespace: "ns" },
+		expect: { source: "local", apiUrl: "https://l.example.com", defaultNamespace: "d" },
 	},
 	{
 		name: "local inline over global; apiUrl reduced to origin",

@@ -7,6 +7,8 @@ import * as fs from "node:fs/promises";
 import { executeShell, Shell } from "@f5-sales-demo/pi-natives";
 import { Settings } from "../config/settings";
 import type { ContainmentFence } from "../sandbox/containment";
+import { captureContextExecution } from "../services/context-execution";
+import { RUNTIME_ENV_KEYS } from "../services/effective-f5-config";
 import { OutputSink } from "../session/streaming-output";
 import { getOrCreateSnapshot } from "../utils/shell-snapshot";
 import { NON_INTERACTIVE_ENV } from "./non-interactive-env";
@@ -100,7 +102,7 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 	const { shell, env: shellEnv, prefix } = settings.getShellConfig();
 	const snapshotPath = shell.includes("bash") ? await getOrCreateSnapshot(shell, shellEnv) : null;
 	const commandCwd = await resolveShellCwd(options?.cwd);
-	const rawBashEnv = (settings.get("bash.environment") ?? {}) as Record<string, unknown>;
+	const rawBashEnv = captureContextExecution(settings).environment as Record<string, unknown>;
 	const bashEnvironment: Record<string, string> = {};
 	for (const [k, v] of Object.entries(rawBashEnv)) {
 		if (typeof v === "string") bashEnvironment[k] = v;
@@ -219,6 +221,8 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 						command: finalCommand,
 						cwd: commandCwd,
 						env: commandEnv,
+						unsetEnvPrefixes: ["XCSH_"],
+						preserveEnvKeys: [...RUNTIME_ENV_KEYS],
 						timeoutMs: options?.timeout,
 						signal: runAbortController.signal,
 						fence: fenceForNative(options?.fence),
@@ -234,6 +238,8 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 						command: finalCommand,
 						cwd: commandCwd,
 						env: commandEnv,
+						unsetEnvPrefixes: ["XCSH_"],
+						preserveEnvKeys: [...RUNTIME_ENV_KEYS],
 						sessionEnv: shellEnv,
 						snapshotPath: snapshotPath ?? undefined,
 						timeoutMs: options?.timeout,

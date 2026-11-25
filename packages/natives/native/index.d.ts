@@ -1157,6 +1157,10 @@ export interface PtyStartOptions {
   cwd?: string
   /** Environment variables for this command. */
   env?: Record<string, string>
+  /** Remove inherited variables with these prefixes before applying command env. */
+  unsetEnvPrefixes?: Array<string>
+  /** Retain these keys even when matched by `unset_env_prefixes`. */
+  preserveEnvKeys?: Array<string>
   /** Timeout in milliseconds before cancelling. */
   timeoutMs?: number
   /** Abort signal for cancelling the operation. */
@@ -1312,6 +1316,10 @@ export interface ShellExecuteOptions {
   cwd?: string
   /** Environment variables to apply for this command only. */
   env?: Record<string, string>
+  /** Remove cached or inherited variables with these prefixes before applying command env. */
+  unsetEnvPrefixes?: Array<string>
+  /** Retain these keys even when matched by `unset_env_prefixes`. */
+  preserveEnvKeys?: Array<string>
   /** Environment variables to apply once per session. */
   sessionEnv?: Record<string, string>
   /** Timeout in milliseconds before cancelling the command. */
@@ -1350,6 +1358,10 @@ export interface ShellRunOptions {
   cwd?: string
   /** Environment variables to apply for this command only. */
   env?: Record<string, string>
+  /** Remove cached or inherited variables with these prefixes before applying command env. */
+  unsetEnvPrefixes?: Array<string>
+  /** Retain these keys even when matched by `unset_env_prefixes`. */
+  preserveEnvKeys?: Array<string>
   /** Timeout in milliseconds before cancelling the command. */
   timeoutMs?: number
   /** Abort signal for cancelling the operation. */
