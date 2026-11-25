@@ -94,8 +94,8 @@ describe("shouldRunSessionContextBootstrap", () => {
 	test("interactive CLI / cold worker (no api url, no spare marker) → true", () => {
 		expect(shouldRunSessionContextBootstrap({})).toBe(true);
 	});
-	test("api url set → false (env-credentialed, never bootstraps)", () => {
-		expect(shouldRunSessionContextBootstrap({ XCSH_API_URL: "https://x.console.ves.volterra.io/api" })).toBe(false);
+	test("api url set → true (saved selection resolves before environment fallback)", () => {
+		expect(shouldRunSessionContextBootstrap({ XCSH_API_URL: "https://x.console.ves.volterra.io/api" })).toBe(true);
 	});
 	test("api url set AND spare marker → false", () => {
 		expect(shouldRunSessionContextBootstrap({ XCSH_API_URL: "https://x/api", XCSH_WORKER_SPARE: "1" })).toBe(false);

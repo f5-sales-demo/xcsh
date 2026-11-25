@@ -1598,7 +1598,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 							activeContextTenant: admitted.environment.XCSH_TENANT,
 							activeContextNamespace: admitted.environment.XCSH_NAMESPACE,
 							activeContextUrl: admitted.environment.XCSH_API_URL,
-							credentialSource: "context",
+							credentialSource: admitted.authority,
 							authStatus: "unknown",
 						}
 					: selectedStatus;

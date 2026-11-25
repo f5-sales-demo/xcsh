@@ -33,7 +33,7 @@ import {
 	setForceSlot,
 	setSymbolPreset,
 } from "../modes/theme/theme";
-import { currentContextExecution } from "../services/context-execution";
+import { currentContextExecution, setContextExecutionSettingsProvider } from "../services/context-execution";
 import { AgentStorage } from "../session/agent-storage";
 import { applyHyperlinkSetting } from "../tui/hyperlink";
 import { type EditMode, normalizeEditMode } from "../utils/edit-mode";
@@ -237,6 +237,7 @@ export class Settings {
 		if (execution && path === "bash.environment") return execution.environment as SettingValue<P>;
 		if (execution && path === "xcsh.sensitiveKeys") return execution.sensitiveKeys as SettingValue<P>;
 		if (execution && path === "xcsh.contextSource") return execution.source as SettingValue<P>;
+		if (execution && path === "xcsh.contextAuthority") return execution.authority as SettingValue<P>;
 		const segments = path.split(".");
 		const value = getByPath(this.#merged, segments);
 		if (value !== undefined) {
@@ -803,6 +804,7 @@ const SETTING_HOOKS: Partial<Record<SettingPath, SettingHook<any>>> = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 let globalInstance: Settings | null = null;
+setContextExecutionSettingsProvider(() => globalInstance ?? undefined);
 let globalInstancePromise: Promise<Settings> | null = null;
 
 /**

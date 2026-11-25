@@ -120,7 +120,7 @@ describe("ContextService", () => {
 			expect(bashEnv.XCSH_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
 		});
 
-		it("returns null when XCSH_API_URL is set (env override skips context)", async () => {
+		it("loads saved context before XCSH_API_URL environment fallback", async () => {
 			process.env.XCSH_API_URL = "https://env-override.console.ves.volterra.io";
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
@@ -128,8 +128,9 @@ describe("ContextService", () => {
 			const service = ContextService.init(xcshConfigDir);
 			const result = await service.loadActive();
 
-			expect(result).toBeNull();
-			expect(service.getStatus().credentialSource).toBe("environment");
+			expect(result?.name).toBe(TEST_CONTEXT.name);
+			expect(service.getStatus().credentialSource).toBe("context");
+			expect(service.getStatus().activeContextUrl).toBe(TEST_CONTEXT.apiUrl);
 		});
 
 		it("loads context values into bash.environment (env vars inherited separately via process.env)", async () => {
@@ -244,7 +245,7 @@ describe("ContextService", () => {
 			expect(bashEnv.XCSH_API_URL).toBeUndefined();
 		});
 
-		it("per-field env merge: XCSH_API_TOKEN in env skips token injection", async () => {
+		it("applied context token wins a conflicting inherited token", async () => {
 			process.env.XCSH_API_TOKEN = "env-token-override";
 			// XCSH_API_URL is NOT set — context should load
 			writeContext(xcshContextsDir, TEST_CONTEXT);
@@ -257,8 +258,9 @@ describe("ContextService", () => {
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 			// URL should be injected from context (not in process.env)
 			expect(bashEnv.XCSH_API_URL).toBe(TEST_CONTEXT.apiUrl);
-			// Token should NOT be injected (already in process.env)
-			expect(bashEnv.XCSH_API_TOKEN).toBeUndefined();
+			// Context credentials are authoritative without changing process.env.
+			expect(bashEnv.XCSH_API_TOKEN).toBe(TEST_CONTEXT.apiToken);
+			expect(process.env.XCSH_API_TOKEN).toBe("env-token-override");
 			// Namespace should be injected from context
 			expect(bashEnv.XCSH_NAMESPACE).toBe(TEST_CONTEXT.defaultNamespace);
 		});
@@ -360,12 +362,14 @@ describe("ContextService", () => {
 			expect(active).toBe(TEST_CONTEXT.name);
 		});
 
-		it("rejects activation when XCSH_API_URL is in environment", async () => {
+		it("activates saved context when XCSH_API_URL is inherited", async () => {
 			process.env.XCSH_API_URL = "https://env.console.ves.volterra.io";
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 
 			const service = ContextService.init(xcshConfigDir);
-			await expect(service.activate(TEST_CONTEXT.name)).rejects.toThrow(/Cannot activate/);
+			await service.activate(TEST_CONTEXT.name);
+			expect(service.getStatus().activeContextUrl).toBe(TEST_CONTEXT.apiUrl);
+			expect(process.env.XCSH_API_URL).toBe("https://env.console.ves.volterra.io");
 		});
 
 		it("rejects empty context name", async () => {
@@ -373,13 +377,14 @@ describe("ContextService", () => {
 			await expect(service.activate("")).rejects.toThrow(/Invalid context name/);
 		});
 
-		it("rejects activation when XCSH_API_URL set — error cites unset command", async () => {
+		it("explicit activation supersedes inherited endpoint without editing the environment", async () => {
 			process.env.XCSH_API_URL = "https://env.console.ves.volterra.io";
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 			const service = ContextService.init(xcshConfigDir);
-			const err = await service.activate(TEST_CONTEXT.name).catch(e => e);
-			expect(err.message).toContain("unset XCSH_API_URL");
-			expect(err.message).not.toContain("/context env");
+			const context = await service.activate(TEST_CONTEXT.name);
+			expect(context.name).toBe(TEST_CONTEXT.name);
+			expect(service.getStatus().credentialSource).toBe("context");
+			expect(process.env.XCSH_API_URL).toBe("https://env.console.ves.volterra.io");
 		});
 
 		it("context not found error cites /context list", async () => {
@@ -448,11 +453,11 @@ describe("ContextService", () => {
 			const result = await service.loadActive();
 
 			expect(result).not.toBeNull();
-			// Mixed: URL from context, token from env
-			expect(service.getStatus().credentialSource).toBe("mixed");
+			// Both URL and token come from the applied context.
+			expect(service.getStatus().credentialSource).toBe("context");
 		});
 
-		it("reports mixed source when XCSH_NAMESPACE is in env but rest from context", async () => {
+		it("reports context source when inherited namespace conflicts", async () => {
 			process.env.XCSH_NAMESPACE = "env-namespace";
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
@@ -460,7 +465,7 @@ describe("ContextService", () => {
 			const service = ContextService.init(xcshConfigDir);
 			await service.loadActive();
 
-			expect(service.getStatus().credentialSource).toBe("mixed");
+			expect(service.getStatus().credentialSource).toBe("context");
 		});
 	});
 
@@ -753,7 +758,7 @@ describe("ContextService", () => {
 			expect(bashEnv.XCSH_TENANT).toBe("test-tenant");
 		});
 
-		it("env map vars respect per-field process.env precedence", async () => {
+		it("context command variables supersede inherited F5 values", async () => {
 			process.env.XCSH_EMAIL = "alex@example.com";
 			writeContext(xcshContextsDir, TEST_CONTEXT_ENV);
 			writeActiveContext(xcshConfigDir, TEST_CONTEXT_ENV.name);
@@ -762,8 +767,8 @@ describe("ContextService", () => {
 			await service.loadActive();
 
 			const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-			// XCSH_EMAIL is in process.env — should NOT be overridden
-			expect(bashEnv.XCSH_EMAIL).toBeUndefined();
+			// Context command variables are authoritative.
+			expect(bashEnv).toMatchObject({ XCSH_EMAIL: TEST_CONTEXT_ENV.env?.XCSH_EMAIL });
 			// Other env vars should be injected normally
 			expect(bashEnv.XCSH_LB_NAME).toBe("test-lb");
 
@@ -1724,14 +1729,14 @@ describe("ContextService", () => {
 			expect(fetchCallCount).toBe(1);
 		});
 
-		it("env override (XCSH_API_TOKEN) suppresses namespace population on activation", async () => {
+		it("inherited token does not suppress context namespace discovery", async () => {
 			try {
 				process.env.XCSH_API_TOKEN = "different-account-token";
 				const service = await setupActiveContext(
 					makeMockJsonResponse(200, { items: [{ name: "env-token-account-ns" }] }),
 				);
 				await waitForCachePopulate();
-				expect(service.getCachedNamespaces()).toEqual([]);
+				expect(service.getCachedNamespaces()).toEqual(["env-token-account-ns"]);
 			} finally {
 				delete process.env.XCSH_API_TOKEN;
 			}
@@ -2063,20 +2068,17 @@ describe("ContextService", () => {
 		});
 
 		it("updates active_context pointer when renaming under XCSH_API_URL override", async () => {
-			// Regression: with XCSH_API_URL set, loadActive() returns null and
-			// #activeContext stays null even when active_context on disk names
-			// a real context. Renaming that context must still update the
-			// on-disk active_context pointer so the next non-env session can
-			// restore the user's previous active selection.
+			// Renaming the saved startup selection updates its pointer even with
+			// an inherited endpoint; the active context remains authoritative.
 			writeContext(xcshContextsDir, TEST_CONTEXT);
 			writeActiveContext(xcshConfigDir, TEST_CONTEXT.name);
-			// Simulate env-backed session
+			// Supply a conflicting inherited endpoint
 			process.env.XCSH_API_URL = "https://override.console.ves.volterra.io";
 			try {
 				const service = ContextService.init(xcshConfigDir);
 				await service.loadActive();
-				// In-memory active is null under env override
-				expect(service.getStatus().activeContextName).toBe(null);
+				// Saved selection resolves before the environment fallback.
+				expect(service.getStatus().activeContextName).toBe(TEST_CONTEXT.name);
 
 				await service.renameContext(TEST_CONTEXT.name, "prod-renamed");
 

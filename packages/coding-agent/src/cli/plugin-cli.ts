@@ -31,16 +31,9 @@ import {
 import type { IntegrationHandle, IntegrationState } from "../integrations/types";
 import { theme } from "../modes/theme/theme";
 import { personProfileService } from "../person-profile/service";
-import { ContextError, ContextService, type XCSHContext } from "../services/xcsh-context";
-import {
-	deriveTenantFromUrl,
-	isInjectableContextEnvKey,
-	XCSH_API_TOKEN,
-	XCSH_API_URL,
-	XCSH_CONTEXT_NAME,
-	XCSH_NAMESPACE,
-	XCSH_TENANT,
-} from "../services/xcsh-env";
+import { captureNextContextExecution, runWithContextExecution } from "../services/context-execution";
+import { contextEnvironment, isF5ContextEnvKey } from "../services/effective-f5-config";
+import { ContextError, ContextService } from "../services/xcsh-context";
 
 // =============================================================================
 // Types
@@ -262,40 +255,29 @@ export function selectSetupIntegration(
 	return setupMatches[0];
 }
 
-function contextEnvironment(context: XCSHContext): Record<string, string> {
-	const environment: Record<string, string> = {
-		[XCSH_API_URL]: context.apiUrl,
-		[XCSH_API_TOKEN]: context.apiToken,
-		[XCSH_NAMESPACE]: context.defaultNamespace,
-		[XCSH_CONTEXT_NAME]: context.name,
-	};
-	const tenant = deriveTenantFromUrl(context.apiUrl);
-	if (tenant) environment[XCSH_TENANT] = tenant;
-	for (const [name, value] of Object.entries(context.env ?? {})) {
-		if (isInjectableContextEnvKey(name) && value) environment[name] = value;
-	}
-	return environment;
-}
-
-async function withPluginContext<T>(name: string | undefined, run: () => Promise<T>): Promise<T> {
+export async function withPluginContext<T>(name: string | undefined, run: () => Promise<T>): Promise<T> {
 	if (!name) return run();
-	let context: XCSHContext;
+	let environment: Record<string, string>;
 	try {
 		await Settings.init({ cwd: getProjectDir() });
 		const service = await ContextService.getOrInit(undefined, getProjectDir());
 		const review = service.prepareActivation(name);
-		context = await service.activate(name, { revision: review.revision, beforeCommit: () => {} });
+		const context = await service.activate(name, { revision: review.revision, beforeCommit: () => {} });
+		environment = contextEnvironment(context);
 	} catch (error) {
 		if (error instanceof ContextError) throw new CliUsageError(error.message);
 		throw error;
 	}
 	const previous = new Map<string, string | undefined>();
-	for (const [key, value] of Object.entries(contextEnvironment(context))) {
+	for (const key of new Set([...Object.keys(process.env).filter(isF5ContextEnvKey), ...Object.keys(environment)])) {
 		previous.set(key, process.env[key]);
-		if (!process.env[key]) process.env[key] = value;
+		if (isF5ContextEnvKey(key)) {
+			if (environment[key] === undefined) delete process.env[key];
+			else process.env[key] = environment[key];
+		} else if (!process.env[key] && environment[key] !== undefined) process.env[key] = environment[key];
 	}
 	try {
-		return await run();
+		return await runWithContextExecution(captureNextContextExecution(Settings.instance), run);
 	} finally {
 		for (const [key, value] of previous) {
 			if (value === undefined) delete process.env[key];

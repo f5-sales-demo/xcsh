@@ -8,4 +8,4 @@ Use this tool for spoken or typed requests to apply, load, use, or switch contex
 
 For combined requests, activate and await a matching target with `authStatus: connected`, then answer the resource question in the same turn. Set `xcsh_api.contextName` to the requested name. Stop on missing context, failed authentication, declined approval, or cancellation; never query the previous tenant as a fallback. Follow-ups retain this selection.
 
-Respect Ask approvals, Plan mode, and existing `XCSH_*` environment precedence. Report effective state without credentials. Resource questions authorize reads only. Briefly confirm selection and answer with relevant scope and limitations; omit tool narration and redundant verification.
+Respect Ask approvals and Plan mode. Applied contexts own F5 values; missing values stay absent. Environment F5 values apply only without a context. Report effective state without credentials. Resource questions authorize reads only. Confirm selection and answer with relevant scope and limitations; omit tool narration and redundant verification.

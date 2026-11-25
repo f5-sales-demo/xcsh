@@ -20,7 +20,7 @@ export type SessionKind = "cli" | "extension";
  * (has XCSH_SESSION_TENANT, no marker) tenant-binds.
  */
 export function shouldRunSessionContextBootstrap(env: { XCSH_API_URL?: string; XCSH_WORKER_SPARE?: string }): boolean {
-	return !env.XCSH_API_URL && !env.XCSH_WORKER_SPARE;
+	return !env.XCSH_WORKER_SPARE;
 }
 
 export interface AutoBindInput {

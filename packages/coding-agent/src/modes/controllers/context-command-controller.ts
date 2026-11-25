@@ -140,8 +140,7 @@ export class ContextCommandController {
 		)
 			return this.#guided(sub, tokens.slice(1));
 		if (sub === "namespace" && tokens[1]) {
-			service.setNamespace(tokens.slice(1).join(" "));
-			this.#ctx.showStatus(`Namespace ${service.getStatus().activeContextNamespace} · future turns`);
+			this.#selectNamespace(service, tokens.slice(1).join(" "));
 			return;
 		}
 		if (sub === "env" && ["set", "unset", "add", "remove"].includes(tokens[1]) && tokens.length < 3)
@@ -425,6 +424,12 @@ export class ContextCommandController {
 			},
 		});
 	}
+	#selectNamespace(service: ContextService, value: string): void {
+		service.setNamespace(value);
+		this.#ctx.statusLine?.invalidate();
+		this.#ctx.updateEditorTopBorder?.();
+		this.#ctx.showStatus(`Namespace ${service.getStatus().activeContextNamespace} · future turns`, { dim: false });
+	}
 	async #guided(sub: string, args: string[] = [], selected?: ContextTarget): Promise<void> {
 		const service = await ContextService.getOrInit();
 		if (sub === "import") {
@@ -460,8 +465,7 @@ export class ContextCommandController {
 							service.getStatus().activeContextNamespace ?? "default",
 						);
 			if (value) {
-				service.setNamespace(value);
-				this.#ctx.showStatus(`Namespace ${value} · future turns`);
+				this.#selectNamespace(service, value);
 			}
 			return;
 		}

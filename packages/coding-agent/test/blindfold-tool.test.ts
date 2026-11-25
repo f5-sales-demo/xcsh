@@ -157,6 +157,7 @@ describe("Blindfold admitted tenant snapshot", () => {
 					}),
 					sensitiveKeys: [],
 					source: "global",
+					authority: "context",
 				},
 				() => adapter.execute("admitted", { operation: "public-key", contextName: "a" }),
 			);

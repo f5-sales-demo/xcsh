@@ -26,8 +26,10 @@ A flag beats the variable: `--smol` overrides `PI_SMOL_MODEL` for that invocatio
 | `XCSH_API_URL` | Tenant application programming interface (API) endpoint when no named context is active |
 | `XCSH_API_TOKEN` | Tenant API credential for that endpoint |
 | `XCSH_TENANT` | Tenant identifier reported in context status |
-| `XCSH_CONTEXT_NAME` | Name of the context the session binds to |
+| `XCSH_CONTEXT_NAME` | Context name reported by environment-backed commands; it does not apply a saved profile |
 | `XCSH_NAMESPACE` | Namespace applied when a command does not pass `-n` and recorded in resource operation records |
+
+An applied context takes precedence over this group, console login credentials and custom `XCSH_*` context command variables, including values loaded from `.env`. Environment values supply F5 configuration only when no context is applied. Missing context values stay absent. Locale, browser configuration and plugin timeouts keep their existing precedence.
 
 Treat every value in this group as a secret. Supply them through the runtime environment or a named context, never through a committed file or a command argument that reaches shell history.
 
@@ -43,7 +45,7 @@ Treat every value in this group as a secret. Supply them through the runtime env
 | `PI_NO_PTY` | Disables pseudo-terminal (PTY) execution, equivalent to `--no-pty` |
 | `PI_EDIT_VARIANT` | Selects the edit tool implementation and rejects an unknown value |
 
-Shell execution inherits the launched process environment, subject to the sandbox and command policy. Restrict dependencies, working directory, and credentials at the process boundary rather than in the prompt.
+Shell execution preserves unrelated runtime environment values, subject to the sandbox and command policy. F5 configuration comes from the admitted context or environment snapshot; values absent from that snapshot are removed before execution. Explicit per-call environment values apply to that command only. Restrict dependencies, working directory, and credentials at the process boundary rather than in the prompt.
 
 ## Which variables configure storage, runtime, and diagnostics?
 

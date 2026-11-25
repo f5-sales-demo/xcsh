@@ -14,18 +14,16 @@ import {
 import { validateXcshApiCredentials, type XcshAuthValidationFailure } from "@f5-sales-demo/pi-utils/xcsh-auth";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
-import { currentContextExecution } from "./context-execution";
+import { captureNextContextExecution, currentContextExecution, runWithContextExecution } from "./context-execution";
+import { contextEnvironment, isF5ContextEnvKey, resolveF5Environment } from "./effective-f5-config";
 import { XCSHApiClient } from "./xcsh-api-client";
 import {
 	deriveTenantFromUrl,
-	hasEnvOverride,
-	isInjectableContextEnvKey,
 	normalizeApiUrl,
 	RESERVED_ENV_KEYS,
 	RESERVED_ENV_MESSAGES,
 	XCSH_API_TOKEN,
 	XCSH_API_URL,
-	XCSH_CONTEXT_NAME,
 	XCSH_NAMESPACE,
 	XCSH_TENANT,
 } from "./xcsh-env";
@@ -190,7 +188,6 @@ export class ContextService {
 	#activeContext: XCSHContext | null = null;
 	#activeTarget: ContextTarget | null = null;
 	#previousTarget: ContextTarget | null = null;
-	#credentialSource: ContextStatus["credentialSource"] = "none";
 	#authStatus: AuthStatus = "unknown";
 	#contextsCache: XCSHContext[] = [];
 	#namespacesCache: string[] = [];
@@ -212,7 +209,7 @@ export class ContextService {
 
 	#refreshApiClient(context: XCSHContext): void {
 		const apiUrl = context.apiUrl;
-		const apiToken = process.env[XCSH_API_TOKEN] || context.apiToken;
+		const apiToken = contextEnvironment(context)[XCSH_API_TOKEN];
 		this.#apiClient = new XCSHApiClient({ apiUrl, apiToken });
 		// Best-effort background namespace-cache fill uses a non-retrying client.
 		// The cache is revalidated every 5 minutes (startRevalidation) and its
@@ -221,9 +218,7 @@ export class ContextService {
 		// it (in tests that share a global fetch mock, a late retry reads another
 		// test's mock and corrupts its count). One attempt keeps it bounded.
 		this.#cacheClient = new XCSHApiClient({ apiUrl, apiToken, maxRetries: 0 });
-		if (!hasEnvOverride()) {
-			this.#populateNamespaceCache();
-		}
+		this.#populateNamespaceCache();
 		this.startRevalidation();
 		this.#lastTokenHealth = "ok";
 	}
@@ -237,7 +232,11 @@ export class ContextService {
 						apiToken: execution.environment[XCSH_API_TOKEN],
 					})
 				: null;
-		return this.#apiClient;
+		if (this.#activeContext) return this.#apiClient;
+		const environment = this.#effectiveEnvironment();
+		return environment[XCSH_API_URL] && environment[XCSH_API_TOKEN]
+			? new XCSHApiClient({ apiUrl: environment[XCSH_API_URL], apiToken: environment[XCSH_API_TOKEN] })
+			: null;
 	}
 
 	startRevalidation(intervalMs = 300_000): void {
@@ -252,7 +251,7 @@ export class ContextService {
 					} catch {}
 				}
 			}
-			if (this.#authStatus === "connected" && this.#namespacesCache.length === 0 && !hasEnvOverride()) {
+			if (this.#authStatus === "connected" && this.#namespacesCache.length === 0) {
 				this.#populateNamespaceCache();
 			}
 			const prevHealth = this.#lastTokenHealth;
@@ -549,14 +548,14 @@ export class ContextService {
 	get activeApiUrl(): string | null {
 		return currentContextExecution()
 			? (currentContextExecution()!.environment[XCSH_API_URL] ?? null)
-			: (this.#activeContext?.apiUrl ?? null);
+			: (this.#effectiveEnvironment()[XCSH_API_URL] ?? null);
 	}
 
 	/** Active context's default namespace, or null when no context is active. */
 	get activeNamespace(): string | null {
 		return currentContextExecution()
 			? (currentContextExecution()!.environment[XCSH_NAMESPACE] ?? null)
-			: (this.#activeContext?.defaultNamespace ?? null);
+			: (this.#effectiveEnvironment()[XCSH_NAMESPACE] ?? null);
 	}
 
 	/** The project-local (`.xcsh/`) context NAME for `cwd`, or null. No activation,
@@ -573,13 +572,6 @@ export class ContextService {
 	}
 
 	async loadActive(cwd?: string): Promise<XCSHContext | null> {
-		// FR-102: XCSH_API_URL is the signal to skip context loading entirely.
-		// Subprocesses inherit process.env, so they already see the env vars directly.
-		if (process.env[XCSH_API_URL]) {
-			this.#credentialSource = "environment";
-			return null;
-		}
-
 		// FR-201: Check for project-local context in .xcsh/contexts/
 		if (cwd) {
 			const resolver = new ContextResolver({ paths: xcshContextPaths });
@@ -602,9 +594,8 @@ export class ContextService {
 					this.#activeContext = localContext;
 					this.#activeTarget = { name: path.basename(localResult.sourcePath, ".json"), source: "local" };
 					localContext.name = this.#activeTarget.name;
-					this.#applyToSettings(localContext);
-					this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
 					this.#refreshApiClient(localContext);
+					this.#applyToSettings(localContext);
 					logger.debug("xcsh: using project context", {
 						name: localContext.name,
 						source: localResult.sourcePath,
@@ -664,10 +655,8 @@ export class ContextService {
 
 		this.#activeContext = context;
 		this.#activeTarget = { name: context.name, source: "global" };
-		this.#applyToSettings(context);
-		// Detect mixed source: context loaded but some fields come from process.env
-		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
 		this.#refreshApiClient(context);
+		this.#applyToSettings(context);
 		return context;
 	}
 
@@ -693,7 +682,7 @@ export class ContextService {
 		return {
 			name: context.name,
 			apiUrl: context.apiUrl,
-			namespace: process.env[XCSH_NAMESPACE] || context.defaultNamespace,
+			namespace: contextEnvironment(context)[XCSH_NAMESPACE],
 			revision: this.#activationRevision(context),
 		};
 	}
@@ -706,13 +695,6 @@ export class ContextService {
 		const target: ContextTarget =
 			typeof nameOrTarget === "string" ? { name: nameOrTarget, source: "global" } : nameOrTarget;
 		const name = target.name;
-		// Reject activation when env overrides are present — before any I/O
-		if (process.env[XCSH_API_URL]) {
-			throw new ContextError(
-				"Cannot activate: XCSH_API_URL environment variable overrides context. Run `unset XCSH_API_URL` first, or restart without it.",
-			);
-		}
-
 		// Self-heal: activate called before loadActive ever ran. Populate cache.
 		if (this.#contextsCache.length === 0) {
 			await this.listContexts();
@@ -738,7 +720,6 @@ export class ContextService {
 		}
 		this.#activeContext = context;
 		this.#activeTarget = target;
-		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
 		this.#namespacesCache = [];
 		this.#activationEpoch += 1;
 
@@ -1112,9 +1093,8 @@ export class ContextService {
 		// Step 2: if renaming the active context, update the pointer. On failure
 		// we must roll back the file rename so the user sees a consistent state.
 		// Consult BOTH the hydrated in-memory state AND the on-disk pointer:
-		// loadActive() leaves #activeContext null when XCSH_API_URL overrides
-		// the context, but the on-disk active_context file may still name the
-		// context being renamed — and the next non-env session relies on that
+		// A session may be contextless while the on-disk active_context file
+		// still names the context being renamed — and the next session relies on that
 		// pointer to restore the user's active selection.
 		const onDiskActiveName = this.#readActiveContextName();
 		const wasActive = this.#activeContext?.name === oldName || onDiskActiveName === oldName;
@@ -1254,11 +1234,10 @@ export class ContextService {
 		apiUrl?: string;
 		apiToken?: string;
 	}): Promise<TokenValidationResult> {
-		// Use explicit credentials if provided (for non-active contexts or env-backed sessions),
-		// otherwise fall back to effective credentials (env override > active context)
-		const effectiveUrl = options?.apiUrl ?? (process.env[XCSH_API_URL] || undefined) ?? this.#activeContext?.apiUrl;
-		const effectiveToken =
-			options?.apiToken ?? (process.env[XCSH_API_TOKEN] || undefined) ?? this.#activeContext?.apiToken;
+		// Readiness belongs to the selected context; API work validates its own admitted credentials.
+		const environment = this.#effectiveEnvironment();
+		const effectiveUrl = options?.apiUrl ?? environment[XCSH_API_URL];
+		const effectiveToken = options?.apiToken ?? environment[XCSH_API_TOKEN];
 		if (!effectiveUrl || !effectiveToken) return { status: "unknown" };
 
 		// Ad-hoc mode: caller is validating credentials that DIFFER from the active/effective
@@ -1270,8 +1249,9 @@ export class ContextService {
 		// to the active name) also passes explicit creds via handleShow, but those creds match
 		// the active/effective ones, so we DO want to refresh the cache — a user running
 		// /context show on the active context is explicitly requesting a fresh validation.
-		const activeUrl = (process.env[XCSH_API_URL] || undefined) ?? this.#activeContext?.apiUrl;
-		const activeToken = (process.env[XCSH_API_TOKEN] || undefined) ?? this.#activeContext?.apiToken;
+		const selected = this.#effectiveEnvironment();
+		const activeUrl = selected[XCSH_API_URL];
+		const activeToken = selected[XCSH_API_TOKEN];
 		const adHoc =
 			(options?.apiUrl !== undefined && options.apiUrl !== activeUrl) ||
 			(options?.apiToken !== undefined && options.apiToken !== activeToken);
@@ -1334,28 +1314,28 @@ export class ContextService {
 		if (!this.#activeContext) {
 			throw new ContextError("No active context. Run `/context activate <name>` to select one.");
 		}
+		if (this.#activeContext.defaultNamespace === namespace) return;
 		this.#activeContext = { ...this.#activeContext, defaultNamespace: namespace };
 		// Re-apply settings with the new namespace
 		this.#applyToSettings(this.#activeContext);
-		this.#credentialSource = hasEnvOverride() ? "mixed" : "context";
+	}
+
+	#effectiveEnvironment(): Record<string, string> {
+		return this.#activeContext ? contextEnvironment(this.#activeContext) : resolveF5Environment({}, "environment");
 	}
 
 	getStatus(): ContextStatus {
-		const url = (process.env[XCSH_API_URL] || undefined) ?? this.#activeContext?.apiUrl ?? null;
-		const credentialSource = process.env[XCSH_API_URL]
-			? this.#activeContext
-				? "mixed"
-				: "environment"
-			: this.#credentialSource;
-		const tenant = url ? deriveTenantFromUrl(url) : null;
+		const environment = this.#effectiveEnvironment();
+		const url = environment[XCSH_API_URL] || null;
+		const credentialSource = this.#activeContext ? "context" : url ? "environment" : "none";
+		const tenant = environment[XCSH_TENANT] || (url ? deriveTenantFromUrl(url) : null);
 		return {
 			activeContextName: this.#activeContext?.name ?? null,
 			activeContextSource: this.#activeTarget?.source ?? "global",
 			activationGeneration: this.#activationEpoch,
 			activeContextUrl: url,
 			activeContextTenant: tenant,
-			activeContextNamespace:
-				(process.env[XCSH_NAMESPACE] || undefined) ?? this.#activeContext?.defaultNamespace ?? null,
+			activeContextNamespace: environment[XCSH_NAMESPACE] ?? null,
 			credentialSource,
 			authStatus: this.#authStatus,
 			isConfigured: credentialSource !== "none",
@@ -1640,46 +1620,25 @@ export class ContextService {
 	}
 
 	#applyToSettings(context: XCSHContext): void {
-		// Per-field merge: skip any key already in process.env (subprocess inherits
-		// it directly), inject context values for the rest. This avoids both
-		// overriding explicit env vars AND losing context values for unset keys.
+		// Applied context owns F5 configuration; preserve unrelated runtime settings.
 		const existing = (Settings.instance.get("bash.environment") ?? {}) as Record<string, string>;
-		// Preserve non-xcsh keys (user-defined HTTP_PROXY, PATH, etc.) but clear
-		// all XCSH_* keys to prevent stale credentials leaking across context switches
+		// Preserve runtime settings (HTTP_PROXY, PATH, locale, etc.) and clear
+		// previous F5 values before applying the new context.
 		const merged: Record<string, string> = {};
 		for (const [key, value] of Object.entries(existing)) {
-			if (!key.startsWith("XCSH_")) merged[key] = value;
+			if (!isF5ContextEnvKey(key)) merged[key] = value;
 		}
-		if (!process.env[XCSH_API_URL]) merged[XCSH_API_URL] = context.apiUrl;
-		if (!process.env[XCSH_API_TOKEN]) merged[XCSH_API_TOKEN] = context.apiToken;
-		if (!process.env[XCSH_NAMESPACE]) merged[XCSH_NAMESPACE] = context.defaultNamespace;
-
-		// Auto-derive XCSH_TENANT from first hostname label of apiUrl
-		if (!process.env[XCSH_TENANT]) {
-			const tenant = deriveTenantFromUrl(context.apiUrl);
-			if (tenant) merged[XCSH_TENANT] = tenant;
-		}
-
-		// Inject context profile name for API tool identity surfacing
-		merged[XCSH_CONTEXT_NAME] = context.name;
-
-		// Inject additional env vars from context.env. Allowlist: only XCSH_-namespaced
-		// non-reserved keys may reach the subprocess — a project-local context file is
-		// untrusted input, so anything outside the XCSH_ namespace (LD_PRELOAD,
-		// NODE_OPTIONS, PATH, …) is refused and can never run code.
-		if (context.env) {
-			for (const [key, value] of Object.entries(context.env)) {
-				if (isInjectableContextEnvKey(key) && !process.env[key]) merged[key] = value;
-			}
-		}
+		Object.assign(merged, resolveF5Environment(contextEnvironment(context), "context"));
 
 		Settings.instance.override("bash.environment", merged);
 		Settings.instance.override("xcsh.sensitiveKeys", context.sensitiveKeys ?? []);
 		Settings.instance.override("xcsh.contextSource", this.#activeTarget?.source ?? "global");
+		Settings.instance.override("xcsh.contextAuthority", "context");
 
 		// Notify listeners (e.g. obfuscator refresh) about the context change.
-		for (const cb of ContextService.#onContextChangeListeners) {
-			cb(context);
-		}
+		const next = captureNextContextExecution(Settings.instance);
+		runWithContextExecution(next, () => {
+			for (const cb of ContextService.#onContextChangeListeners) cb(context);
+		});
 	}
 }

@@ -133,19 +133,32 @@ test("authentication failure reports the selected target without claiming connec
 	expect(JSON.stringify(result)).not.toContain("synthetic-");
 });
 
-test("environment endpoint override blocks selection", async () => {
+test("applied context supersedes inherited endpoint without editing process env", async () => {
 	process.env.XCSH_API_URL = "https://override.example.test";
-	await expect(tool.execute("switch", { action: "activate", name: "beta" })).rejects.toThrow("XCSH_API_URL");
-	expect(service.getStatus().activeContextName).not.toBe("beta");
+	await tool.execute("switch", { action: "activate", name: "beta" });
+	expect(service.getStatus().activeContextName).toBe("beta");
+	expect(process.env.XCSH_API_URL).toBe("https://override.example.test");
 });
 
-test("effective credential and namespace overrides are reflected and validated", async () => {
+test("selected credentials and namespace supersede inherited F5 values", async () => {
 	process.env.XCSH_API_TOKEN = "synthetic-override";
 	process.env.XCSH_NAMESPACE = "override-namespace";
 	const result = await tool.execute("switch", { action: "activate", name: "beta" });
-	expect(result.details).toMatchObject({ credentialSource: "mixed", activeContextNamespace: "override-namespace" });
-	expect(requests.every(request => request.authorization === "APIToken synthetic-override")).toBe(true);
+	expect(result.details).toMatchObject({ credentialSource: "context", activeContextNamespace: "example-beta" });
+	expect(requests.every(request => request.authorization === "APIToken synthetic-beta")).toBe(true);
 	expect(JSON.stringify(result)).not.toContain("synthetic-");
+});
+
+test("activation validates selected B while previously admitted API work retains A", async () => {
+	await service.activate("alpha");
+	const admitted = captureContextExecution(settings);
+	requests.length = 0;
+	const result = await runWithContextExecution(admitted, () =>
+		tool.execute("switch", { action: "activate", name: "beta" }),
+	);
+	expect(result.details).toMatchObject({ activeContextName: "beta", authStatus: "connected" });
+	expect(requests.every(request => request.authorization === "APIToken synthetic-beta")).toBe(true);
+	expect(runWithContextExecution(admitted, () => service.activeApiUrl)).toBe("https://alpha.console.ves.volterra.io");
 });
 
 test("Plan permits inspection but blocks activation", async () => {
@@ -316,3 +329,5 @@ test("tenant-wide discovery propagates denied namespace queries", async () => {
 	expect(result.isError).toBe(true);
 	expect(result.content.find(c => c.type === "text")?.text).toContain("incomplete");
 });
+
+import { captureContextExecution, runWithContextExecution } from "../src/services/context-execution";

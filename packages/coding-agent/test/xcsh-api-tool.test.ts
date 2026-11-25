@@ -4,8 +4,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { XcshApiTool } from "../src/tools/xcsh-api";
 
-function mockSession(bashEnv?: Record<string, string>): any {
-	return { settings: { get: (key: string) => (key === "bash.environment" ? (bashEnv ?? {}) : undefined) } };
+function mockSession(bashEnv?: Record<string, string>, authority = "environment"): any {
+	return {
+		settings: {
+			get: (key: string) =>
+				key === "bash.environment" ? (bashEnv ?? {}) : key === "xcsh.contextAuthority" ? authority : undefined,
+		},
+	};
 }
 
 describe("XcshApiTool", () => {
@@ -84,7 +89,7 @@ describe("XcshApiTool", () => {
 		}) as unknown as typeof fetch;
 		try {
 			const tool = new XcshApiTool({
-				...mockSession(bashEnv),
+				...mockSession(bashEnv, "context"),
 				getContextService: async () => ({
 					getStatus: () => ({
 						activeContextName: "target",

@@ -10,6 +10,7 @@ import {
 } from "@f5-sales-demo/pi-resource-management";
 import { SingleAttemptTransport } from "@f5-sales-demo/xcsh-f5-core";
 import { kindResolver } from "../resource-management/index";
+import { executionEnvironmentValue } from "../services/context-execution";
 
 export interface ResourceCliArgs {
 	operation: ResourceOperation;
@@ -31,13 +32,11 @@ export interface ResourceEnvironment {
 	defaultNamespace?: string;
 }
 
-export function resolveResourceEnvironment(
-	env: Readonly<Record<string, string | undefined>> = process.env,
-): ResourceEnvironment {
+export function resolveResourceEnvironment(env?: Readonly<Record<string, string | undefined>>): ResourceEnvironment {
 	return {
-		apiUrl: env.XCSH_API_URL,
-		apiToken: env.XCSH_API_TOKEN,
-		defaultNamespace: env.XCSH_NAMESPACE,
+		apiUrl: env ? env.XCSH_API_URL : executionEnvironmentValue("XCSH_API_URL"),
+		apiToken: env ? env.XCSH_API_TOKEN : executionEnvironmentValue("XCSH_API_TOKEN"),
+		defaultNamespace: env ? env.XCSH_NAMESPACE : executionEnvironmentValue("XCSH_NAMESPACE"),
 	};
 }
 

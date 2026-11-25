@@ -172,8 +172,8 @@ export class ContextPicker extends Container {
 		if (matchesSelectorKey(data, "confirm") || actions) {
 			const choice = this.#filtered().find(choice => identity(choice.target) === this.#selected);
 			if (choice) {
-				if (!actions && (choice.error || process.env.XCSH_API_URL)) {
-					this.#error = choice.error ?? "Unset XCSH_API_URL and restart to select a saved context.";
+				if (!actions && choice.error) {
+					this.#error = choice.error;
 					return;
 				}
 				this.done({ target: choice.target, action: actions ? "actions" : "activate" });

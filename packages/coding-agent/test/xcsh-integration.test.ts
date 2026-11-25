@@ -148,7 +148,7 @@ describe("xcsh authentication end-to-end integration", () => {
 		expect(result2.output.trim()).toBe(TEST_STAGING_URL);
 	});
 
-	it("environment variables take precedence over context", async () => {
+	it("saved context takes precedence over inherited environment", async () => {
 		// Setup: context exists
 		fs.mkdirSync(xcshContextsDir, { recursive: true });
 		fs.writeFileSync(
@@ -163,19 +163,17 @@ describe("xcsh authentication end-to-end integration", () => {
 		);
 		fs.writeFileSync(path.join(xcshConfigDir, "active_context"), "production");
 
-		// XCSH_API_URL alone is the signal to skip context loading (FR-102)
+		// A saved context takes precedence over the inherited endpoint.
 		process.env.XCSH_API_URL = "https://env-override.console.ves.volterra.io";
 
 		const service = ContextService.init(xcshConfigDir);
 		const result = await service.loadActive();
 
-		// Context should NOT have been loaded
-		expect(result).toBeNull();
-		expect(service.getStatus().credentialSource).toBe("environment");
-
-		// bash.environment should NOT contain context credentials
+		expect(result?.name).toBe("production");
+		expect(service.getStatus().credentialSource).toBe("context");
 		const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
-		expect(bashEnv.XCSH_API_URL).toBeUndefined();
+		expect(bashEnv.XCSH_API_URL).toBe(TEST_URL);
+		expect(process.env.XCSH_API_URL).toBe("https://env-override.console.ves.volterra.io");
 	});
 
 	it("gracefully handles missing config directory at startup", async () => {
@@ -284,7 +282,7 @@ describe("xcsh authentication end-to-end integration", () => {
 		expect(text).not.toContain("\r");
 	});
 
-	it("per-field env override: XCSH_API_TOKEN from env, URL from context in bash.environment", async () => {
+	it("context endpoint and token remain authoritative over inherited token", async () => {
 		process.env.XCSH_API_TOKEN = "env-override-token";
 		// XCSH_API_URL is NOT set — context loads
 
@@ -307,8 +305,8 @@ describe("xcsh authentication end-to-end integration", () => {
 		// URL should be injected into bash.environment from context
 		const bashEnv = Settings.instance.get("bash.environment") as Record<string, string>;
 		expect(bashEnv.XCSH_API_URL).toBe(TEST_URL);
-		// Token should NOT be in bash.environment (it's in process.env)
-		expect(bashEnv.XCSH_API_TOKEN).toBeUndefined();
+		expect(bashEnv.XCSH_API_TOKEN).toBe(TEST_TOKEN);
+		expect(process.env.XCSH_API_TOKEN).toBe("env-override-token");
 		// Namespace should be injected from context
 		expect(bashEnv.XCSH_NAMESPACE).toBe(TEST_NAMESPACE);
 

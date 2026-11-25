@@ -2140,6 +2140,7 @@ export const SETTINGS_SCHEMA = {
 
 	/** Sensitive env var key names from the active xcsh context (populated by ContextService) */
 	"xcsh.contextSource": { type: "enum", values: ["local", "global"] as const, default: "global" },
+	"xcsh.contextAuthority": { type: "enum", values: ["context", "environment"] as const, default: "environment" },
 	"xcsh.sensitiveKeys": { type: "array", default: [] as string[] },
 
 	/** Clear terminal on startup */
