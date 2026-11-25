@@ -45,7 +45,10 @@ Treat every value in this group as a secret. Supply them through the runtime env
 | `PI_NO_PTY` | Disables pseudo-terminal (PTY) execution, equivalent to `--no-pty` |
 | `PI_EDIT_VARIANT` | Selects the edit tool implementation and rejects an unknown value |
 
-Shell execution preserves unrelated runtime environment values, subject to the sandbox and command policy. F5 configuration comes from the admitted context or environment snapshot; values absent from that snapshot are removed before execution. Explicit per-call environment values apply to that command only. Restrict dependencies, working directory, and credentials at the process boundary rather than in the prompt.
+Shell execution preserves unrelated runtime environment values, subject to the sandbox and command policy. F5
+configuration comes from the admitted context or environment snapshot; values absent from that snapshot are removed
+before execution. Explicit per-call environment values apply to that command only. Restrict dependencies, working
+directory, and credentials at the process boundary rather than in the prompt.
 
 ## Which variables configure storage, runtime, and diagnostics?
 
