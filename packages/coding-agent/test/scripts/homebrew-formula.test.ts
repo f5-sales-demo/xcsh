@@ -40,7 +40,7 @@ describe("macOS Homebrew binary cask", () => {
 		expect(cask).toContain(
 			'url "https://github.com/f5-sales-demo/xcsh/releases/download/v#{version}/xcsh-darwin-#{arch}.zip"',
 		);
-		expect(cask).toContain('depends_on formula: "ripgrep"');
+		expect(cask).not.toContain('depends_on formula: "ripgrep"');
 		expect(cask).toContain('binary "bin/xcsh"');
 	});
 

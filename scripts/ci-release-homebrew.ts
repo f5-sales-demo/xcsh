@@ -188,8 +188,6 @@ export function generateCask(version: string, tag: string, checksums: Map<string
   desc "AI coding agent for the terminal"
   homepage "https://github.com/${repo}"
 
-  depends_on formula: "ripgrep"
-
   binary "bin/xcsh"
 
   postflight_steps do
