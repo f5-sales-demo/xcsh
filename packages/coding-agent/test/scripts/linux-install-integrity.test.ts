@@ -6,14 +6,23 @@ import * as path from "node:path";
 const repository = path.resolve(import.meta.dir, "../../../..");
 const digest = (text: string) => new Bun.CryptoHasher("sha256").update(text).digest("hex");
 
-async function fixture(failure: string, arch = "x64") {
+async function fixture(
+	failure: string,
+	arch = "x64",
+	options: { noRecycle?: boolean; shadow?: boolean; recycleFailure?: boolean } = {},
+) {
 	const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-install-integrity-"));
 	const mocks = path.join(root, "mocks"),
 		assets = path.join(root, "assets"),
 		install = path.join(root, "install");
 	await Promise.all([mocks, assets, install].map(dir => fs.mkdir(dir)));
 	const name = `xcsh-linux-${arch}`;
-	const binary = '#!/bin/sh\nprintf "xcsh/22.4.4\\n"\ntouch "$TEST_ROOT/executed"\n';
+	const binary = `#!/bin/sh
+case "$1" in
+--version) printf 'xcsh/22.4.4\\n'; touch "$TEST_ROOT/executed";;
+*) printf '%s %s\\n' "$1" "$2" >> "$TEST_ROOT/installed-calls"; [ "$TEST_RECYCLE_FAILURE" != 1 ];;
+esac
+`;
 	const nativeNames =
 		arch === "x64"
 			? ["pi_natives.linux-x64-baseline.node", "pi_natives.linux-x64-modern.node"]
@@ -110,19 +119,36 @@ exec /bin/mv "$@"
 `,
 		{ mode: 0o755 },
 	);
-	const child = Bun.spawn(["sh", path.join(repository, "scripts/install.sh"), "--binary", "--ref", "v22.4.4"], {
-		env: {
-			...process.env,
-			PATH: `${mocks}:${install}:${process.env.PATH}`,
-			PI_INSTALL_DIR: install,
-			TEST_ROOT: root,
-			TEST_FAILURE: failure,
-			TEST_ARCH: arch,
-			TEST_UNAME_ARCH: arch === "x64" ? "x86_64" : "aarch64",
+	if (options.shadow)
+		await fs.writeFile(path.join(mocks, "xcsh"), '#!/bin/sh\ntouch "$TEST_ROOT/foreign-called"\nexit 23\n', {
+			mode: 0o755,
+		});
+	const child = Bun.spawn(
+		[
+			"sh",
+			path.join(repository, "scripts/install.sh"),
+			"--binary",
+			"--ref",
+			"v22.4.4",
+			...(options.noRecycle ? ["--no-recycle"] : []),
+		],
+		{
+			env: {
+				...process.env,
+				PATH: `${mocks}:${install}:${process.env.PATH}`,
+				PI_INSTALL_DIR: install,
+				TEST_ROOT: root,
+				TEST_FAILURE: failure,
+				GH_TOKEN: "",
+				GITHUB_TOKEN: "",
+				TEST_RECYCLE_FAILURE: options.recycleFailure ? "1" : "0",
+				TEST_ARCH: arch,
+				TEST_UNAME_ARCH: arch === "x64" ? "x86_64" : "aarch64",
+			},
+			stdout: "pipe",
+			stderr: "pipe",
 		},
-		stdout: "pipe",
-		stderr: "pipe",
-	});
+	);
 	const [stdout, stderr, code] = await Promise.all([
 		new Response(child.stdout).text(),
 		new Response(child.stderr).text(),
@@ -165,6 +191,59 @@ describe("standalone Linux integrity", () => {
 				arch,
 			});
 			expect(await Bun.file(path.join(f.install, `xcsh-linux-${arch}.provenance.json`)).exists()).toBe(true);
+		} finally {
+			await fs.rm(f.root, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("installer recycle targeting", () => {
+	it.each([false, true])("opts out without touching services, PATH shadow: %s", async shadow => {
+		const f = await fixture("success", "x64", { noRecycle: true, shadow });
+		try {
+			expect(f.code, `${f.stdout}\n${f.stderr}`).toBe(0);
+			expect(JSON.parse(await fs.readFile(path.join(f.install, "xcsh-install.json"), "utf8")).version).toBe(
+				"22.4.4",
+			);
+			expect(await Bun.file(path.join(f.root, "executed")).exists()).toBe(true);
+			expect(await Bun.file(path.join(f.root, "installed-calls")).exists()).toBe(false);
+			expect(await Bun.file(path.join(f.root, "foreign-called")).exists()).toBe(false);
+		} finally {
+			await fs.rm(f.root, { recursive: true, force: true });
+		}
+	});
+	it("targets only the verified promoted binary ahead of an unrelated PATH executable", async () => {
+		const f = await fixture("success", "x64", { shadow: true });
+		try {
+			expect(f.code, `${f.stdout}\n${f.stderr}`).toBe(0);
+			expect(await Bun.file(path.join(f.root, "foreign-called")).exists()).toBe(false);
+			expect(await fs.readFile(path.join(f.root, "installed-calls"), "utf8")).toBe(
+				"chrome recycle\noffice recycle\n",
+			);
+		} finally {
+			await fs.rm(f.root, { recursive: true, force: true });
+		}
+	});
+	it("keeps both default recycle failures best effort", async () => {
+		const f = await fixture("success", "x64", { recycleFailure: true });
+		try {
+			expect(f.code, `${f.stdout}\n${f.stderr}`).toBe(0);
+			expect(await fs.readFile(path.join(f.root, "installed-calls"), "utf8")).toBe(
+				"chrome recycle\noffice recycle\n",
+			);
+		} finally {
+			await fs.rm(f.root, { recursive: true, force: true });
+		}
+	});
+	it("retains checksum refusal and previous bytes when recycling is disabled", async () => {
+		const f = await fixture("incorrect-checksum", "x64", { noRecycle: true, shadow: true });
+		try {
+			expect(f.code).not.toBe(0);
+			expect(f.stderr).toContain("Published checksum sidecar mismatch");
+			for (const [name, bytes] of Object.entries(f.original))
+				expect(await fs.readFile(path.join(f.install, name), "utf8")).toBe(bytes);
+			expect(await Bun.file(path.join(f.root, "installed-calls")).exists()).toBe(false);
+			expect(await Bun.file(path.join(f.root, "foreign-called")).exists()).toBe(false);
 		} finally {
 			await fs.rm(f.root, { recursive: true, force: true });
 		}
