@@ -613,6 +613,8 @@ export class ExtensionRunner {
 			}
 		}
 
+		if (event.type === "session_start")
+			integrationRegistry.completeInitialization(this.getAllRegisteredIntegrations());
 		return result as RunnerEmitResult<TEvent>;
 	}
 
