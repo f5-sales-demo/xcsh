@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "testCoverageVerified": false,
-  "revision": "7f81f4f2ae107233a10344327763029552a76522",
-  "fingerprint": "fa15823afe50f40ac5d0c54a98b65e77540a1086e2b2788ff9e1f2f09938e9f1",
+  "revision": "5a6d7092b9532f838102456a79e8553f65f5a47b",
+  "fingerprint": "f8ac9595769ef27644525450e954889d9382248174357bf5e63541347db6dad5",
   "counts": {
     "total": 246,
     "components": 103,
@@ -1024,7 +1024,7 @@
       "kind": "integration",
       "ownership": "runtime-lifecycle",
       "domain": "reports",
-      "sha256": "300948503090c0610801b59f7c9b9100f1d0a3015f66f438bbc67f71a40b97b2",
+      "sha256": "2f28d692201c34a3149b1915fb921189462dfa5eba6deb6def933bd4d4d52f14",
       "exports": [
         "DebugLogViewerComponent",
         "DebugLogViewerModel",
@@ -4397,7 +4397,7 @@
       "kind": "component",
       "ownership": "read-only-renderer",
       "domain": "core",
-      "sha256": "19421349e3a9efd240e1949b68b7d2f892a8f0500437500a8eaa8db954fe7452",
+      "sha256": "46fba6a5851f448090f7f75e912f18a0d6f784cc789234a1804128b9bb445bc2",
       "exports": [
         "ExtensionSettingsManager",
         "applyFilter",
@@ -5220,7 +5220,7 @@
       "kind": "component",
       "ownership": "caller-owned-draft",
       "domain": "foundation",
-      "sha256": "73db5681e1017181aca034e130e630b35b364475bcaf9d0383410ee43db7524c",
+      "sha256": "d8a54fafa67cdb83bb596a1e1f27011692357e1ef40f6ff10a1c0db9e4c2348c",
       "exports": [
         "DefaultPickerModelPresentation",
         "ModelItem",

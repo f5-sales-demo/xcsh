@@ -462,6 +462,7 @@ export async function panelDiagnostics(panel: Page): Promise<string> {
 				sendPresent: d.querySelector("#send") != null,
 				sendDisabled: d.querySelector("#send")?.disabled ?? null,
 				stopPresent: d.querySelector("#stop") != null,
+				// biome-ignore lint/performance/useDomNodeTextContent: Report the visible panel state, excluding hidden UI content.
 				text: root?.innerText?.replace(/\s+/g, " ").slice(0, 400) ?? "",
 			});
 		})
@@ -681,6 +682,7 @@ export async function readLastReply(panel: Page): Promise<string | null> {
 			parentElement: { querySelector(s: string): { innerText?: string } | null } | null;
 		};
 		const body = gutter.parentElement?.querySelector(".body");
+		// biome-ignore lint/performance/useDomNodeTextContent: Replies must match rendered text and preserve visual line breaks.
 		return body?.innerText ?? null;
 	});
 }

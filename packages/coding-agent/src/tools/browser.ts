@@ -1081,6 +1081,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 								const selector = ensureParam(arg.selector, `args[${index}].selector`, params.action);
 								const h = await untilAborted(signal, () => resolve(page, selector));
 								const t = (await h.evaluate(
+									// biome-ignore lint/performance/useDomNodeTextContent: get_text returns visible text with rendered line breaks.
 									el => (el as unknown as { innerText: string }).innerText,
 								)) as string;
 								await h.dispose();
@@ -1095,6 +1096,7 @@ export class BrowserTool implements AgentTool<typeof browserSchema, BrowserToolD
 					const selector = ensureParam(params.selector, "selector", params.action);
 					details.selector = selector;
 					const h = await untilAborted(signal, () => resolve(page, selector));
+					// biome-ignore lint/performance/useDomNodeTextContent: get_text returns visible text with rendered line breaks.
 					const value = (await h.evaluate(el => (el as unknown as { innerText: string }).innerText)) as string;
 					await h.dispose();
 					details.result = value;

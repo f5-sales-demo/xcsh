@@ -12,7 +12,8 @@ export interface SpanFrame {
 	cold?: boolean;
 }
 
-const clamp = (ms: number): number => (ms > 0 ? ms : 0);
+// Invalid durations and signed zero retain the zero fallback.
+const clamp = (ms: number): number => Math.max(0, ms || 0);
 
 /**
  * Decompose one chat turn's route->first-token into two disjoint spans that sum to
