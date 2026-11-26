@@ -21,7 +21,6 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "Reusable core of a POSIX/bash shell (used by brush-shell)"
-readme = "README.md"
 keywords = [
     "cli",
     "shell",
@@ -173,7 +172,7 @@ version = "0.3.2"
 version = "0.2.183"
 
 [target."cfg(unix)".dependencies.nix]
-version = "0.31.2"
+version = "0.32.0"
 features = [
     "fs",
     "poll",

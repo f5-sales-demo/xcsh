@@ -1,0 +1,3 @@
+# Retain upstream library sources under the repository lib ignore rule.
+!/src/lib/
+!/src/lib/**
