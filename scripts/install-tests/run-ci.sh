@@ -130,23 +130,9 @@ mkdir -p "$TARBALL_APP_DIR"
 
   # Write overrides so bun resolves inter-package deps from tarballs, not the registry
   # (version 12.x.y hasn't been published yet when CI runs pre-release)
-  XCSH_NATIVE_CANDIDATE_JSON="$native_candidate_json" node -e '
-    const fs = require("fs");
-    const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-    const names = [
-      "@f5-sales-demo/pi-utils", "@f5-sales-demo/pi-natives",
-      "@f5-sales-demo/pi-ai", "@f5-sales-demo/pi-agent-core",
-      "@f5-sales-demo/pi-tui", "@f5-sales-demo/xcsh-stats",
-      "@f5-sales-demo/pi-resource-management", "@f5-sales-demo/xcsh-f5-core",
-      "@f5-sales-demo/xcsh"
-    ];
-    const archives = process.argv.slice(1);
-    if (archives.length !== names.length) throw Error("Candidate tarball inventory mismatch");
-    pkg.overrides = Object.fromEntries(names.map((name, index) => [name, archives[index]]));
-    const native = JSON.parse(process.env.XCSH_NATIVE_CANDIDATE_JSON);
-    pkg.overrides[native.name] = native.tarball;
-    fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
-  ' "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" \
+  XCSH_NATIVE_CANDIDATE_JSON="$native_candidate_json" \
+    bun "$ROOT_DIR/scripts/install-tests/candidate-overrides.ts" \
+    "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" \
     "$stats_tgz" "$resource_mgmt_tgz" "$f5_core_tgz" "$coding_agent_tgz"
 
   bun add "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" "$stats_tgz" "$resource_mgmt_tgz" "$f5_core_tgz" "$coding_agent_tgz"
