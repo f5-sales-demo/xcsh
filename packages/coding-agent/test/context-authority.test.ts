@@ -351,3 +351,58 @@ test("R10 plugin context replaces inherited F5 values and restores absent empty 
 		expect(process.env).toEqual(before);
 	}
 });
+
+const terraformRuntimeKeys = [
+	"XCSH_TERRAFORM_EXECUTABLES_DIR",
+	"XCSH_TERRAFORM_RUNTIME_DIR",
+	"XCSH_TERRAFORM_SSH_CLIENTS_DIR",
+];
+
+test.each(terraformRuntimeKeys)("plugin context preserves Terraform process runtime path %s", async key => {
+	await ContextService.instance.createContext({
+		name: "terraform-paths",
+		apiUrl: "https://terraform-paths.example.invalid",
+		apiToken: "synthetic-terraform-context",
+		defaultNamespace: "shared",
+		env: { [key]: "/synthetic/context/path" },
+	});
+	for (const value of ["", "/synthetic/process/path"]) {
+		for (const fail of [false, true]) {
+			conflictingEnvironment();
+			process.env[key] = value;
+			process.env.XCSH_TERRAFORM_API_TOKEN = "synthetic-inherited-terraform-token";
+			const before = { ...process.env };
+			const run = withPluginContext("terraform-paths", async () => {
+				expect(process.env[key]).toBe(value);
+				expect(captureContextExecution(Settings.instance).environment[key]).toBe(value);
+				expect(process.env.XCSH_API_TOKEN).toBe("synthetic-terraform-context");
+				expect(process.env.XCSH_TERRAFORM_API_TOKEN).toBeUndefined();
+				if (fail) throw new Error("synthetic Terraform probe failure");
+				return "ready";
+			});
+			if (fail) await expect(run).rejects.toThrow("synthetic Terraform probe failure");
+			else expect(await run).toBe("ready");
+			expect(process.env).toEqual(before);
+		}
+	}
+});
+
+test("Terraform runtime paths survive context changes in execution snapshots", async () => {
+	for (const key of terraformRuntimeKeys) process.env[key] = "/synthetic/process/path";
+	process.env.XCSH_TERRAFORM_API_TOKEN = "synthetic-inherited-terraform-token";
+	await ContextService.instance.activate("a");
+	const first = captureNextContextExecution(Settings.instance);
+	for (const key of terraformRuntimeKeys) expect(first.environment[key]).toBe("/synthetic/process/path");
+	expect(first.environment.XCSH_TERRAFORM_API_TOKEN).toBeUndefined();
+	const cached = { ...(Settings.instance.get("bash.environment") as Record<string, string>) };
+	for (const key of terraformRuntimeKeys) {
+		delete process.env[key];
+		cached[key] = "/synthetic/cached/path";
+	}
+	Settings.instance.override("bash.environment", cached);
+	await ContextService.instance.activate("b");
+	const second = captureNextContextExecution(Settings.instance);
+	for (const key of terraformRuntimeKeys) expect(second.environment[key]).toBe("/synthetic/cached/path");
+	expect(second.environment.XCSH_TERRAFORM_API_TOKEN).toBeUndefined();
+	expect(second.environment.XCSH_API_TOKEN).toBe("synthetic-b");
+});
