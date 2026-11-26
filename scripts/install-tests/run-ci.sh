@@ -125,21 +125,9 @@ mkdir -p "$TARBALL_APP_DIR"
 
   # Write overrides so bun resolves inter-package deps from tarballs, not the registry
   # (version 12.x.y hasn't been published yet when CI runs pre-release)
-  node -e "
-		const pkg = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
-		pkg.overrides = {
-			'@f5-sales-demo/pi-utils': '$utils_tgz',
-			'@f5-sales-demo/pi-natives': '$natives_tgz',
-			'@f5-sales-demo/pi-ai': '$ai_tgz',
-			'@f5-sales-demo/pi-agent-core': '$agent_tgz',
-			'@f5-sales-demo/pi-tui': '$tui_tgz',
-			'@f5-sales-demo/xcsh-stats': '$stats_tgz',
-			'@f5-sales-demo/pi-resource-management': '$resource_mgmt_tgz',
-			'@f5-sales-demo/xcsh-f5-core': '$f5_core_tgz',
-			'@f5-sales-demo/xcsh': '$coding_agent_tgz'
-		};
-		require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-	"
+  bun "$ROOT_DIR/scripts/install-tests/candidate-overrides.ts" \
+    "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" \
+    "$stats_tgz" "$resource_mgmt_tgz" "$f5_core_tgz" "$coding_agent_tgz"
 
   bun add "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" "$stats_tgz" "$resource_mgmt_tgz" "$f5_core_tgz" "$coding_agent_tgz"
   XCSH_RELEASE_CACHE_DIR="$candidate_cache" smoke_cli ./node_modules/.bin/xcsh
