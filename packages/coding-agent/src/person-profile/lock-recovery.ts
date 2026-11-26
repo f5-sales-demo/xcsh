@@ -389,6 +389,7 @@ export async function recoverProfileLock(
 		if (cause instanceof ProfileStoreError) throw cause;
 		throw refuse("invalid_review", cause);
 	}
+	if (review.closure?.kind === "previous-boot") throw refuse("previous_boot_capture_mapping_unqualified");
 	const parentPath = dirname(path);
 	const lockPath = `${path}.lock`;
 	const intentName = `.${domain}-profile-lock-recovery-${review.sha256}.intent.json`;
@@ -636,5 +637,23 @@ export async function inspectProfileLockRecovery(
 	} catch (cause) {
 		if (cause instanceof ProfileStoreError) throw cause;
 		throw refuse("recovery_inspection_unavailable", cause);
+	}
+}
+
+/** Read only the caller-selected private review; raw parse failures never enter CLI output. */
+export async function readProfileLockRecoveryReview(
+	path: string,
+	domain: ProfileDomain,
+): Promise<ProfileLockRecoveryReview> {
+	if (process.platform !== "linux" || !process.getuid)
+		throw new ProfileLockRecoveryError(domain, "unsupported_platform");
+	try {
+		const bytes = await boundedIntentBytes(path, domain);
+		if (Buffer.byteLength(bytes) > 32768) throw new Error("review_file_too_large");
+		const value: unknown = JSON.parse(bytes);
+		if (!object(value)) throw new Error("invalid_review_shape");
+		return value as unknown as ProfileLockRecoveryReview;
+	} catch {
+		throw new ProfileLockRecoveryError(domain, "invalid_private_review_file");
 	}
 }
