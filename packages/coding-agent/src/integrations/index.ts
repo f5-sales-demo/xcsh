@@ -3,6 +3,7 @@ export type { SetupStepRunner } from "./setup";
 export {
 	createSetupStepRunner,
 	describeSetupPlan,
+	executeConfigurationSetup,
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
 	runSetupStep,

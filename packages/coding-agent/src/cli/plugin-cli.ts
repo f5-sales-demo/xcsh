@@ -22,9 +22,11 @@ import {
 	MarketplaceManager,
 	resolvePluginDependencyPlan,
 } from "../extensibility/plugins/marketplace/index.js";
+import type { ConfigurationReviewer } from "../integrations/setup";
 import {
 	describeIntegrationSetupNextAction,
 	describeSetupPlan,
+	executeConfigurationSetup,
 	executeInstallAuthorizedSetup,
 	executeReviewedSetup,
 } from "../integrations/setup";
@@ -324,11 +326,19 @@ export function shouldSkipIntegrationSetup(state: IntegrationState, force = fals
 
 export async function reviewAndExecuteIntegrationSetup(
 	handle: IntegrationHandle<unknown>,
-	options: { force?: boolean } = {},
+	options: { force?: boolean; reviewConfiguration?: ConfigurationReviewer } = {},
 ) {
 	if (!handle.setupPlan) throw new Error(`Integration ${handle.id} does not declare setup`);
 	const current = await handle.get();
-	if (shouldSkipIntegrationSetup(current.state, options.force)) return current;
+	if (handle.prepareConfiguration && !options.force && current.state !== "ready" && current.state !== "setup_required")
+		throw new Error(
+			`Integration ${handle.id} authentication could not be verified (${current.reason ?? current.state}); retry readiness before configuration setup.`,
+		);
+	if (shouldSkipIntegrationSetup(current.state, options.force)) {
+		if (options.reviewConfiguration) await executeConfigurationSetup(handle, options.reviewConfiguration);
+		else await reviewIntegrationConfiguration(handle);
+		return handle.get();
+	}
 	const plan = handle.prepareSetup ? await handle.prepareSetup() : handle.setupPlan!;
 	if (plan.guidedAction?.kind === "context_wizard")
 		throw new Error(
@@ -343,8 +353,34 @@ export async function reviewAndExecuteIntegrationSetup(
 		prompt.close();
 	}
 	const result = await executeReviewedSetup(handle, plan);
+	if (result.state === "ready") {
+		if (options.reviewConfiguration) await executeConfigurationSetup(handle, options.reviewConfiguration);
+		else await reviewIntegrationConfiguration(handle);
+	}
 	await personProfileService.reconcileFromCollectors(undefined, 0);
-	return result;
+	return handle.get();
+}
+
+async function reviewIntegrationConfiguration(handle: IntegrationHandle<unknown>) {
+	await executeConfigurationSetup(handle, async plan => {
+		process.stdout.write(`${plan.title}\n${plan.summary.join("\n")}\n`);
+		const prompt = createInterface({ input: process.stdin, output: process.stdout });
+		try {
+			const answers: Record<string, string> = {};
+			for (const question of plan.questions) {
+				const choices = question.options ? ` (${question.options.join(", ")})` : "";
+				const answer = await prompt.question(`${question.prompt}${choices} [${question.defaultValue ?? ""}]: `);
+				answers[question.id] = answer || question.defaultValue || "";
+			}
+			await plan.validate(answers);
+			process.stdout.write(`${JSON.stringify(answers, null, 2)}\n`);
+			return (await prompt.question('Type "save" to apply this private configuration: ')) === "save"
+				? answers
+				: undefined;
+		} finally {
+			prompt.close();
+		}
+	});
 }
 
 async function handleIntegrationSetup(
