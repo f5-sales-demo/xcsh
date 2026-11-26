@@ -290,6 +290,14 @@ export class TtsrManager {
 		return false;
 	}
 
+	/** Retire workspace rules and their streaming/injection state before loading another workspace. */
+	clearRules(): void {
+		this.#rules.clear();
+		this.#injectionRecords.clear();
+		this.#buffers.clear();
+		this.#messageCount = 0;
+	}
+
 	/** Add a TTSR rule to be monitored. */
 	addRule(rule: Rule): boolean {
 		if (this.#rules.has(rule.name)) {
