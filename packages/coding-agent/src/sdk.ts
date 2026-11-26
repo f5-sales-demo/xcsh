@@ -2070,8 +2070,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				}
 
 				// Role 2: notify the LLM when name OR namespace changes. Read
-				// ContextService.getStatus() (not the callback arg) to honor the XCSH_NAMESPACE
-				// env override consistently with session-start emission.
+				// ContextService.getStatus() gives the effective applied context consistently
+				// with session-start emission and future execution admission.
 				try {
 					const currentStatus = service.instance?.getStatus();
 					const currentName = currentStatus?.activeContextName ?? undefined;
@@ -2099,6 +2099,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					// streaming vs non-streaming correctly (queues via steer/followUp/nextTurn
 					// when a turn is in flight).
 					const nameChanged = !lastEmittedContext || currentName !== lastEmittedContext.name;
+					const selectionChanged = nameChanged || currentStatus.activeContextSource !== lastEmittedContext?.source;
 					const prefix = nameChanged
 						? `[Context switched to ${currentName}]`
 						: `[F5 XC namespace changed to ${currentNamespace}]`;
@@ -2120,6 +2121,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						source: currentStatus.activeContextSource,
 					};
 					if (!session.isStreaming && !session.isRetrying) void session.refreshBaseSystemPrompt();
+					// Namespace selection is local. Keep cached authentication and notify the
+					// agent without initiating validation/discovery against the tenant.
+					if (!selectionChanged) return;
 					// Role 3: background-validate credentials after context switch so the
 					// LLM knows whether the new context is usable. Fire-and-forget — do
 					// not block the context change notification.

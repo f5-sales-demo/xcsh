@@ -8,7 +8,7 @@ import {
 } from "@f5-sales-demo/pi-utils";
 import { type ContextOperation, executeContextOperation } from "../../services/context-operations";
 import type { ContextTarget, XCSHContext } from "../../services/xcsh-context";
-import { ContextService } from "../../services/xcsh-context";
+import { ContextError, ContextService } from "../../services/xcsh-context";
 import { isSensitiveEnvKey } from "../../services/xcsh-env";
 import { expandTilde } from "../../tools/path-utils";
 import { ContextAddWizard } from "../components/context-add-wizard";
@@ -425,7 +425,13 @@ export class ContextCommandController {
 		});
 	}
 	#selectNamespace(service: ContextService, value: string): void {
-		service.setNamespace(value);
+		try {
+			service.setNamespace(value);
+		} catch (error) {
+			if (!(error instanceof ContextError)) throw error;
+			this.#ctx.showStatus(error.message, { dim: false });
+			return;
+		}
 		this.#ctx.statusLine?.invalidate();
 		this.#ctx.updateEditorTopBorder?.();
 		this.#ctx.showStatus(`Namespace ${service.getStatus().activeContextNamespace} · future turns`, { dim: false });

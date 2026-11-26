@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "testCoverageVerified": false,
-  "revision": "06fba683aafa7994d3f08c3c1a0f8d4537bae25f",
-  "fingerprint": "24c18e4980b63add34e0c62ce3c2a9e64aac71010f1fcc35f79743a9060d949d",
+  "revision": "cfe3fa9828579ed1616ed36bf0fc578ff689f619",
+  "fingerprint": "62b03124a1097544da458d09da6e40d74e8194baca24ead7c9eb03c2a27b8dce",
   "counts": {
     "total": 246,
     "components": 103,
@@ -7557,7 +7557,7 @@
       "kind": "integration",
       "ownership": "reviewed-mutation-adapter",
       "domain": "connections",
-      "sha256": "b0c129c530a65e9fdea721ce770678b3be9c9c91d2cce73c2cb83fe80990fced",
+      "sha256": "11bfd536ff66d4b9d6b3155c7ec9a63567c9d43da8f3a06446a10fcbbc19aebf",
       "exports": [
         "ContextCommandController"
       ],
@@ -9625,7 +9625,7 @@
       "kind": "integration",
       "ownership": "machine-protocol-contract",
       "domain": "protocols",
-      "sha256": "fed5f76cb6cccda5c73c4702ef66bf298c283f1cf60efcc1b09aaaad6b67dc68",
+      "sha256": "82ac69805bede95f0e2f593c1d2428e96147c906dcaf69219d8aeaac312da73a",
       "exports": [
         "// Individual tool classes (for custom usage)\n\tBashTool",
         "// Tool classes and factories\n\tBUILTIN_TOOLS",
@@ -11009,6 +11009,7 @@
         "packages/coding-agent/test/scripts/immutable-release-gate.test.ts",
         "packages/coding-agent/test/scripts/reconcile-releases.test.ts",
         "packages/coding-agent/test/scripts/terraform-index-delivery.test.ts",
+        "packages/coding-agent/test/sdk-context-integration.test.ts",
         "packages/coding-agent/test/slash-commands/resource-commands-review.test.ts",
         "packages/coding-agent/test/sweep/spec-probe.test.ts",
         "packages/coding-agent/test/terraform-snapshot-download.test.ts",

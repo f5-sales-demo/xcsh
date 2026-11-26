@@ -134,6 +134,7 @@ PY
 }
 
 verify_current_install() {
+  local phase=$1
   test -L "$installed_link"
   resolved_binary=$(realpath "$installed_link")
   test "$resolved_binary" = "$installed_root/bin/xcsh"
@@ -162,6 +163,10 @@ verify_current_install() {
   grep -F "Loaded native addon from ${installed_root}/libexec/" "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
   "$installed_link" chrome recycle
   "$installed_link" office recycle
+  /usr/bin/python3 "$script_dir/installed_agent_e2e.py" \
+    --executable "$installed_link" \
+    --output "$HOME/xcsh-installed-agent-evidence/$phase" \
+    --backend deterministic --artifact-origin published
   after=$(snapshot_installed)
   test "$before" = "$after"
 }
@@ -228,7 +233,7 @@ for attempt in $(seq 1 "$max_attempts"); do
   if [[ "$delay" -lt 60 ]]; then delay=$((delay * 2)); fi
 done
 
-verify_current_install
+verify_current_install fresh
 
 # Exercise a real immutable-baseline upgrade after the independent fresh-install gate.
 brew uninstall --cask "$cask"
@@ -239,7 +244,7 @@ BASELINE_VERSION="$baseline_version" \
   BASELINE_SHA256="$baseline_sha" \
   RELEASE_ARCH="$RELEASE_ARCH" \
   /bin/bash "$script_dir/ci-homebrew-upgrade-fixture.sh"
-verify_current_install
+verify_current_install upgrade
 
 assert_no_legacy_package
 brew uninstall --cask "$cask"

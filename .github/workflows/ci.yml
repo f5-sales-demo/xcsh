@@ -104,6 +104,8 @@ jobs:
         run: python3 -m unittest tests.test_ci_notary_auth
       - name: Verify pre-commit TypeScript contract
         run: python3 -m unittest tests.test_pre_commit_ts_gate
+      - name: Verify installed-agent acceptance rejects false evidence
+        run: python3 -m unittest tests.test_installed_agent_e2e
 
   native-linux-x64-baseline:
     name: Native build (linux, x64, baseline)
@@ -1341,7 +1343,7 @@ jobs:
           - os: macos-26
             arch: arm64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1358,6 +1360,8 @@ jobs:
           sudo mkdir -p "$uat_home/tmp"
           sudo cp scripts/ci-verify-homebrew-cask.sh "$uat_home/ci-verify-homebrew-cask.sh"
           sudo cp scripts/ci-homebrew-upgrade-fixture.sh "$uat_home/ci-homebrew-upgrade-fixture.sh"
+          sudo cp scripts/installed_agent_e2e.py scripts/ci-package-installed-agent-evidence.sh \
+            scripts/installed-agent-evidence-recipient.pem "$uat_home/"
           sudo chown -R "$UAT_USER":staff "$uat_home" "$brew_prefix"
           {
             echo "UAT_USER=$UAT_USER"
@@ -1378,6 +1382,31 @@ jobs:
             TMPDIR="$UAT_HOME/tmp" \
             PATH="$UAT_BREW_PREFIX/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
             /bin/bash "$UAT_HOME/ci-verify-homebrew-cask.sh"
+      - name: Preserve private installed-agent evidence as ciphertext
+        if: always() && env.UAT_HOME != ''
+        run: |
+          sudo -H -u "$UAT_USER" /bin/bash "$UAT_HOME/ci-package-installed-agent-evidence.sh" \
+            "$UAT_HOME/xcsh-installed-agent-evidence" "$UAT_HOME/installed-agent-evidence-recipient.pem"
+          public_root="$RUNNER_TEMP/installed-agent-public"
+          mkdir -p "$public_root"
+          for phase in fresh upgrade; do
+            evidence="$UAT_HOME/xcsh-installed-agent-evidence/$phase"
+            if ! sudo test -d "$evidence/receipts"; then continue; fi
+            mkdir -p "$public_root/$phase"
+            sudo cp -R "$evidence/receipts" "$public_root/$phase/"
+            sudo cp "$evidence/private-evidence.cms" "$public_root/$phase/"
+          done
+          sudo chown -R "$(id -u):$(id -g)" "$public_root"
+      - name: Upload sanitized installed-agent receipts and encrypted captures
+        if: always() && env.UAT_HOME != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.0
+        with:
+          name: installed-agent-homebrew-${{ matrix.arch }}
+          path: |
+            ${{ runner.temp }}/installed-agent-public/*/receipts/*.json
+            ${{ runner.temp }}/installed-agent-public/*/private-evidence.cms
+          if-no-files-found: error
+          retention-days: 30
 
   verify-macos-pkg:
     name: Verify direct MDM package (${{ matrix.arch }})
