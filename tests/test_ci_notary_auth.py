@@ -72,7 +72,7 @@ sys.exit(int(os.environ["NOTARY_TEST_REJECT"]))
 
     def legacy(self):
         return {
-            "APPLE_ID": "fake@example.invalid",
+            "APPLE_ID": "fake@example.com",
             "APPLE_PASSWORD": "FAKE_APP_PASSWORD",
             "APPLE_TEAM_ID": "FAKE_TEAM",
         }
@@ -117,7 +117,7 @@ sys.exit(int(os.environ["NOTARY_TEST_REJECT"]))
         assert record is None
 
     def test_partial_legacy_fails_before_apple(self):
-        result, record = self.invoke({"APPLE_ID": "fake@example.invalid"})
+        result, record = self.invoke({"APPLE_ID": "fake@example.com"})
         assert result.returncode != 0
         assert record is None
 

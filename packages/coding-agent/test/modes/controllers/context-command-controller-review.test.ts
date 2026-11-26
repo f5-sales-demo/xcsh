@@ -108,6 +108,21 @@ function harness(inputs: string[][], storedBorder = false) {
 	};
 }
 
+test("refused namespace selection reports a normal status and leaves the controller usable", async () => {
+	const h = harness([]);
+	await expect(
+		h.controller.handle({
+			name: "context",
+			args: "namespace default",
+			text: "/context namespace default",
+		}),
+	).resolves.toBeUndefined();
+	expect(h.ctx.showStatus).toHaveBeenCalledWith("No active context. Run `/context activate <name>` to select one.", {
+		dim: false,
+	});
+	expect(ContextService.instance.getStatus().activeContextName).toBeNull();
+});
+
 async function waitFor(predicate: () => boolean): Promise<void> {
 	for (let attempt = 0; attempt < 200; attempt++) {
 		if (predicate()) return;

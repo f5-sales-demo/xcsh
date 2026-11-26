@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -43,6 +43,57 @@ describe("createAgentSession context tracking", () => {
 		settings = await Settings.init({ cwd, agentDir, inMemory: true });
 
 		ContextService.init(configDir);
+	});
+
+	it("namespace-only notices preserve cached authentication without starting validation", async () => {
+		await ContextService.instance.createContext({
+			name: "fixture-a",
+			apiUrl: "https://fixture-a.example.invalid",
+			apiToken: "synthetic-token",
+			defaultNamespace: "ns-old",
+		});
+		const validate = spyOn(ContextService.instance, "validateToken").mockResolvedValue({ status: "auth_error" });
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = Object.assign(
+			async () => new Response(JSON.stringify({ items: [] }), { headers: { "Content-Type": "application/json" } }),
+			{
+				preconnect() {
+					/* The synthetic transport never opens a socket. */
+				},
+			},
+		);
+		let session: Awaited<ReturnType<typeof createAgentSession>>["session"] | undefined;
+		try {
+			await ContextService.instance.activate("fixture-a");
+			({ session } = await createAgentSession({
+				cwd,
+				agentDir,
+				settings,
+				disableExtensionDiscovery: true,
+				skills: [],
+				contextFiles: [],
+				promptTemplates: [],
+				slashCommands: [],
+				enableLsp: false,
+			}));
+			const before = validate.mock.calls.length;
+			const authStatus = ContextService.instance.getStatus().authStatus;
+			ContextService.instance.setNamespace("default");
+			await Bun.sleep(20);
+			expect(validate.mock.calls.length).toBe(before);
+			expect(ContextService.instance.getStatus().authStatus).toBe(authStatus);
+			expect(session.sessionManager.getEntries()).toContainEqual(
+				expect.objectContaining({
+					type: "context_change",
+					contextName: "fixture-a",
+					namespace: "default",
+				}),
+			);
+		} finally {
+			await session?.dispose();
+			validate.mockRestore();
+			globalThis.fetch = originalFetch;
+		}
 	});
 
 	afterEach(() => {
