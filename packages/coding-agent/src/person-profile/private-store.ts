@@ -196,33 +196,39 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 				throw this.#failure("persistence_unavailable");
 			}
 		};
-		let originalProcess: {
-			platform: string;
-			pid: number;
-			bootId: string;
-			startTicks: string;
-			machineIdSha256: string;
-			namespaces: { pid: string; mount: string; user: string };
-		} | null = null;
-		if (process.platform === "linux") {
-			const processStat = await readFile("/proc/self/stat", "utf8");
-			const fields = processStat
-				.slice(processStat.lastIndexOf(")") + 2)
-				.trim()
-				.split(/\s+/);
-			const bootId = (await readFile("/proc/sys/kernel/random/boot_id", "utf8")).trim();
-			const machineId = (await readFile("/etc/machine-id", "utf8")).trim();
-			if (!/^\d+$/.test(fields[19] ?? "") || !/^[0-9a-f-]{36}$/.test(bootId) || !/^[0-9a-f]{32}$/.test(machineId))
+		const readOriginalProcess = async () => {
+			try {
+				const processStat = await readFile("/proc/self/stat", "utf8");
+				const commandEnd = processStat.lastIndexOf(")");
+				const fields = processStat
+					.slice(commandEnd + 2)
+					.trim()
+					.split(/\s+/);
+				const bootId = (await readFile("/proc/sys/kernel/random/boot_id", "utf8")).trim();
+				const machineId = (await readFile("/etc/machine-id", "utf8")).trim();
+				if (
+					processStat.match(/^([1-9]\d*) \(/)?.[1] !== String(process.pid) ||
+					commandEnd <= processStat.indexOf("(") ||
+					processStat[commandEnd + 1] !== " " ||
+					!/^[RSDZTWtXxKPI]$/.test(fields[0] ?? "") ||
+					!/^[1-9]\d*$/.test(fields[19] ?? "") ||
+					!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(bootId) ||
+					!/^[0-9a-f]{32}$/.test(machineId)
+				)
+					throw this.#failure("persistence_unavailable");
+				return {
+					platform: process.platform,
+					pid: process.pid,
+					bootId,
+					startTicks: fields[19]!,
+					machineIdSha256: createHash("sha256").update(machineId).digest("hex"),
+					namespaces: await readNamespaces(),
+				};
+			} catch {
 				throw this.#failure("persistence_unavailable");
-			originalProcess = {
-				platform: process.platform,
-				pid: process.pid,
-				bootId,
-				startTicks: fields[19]!,
-				machineIdSha256: createHash("sha256").update(machineId).digest("hex"),
-				namespaces: await readNamespaces(),
-			};
-		}
+			}
+		};
+		const originalProcess = await readOriginalProcess();
 		// Unavailable process identity never grants recovery authority. Existing ambiguous locks remain untouched.
 		let ownerPath = join(activePath, "owner.json");
 		const leaseId = crypto.randomUUID();
@@ -306,12 +312,19 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 		};
 		const verify = async () => {
 			try {
-				if (originalProcess) {
-					const current = await readNamespaces();
-					const expected = originalProcess.namespaces;
-					if (current.pid !== expected.pid || current.mount !== expected.mount || current.user !== expected.user)
-						throw this.#failure("ownership_mismatch");
-				}
+				const currentProcess = await readOriginalProcess();
+				const expected = originalProcess;
+				if (
+					currentProcess.platform !== expected.platform ||
+					currentProcess.pid !== expected.pid ||
+					currentProcess.bootId !== expected.bootId ||
+					currentProcess.startTicks !== expected.startTicks ||
+					currentProcess.machineIdSha256 !== expected.machineIdSha256 ||
+					currentProcess.namespaces.pid !== expected.namespaces.pid ||
+					currentProcess.namespaces.mount !== expected.namespaces.mount ||
+					currentProcess.namespaces.user !== expected.namespaces.user
+				)
+					throw this.#failure("ownership_mismatch");
 				await sameDirectory();
 				const contents = await readdir(activePath);
 				if (contents.length !== 1 || contents[0] !== "owner.json") throw this.#failure("ownership_mismatch");
