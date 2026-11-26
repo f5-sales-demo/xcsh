@@ -460,7 +460,7 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		expect(smokeJob).toBe("");
 		expect(nativeJob).toContain("ubuntu-24.04");
 		expect(nativeJob).toContain("macos-26-intel");
-		expect(nativeJob).toContain("macos-15");
+		expect(nativeJob).toContain("macos-26");
 		expect(nativeJob).toContain("windows-latest");
 		expect(nativeJob).toContain("uses: $/.github/actions/setup-zig");
 		expect(nativeJob).toContain("run: bash scripts/verify-self-hosted-tools.sh full");
@@ -733,7 +733,7 @@ describe("protected CI enforces the macOS sibling-customer boundary", () => {
 		expect(matrices).toHaveLength(2);
 		for (const matrix of matrices) {
 			expect(matrix.filter(row => row.platform === "darwin" && row.arch === "arm64")).toEqual([
-				{ os: "macos-15", platform: "darwin", arch: "arm64", sandbox_check: true },
+				{ os: "macos-26", platform: "darwin", arch: "arm64", sandbox_check: true },
 			]);
 		}
 		expect(matrices[1]).toHaveLength(1);
