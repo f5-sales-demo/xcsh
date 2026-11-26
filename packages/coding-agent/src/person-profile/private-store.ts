@@ -4,7 +4,7 @@ import { chmod, lstat, mkdir, open, readdir, readFile, readlink, rename, rm, unl
 import { basename, dirname, join } from "node:path";
 import { renameExclusive, renameExclusiveAt } from "@f5-sales-demo/pi-natives";
 
-import { reviewProfileLockRecovery } from "./lock-recovery";
+import { type ProfileLockRecoveryReview, recoverProfileLock, reviewProfileLockRecovery } from "./lock-recovery";
 
 import { type ProfileDomain, ProfileStoreError, type ProfileStoreErrorCode } from "./profile-store-error";
 
@@ -501,6 +501,9 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 			if (error instanceof ProfileStoreError || signal?.aborted) throw error;
 			throw new ProfileStoreError("persistence_unavailable", this.domain, { cause: error });
 		}
+	}
+	async recoverLock(review: ProfileLockRecoveryReview, approvedSha256: string, signal?: AbortSignal) {
+		return recoverProfileLock(this.path, this.domain, review, approvedSha256, signal);
 	}
 	async reviewLockRecovery() {
 		return reviewProfileLockRecovery(this.path, this.domain);

@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { type BigIntStats, constants } from "node:fs";
 import { lstat, open, readdir, readFile, readlink, statfs } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
+import { renameExclusiveAt } from "@f5-sales-demo/pi-natives";
 import { type ProfileDomain, ProfileStoreError } from "./profile-store-error";
 
 interface Identity {
@@ -137,15 +138,11 @@ function startTicks(raw: string, pid: number): string {
 	return fields[19]!;
 }
 /** Read-only review. No owner or profile is removed, reset, signalled or rewritten. */
-export async function reviewProfileLockRecovery(
-	path: string,
-	domain: ProfileDomain,
-): Promise<ProfileLockRecoveryReview> {
+async function reviewLockAt(path: string, domain: ProfileDomain, lockPath: string): Promise<ProfileLockRecoveryReview> {
 	const refuse = (reason: string, cause?: unknown) =>
 		new ProfileLockRecoveryError(domain, reason, cause ? { cause } : undefined);
 	if (process.platform !== "linux" || !process.getuid) throw refuse("unsupported_platform");
 	const parentPath = dirname(path);
-	const lockPath = `${path}.lock`;
 	try {
 		const parent = await open(parentPath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
 		try {
@@ -304,5 +301,183 @@ export async function reviewProfileLockRecovery(
 	} catch (cause) {
 		if (cause instanceof ProfileStoreError) throw cause;
 		throw refuse("evidence_unavailable", cause);
+	}
+}
+
+export async function reviewProfileLockRecovery(
+	path: string,
+	domain: ProfileDomain,
+): Promise<ProfileLockRecoveryReview> {
+	return reviewLockAt(path, domain, `${path}.lock`);
+}
+export interface ProfileLockRecoveryResult {
+	schemaVersion: 1;
+	status: "retained";
+	retainedDirectoryPath: string;
+	intentPath: string;
+	reviewSha256: string;
+	receiptSha256: string;
+}
+function comparison(review: ProfileLockRecoveryReview, captured: boolean): string {
+	return JSON.stringify({
+		schemaVersion: review.schemaVersion,
+		path: review.path,
+		domain: review.domain,
+		ownerSha256: review.ownerSha256,
+		binding: review.binding,
+		filesystemType: review.filesystemType,
+		closure: review.closure,
+		owner: review.owner,
+		directory: { mtimeNs: review.directory.mtimeNs, ctimeNs: captured ? undefined : review.directory.ctimeNs },
+	});
+}
+/** Explicit reviewed action; acquiring a normal mutation/reset lease never invokes it. */
+export async function recoverProfileLock(
+	path: string,
+	domain: ProfileDomain,
+	review: ProfileLockRecoveryReview,
+	approvedSha256: string,
+	signal?: AbortSignal,
+): Promise<ProfileLockRecoveryResult> {
+	const refuse = (reason: string, cause?: unknown) =>
+		new ProfileLockRecoveryError(domain, reason, cause ? { cause } : undefined);
+	const cancelled = () => {
+		if (signal?.aborted) throw refuse("request_cancelled");
+	};
+	cancelled();
+	if (process.platform !== "linux" || !process.getuid || !["person", "computer"].includes(domain))
+		throw refuse("unsupported_platform_or_domain");
+	let payload: string;
+	try {
+		if (!review || !object(review)) throw refuse("invalid_review");
+		const { sha256, ...body } = review;
+		payload = JSON.stringify(body);
+		if (
+			!digest(sha256) ||
+			approvedSha256 !== sha256 ||
+			hash(payload) !== sha256 ||
+			body.path !== path ||
+			body.domain !== domain ||
+			body.schemaVersion !== 1 ||
+			payload.length > 32768
+		)
+			throw refuse("review_authorization_mismatch");
+		const observed = Date.parse(body.observedAt);
+		const age = Date.now() - observed;
+		if (!Number.isFinite(age) || age < 0 || age > 300000) throw refuse("review_expired_or_future");
+	} catch (cause) {
+		if (cause instanceof ProfileStoreError) throw cause;
+		throw refuse("invalid_review", cause);
+	}
+	const parentPath = dirname(path);
+	const lockPath = `${path}.lock`;
+	const intentName = `.${domain}-profile-lock-recovery-${review.sha256}.intent.json`;
+	const retainedName = `.${domain}-profile-lock-recovery-${review.sha256}.recovery-directory`;
+	const retainedDirectoryPath = join(parentPath, retainedName);
+	const intentPath = join(parentPath, intentName);
+	const verify = async (captured: boolean) => {
+		const current = await reviewLockAt(path, domain, captured ? retainedDirectoryPath : lockPath);
+		if (comparison(current, captured) !== comparison(review, captured)) throw refuse("reviewed_identity_changed");
+	};
+	try {
+		await verify(false);
+		cancelled();
+		const parent = await open(parentPath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+		try {
+			const verifyParent = async () => {
+				const [held, named] = await Promise.all([
+					parent.stat({ bigint: true }),
+					lstat(parentPath, { bigint: true }),
+				]);
+				if (
+					!held.isDirectory() ||
+					!named.isDirectory() ||
+					named.isSymbolicLink() ||
+					!equalIdentity(identity(held), review.binding.parent) ||
+					!equalIdentity(identity(named), review.binding.parent) ||
+					held.uid !== BigInt(process.getuid!()) ||
+					(held.mode & 0o777n) !== 0o700n ||
+					named.mode !== held.mode
+				)
+					throw refuse("reviewed_parent_changed");
+			};
+			await verifyParent();
+			const receipt = JSON.stringify({
+				schemaVersion: 1,
+				operation: "profile-lock-recovery",
+				approvedReviewSha256: approvedSha256,
+				review,
+				retainedDirectoryPath,
+				scope: { changeProfile: false, signalProcesses: false },
+			});
+			// The original descriptor binds creation even if an ancestor pathname changes.
+			// Exclusive creation consumes this review on both success and partial failure.
+			let intent: Awaited<ReturnType<typeof open>>;
+			try {
+				intent = await open(
+					`/proc/self/fd/${parent.fd}/${intentName}`,
+					constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+					0o600,
+				);
+			} catch (cause) {
+				throw refuse("review_intent_unavailable_or_already_used", cause);
+			}
+			try {
+				await intent.writeFile(receipt);
+				await intent.sync();
+				const stats = await intent.stat({ bigint: true });
+				if (
+					!stats.isFile() ||
+					stats.nlink !== 1n ||
+					stats.uid !== BigInt(process.getuid!()) ||
+					(stats.mode & 0o777n) !== 0o600n
+				)
+					throw refuse("intent_retention_unverified");
+			} finally {
+				await intent.close();
+			}
+			await parent.sync();
+			await verifyParent();
+			await verify(false);
+			cancelled();
+			if (!renameExclusiveAt(parent.fd, basename(lockPath), retainedName))
+				throw refuse("retained_destination_conflict");
+			try {
+				// The kernel rename has no source-inode predicate. Independently verify
+				// the complete captured original and refuse unexpected namespace changes.
+				await verify(true);
+				await parent.sync();
+				await verifyParent();
+				await verify(true);
+			} catch (failure) {
+				try {
+					// Restore the whole capture only into an absent active name. A new
+					// contender and all unexpected captures remain intact on conflict.
+					if (!renameExclusiveAt(parent.fd, retainedName, basename(lockPath)))
+						throw refuse("original_restoration_conflict");
+					await parent.sync();
+				} catch (restorationFailure) {
+					throw new AggregateError(
+						[failure, restorationFailure],
+						"Reviewed original profile lock capture and restoration failed",
+						{ cause: failure },
+					);
+				}
+				throw failure;
+			}
+			return {
+				schemaVersion: 1,
+				status: "retained",
+				retainedDirectoryPath,
+				intentPath,
+				reviewSha256: review.sha256,
+				receiptSha256: hash(receipt),
+			};
+		} finally {
+			await parent.close();
+		}
+	} catch (cause) {
+		if (cause instanceof ProfileStoreError || cause instanceof AggregateError) throw cause;
+		throw refuse("retention_or_capture_unavailable", cause);
 	}
 }
