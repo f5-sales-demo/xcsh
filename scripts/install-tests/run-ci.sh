@@ -45,7 +45,11 @@ find_tarball() {
 }
 
 section "Binary install smoke"
-bun --cwd=packages/natives run build
+if [ "$(uname -m)" = "x86_64" ]; then
+  TARGET_VARIANTS="baseline modern" bun scripts/ci-build-native.ts
+else
+  bun --cwd=packages/natives run build
+fi
 bun --cwd=packages/coding-agent run build
 
 BINARY_DIR="$WORK_DIR/binary-bin"
@@ -68,6 +72,7 @@ bash scripts/install-tests/source-ref.sh
 section "Tarball install smoke"
 TARBALL_DIR="$WORK_DIR/tarballs"
 mkdir -p "$TARBALL_DIR"
+native_candidate_json="$(bun scripts/install-tests/native-candidate.ts "$ROOT_DIR" "$WORK_DIR/native-platform")"
 for pkg in utils natives ai agent tui stats resource-management f5-core coding-agent; do
   (
     cd "$ROOT_DIR/packages/$pkg"
@@ -125,21 +130,24 @@ mkdir -p "$TARBALL_APP_DIR"
 
   # Write overrides so bun resolves inter-package deps from tarballs, not the registry
   # (version 12.x.y hasn't been published yet when CI runs pre-release)
-  node -e "
-		const pkg = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
-		pkg.overrides = {
-			'@f5-sales-demo/pi-utils': '$utils_tgz',
-			'@f5-sales-demo/pi-natives': '$natives_tgz',
-			'@f5-sales-demo/pi-ai': '$ai_tgz',
-			'@f5-sales-demo/pi-agent-core': '$agent_tgz',
-			'@f5-sales-demo/pi-tui': '$tui_tgz',
-			'@f5-sales-demo/xcsh-stats': '$stats_tgz',
-			'@f5-sales-demo/pi-resource-management': '$resource_mgmt_tgz',
-			'@f5-sales-demo/xcsh-f5-core': '$f5_core_tgz',
-			'@f5-sales-demo/xcsh': '$coding_agent_tgz'
-		};
-		require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-	"
+  XCSH_NATIVE_CANDIDATE_JSON="$native_candidate_json" node -e '
+    const fs = require("fs");
+    const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+    const names = [
+      "@f5-sales-demo/pi-utils", "@f5-sales-demo/pi-natives",
+      "@f5-sales-demo/pi-ai", "@f5-sales-demo/pi-agent-core",
+      "@f5-sales-demo/pi-tui", "@f5-sales-demo/xcsh-stats",
+      "@f5-sales-demo/pi-resource-management", "@f5-sales-demo/xcsh-f5-core",
+      "@f5-sales-demo/xcsh"
+    ];
+    const archives = process.argv.slice(1);
+    if (archives.length !== names.length) throw Error("Candidate tarball inventory mismatch");
+    pkg.overrides = Object.fromEntries(names.map((name, index) => [name, archives[index]]));
+    const native = JSON.parse(process.env.XCSH_NATIVE_CANDIDATE_JSON);
+    pkg.overrides[native.name] = native.tarball;
+    fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+  ' "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" \
+    "$stats_tgz" "$resource_mgmt_tgz" "$f5_core_tgz" "$coding_agent_tgz"
 
   bun add "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" "$stats_tgz" "$resource_mgmt_tgz" "$f5_core_tgz" "$coding_agent_tgz"
   XCSH_RELEASE_CACHE_DIR="$candidate_cache" smoke_cli ./node_modules/.bin/xcsh
