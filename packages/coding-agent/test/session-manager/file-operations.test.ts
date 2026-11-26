@@ -104,6 +104,35 @@ describe("findMostRecentSession", () => {
 		expect(await findMostRecentSession(tempDir)).toBeNull();
 	});
 
+	it("filters automatic selection by canonical header cwd and refuses missing ownership", async () => {
+		const project = path.join(tempDir, "project");
+		const alias = path.join(tempDir, "alias");
+		fs.mkdirSync(project);
+		fs.symlinkSync(project, alias);
+		const file = path.join(tempDir, "owned.jsonl");
+		fs.writeFileSync(file, `${JSON.stringify({ type: "session", id: "owned", cwd: project })}\n`);
+		fs.writeFileSync(path.join(tempDir, "unowned.jsonl"), `${JSON.stringify({ type: "session", id: "unowned" })}\n`);
+		expect(await findMostRecentSession(tempDir, undefined, alias)).toBe(file);
+		expect(await findMostRecentSession(tempDir, undefined, `${project}-other`)).toBeNull();
+	});
+
+	it("lists only owned sessions from a colliding default project directory", async () => {
+		const alpha = path.join(tempDir, "alpha-beta");
+		const beta = path.join(tempDir, "alpha", "beta");
+		const dir = SessionManager.getDefaultSessionDir(alpha, path.join(tempDir, "agent"));
+		for (const [id, cwd] of [
+			["alpha", alpha],
+			["beta", beta],
+		]) {
+			fs.writeFileSync(
+				path.join(dir, `${id}.jsonl`),
+				`${JSON.stringify({ type: "session", version: 3, id, cwd, timestamp: "2026-01-01T00:00:00Z" })}\n`,
+			);
+		}
+		expect((await SessionManager.list(alpha, dir)).map(info => info.cwd)).toEqual([alpha]);
+		expect((await SessionManager.list(beta, dir)).map(info => info.cwd)).toEqual([beta]);
+	});
+
 	it("returns single valid session file", async () => {
 		const file = path.join(tempDir, "session.jsonl");
 		fs.writeFileSync(file, '{"type":"session","id":"abc","timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp"}\n');

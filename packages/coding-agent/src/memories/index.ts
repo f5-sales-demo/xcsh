@@ -520,6 +520,15 @@ async function runPhase2(options: {
 	const memoryRoot = getMemoryRoot(agentDir, cwd);
 
 	try {
+		// Legacy names cannot prove ownership: separators and literal hyphens collide.
+		// Leave those artifacts untouched and rebuild only from cwd-bound database outputs.
+		if (
+			!existsSync(memoryRoot) &&
+			existsSync(getLegacyMemoryRoot(agentDir, cwd)) &&
+			listStage1OutputsForGlobal(db, 1, cwd).length > 0
+		) {
+			enqueueGlobalWatermark(db, nowSec, cwd, { forceDirtyWhenNotAdvanced: true });
+		}
 		const claimResult = tryClaimGlobalPhase2Job(db, {
 			workerId,
 			leaseSeconds: config.phase2LeaseSeconds,
@@ -1259,11 +1268,12 @@ function loadMemoryConfig(settings: Settings): MemoryRuntimeConfig {
 }
 
 export function getMemoryRoot(agentDir: string, cwd: string): string {
-	return path.join(getMemoriesDir(agentDir), encodeProjectPath(cwd));
+	const projectKey = createHash("sha256").update(path.resolve(cwd)).digest("hex");
+	return path.join(getMemoriesDir(agentDir), `project-${projectKey}`);
 }
 
-function encodeProjectPath(cwd: string): string {
-	return `--${cwd.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`;
+function getLegacyMemoryRoot(agentDir: string, cwd: string): string {
+	return path.join(getMemoriesDir(agentDir), `--${cwd.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`);
 }
 
 function unixNow(): number {
