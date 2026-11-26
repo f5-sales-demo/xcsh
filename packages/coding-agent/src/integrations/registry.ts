@@ -1,4 +1,6 @@
 import type {
+	IntegrationConfigurationAnswers,
+	IntegrationConfigurationPlan,
 	IntegrationDefinition,
 	IntegrationHandle,
 	IntegrationProbeResult,
@@ -151,6 +153,7 @@ export class IntegrationRegistry {
 
 		let setupPlan = freezePlan(definition.setup);
 		let preparationRevision = 0;
+		let configurationRevision = 0;
 		const frozenDefinition = Object.freeze({
 			...definition,
 			dependencies: definition.dependencies ? freezeStrings(definition.dependencies) : undefined,
@@ -179,6 +182,56 @@ export class IntegrationRegistry {
 				return setupPlan;
 			},
 			get: (signal?: AbortSignal) => this.#get(definition.id, false, signal) as Promise<IntegrationSnapshot<T>>,
+			prepareConfiguration: definition.prepareConfiguration
+				? async (signal?: AbortSignal) => {
+						const revision = ++configurationRevision;
+						let prepared: IntegrationConfigurationPlan;
+						try {
+							prepared = await definition.prepareConfiguration!(signal);
+						} catch (error) {
+							if (!signal?.aborted && this.#entries.get(definition.id)?.handle === handle)
+								this.invalidate(definition.id);
+							throw error;
+						}
+						const assertCurrent = () => {
+							signal?.throwIfAborted();
+							if (revision !== configurationRevision || this.#entries.get(definition.id)?.handle !== handle)
+								throw new Error("Configuration discovery changed; review again");
+						};
+						assertCurrent();
+						if (
+							!prepared.title ||
+							!Array.isArray(prepared.summary) ||
+							!Array.isArray(prepared.questions) ||
+							typeof prepared.validate !== "function" ||
+							typeof prepared.apply !== "function" ||
+							prepared.questions.some(
+								(q, i, all) => !q.id || !q.prompt || all.findIndex(other => other.id === q.id) !== i,
+							)
+						)
+							throw new Error("Invalid integration configuration plan");
+						return Object.freeze({
+							...prepared,
+							summary: freezeStrings(prepared.summary),
+							questions: Object.freeze(
+								prepared.questions.map(q =>
+									Object.freeze({ ...q, options: q.options ? freezeStrings(q.options) : undefined }),
+								),
+							),
+							validate: async (answers: IntegrationConfigurationAnswers, currentSignal?: AbortSignal) => {
+								assertCurrent();
+								await prepared.validate(answers, currentSignal);
+								assertCurrent();
+							},
+							apply: async (answers: IntegrationConfigurationAnswers, currentSignal?: AbortSignal) => {
+								assertCurrent();
+								currentSignal?.throwIfAborted();
+								await prepared.apply(answers, currentSignal);
+								++configurationRevision;
+							},
+						});
+					}
+				: undefined,
 			invalidate: () => this.invalidate(definition.id),
 			verifyAfterSetup: (reviewedPlan: IntegrationSetupPlan, signal?: AbortSignal) => {
 				const current = this.#entries.get(definition.id);

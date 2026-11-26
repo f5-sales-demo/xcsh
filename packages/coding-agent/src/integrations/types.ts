@@ -61,6 +61,23 @@ export interface IntegrationSetupPlan {
 	readonly validate?: (signal?: AbortSignal) => Promise<void>;
 }
 
+/** Discovered private settings, reviewed only by an explicit setup surface. */
+export interface IntegrationConfigurationQuestion {
+	readonly id: string;
+	readonly prompt: string;
+	readonly defaultValue?: string;
+	readonly options?: readonly string[];
+}
+
+export type IntegrationConfigurationAnswers = Readonly<Record<string, string>>;
+export interface IntegrationConfigurationPlan {
+	readonly title: string;
+	readonly summary: readonly string[];
+	readonly questions: readonly IntegrationConfigurationQuestion[];
+	readonly validate: (answers: IntegrationConfigurationAnswers, signal?: AbortSignal) => Promise<void>;
+	readonly apply: (answers: IntegrationConfigurationAnswers, signal?: AbortSignal) => Promise<void>;
+}
+
 export interface IntegrationDefinition<T> {
 	readonly id: string;
 	readonly name: string;
@@ -70,6 +87,7 @@ export interface IntegrationDefinition<T> {
 	readonly successTtlMs?: number;
 	readonly setup?: IntegrationSetupPlan;
 	readonly prepareSetup?: (signal?: AbortSignal) => Promise<IntegrationSetupPlan>;
+	readonly prepareConfiguration?: (signal?: AbortSignal) => Promise<IntegrationConfigurationPlan>;
 	readonly probe: (signal?: AbortSignal) => Promise<IntegrationProbeResult<T>>;
 	/** Optional private profile projection. The registry never persists `value` itself. */
 	readonly profile?: (value: T) => ProfileCollection;
@@ -93,6 +111,7 @@ export interface IntegrationHandle<T> {
 	readonly plugin?: string;
 	readonly setupPlan?: IntegrationSetupPlan;
 	prepareSetup?(signal?: AbortSignal): Promise<IntegrationSetupPlan>;
+	prepareConfiguration?(signal?: AbortSignal): Promise<IntegrationConfigurationPlan>;
 	get(signal?: AbortSignal): Promise<IntegrationSnapshot<T>>;
 	invalidate(): void;
 	verifyAfterSetup(reviewedPlan: IntegrationSetupPlan, signal?: AbortSignal): Promise<IntegrationSnapshot<T>>;

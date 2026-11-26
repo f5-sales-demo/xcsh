@@ -11610,6 +11610,38 @@
     },
     {
       "surface": {
+        "id": "source:packages/coding-agent/src/modes/components/integration-configuration.ts",
+        "source": "packages/coding-agent/src/modes/components/integration-configuration.ts",
+        "kind": "component"
+      },
+      "status": "in-progress",
+      "adapter": "Integration configuration -> HookInputComponent -> runReviewedAction -> validated provider apply",
+      "reviewPolicy": "Draft answers never write; cancellation stops setup; the reviewed action owns the validated private apply callback.",
+      "states": [
+        "discovery",
+        "input",
+        "validation",
+        "review",
+        "cancelled",
+        "apply",
+        "failed",
+        "saved"
+      ],
+      "tests": [
+        "packages/coding-agent/test/integration-configuration.test.ts"
+      ],
+      "persistence": [
+        "Synthetic lifecycle tests cover invalid answers, cancellation, stale discovery and apply failures."
+      ],
+      "captures": [],
+      "visualVerdicts": [],
+      "fingerprint": null,
+      "notes": [
+        "Shared input/review components are reused. End-to-end installed configuration acceptance is tracked separately; no terminal capture is claimed here."
+      ]
+    },
+    {
+      "surface": {
         "id": "source:packages/coding-agent/src/modes/components/keybinding-hints.ts",
         "source": "packages/coding-agent/src/modes/components/keybinding-hints.ts",
         "kind": "component"
