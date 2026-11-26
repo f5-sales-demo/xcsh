@@ -1186,6 +1186,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				usage: "[marketplace]",
 			},
 			{ name: "list", description: t("commands.plugin.sub.list.description") },
+			{ name: "status", description: "Show registered integration readiness", usage: "[plugin-or-integration]" },
 			{
 				name: "validate",
 				description: t("commands.plugin.sub.validate.description"),
@@ -1663,6 +1664,44 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						}
 						break;
 					}
+					case "status": {
+						const targets = rest.split(/\s+/).filter(Boolean);
+						if (targets.length > 1 || targets.some(target => target.startsWith("-"))) {
+							pluginError(
+								"Usage: /plugin status [plugin-or-integration]. Use /context to select the active context; status does not accept flags.",
+							);
+							break;
+						}
+						const target = targets[0];
+						const handles = runtime.ctx.session?.extensionRunner?.getAllRegisteredIntegrations() ?? [];
+						const selected = target
+							? handles.filter(
+									handle =>
+										handle.id === target ||
+										handle.plugin === target ||
+										handle.plugin?.split("@")[0] === target,
+								)
+							: handles;
+						if (target && !selected.length) {
+							pluginError(`No enabled integration is registered for ${target}`);
+							break;
+						}
+						if (!selected.length) {
+							pluginStatus("No enabled plugin integrations are registered.");
+							break;
+						}
+						const lines = await Promise.all(
+							selected.map(async handle => {
+								const snapshot = await handle.get();
+								const summary = `${handle.plugin ?? handle.id}: ${snapshot.state}${snapshot.reason ? ` (${snapshot.reason})` : ""}`;
+								return snapshot.state === "setup_required"
+									? `${summary}\n  next: /plugin setup ${handle.id}`
+									: summary;
+							}),
+						);
+						pluginStatus(lines.join("\n"));
+						break;
+					}
 					// ── Installed list ──
 					case "installed": {
 						const lines: string[] = [];
@@ -1810,19 +1849,13 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					}
 					// ── Help ──
 					case "help": {
-						pluginStatus(t("commands.plugin.help"));
+						pluginStatus(
+							`${t("commands.plugin.help")}\n\n/plugin status [plugin-or-integration]  Show readiness in the active context`,
+						);
 						break;
 					}
 					default: {
-						const marketplaces = await mgr.listMarketplaces();
-						if (marketplaces.length === 0) {
-							pluginStatus(t("commands.plugin.marketplace.noneConfiguredBrowse"));
-						} else {
-							const lines = marketplaces.map(m => `  ${m.name}  ${m.sourceUri}`);
-							pluginStatus(
-								`Marketplaces:\n${lines.join("\n")}\n\n${t("commands.plugin.marketplace.listHintAll")}`,
-							);
-						}
+						pluginError(`Unknown plugin subcommand: ${sub}. Run /plugin help for available commands.`);
 						break;
 					}
 				}
