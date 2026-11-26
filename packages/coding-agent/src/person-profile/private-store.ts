@@ -1,9 +1,12 @@
+import { createHash } from "node:crypto";
 import { constants } from "node:fs";
-import { chmod, lstat, mkdir, open, rename, rm, unlink } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { chmod, lstat, mkdir, open, readdir, readFile, readlink, rename, rm, unlink } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
+import { renameExclusive, renameExclusiveAt } from "@f5-sales-demo/pi-natives";
 
 export type ProfileStoreErrorCode =
 	| "unsupported_format"
+	| "unsupported_platform"
 	| "insecure_permissions"
 	| "invalid_shape"
 	| "ownership_mismatch"
@@ -34,8 +37,16 @@ export class ProfileStoreError extends Error {
 	constructor(
 		readonly code: ProfileStoreErrorCode,
 		readonly domain: ProfileDomain,
+		options?: ErrorOptions,
 	) {
-		super(`${domain} profile storage ${code}; run xcsh profile reset ${domain} --yes`);
+		super(
+			code === "unsupported_platform"
+				? `${domain} profile storage unsupported_platform; durable locking is unavailable on ${process.platform}; use a qualified Linux host`
+				: code === "lock_busy"
+					? `${domain} profile storage lock_busy; wait for the active operation; retain the original lock and owner evidence and verify original-holder closure before recovery`
+					: `${domain} profile storage ${code}; run xcsh profile reset ${domain} --yes`,
+			options,
+		);
 		this.name = "ProfileStoreError";
 	}
 }
@@ -131,7 +142,307 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 			};
 		}
 	}
-	async #acquireLock(signal?: AbortSignal): Promise<string> {
+	async #publishLockOwner(
+		prepared: string,
+		lock: string,
+		operation: "mutate" | "reset",
+		deadline: number,
+		signal?: AbortSignal,
+	) {
+		let activePath = prepared;
+		const lockStats = await lstat(prepared);
+		const parent = dirname(lock);
+		const parentStats = await lstat(parent);
+		const sameParent = async () => {
+			const current = await lstat(parent);
+			if (
+				!current.isDirectory() ||
+				current.isSymbolicLink() ||
+				current.dev !== parentStats.dev ||
+				current.ino !== parentStats.ino ||
+				current.uid !== parentStats.uid ||
+				(current.mode & 0o777) !== 0o700
+			)
+				throw this.#failure("ownership_mismatch");
+		};
+		const sameDirectory = async () => {
+			await sameParent();
+			const current = await lstat(activePath);
+			if (
+				!current.isDirectory() ||
+				current.isSymbolicLink() ||
+				current.dev !== lockStats.dev ||
+				current.ino !== lockStats.ino ||
+				current.uid !== lockStats.uid ||
+				(current.mode & 0o777) !== 0o700
+			)
+				throw this.#failure("ownership_mismatch");
+		};
+		const readNamespaces = async () => {
+			try {
+				const [pid, mount, user] = await Promise.all([
+					readlink("/proc/self/ns/pid"),
+					readlink("/proc/self/ns/mnt"),
+					readlink("/proc/self/ns/user"),
+				]);
+				if (
+					!/^pid:\[[1-9]\d*\]$/.test(pid) ||
+					!/^mnt:\[[1-9]\d*\]$/.test(mount) ||
+					!/^user:\[[1-9]\d*\]$/.test(user)
+				)
+					throw this.#failure("persistence_unavailable");
+				return { pid, mount, user };
+			} catch {
+				throw this.#failure("persistence_unavailable");
+			}
+		};
+		let originalProcess: {
+			platform: string;
+			pid: number;
+			bootId: string;
+			startTicks: string;
+			machineIdSha256: string;
+			namespaces: { pid: string; mount: string; user: string };
+		} | null = null;
+		if (process.platform === "linux") {
+			const processStat = await readFile("/proc/self/stat", "utf8");
+			const fields = processStat
+				.slice(processStat.lastIndexOf(")") + 2)
+				.trim()
+				.split(/\s+/);
+			const bootId = (await readFile("/proc/sys/kernel/random/boot_id", "utf8")).trim();
+			const machineId = (await readFile("/etc/machine-id", "utf8")).trim();
+			if (!/^\d+$/.test(fields[19] ?? "") || !/^[0-9a-f-]{36}$/.test(bootId) || !/^[0-9a-f]{32}$/.test(machineId))
+				throw this.#failure("persistence_unavailable");
+			originalProcess = {
+				platform: process.platform,
+				pid: process.pid,
+				bootId,
+				startTicks: fields[19]!,
+				machineIdSha256: createHash("sha256").update(machineId).digest("hex"),
+				namespaces: await readNamespaces(),
+			};
+		}
+		// Unavailable process identity never grants recovery authority. Existing ambiguous locks remain untouched.
+		let ownerPath = join(activePath, "owner.json");
+		const leaseId = crypto.randomUUID();
+		const ownerBytes = JSON.stringify({
+			schemaVersion: 1,
+			leaseId,
+			domain: this.domain,
+			operation,
+			pid: process.pid,
+			createdAt: new Date().toISOString(),
+			originalProcess,
+		});
+		await sameDirectory();
+		const owner = await open(ownerPath, "wx", 0o600);
+		let ownerStats: Awaited<ReturnType<typeof owner.stat>>;
+		try {
+			await owner.writeFile(ownerBytes);
+			await owner.sync();
+			ownerStats = await owner.stat();
+		} finally {
+			await owner.close();
+		}
+		cancelled(this.domain, signal);
+		for (const path of [activePath, parent]) {
+			const directory = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+			try {
+				await directory.sync();
+			} finally {
+				await directory.close();
+			}
+		}
+		const originalOwnerStats = ownerStats;
+		const ownerLinks = 1;
+		const readBoundOwner = async (path: string, expectedLinks: number) => {
+			await sameParent();
+			const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+			try {
+				const current = await file.stat();
+				if (
+					!current.isFile() ||
+					current.dev !== originalOwnerStats.dev ||
+					current.ino !== originalOwnerStats.ino ||
+					current.uid !== originalOwnerStats.uid ||
+					current.size !== originalOwnerStats.size ||
+					current.mtimeMs !== originalOwnerStats.mtimeMs ||
+					(current.mode & 0o777) !== 0o600 ||
+					current.nlink !== expectedLinks ||
+					(await file.readFile("utf8")) !== ownerBytes
+				)
+					throw this.#failure("ownership_mismatch");
+				const pathStats = await lstat(path);
+				if (
+					!pathStats.isFile() ||
+					pathStats.isSymbolicLink() ||
+					pathStats.dev !== current.dev ||
+					pathStats.ino !== current.ino
+				)
+					throw this.#failure("ownership_mismatch");
+				return current;
+			} finally {
+				await file.close();
+			}
+		};
+		const syncDirectory = async (path: string) => {
+			const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+			try {
+				const current = await file.stat();
+				const expected = path === activePath ? lockStats : parentStats;
+				if (
+					!current.isDirectory() ||
+					current.dev !== expected.dev ||
+					current.ino !== expected.ino ||
+					current.uid !== expected.uid ||
+					(current.mode & 0o777) !== 0o700
+				)
+					throw this.#failure("ownership_mismatch");
+				await file.sync();
+			} finally {
+				await file.close();
+			}
+		};
+		const verify = async () => {
+			try {
+				if (originalProcess) {
+					const current = await readNamespaces();
+					const expected = originalProcess.namespaces;
+					if (current.pid !== expected.pid || current.mount !== expected.mount || current.user !== expected.user)
+						throw this.#failure("ownership_mismatch");
+				}
+				await sameDirectory();
+				const contents = await readdir(activePath);
+				if (contents.length !== 1 || contents[0] !== "owner.json") throw this.#failure("ownership_mismatch");
+				const current = await readBoundOwner(ownerPath, ownerLinks);
+				if (current.ctimeMs !== ownerStats.ctimeMs || current.mtimeMs !== ownerStats.mtimeMs)
+					throw this.#failure("ownership_mismatch");
+				await sameDirectory();
+			} catch {
+				throw this.#failure("ownership_mismatch");
+			}
+		};
+		await verify();
+		// Retain the original parent descriptor until this single-use lease closes.
+		// Path replacement cannot redirect the namespace handoff to a different parent.
+		const parentHandle = await open(parent, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_DIRECTORY);
+		const releaseCapture = async () => {
+			await verify();
+			const retainedName = `.${this.domain}-profile-lock-${leaseId}.release-directory`;
+			if (!renameExclusiveAt(parentHandle.fd, basename(lock), retainedName))
+				throw this.#failure("ownership_mismatch");
+			activePath = join(parent, retainedName);
+			ownerPath = join(activePath, "owner.json");
+			try {
+				// renameat2 does not bind a source inode. Verify the complete captured
+				// directory and owner after handoff before treating release as successful.
+				await verify();
+				await parentHandle.sync();
+				await verify();
+			} catch (failure) {
+				try {
+					// Preserve unexpected captures intact. Never overwrite an active contender.
+					if (!renameExclusiveAt(parentHandle.fd, retainedName, basename(lock)))
+						throw this.#failure("ownership_mismatch");
+					activePath = lock;
+					ownerPath = join(lock, "owner.json");
+					await parentHandle.sync();
+				} catch (restorationFailure) {
+					throw new AggregateError(
+						[failure, restorationFailure],
+						"Original profile lock capture and complete-directory restoration failed",
+						{ cause: failure },
+					);
+				}
+				throw failure;
+			}
+		};
+		let releaseOutcome: Promise<void> | undefined;
+		const releaseOriginal = async () => {
+			let failed = false;
+			let failure: unknown;
+			try {
+				await releaseCapture();
+			} catch (error) {
+				failed = true;
+				failure = error;
+			}
+			try {
+				await parentHandle.close();
+			} catch (closeFailure) {
+				if (failed)
+					throw new AggregateError(
+						[failure, closeFailure],
+						"Profile lock release and parent descriptor closure failed",
+						{
+							cause: failure,
+						},
+					);
+				throw closeFailure;
+			}
+			if (failed) throw failure;
+		};
+		const lease = {
+			verify,
+			release: () => (releaseOutcome ??= releaseOriginal()),
+		};
+		try {
+			const openedParent = await parentHandle.stat();
+			if (
+				!openedParent.isDirectory() ||
+				openedParent.dev !== parentStats.dev ||
+				openedParent.ino !== parentStats.ino ||
+				openedParent.uid !== parentStats.uid ||
+				(openedParent.mode & 0o777) !== 0o700
+			)
+				throw this.#failure("ownership_mismatch");
+			for (;;) {
+				cancelled(this.domain, signal);
+				await verify();
+				cancelled(this.domain, signal);
+				// Synchronous exclusive publication cannot replace even an empty
+				// historical lock. Interrupted preparations stay separately attributed.
+				if (renameExclusive(prepared, lock)) {
+					activePath = lock;
+					ownerPath = join(lock, "owner.json");
+					break;
+				}
+				if (Date.now() >= deadline) throw this.#failure("lock_busy");
+				await Bun.sleep(20);
+			}
+			await syncDirectory(parent);
+			await verify();
+			if (signal?.aborted) {
+				try {
+					await lease.release();
+				} catch (releaseFailure) {
+					throw new AggregateError(
+						[new Error(`${this.domain} profile operation cancelled`), releaseFailure],
+						"Cancelled profile acquisition retained its original release failure",
+					);
+				}
+				cancelled(this.domain, signal);
+			}
+			return lease;
+		} catch (failure) {
+			// A cancellation release already owns descriptor closure through its one promise.
+			if (!releaseOutcome) {
+				try {
+					await parentHandle.close();
+				} catch (closeFailure) {
+					throw new AggregateError(
+						[failure, closeFailure],
+						"Profile acquisition and parent descriptor closure failed",
+						{ cause: failure },
+					);
+				}
+			}
+			throw failure;
+		}
+	}
+	async #acquireLock(operation: "mutate" | "reset", signal?: AbortSignal) {
+		if (process.platform !== "linux") throw this.#failure("unsupported_platform");
 		const dir = dirname(this.path);
 		try {
 			await mkdir(dir, { recursive: true, mode: 0o700 });
@@ -145,23 +456,25 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 		}
 		const lock = `${this.path}.lock`;
 		const deadline = Date.now() + this.lockTimeoutMs;
-		for (;;) {
+		cancelled(this.domain, signal);
+		const prepared = join(dir, `.${this.domain}-profile-lock-${crypto.randomUUID()}.prepared`);
+		try {
+			await mkdir(prepared, { mode: 0o700 });
 			cancelled(this.domain, signal);
-			try {
-				await mkdir(lock, { mode: 0o700 });
-				return lock;
-			} catch (error) {
-				if (errorCode(error) !== "EEXIST") throw this.#failure("persistence_unavailable");
-				if (Date.now() >= deadline) throw this.#failure("lock_busy");
-				await Bun.sleep(20);
-			}
+			return await this.#publishLockOwner(prepared, lock, operation, deadline, signal);
+		} catch (error) {
+			// Never recursively discard partial ownership or remove a historical
+			// lock. The original IO failure remains available as the private cause.
+			if (error instanceof ProfileStoreError || signal?.aborted) throw error;
+			throw new ProfileStoreError("persistence_unavailable", this.domain, { cause: error });
 		}
 	}
 	async acquireResetLease(signal?: AbortSignal): Promise<ProfileResetLease> {
-		const lock = await this.#acquireLock(signal);
+		const lock = await this.#acquireLock("reset", signal);
 		let released = false;
 		const inspect = async () => {
 			if (released) throw this.#failure("lock_busy");
+			await lock.verify();
 			let stats: Awaited<ReturnType<typeof lstat>> | undefined;
 			try {
 				stats = await lstat(this.path);
@@ -179,12 +492,13 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 			remove: async resetSignal => {
 				if (!(await inspect())) return false;
 				cancelled(this.domain, resetSignal);
+				await lock.verify();
 				await unlink(this.path);
 				return true;
 			},
 			release: async () => {
 				if (released) return;
-				await rm(lock, { recursive: true });
+				await lock.release();
 				released = true;
 			},
 		};
@@ -201,15 +515,10 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 	): Promise<T> {
 		cancelled(this.domain, signal);
 		const dir = dirname(this.path);
-		const lock = await this.#acquireLock(signal);
+		const lock = await this.#acquireLock("mutate", signal);
 		let temp: string | undefined;
 		const commit = async (): Promise<T> => {
-			const owner = await open(join(lock, "owner.json"), "wx", 0o600);
-			try {
-				await owner.writeFile(JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }));
-			} finally {
-				await owner.close();
-			}
+			await lock.verify();
 			cancelled(this.domain, signal);
 			const profile = await this.get();
 			if (revision !== undefined && profile.revision !== revision)
@@ -235,6 +544,7 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 			}
 			cancelled(this.domain, signal);
 			if (!canCommit()) throw new Error(`${this.domain} profile operation cancelled`);
+			await lock.verify();
 			await rename(temp, this.path);
 			temp = undefined;
 			const directory = await open(dir, "r");
@@ -254,7 +564,7 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 		} finally {
 			try {
 				if (temp) await rm(temp, { force: true });
-				await rm(lock, { recursive: true });
+				await lock.release();
 			} catch {
 				failure ??= this.#failure("persistence_unavailable");
 			}
