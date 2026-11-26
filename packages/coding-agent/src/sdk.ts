@@ -966,34 +966,32 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const skills: Skill[] = [...preparedSystemPromptInputs.skills];
 	const skillWarnings: SkillWarning[] = [...preparedSystemPromptInputs.skillWarnings];
 
-	// Discover rules and bucket them in one pass to avoid repeated scans over large rule sets.
-	const { ttsrManager, rulebookRules, alwaysApplyRules } = await logger.time("discoverTtsrRules", async () => {
-		const ttsrSettings = settings.getGroup("ttsr");
-		const ttsrManager = new TtsrManager(ttsrSettings);
+	// Rules, including conditional streaming rules, belong to the effective workspace.
+	const ttsrManager = new TtsrManager(settings.getGroup("ttsr"));
+	const rulebookRules: Rule[] = [];
+	const alwaysApplyRules: Rule[] = [];
+	let rulesCwd = path.resolve(cwd);
+	const loadWorkspaceRules = async (currentCwd: string, injectedRules: string[]): Promise<void> => {
 		const rulesResult =
-			options.rules !== undefined
-				? { items: options.rules, warnings: undefined }
-				: await loadCapability<Rule>(ruleCapability.id, { cwd });
-		const rulebookRules: Rule[] = [];
-		const alwaysApplyRules: Rule[] = [];
+			options.rules !== undefined && path.resolve(currentCwd) === path.resolve(cwd)
+				? { items: options.rules }
+				: await loadCapability<Rule>(ruleCapability.id, { cwd: currentCwd });
+		ttsrManager.clearRules();
+		rulebookRules.splice(0);
+		alwaysApplyRules.splice(0);
 		for (const rule of rulesResult.items) {
 			const isTtsrRule = rule.condition && rule.condition.length > 0 ? ttsrManager.addRule(rule) : false;
-			if (isTtsrRule) {
-				continue;
-			}
+			if (isTtsrRule) continue;
 			if (rule.alwaysApply === true) {
 				alwaysApplyRules.push(rule);
 				continue;
 			}
-			if (rule.description) {
-				rulebookRules.push(rule);
-			}
+			if (rule.description) rulebookRules.push(rule);
 		}
-		if (existingSession.injectedTtsrRules.length > 0) {
-			ttsrManager.restoreInjected(existingSession.injectedTtsrRules);
-		}
-		return { ttsrManager, rulebookRules, alwaysApplyRules };
-	});
+		ttsrManager.restoreInjected(injectedRules);
+		rulesCwd = path.resolve(currentCwd);
+	};
+	await logger.time("discoverTtsrRules", () => loadWorkspaceRules(cwd, existingSession.injectedTtsrRules));
 
 	const contextFiles = [...preparedSystemPromptInputs.contextFiles];
 
@@ -1569,6 +1567,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					description: renderSearchToolBm25Description(discoverableTools),
 				},
 			});
+			const currentCwd = getEffectivePromptCwd();
+			if (rulesCwd !== path.resolve(currentCwd)) {
+				await loadWorkspaceRules(currentCwd, sessionManager.buildSessionContext().injectedTtsrRules);
+			}
+
 			const memoryInstructions = await buildMemoryToolDeveloperInstructions(
 				agentDir,
 				settings,
@@ -1666,7 +1669,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const localeName = currentLocale !== "en" ? getLocaleDisplayName(currentLocale) : undefined;
 			const localeForPrompt = localeName ? { code: currentLocale, name: localeName } : undefined;
 
-			const currentCwd = getEffectivePromptCwd();
 			let prepared = preparedSystemPromptInputs;
 			if (!prepared) prepared = await prepareCurrentSystemPromptInputs();
 			if (
