@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "testCoverageVerified": false,
-  "revision": "4da3cf05d6fb2dd723581aa4b16fe02e8df336a8",
+  "revision": "d32f940f4cd9b2e334a4d73a0a6635177fadc1d3",
   "fingerprint": "24c18e4980b63add34e0c62ce3c2a9e64aac71010f1fcc35f79743a9060d949d",
   "counts": {
     "total": 246,
@@ -11824,6 +11824,7 @@
         "packages/coding-agent/test/profile-lock-directory-retention.test.ts",
         "packages/coding-agent/test/profile-lock-ownership.test.ts",
         "packages/coding-agent/test/profile-lock-process-identity.test.ts",
+        "packages/coding-agent/test/profile-lock-recovery-binding.test.ts",
         "packages/coding-agent/test/profile-lock-release-durability.test.ts",
         "packages/coding-agent/test/profile-lock-release-race.test.ts",
         "packages/coding-agent/test/progressive-context-loading.test.ts",

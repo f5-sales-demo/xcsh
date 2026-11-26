@@ -232,19 +232,54 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 		// Unavailable process identity never grants recovery authority. Existing ambiguous locks remain untouched.
 		let ownerPath = join(activePath, "owner.json");
 		const leaseId = crypto.randomUUID();
-		const ownerBytes = JSON.stringify({
-			schemaVersion: 1,
-			leaseId,
-			domain: this.domain,
-			operation,
-			pid: process.pid,
-			createdAt: new Date().toISOString(),
-			originalProcess,
-		});
 		await sameDirectory();
 		const owner = await open(ownerPath, "wx", 0o600);
+		let ownerBytes: string;
 		let ownerStats: Awaited<ReturnType<typeof owner.stat>>;
 		try {
+			// Read exact integer identities before writing, and bind the original
+			// owner inode. Copied ownership cannot authorize recovery of a new lock.
+			const originalOwner = await owner.stat({ bigint: true });
+			const [originalParent, originalDirectory] = await Promise.all([
+				lstat(parent, { bigint: true }),
+				lstat(prepared, { bigint: true }),
+			]);
+			const identity = (stats: typeof originalOwner) => ({
+				device: String(stats.dev),
+				inode: String(stats.ino),
+				uid: Number(stats.uid),
+			});
+			if (
+				!originalOwner.isFile() ||
+				originalOwner.nlink !== 1n ||
+				(originalOwner.mode & 0o777n) !== 0o600n ||
+				!Number.isSafeInteger(lockStats.dev) ||
+				!Number.isSafeInteger(lockStats.ino) ||
+				!Number.isSafeInteger(parentStats.dev) ||
+				!Number.isSafeInteger(parentStats.ino) ||
+				originalParent.dev !== BigInt(parentStats.dev) ||
+				originalParent.ino !== BigInt(parentStats.ino) ||
+				originalDirectory.dev !== BigInt(lockStats.dev) ||
+				originalDirectory.ino !== BigInt(lockStats.ino) ||
+				originalOwner.uid !== originalDirectory.uid ||
+				originalOwner.dev !== originalDirectory.dev
+			)
+				throw this.#failure("ownership_mismatch");
+			ownerBytes = JSON.stringify({
+				schemaVersion: 1,
+				leaseId,
+				domain: this.domain,
+				operation,
+				pid: process.pid,
+				createdAt: new Date().toISOString(),
+				originalProcess,
+				recoveryBinding: {
+					schemaVersion: 1,
+					parent: identity(originalParent),
+					directory: identity(originalDirectory),
+					owner: identity(originalOwner),
+				},
+			});
 			await owner.writeFile(ownerBytes);
 			await owner.sync();
 			ownerStats = await owner.stat();
