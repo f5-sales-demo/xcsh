@@ -179,9 +179,17 @@ repos:
     hooks:
       - id: actionlint
         name: GitHub Actions lint
-        entry: actionlint
-        language: system
-        files: ^\.github/workflows/.*\.ya?ml$
+        entry: python3 scripts/lint_workflow_actions.py
+        language: python
+        additional_dependencies: [PyYAML==6.0.4]
+        files: ^(\.github/workflows/.*\.ya?ml|scripts/lint_workflow_actions\.py|\.pre-commit-config\.yaml)$
+        pass_filenames: false
+      - id: actionlint-tests
+        name: GitHub Actions lint regressions
+        entry: python3 -m unittest tests.test_workflow_actions
+        language: python
+        additional_dependencies: [PyYAML==6.0.4]
+        files: ^(\.github/workflows/.*\.ya?ml|scripts/lint_workflow_actions\.py|tests/test_workflow_actions\.py|\.pre-commit-config\.yaml)$
         pass_filenames: false
 
   # ===========================================================================
@@ -306,6 +314,7 @@ ci:
     - markdownlint
     - shellcheck
     - actionlint
+    - actionlint-tests
     - hadolint
     - biome-check
     - codespell
