@@ -7,6 +7,7 @@ set -e
 # Options:
 #   --source       Install via bun (installs bun if needed)
 #   --binary       Always install prebuilt binary
+#   --no-recycle   Skip post-install Chrome and Office service recycling
 #   --ref <ref>    Install specific tag/commit/branch
 #   -r <ref>       Shorthand for --ref
 
@@ -20,6 +21,8 @@ BUN_INSTALL_VERSION="1.4.4"
 # Parse arguments
 MODE=""
 REF=""
+RECYCLE=1
+INSTALLED_XCSH=""
 while [ $# -gt 0 ]; do
   case "$1" in
   --source)
@@ -28,6 +31,10 @@ while [ $# -gt 0 ]; do
     ;;
   --binary)
     MODE="binary"
+    shift
+    ;;
+  --no-recycle)
+    RECYCLE=0
     shift
     ;;
   --ref)
@@ -290,6 +297,7 @@ install_via_bun() {
       mv -f "$INSTALL_STAGE_DIR/$native_addon_name" "$INSTALL_DIR/$native_addon_name"
     done
     mv -f "$INSTALL_STAGE_DIR/xcsh" "$INSTALL_DIR/xcsh"
+    INSTALLED_XCSH="$(cd -P "$INSTALL_DIR" && pwd -P)/xcsh"
     rmdir "$INSTALL_STAGE_DIR"
     INSTALL_STAGE_DIR=""
     rm -rf "$SOURCE_TMP_DIR"
@@ -309,6 +317,8 @@ install_via_bun() {
       echo "Failed to install $PACKAGE"
       exit 1
     }
+    bun_bin_dir=$(bun pm bin -g 2>/dev/null || true)
+    [ -z "$bun_bin_dir" ] || INSTALLED_XCSH="$bun_bin_dir/xcsh"
   fi
   echo ""
   echo "✓ Installed xcsh via bun"
@@ -527,6 +537,7 @@ install_binary() {
   printf '%s\n' xcsh >>"$INSTALL_STAGE_DIR/promoted"
   mv -f "$INSTALL_STAGE_DIR/xcsh" "$INSTALL_DIR/xcsh"
   PROMOTION_COMPLETE=1
+  INSTALLED_XCSH="$CANONICAL_INSTALL_DIR/xcsh"
   rm -rf "$INSTALL_STAGE_DIR" || true
   INSTALL_STAGE_DIR=""
   trap - EXIT INT TERM
@@ -560,16 +571,10 @@ binary)
   ;;
 esac
 
-# #1874 Task 7: if this was a re-install/upgrade, proactively recycle so the new
-# version reaches the Chrome extension now (refresh the native-host wrapper +
-# step down a running old manager; the successor re-adopts live workers). Fully
-# best-effort — must never fail the install. Resolve xcsh from PATH or the
-# install dir; skip silently if not found (passive supersede covers it).
-XCSH_BIN="$(command -v xcsh 2>/dev/null || true)"
-[ -z "$XCSH_BIN" ] && [ -x "$INSTALL_DIR/xcsh" ] && XCSH_BIN="$INSTALL_DIR/xcsh"
-if [ -n "$XCSH_BIN" ]; then
-  "$XCSH_BIN" chrome recycle >/dev/null 2>&1 || true
-  # Also stop a running "office serve" squatting :8444 on the replaced binary, so
-  # the next `xcsh office serve` starts clean instead of "port 8444 in use".
-  "$XCSH_BIN" office recycle >/dev/null 2>&1 || true
+# Recycle through the executable promoted by this installation route. An
+# unrelated PATH installation must never receive post-install commands.
+# Each command remains best effort; isolated installations can opt out.
+if [ "$RECYCLE" = 1 ] && [ -n "$INSTALLED_XCSH" ] && [ -x "$INSTALLED_XCSH" ]; then
+  "$INSTALLED_XCSH" chrome recycle >/dev/null 2>&1 || true
+  "$INSTALLED_XCSH" office recycle >/dev/null 2>&1 || true
 fi
