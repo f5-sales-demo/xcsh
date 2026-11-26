@@ -109,6 +109,11 @@ async function main(): Promise<void> {
 		loader,
 		`import indexGzipPath from "./.documentation-generated/terraform/terraform-documentation.sqlite.gz" with { type: "file" };\nimport type { TerraformEmbeddedAssets } from "./terraform-documentation";\nexport const EMBEDDED_TERRAFORM_DOCUMENTATION = { indexGzipPath, pin: ${JSON.stringify(pin)} } satisfies TerraformEmbeddedAssets;\n`,
 	);
+	const format = Bun.spawn(
+		[process.execPath, path.join(root, "node_modules/@biomejs/biome/bin/biome"), "format", "--write", loader],
+		{ cwd: root, stdout: "inherit", stderr: "inherit" },
+	);
+	if ((await format.exited) !== 0) throw new Error("Failed to format generated Terraform documentation loader");
 	console.log(JSON.stringify({ providerVersion: pin.provider_version, ...pin.index }));
 }
 

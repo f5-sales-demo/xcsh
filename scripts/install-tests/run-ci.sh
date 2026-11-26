@@ -45,7 +45,11 @@ find_tarball() {
 }
 
 section "Binary install smoke"
-bun --cwd=packages/natives run build
+if [ "$(uname -m)" = "x86_64" ]; then
+  TARGET_VARIANTS="baseline modern" bun scripts/ci-build-native.ts
+else
+  bun --cwd=packages/natives run build
+fi
 bun --cwd=packages/coding-agent run build
 
 BINARY_DIR="$WORK_DIR/binary-bin"
@@ -68,6 +72,7 @@ bash scripts/install-tests/source-ref.sh
 section "Tarball install smoke"
 TARBALL_DIR="$WORK_DIR/tarballs"
 mkdir -p "$TARBALL_DIR"
+native_candidate_json="$(bun scripts/install-tests/native-candidate.ts "$ROOT_DIR" "$WORK_DIR/native-platform")"
 for pkg in utils natives ai agent tui stats resource-management f5-core coding-agent; do
   (
     cd "$ROOT_DIR/packages/$pkg"
@@ -125,7 +130,8 @@ mkdir -p "$TARBALL_APP_DIR"
 
   # Write overrides so bun resolves inter-package deps from tarballs, not the registry
   # (version 12.x.y hasn't been published yet when CI runs pre-release)
-  bun "$ROOT_DIR/scripts/install-tests/candidate-overrides.ts" \
+  XCSH_NATIVE_CANDIDATE_JSON="$native_candidate_json" \
+    bun "$ROOT_DIR/scripts/install-tests/candidate-overrides.ts" \
     "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" \
     "$stats_tgz" "$resource_mgmt_tgz" "$f5_core_tgz" "$coding_agent_tgz"
 

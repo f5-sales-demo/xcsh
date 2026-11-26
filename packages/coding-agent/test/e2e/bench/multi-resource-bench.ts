@@ -217,6 +217,7 @@ async function injectTimelineObserver(panel: Page): Promise<void> {
 					t_ms: g.performance.now() - base,
 					className: gutter?.className ?? "",
 					// `||` (not `??`): innerText can be "" for a not-yet-laid-out node → fall back to textContent.
+					// biome-ignore lint/performance/useDomNodeTextContent: Measure rendered output, with raw text only as the pre-layout fallback.
 					body: body?.innerText || body?.textContent || "",
 				});
 			}

@@ -72,14 +72,14 @@
       "fcd817c6"
     ],
     "packages/coding-agent/src/debug/log-viewer.ts": [
-      "30094850",
-      "3090c061",
-      "0801b59f",
-      "7c9b9100",
-      "f1d0a301",
-      "5f66f438",
-      "bbc67f71",
-      "a40b97b2"
+      "2f28d692",
+      "201c34a3",
+      "149b1915",
+      "fb921189",
+      "462dfa5e",
+      "ba6deb6d",
+      "ef933bd4",
+      "d4d52f14"
     ],
     "packages/coding-agent/src/edit/renderer.ts": [
       "7404bdd5",
@@ -232,14 +232,14 @@
       "7fa4e874"
     ],
     "packages/coding-agent/src/modes/components/model-selector.ts": [
-      "73db5681",
-      "e1017181",
-      "aca034e1",
-      "30e630b3",
-      "5b364475",
-      "bcaf9d03",
-      "83410ee4",
-      "3db7524c"
+      "d8a54faf",
+      "a67cdb83",
+      "bb596a1e",
+      "1f270116",
+      "92357e1e",
+      "f40f6ff1",
+      "0a1c0db9",
+      "e4c2348c"
     ],
     "packages/coding-agent/src/modes/components/oauth-selector.ts": [
       "4ee12171",
