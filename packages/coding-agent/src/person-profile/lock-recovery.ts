@@ -423,14 +423,7 @@ export async function recoverProfileLock(
 			};
 			await verifyParent();
 			fresh();
-			const receipt = JSON.stringify({
-				schemaVersion: 1,
-				operation: "profile-lock-recovery",
-				approvedReviewSha256: approvedSha256,
-				review,
-				retainedDirectoryPath,
-				scope: { changeProfile: false, signalProcesses: false },
-			});
+			const receipt = recoveryReceipt(review, retainedDirectoryPath);
 			// The original descriptor binds creation even if an ancestor pathname changes.
 			// Exclusive creation consumes this review on both success and partial failure.
 			let intent: Awaited<ReturnType<typeof open>>;
@@ -501,5 +494,147 @@ export async function recoverProfileLock(
 	} catch (cause) {
 		if (cause instanceof ProfileStoreError || cause instanceof AggregateError) throw cause;
 		throw refuse("retention_or_capture_unavailable", cause);
+	}
+}
+
+export interface ProfileLockRecoveryInspection {
+	schemaVersion: 1;
+	status: "original-retained" | "captured";
+	intentUsed: true;
+	completionConfirmed: false;
+	activeLock: "original" | "different" | "absent";
+	retainedDirectoryPath: string;
+	intentPath: string;
+	reviewSha256: string;
+	receiptSha256: string;
+}
+function recoveryReceipt(review: ProfileLockRecoveryReview, retainedDirectoryPath: string): string {
+	return JSON.stringify({
+		schemaVersion: 1,
+		operation: "profile-lock-recovery",
+		approvedReviewSha256: review.sha256,
+		review,
+		retainedDirectoryPath,
+		scope: { changeProfile: false, signalProcesses: false },
+	});
+}
+async function boundedIntentBytes(path: string, domain: ProfileDomain): Promise<string> {
+	const refuse = (reason: string) => new ProfileLockRecoveryError(domain, reason);
+	const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+	try {
+		const initial = await file.stat({ bigint: true });
+		if (
+			!initial.isFile() ||
+			initial.nlink !== 1n ||
+			initial.size <= 0n ||
+			initial.size > 65536n ||
+			initial.uid !== BigInt(process.getuid!()) ||
+			(initial.mode & 0o777n) !== 0o600n
+		)
+			throw refuse("invalid_private_intent");
+		const buffer = Buffer.alloc(65537);
+		let length = 0;
+		while (length < buffer.length) {
+			const { bytesRead } = await file.read(buffer, length, buffer.length - length, length);
+			if (bytesRead === 0) break;
+			length += bytesRead;
+		}
+		if (length > 65536 || BigInt(length) !== initial.size) throw refuse("intent_capture_size_changed");
+		const [held, named] = await Promise.all([file.stat({ bigint: true }), lstat(path, { bigint: true })]);
+		for (const current of [held, named]) {
+			if (
+				!current.isFile() ||
+				current.isSymbolicLink() ||
+				!equalIdentity(identity(current), identity(initial)) ||
+				current.mode !== initial.mode ||
+				current.nlink !== initial.nlink ||
+				current.size !== initial.size ||
+				current.ctimeNs !== initial.ctimeNs ||
+				current.mtimeNs !== initial.mtimeNs
+			)
+				throw refuse("intent_changed_during_inspection");
+		}
+		return new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length));
+	} finally {
+		await file.close();
+	}
+}
+/** Inspect observed namespaces only. Neither an intent nor a capture proves prior action completion. */
+export async function inspectProfileLockRecovery(
+	path: string,
+	domain: ProfileDomain,
+	reviewSha256: string,
+): Promise<ProfileLockRecoveryInspection> {
+	const refuse = (reason: string, cause?: unknown) =>
+		new ProfileLockRecoveryError(domain, reason, cause ? { cause } : undefined);
+	if (process.platform !== "linux" || !process.getuid || !["person", "computer"].includes(domain))
+		throw refuse("unsupported_platform_or_domain");
+	if (!digest(reviewSha256)) throw refuse("invalid_review_digest");
+	const parent = dirname(path);
+	const intentPath = join(parent, `.${domain}-profile-lock-recovery-${reviewSha256}.intent.json`);
+	const retainedDirectoryPath = join(parent, `.${domain}-profile-lock-recovery-${reviewSha256}.recovery-directory`);
+	try {
+		const bytes = await boundedIntentBytes(intentPath, domain);
+		const intent: unknown = JSON.parse(bytes);
+		if (!object(intent) || !object(intent.review)) throw refuse("invalid_recovery_intent");
+		const review = intent.review as unknown as ProfileLockRecoveryReview;
+		const { sha256, ...body } = review;
+		if (
+			sha256 !== reviewSha256 ||
+			hash(JSON.stringify(body)) !== sha256 ||
+			body.schemaVersion !== 1 ||
+			body.path !== path ||
+			body.domain !== domain ||
+			bytes !== recoveryReceipt(review, retainedDirectoryPath)
+		)
+			throw refuse("intent_review_binding_mismatch");
+		let capture: BigIntStats | undefined;
+		try {
+			capture = await lstat(retainedDirectoryPath, { bigint: true });
+		} catch (cause) {
+			if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause;
+		}
+		const current = await reviewLockAt(path, domain, capture ? retainedDirectoryPath : `${path}.lock`);
+		// Rename and restoration change directory ctime; immutable identities,
+		// directory inventory/mtime and exact original owner bytes remain required.
+		if (comparison(current, true) !== comparison(review, true)) throw refuse("inspected_original_identity_changed");
+		let activeLock: ProfileLockRecoveryInspection["activeLock"] = "original";
+		if (capture) {
+			activeLock = "absent";
+			try {
+				const active = await lstat(`${path}.lock`, { bigint: true });
+				if (
+					!active.isDirectory() ||
+					active.isSymbolicLink() ||
+					active.uid !== BigInt(process.getuid()) ||
+					(active.mode & 0o777n) !== 0o700n ||
+					equalIdentity(identity(active), review.binding.directory)
+				)
+					throw refuse("active_name_unverified");
+				activeLock = "different";
+			} catch (cause) {
+				if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause;
+			}
+		}
+		const finalOriginal = await reviewLockAt(path, domain, capture ? retainedDirectoryPath : `${path}.lock`);
+		if (
+			comparison(finalOriginal, true) !== comparison(current, true) ||
+			(await boundedIntentBytes(intentPath, domain)) !== bytes
+		)
+			throw refuse("recovery_evidence_changed_during_inspection");
+		return {
+			schemaVersion: 1,
+			status: capture ? "captured" : "original-retained",
+			intentUsed: true,
+			completionConfirmed: false,
+			activeLock,
+			retainedDirectoryPath,
+			intentPath,
+			reviewSha256,
+			receiptSha256: hash(bytes),
+		};
+	} catch (cause) {
+		if (cause instanceof ProfileStoreError) throw cause;
+		throw refuse("recovery_inspection_unavailable", cause);
 	}
 }
