@@ -109,7 +109,8 @@ class WorkflowActionsTests(unittest.TestCase):
 
     def lint(self, workflows):
         actionlint = shutil.which("actionlint")
-        self.assertIsNotNone(actionlint, "The normal actionlint executable is required")
+        if actionlint is None:
+            self.fail("The normal actionlint executable is required")
         with tempfile.TemporaryDirectory(prefix="workflow lint ") as temporary:
             root = Path(temporary)
             directory = root / ".github/workflows"
