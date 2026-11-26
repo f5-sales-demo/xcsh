@@ -139,8 +139,11 @@ describe("private Herdr acceptance controls", () => {
 		try {
 			const file = path.join(dir, "plan.json");
 			fs.writeFileSync(file, "{}", { mode: 0o644 });
+			fs.chmodSync(file, 0o644);
+			expect(fs.statSync(file).mode & 0o777).toBe(0o644);
 			expect(() => privateJson(file)).toThrow("owner-private");
 			fs.chmodSync(file, 0o600);
+			expect(privateJson(file)).toEqual({});
 			fs.symlinkSync(file, path.join(dir, "link.json"));
 			expect(() => privateJson(path.join(dir, "link.json"))).toThrow("regular");
 		} finally {
