@@ -498,3 +498,159 @@ test.skipIf(process.platform !== "linux")(
 		expect(await readFile(join(f.lock, "owner.json"), "utf8")).toBe(f.owner);
 	},
 );
+
+test.skipIf(process.platform !== "linux")("Every owner verification uses a bounded original descriptor", async () => {
+	const f = await fixture();
+	const real = filesystem.readFile;
+	let unboundedOwnerReads = 0;
+	const injection = spyOn(filesystem, "readFile").mockImplementation(
+		async (path: Parameters<typeof filesystem.readFile>[0], options?: unknown) => {
+			if (String(path) === join(f.lock, "owner.json")) {
+				unboundedOwnerReads++;
+				throw new Error("unbounded owner reader unavailable");
+			}
+			return Reflect.apply(real, filesystem, [path, options]);
+		},
+	);
+	let review: Review | undefined;
+	try {
+		review = await f.candidate.reviewLockRecovery();
+	} finally {
+		injection.mockRestore();
+	}
+	expect(review?.closure.kind).toBe("pid-absent");
+	expect(unboundedOwnerReads).toBe(0);
+	expect(await readFile(join(f.lock, "owner.json"), "utf8")).toBe(f.owner);
+});
+test.skipIf(process.platform !== "linux")(
+	"Owner growth during final descriptor capture is bounded and refused",
+	async () => {
+		const f = await fixture();
+		const realOpen = filesystem.open;
+		const realReadFile = filesystem.readFile;
+		const restore: (() => void)[] = [];
+		let ownerReads = 0;
+		let unboundedOwnerReads = 0;
+		const oversized = "x".repeat(16385);
+		const unbounded = spyOn(filesystem, "readFile").mockImplementation(
+			async (path: Parameters<typeof filesystem.readFile>[0], options?: unknown) => {
+				if (String(path) === join(f.lock, "owner.json")) {
+					unboundedOwnerReads++;
+					await writeFile(join(f.lock, "owner.json"), oversized);
+				}
+				return Reflect.apply(realReadFile, filesystem, [path, options]);
+			},
+		);
+		const injection = spyOn(filesystem, "open").mockImplementation(
+			async (path: Parameters<typeof filesystem.open>[0], ...args: unknown[]) => {
+				const handle: Awaited<ReturnType<typeof filesystem.open>> = await Reflect.apply(realOpen, filesystem, [
+					path,
+					...args,
+				]);
+				if (String(path) === join(f.lock, "owner.json")) {
+					const read = handle.read.bind(handle);
+					const patch = spyOn(handle, "read").mockImplementation(async (...readArgs: unknown[]) => {
+						ownerReads++;
+						if (ownerReads === 3) await writeFile(join(f.lock, "owner.json"), oversized);
+						return Reflect.apply(read, handle, readArgs);
+					});
+					restore.push(() => patch.mockRestore());
+				}
+				return handle;
+			},
+		);
+		try {
+			await expect(f.candidate.reviewLockRecovery()).rejects.toMatchObject({ code: "lock_recovery_unavailable" });
+		} finally {
+			injection.mockRestore();
+			unbounded.mockRestore();
+			for (const restoreOriginal of restore) restoreOriginal();
+		}
+		expect(unboundedOwnerReads).toBe(0);
+		expect(ownerReads).toBe(3);
+		expect(await readFile(join(f.lock, "owner.json"), "utf8")).toBe(oversized);
+		expect(await readFile(f.path, "utf8")).toBe(f.profile);
+	},
+);
+test.skipIf(process.platform !== "linux")("Approval expiry during durable intent cannot move the lock", async () => {
+	const f = await fixture();
+	const review = await f.candidate.reviewLockRecovery();
+	const real = filesystem.open;
+	const now = Date.now();
+	const clock = spyOn(Date, "now").mockReturnValue(now);
+	const restore: (() => void)[] = [];
+	const injection = spyOn(filesystem, "open").mockImplementation(
+		async (path: Parameters<typeof filesystem.open>[0], ...args: unknown[]) => {
+			const handle: Awaited<ReturnType<typeof filesystem.open>> = await Reflect.apply(real, filesystem, [
+				path,
+				...args,
+			]);
+			if (String(path).endsWith(".intent.json")) {
+				const sync = handle.sync.bind(handle);
+				const patch = spyOn(handle, "sync").mockImplementation(async () => {
+					await sync();
+					clock.mockReturnValue(now + 300001);
+				});
+				restore.push(() => patch.mockRestore());
+			}
+			return handle;
+		},
+	);
+	try {
+		await expect(f.candidate.recoverLock(review, review.sha256)).rejects.toMatchObject({
+			code: "lock_recovery_unavailable",
+			reason: "review_expired_or_future",
+		});
+	} finally {
+		injection.mockRestore();
+		clock.mockRestore();
+		for (const restoreOriginal of restore) restoreOriginal();
+	}
+	expect(await readFile(join(f.lock, "owner.json"), "utf8")).toBe(f.owner);
+	expect((await readdir(f.root)).filter(name => name.endsWith(".intent.json"))).toHaveLength(1);
+	expect((await readdir(f.root)).filter(name => name.endsWith(".recovery-directory"))).toHaveLength(0);
+});
+
+for (const age of [300000, 300001]) {
+	test.skipIf(process.platform !== "linux")(
+		`Reviewed action honors the exact five-minute boundary at ${age}ms`,
+		async () => {
+			const f = await fixture();
+			const review = await f.candidate.reviewLockRecovery();
+			const clock = spyOn(Date, "now").mockReturnValue(Date.parse(review.observedAt) + age);
+			try {
+				if (age === 300000) expect((await f.candidate.recoverLock(review, review.sha256)).status).toBe("retained");
+				else
+					await expect(f.candidate.recoverLock(review, review.sha256)).rejects.toMatchObject({
+						code: "lock_recovery_unavailable",
+						reason: "review_expired_or_future",
+					});
+			} finally {
+				clock.mockRestore();
+			}
+			expect((await readdir(f.root)).filter(name => name.endsWith(".intent.json"))).toHaveLength(
+				age === 300000 ? 1 : 0,
+			);
+			expect((await readdir(f.root)).filter(name => name.endsWith(".recovery-directory"))).toHaveLength(
+				age === 300000 ? 1 : 0,
+			);
+			expect(await readFile(f.path, "utf8")).toBe(f.profile);
+		},
+	);
+}
+test.skipIf(process.platform !== "linux")(
+	"Invalid UTF-8 ownership is refused without replacing the original bytes",
+	async () => {
+		const f = await fixture();
+		const ownerPath = join(f.lock, "owner.json");
+		const bytes = Buffer.concat([
+			Buffer.from(f.owner.slice(0, -1) + ',"synthetic":"'),
+			Buffer.from([0xff]),
+			Buffer.from('"}'),
+		]);
+		await writeFile(ownerPath, bytes);
+		await expect(f.candidate.reviewLockRecovery()).rejects.toMatchObject({ code: "lock_recovery_unavailable" });
+		expect(await readFile(ownerPath)).toEqual(bytes);
+		expect(await readFile(f.path, "utf8")).toBe(f.profile);
+	},
+);

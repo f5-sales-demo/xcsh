@@ -137,6 +137,32 @@ function startTicks(raw: string, pid: number): string {
 		throw new Error("invalid_process_identity");
 	return fields[19]!;
 }
+async function boundedOwnerBytes(
+	file: Awaited<ReturnType<typeof open>>,
+	expected: BigIntStats,
+	domain: ProfileDomain,
+): Promise<string> {
+	const buffer = Buffer.alloc(16385);
+	let length = 0;
+	while (length < buffer.length) {
+		const { bytesRead } = await file.read(buffer, length, buffer.length - length, length);
+		if (bytesRead === 0) break;
+		length += bytesRead;
+	}
+	if (length > 16384 || BigInt(length) !== expected.size)
+		throw new ProfileLockRecoveryError(domain, "owner_capture_size_changed");
+	const now = await file.stat({ bigint: true });
+	if (
+		!equalIdentity(identity(now), identity(expected)) ||
+		now.mode !== expected.mode ||
+		now.nlink !== expected.nlink ||
+		now.ctimeNs !== expected.ctimeNs ||
+		now.mtimeNs !== expected.mtimeNs ||
+		now.size !== expected.size
+	)
+		throw new ProfileLockRecoveryError(domain, "evidence_changed_during_review");
+	return new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length));
+}
 /** Read-only review. No owner or profile is removed, reset, signalled or rewritten. */
 async function reviewLockAt(path: string, domain: ProfileDomain, lockPath: string): Promise<ProfileLockRecoveryReview> {
 	const refuse = (reason: string, cause?: unknown) =>
@@ -168,15 +194,7 @@ async function reviewLockAt(path: string, domain: ProfileDomain, lockPath: strin
 						(fileStats.mode & 0o777n) !== 0o600n
 					)
 						throw refuse("invalid_private_evidence");
-					const buffer = Buffer.alloc(16385);
-					let length = 0;
-					while (length < buffer.length) {
-						const { bytesRead } = await file.read(buffer, length, buffer.length - length, null);
-						if (bytesRead === 0) break;
-						length += bytesRead;
-					}
-					if (length > 16384 || BigInt(length) !== fileStats.size) throw refuse("owner_capture_size_changed");
-					const bytes = buffer.subarray(0, length).toString("utf8");
+					const bytes = await boundedOwnerBytes(file, fileStats, domain);
 					let owner: unknown;
 					try {
 						owner = JSON.parse(bytes);
@@ -269,7 +287,7 @@ async function reviewLockAt(path: string, domain: ProfileDomain, lockPath: strin
 						ownerNow.ctimeNs !== fileStats.ctimeNs ||
 						ownerNow.mtimeNs !== fileStats.mtimeNs ||
 						ownerNow.size !== fileStats.size ||
-						(await readFile(join(lockPath, "owner.json"), "utf8")) !== bytes
+						(await boundedOwnerBytes(file, fileStats, domain)) !== bytes
 					)
 						throw refuse("evidence_changed_during_review");
 					const body = {
@@ -347,6 +365,10 @@ export async function recoverProfileLock(
 	cancelled();
 	if (process.platform !== "linux" || !process.getuid || !["person", "computer"].includes(domain))
 		throw refuse("unsupported_platform_or_domain");
+	const fresh = () => {
+		const age = Date.now() - Date.parse(review?.observedAt);
+		if (!Number.isFinite(age) || age < 0 || age > 300000) throw refuse("review_expired_or_future");
+	};
 	let payload: string;
 	try {
 		if (!review || !object(review)) throw refuse("invalid_review");
@@ -362,9 +384,7 @@ export async function recoverProfileLock(
 			payload.length > 32768
 		)
 			throw refuse("review_authorization_mismatch");
-		const observed = Date.parse(body.observedAt);
-		const age = Date.now() - observed;
-		if (!Number.isFinite(age) || age < 0 || age > 300000) throw refuse("review_expired_or_future");
+		fresh();
 	} catch (cause) {
 		if (cause instanceof ProfileStoreError) throw cause;
 		throw refuse("invalid_review", cause);
@@ -402,6 +422,7 @@ export async function recoverProfileLock(
 					throw refuse("reviewed_parent_changed");
 			};
 			await verifyParent();
+			fresh();
 			const receipt = JSON.stringify({
 				schemaVersion: 1,
 				operation: "profile-lock-recovery",
@@ -440,6 +461,7 @@ export async function recoverProfileLock(
 			await verifyParent();
 			await verify(false);
 			cancelled();
+			fresh();
 			if (!renameExclusiveAt(parent.fd, basename(lockPath), retainedName))
 				throw refuse("retained_destination_conflict");
 			try {
