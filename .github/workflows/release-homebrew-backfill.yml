@@ -144,6 +144,7 @@ jobs:
           sudo mkdir -p "$uat_home/tmp"
           sudo cp .controller/scripts/ci-verify-homebrew-cask.sh "$uat_home/ci-verify-homebrew-cask.sh"
           sudo cp .controller/scripts/ci-homebrew-upgrade-fixture.sh "$uat_home/ci-homebrew-upgrade-fixture.sh"
+          sudo cp -R .controller/scripts/installed_agent_acceptance "$uat_home/"
           sudo cp .controller/scripts/installed_agent_e2e.py .controller/scripts/ci-package-installed-agent-evidence.sh \
             .controller/scripts/installed-agent-evidence-recipient.pem "$uat_home/"
           sudo chown -R "$UAT_USER":staff "$uat_home" "$brew_prefix"

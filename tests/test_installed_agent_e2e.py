@@ -2,26 +2,22 @@
 
 import base64
 import copy
-import importlib.util
 import json
 import pathlib
 import sqlite3
 import tempfile
 import time
 import unittest
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 
-SOURCE = pathlib.Path(__file__).resolve().parents[1] / "scripts/installed_agent_e2e.py"
-SPEC = importlib.util.spec_from_file_location("installed_e2e", SOURCE)
-E2E = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(E2E)
+from scripts import installed_agent_acceptance as e2e
 
 
 @contextmanager
 def expected_rejection():
     try:
         yield
-    except E2E.AcceptanceError:
+    except e2e.AcceptanceError:
         return
     reason = "invalid evidence was accepted"
     raise AssertionError(reason)
@@ -145,50 +141,50 @@ def evidence():
 
 class EvidenceValidationTests(unittest.TestCase):
     def test_valid_observed_result(self):
-        assert E2E.validate_evidence(*evidence())["result"] == "pass"
+        assert e2e.validate_evidence(*evidence())["result"] == "pass"
 
-    def reject(self, mutate):
+    def _reject(self, mutate):
         value = copy.deepcopy(evidence())
         mutate(value)
         with expected_rejection():
-            E2E.validate_evidence(*value)
+            e2e.validate_evidence(*value)
 
     def test_missing_tool_call(self):
-        self.reject(lambda v: v[1][0]["content"].pop())
+        self._reject(lambda v: v[1][0]["content"].pop())
 
     def test_missing_tool_result(self):
-        self.reject(lambda v: v[1].pop(2))
+        self._reject(lambda v: v[1].pop(2))
 
     def test_wrong_tool_result_id(self):
-        self.reject(lambda v: v[1][2].update(toolCallId="fabricated"))
+        self._reject(lambda v: v[1][2].update(toolCallId="fabricated"))
 
     def test_wrong_namespace(self):
-        self.reject(
+        self._reject(
             lambda v: v[2][0].update(
                 path="/api/config/namespaces/old/http_loadbalancers"
             )
         )
 
     def test_wrong_credentials(self):
-        self.reject(lambda v: v[2][0].update(credentialMatches=False))
+        self._reject(lambda v: v[2][0].update(credentialMatches=False))
 
     def test_backend_status_mismatch(self):
-        self.reject(lambda v: v[2][0].update(status=403))
+        self._reject(lambda v: v[2][0].update(status=403))
 
     def test_backend_unrelated_request(self):
-        self.reject(lambda v: v[2][0].update(requestId="unrelated"))
+        self._reject(lambda v: v[2][0].update(requestId="unrelated"))
 
     def test_wrong_backend_endpoint(self):
-        self.reject(lambda v: v[2][0].update(endpoint="context-b"))
+        self._reject(lambda v: v[2][0].update(endpoint="context-b"))
 
     def test_inherited_fallback_activity(self):
-        self.reject(lambda v: v[4].update(inheritedFallbackUnused=False))
+        self._reject(lambda v: v[4].update(inheritedFallbackUnused=False))
 
     def test_wrong_assistant_model(self):
-        self.reject(lambda v: v[1][-1].update(model="other-model"))
+        self._reject(lambda v: v[1][-1].update(model="other-model"))
 
     def test_context_activation_cannot_substitute_for_status(self):
-        self.reject(
+        self._reject(
             lambda v: v[1][0]["content"][0]["arguments"].update(
                 action="activate", name="context-a"
             )
@@ -219,7 +215,7 @@ class EvidenceValidationTests(unittest.TestCase):
             tools=["xcsh_context", "bash", "xcsh_api"], shellValues=["NS=default"]
         )
         with expected_rejection():
-            E2E.validate_evidence(*value)
+            e2e.validate_evidence(*value)
 
     def test_failed_bash_result_is_not_environment_evidence(self):
         value = evidence()
@@ -228,7 +224,7 @@ class EvidenceValidationTests(unittest.TestCase):
                 "type": "toolCall",
                 "id": "bash-1",
                 "name": "bash",
-                "arguments": {"command": E2E.SHELL_COMMAND},
+                "arguments": {"command": e2e.SHELL_COMMAND},
             }
         )
         value[1].insert(
@@ -246,14 +242,14 @@ class EvidenceValidationTests(unittest.TestCase):
             tools=["xcsh_context", "bash", "xcsh_api"], shellValues=["NS=default"]
         )
         with expected_rejection():
-            E2E.validate_evidence(*value)
+            e2e.validate_evidence(*value)
 
     def test_wrong_context_guard_is_not_the_requested_guard(self):
         value = evidence()
         value[3]["guard"] = "context-a"
         value[1][0]["content"][1]["arguments"]["contextName"] = "other-context"
         with expected_rejection():
-            E2E.validate_evidence(*value)
+            e2e.validate_evidence(*value)
 
     def test_extra_report_fields_cannot_claim_unobserved_resources(self):
         value = evidence()
@@ -261,7 +257,7 @@ class EvidenceValidationTests(unittest.TestCase):
         report["otherResources"] = ["invented-lb"]
         value[1][-1]["content"][0]["text"] = json.dumps(report)
         with expected_rejection():
-            E2E.validate_evidence(*value)
+            e2e.validate_evidence(*value)
 
     def test_repeated_local_rejections_are_not_bounded_api_execution(self):
         value = evidence()
@@ -296,15 +292,15 @@ class EvidenceValidationTests(unittest.TestCase):
             }
         )
         with expected_rejection():
-            E2E.validate_evidence(*value)
+            e2e.validate_evidence(*value)
 
     def test_error_turn_rejects_for_incompletion_before_missing_tools(self):
         value = evidence()
         value[1] = [{"role": "assistant", "stopReason": "error", "content": []}]
         reason = None
         try:
-            E2E.validate_evidence(*value)
-        except E2E.AcceptanceError as error:
+            e2e.validate_evidence(*value)
+        except e2e.AcceptanceError as error:
             reason = str(error)
         assert reason == "incomplete assistant turn"
 
@@ -331,7 +327,7 @@ class EvidenceValidationTests(unittest.TestCase):
             {"namespace": "default", "outcome": "match", "matchingContent": "invented"}
         )
         with expected_rejection():
-            E2E.validate_evidence(*value)
+            e2e.validate_evidence(*value)
 
     def test_invalid_regex_requires_actual_pattern_diagnostic(self):
         value = evidence()
@@ -356,58 +352,66 @@ class EvidenceValidationTests(unittest.TestCase):
             {"namespace": "default", "outcome": "invalid", "matchingContent": ""}
         )
         with expected_rejection():
-            E2E.validate_evidence(*value)
+            e2e.validate_evidence(*value)
+
+
+class TransportAndPersistenceTests(unittest.TestCase):
+    def _reject(self, mutate):
+        value = copy.deepcopy(evidence())
+        mutate(value)
+        with expected_rejection():
+            e2e.validate_evidence(*value)
 
     def test_explicit_namespace_hides_resolution(self):
-        self.reject(
+        self._reject(
             lambda v: v[1][0]["content"][1]["arguments"].update(
                 params={"namespace": "default"}
             )
         )
 
     def test_discovery_expansion(self):
-        self.reject(
+        self._reject(
             lambda v: v[1][0]["content"][1]["arguments"].update(expandDiscovery=True)
         )
 
     def test_missing_backend_request(self):
-        self.reject(lambda v: v[2].clear())
+        self._reject(lambda v: v[2].clear())
 
     def test_false_resource_claim(self):
-        self.reject(lambda v: v[1][2]["content"][0].update(text="empty response"))
+        self._reject(lambda v: v[1][2]["content"][0].update(text="empty response"))
 
     def test_missing_final_observed_names(self):
-        self.reject(lambda v: v[1][-1]["content"][0].update(text="Success!"))
+        self._reject(lambda v: v[1][-1]["content"][0].update(text="Success!"))
 
     def test_incomplete_assistant_turn(self):
-        self.reject(lambda v: v[1][-1].update(stopReason="length"))
+        self._reject(lambda v: v[1][-1].update(stopReason="length"))
 
     def test_truncated_transcript(self):
-        self.reject(lambda v: v[4].update(evidenceComplete=False))
+        self._reject(lambda v: v[4].update(evidenceComplete=False))
 
     def test_missing_fingerprint(self):
-        self.reject(lambda v: v[0].pop("sha256"))
+        self._reject(lambda v: v[0].pop("sha256"))
 
     def test_persistence_changed(self):
-        self.reject(lambda v: v[4].update(savedProfilesUnchanged=False))
+        self._reject(lambda v: v[4].update(savedProfilesUnchanged=False))
 
     def test_no_immediate_border(self):
-        self.reject(lambda v: v[4].update(selectionBorder=False))
+        self._reject(lambda v: v[4].update(selectionBorder=False))
 
     def test_namespace_selection_network_request(self):
-        self.reject(lambda v: v[4].update(selectionNetworkFree=False))
+        self._reject(lambda v: v[4].update(selectionNetworkFree=False))
 
     def test_external_rg_called(self):
-        self.reject(lambda v: v[4].update(externalRgExecutions=1))
+        self._reject(lambda v: v[4].update(externalRgExecutions=1))
 
     def test_unbounded_retry(self):
-        self.reject(lambda v: v[2].extend(copy.deepcopy(v[2]) * 3))
+        self._reject(lambda v: v[2].extend(copy.deepcopy(v[2]) * 3))
 
     def test_context_status_disagrees(self):
-        self.reject(lambda v: v[1][1]["details"].update(activeContextNamespace="old"))
+        self._reject(lambda v: v[1][1]["details"].update(activeContextNamespace="old"))
 
     def test_http_failure_is_distinct_from_empty_success(self):
-        self.reject(lambda v: v[1][2].update(isError=True))
+        self._reject(lambda v: v[1][2].update(isError=True))
 
     def test_failure_with_fabricated_success(self):
         value = evidence()
@@ -424,7 +428,7 @@ class EvidenceValidationTests(unittest.TestCase):
             }
         )
         with expected_rejection():
-            E2E.validate_evidence(*value)
+            e2e.validate_evidence(*value)
 
 
 class CredentialHandoffTests(unittest.TestCase):
@@ -438,7 +442,7 @@ class CredentialHandoffTests(unittest.TestCase):
         )
         token = "synthetic-header." + encoded + ".synthetic-signature"
         path = pathlib.Path(directory) / "auth.db"
-        with sqlite3.connect(path) as database:
+        with closing(sqlite3.connect(path)) as database:
             database.execute(
                 "CREATE TABLE auth_credentials(provider TEXT, credential_type TEXT, data TEXT, disabled_cause TEXT)"
             )
@@ -446,13 +450,14 @@ class CredentialHandoffTests(unittest.TestCase):
                 "INSERT INTO auth_credentials VALUES (?,?,?,?)",
                 ("openai-codex", "oauth", json.dumps({"access": token}), disabled),
             )
+            database.commit()
         return path, token
 
     def test_enabled_credential_handoff_keeps_store_bytes_unchanged(self):
         with tempfile.TemporaryDirectory() as directory:
             path, token = self.fixture(directory)
             before = path.read_bytes()
-            assert E2E.load_enabled_credential(path) == token
+            assert e2e.load_enabled_credential(path) == token
             assert path.read_bytes() == before
 
     def test_disabled_credential_is_not_reenabled_or_used(self):
@@ -460,34 +465,34 @@ class CredentialHandoffTests(unittest.TestCase):
             path, _ = self.fixture(directory, disabled="synthetic-disabled")
             before = path.read_bytes()
             with expected_rejection():
-                E2E.load_enabled_credential(path)
+                e2e.load_enabled_credential(path)
             assert path.read_bytes() == before
 
     def test_expired_enabled_credential_is_not_used(self):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.fixture(directory, expiry=-100)
             with expected_rejection():
-                E2E.load_enabled_credential(path)
+                e2e.load_enabled_credential(path)
 
     def test_final_scan_finds_late_wal_and_extensionless_writes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
             marker = "synthetic credential marker"
-            assert E2E.credential_is_absent(root, marker)
+            assert e2e.credential_is_absent(root, marker)
             (root / "auth.db-wal").write_bytes(
                 b"x" * (1024 * 1024 - 5) + marker.encode()
             )
-            assert not E2E.credential_is_absent(root, marker)
+            assert not e2e.credential_is_absent(root, marker)
             (root / "auth.db-wal").unlink()
             (root / "exit-write").write_text(marker)
-            assert not E2E.credential_is_absent(root, marker)
+            assert not e2e.credential_is_absent(root, marker)
 
     def test_final_scan_checks_private_filenames(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
             marker = "synthetic-credential-name"
             (root / marker).write_text("unrelated content")
-            assert not E2E.credential_is_absent(root, marker)
+            assert not e2e.credential_is_absent(root, marker)
 
 
 if __name__ == "__main__":

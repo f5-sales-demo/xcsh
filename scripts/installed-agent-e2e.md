@@ -8,6 +8,9 @@ markers withheld from the prompt. A completion claim alone cannot pass.
 The supported hosts are Linux and macOS. The controller needs Python's standard library
 and OpenSSL; it does not need Bun or external `rg`. xcsh ships its native search engine.
 Operators who use the separate shell `rg` command manage that utility themselves.
+Keep `installed_agent_acceptance/` beside the `installed_agent_e2e.py` entrypoint when
+copying the controller. Its modules separate validation, fixture transport, profile setup,
+terminal capture, credential handoff, and scenario execution without adding dependencies.
 
 ## Run the exact artifact
 

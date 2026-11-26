@@ -134,8 +134,10 @@ jobs:
           TARGET_ARCH: x64
           TARGET_VARIANTS: baseline
         run: bun run ci:build:native
-      - name: Reset optional Terraform loader for native-only source tests
-        run: bun --cwd=packages/coding-agent run generate-terraform-documentation-index --reset
+      - name: Reset optional documentation loaders for native-only source tests
+        run: |
+          bun --cwd=packages/coding-agent run generate-documentation-index --reset
+          bun --cwd=packages/coding-agent run generate-terraform-documentation-index --reset
       - name: Sandbox self-test inside live bash profile
         run: bun test packages/coding-agent/test/sandbox-check.test.ts --max-concurrency=2
       - name: Upload verified Linux x64 natives
@@ -272,8 +274,10 @@ jobs:
           TARGET_ARCH: ${{ matrix.arch }}
           TARGET_VARIANTS: ${{ matrix.variants }}
         run: bun run ci:build:native
-      - name: Reset optional Terraform loader for native-only source tests
-        run: bun --cwd=packages/coding-agent run generate-terraform-documentation-index --reset
+      - name: Reset optional documentation loaders for native-only source tests
+        run: |
+          bun --cwd=packages/coding-agent run generate-documentation-index --reset
+          bun --cwd=packages/coding-agent run generate-terraform-documentation-index --reset
       - name: Sandbox self-test inside live bash profile
         if: matrix.sandbox_check
         run: bun test packages/coding-agent/test/sandbox-check.test.ts --max-concurrency=2
@@ -1360,6 +1364,7 @@ jobs:
           sudo mkdir -p "$uat_home/tmp"
           sudo cp scripts/ci-verify-homebrew-cask.sh "$uat_home/ci-verify-homebrew-cask.sh"
           sudo cp scripts/ci-homebrew-upgrade-fixture.sh "$uat_home/ci-homebrew-upgrade-fixture.sh"
+          sudo cp -R scripts/installed_agent_acceptance "$uat_home/"
           sudo cp scripts/installed_agent_e2e.py scripts/ci-package-installed-agent-evidence.sh \
             scripts/installed-agent-evidence-recipient.pem "$uat_home/"
           sudo chown -R "$UAT_USER":staff "$uat_home" "$brew_prefix"
