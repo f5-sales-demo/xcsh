@@ -104,6 +104,7 @@ export async function assertText(page: Page, selector: string, expected: string,
 	await waitForXcSettled(page);
 	const h = await resolve(page, selector, context);
 	try {
+		// biome-ignore lint/performance/useDomNodeTextContent: Assertions need rendered text, excluding hidden descendants.
 		const txt = (await h.evaluate(el => (el as unknown as { innerText: string }).innerText)) as string;
 		if (!txt.includes(expected)) throw new Error(`assert failed: "${expected}" not in "${txt.slice(0, 200)}"`);
 	} finally {

@@ -48,6 +48,10 @@ function fixture() {
 		...process.env,
 		PATH: `${bin}:${process.env.PATH}`,
 		ROOT_DIR: rootDir,
+		native_candidate_json: JSON.stringify({
+			name: "@f5-sales-demo/pi-natives-linux-x64",
+			tarball: join(root, "native candidate.tgz"),
+		}),
 		...Object.fromEntries(variables.map((name, index) => [name, archives[index]])),
 	};
 	return { root, archives, initial, packagePath, env };
@@ -66,7 +70,10 @@ test("candidate overrides retain exact archive paths when node resolves to Bun",
 		expect(result.status).toBe(0);
 		const pkg = JSON.parse(readFileSync(f.packagePath, "utf8"));
 		expect(pkg.name).toBe("disposable-candidate");
-		expect(pkg.overrides).toEqual(Object.fromEntries(names.map((name, index) => [name, f.archives[index]])));
+		expect(pkg.overrides).toEqual({
+			...Object.fromEntries(names.map((name, index) => [name, f.archives[index]])),
+			"@f5-sales-demo/pi-natives-linux-x64": join(f.root, "native candidate.tgz"),
+		});
 	} finally {
 		rmSync(f.root, { recursive: true, force: true });
 	}

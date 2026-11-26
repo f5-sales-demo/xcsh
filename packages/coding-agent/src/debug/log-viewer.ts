@@ -666,7 +666,7 @@ export class DebugLogViewerComponent implements Component, MouseRoutable {
 		if (firstContent) {
 			const needle = Bun.stripANSI(firstContent.content).trim();
 			const index = frame.findIndex(line => Bun.stripANSI(line).includes(needle));
-			this.#bodyRowStart = index >= 0 ? index : 0;
+			this.#bodyRowStart = Math.max(0, index);
 		}
 		this.#bodyRowCount = visibleBodyLines.length;
 		return frame;

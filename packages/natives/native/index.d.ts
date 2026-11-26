@@ -1222,6 +1222,22 @@ export interface ReadResult {
 }
 
 /**
+ * Publish one prepared path atomically. Returns false when the destination
+ * already exists. Other OS/filesystem errors throw; ordinary rename is never used.
+ */
+export declare function renameExclusive(source: string, destination: string): boolean
+
+/**
+ * Rename two single-component names relative to the same retained directory
+ * descriptor.
+ *
+ * Linux only. Returns false on an existing destination; other errors
+ * throw. Source identity must be verified separately after capture; this operation
+ * is not an atomic expected-inode deletion or a recovery authorization.
+ */
+export declare function renameExclusiveAt(directoryFd: number, source: string, destination: string): boolean
+
+/**
  * Options for `ChunkState.render`: which subtree to show and how anchors
  * appear.
  */

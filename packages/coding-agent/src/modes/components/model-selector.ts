@@ -979,7 +979,7 @@ export class ModelSelectorComponent extends Container {
 		const previousIndex = this.#providerGroups.findIndex(
 			group => group.id === previousProvider || group.providers.includes(previousProvider),
 		);
-		this.#activeTabIndex = previousIndex >= 0 ? previousIndex : 0;
+		this.#activeTabIndex = Math.max(0, previousIndex);
 	}
 
 	async #refreshSelectedProvider(): Promise<void> {
@@ -1224,7 +1224,7 @@ export class ModelSelectorComponent extends Container {
 		const currentLevel =
 			this.#menuScope === "conversation" ? this.#currentThinkingLevel : this.#getCurrentRoleThinkingLevel(role);
 		const foundIndex = options.indexOf(currentLevel);
-		return foundIndex >= 0 ? foundIndex : 0;
+		return Math.max(0, foundIndex);
 	}
 
 	#contextSettingFor(model: Model): "providers.openaiContextTier" | "providers.litellmContextTier" | undefined {
@@ -1265,7 +1265,7 @@ export class ModelSelectorComponent extends Container {
 		if (!setting) return 0;
 		const current = this.#settings.get(setting) as CodexContextTier;
 		const index = this.#contextActions(model).findIndex(action => action.tier === current);
-		return index >= 0 ? index : 0;
+		return Math.max(0, index);
 	}
 
 	#getSelectedItem(): ModelItem | CanonicalModelItem | undefined {

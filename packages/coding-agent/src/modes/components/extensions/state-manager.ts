@@ -522,7 +522,7 @@ export async function refreshState(
 
 	// Find new index for current provider (tabs may have reordered)
 	const newActiveTabIndex = tabs.findIndex(t => t.id === providerId);
-	const activeTabIndex = newActiveTabIndex >= 0 ? newActiveTabIndex : 0;
+	const activeTabIndex = Math.max(0, newActiveTabIndex);
 
 	// Try to preserve selection
 	const selectedId = state.selected?.id;

@@ -4,6 +4,7 @@ exclude = [
   "crates/brush-core-vendored",
   "crates/brush-builtins-vendored",
   "crates/portable-pty-vendored",
+  "crates/uucore-vendored",
   "crates/tree-sitter-glimmer",
 ]
 resolver = "3"
@@ -20,6 +21,7 @@ brush-core = { path = "crates/brush-core-vendored" }
 brush-builtins = { path = "crates/brush-builtins-vendored" }
 tree-sitter-glimmer = { path = "crates/tree-sitter-glimmer" }
 portable-pty = { path = "crates/portable-pty-vendored" }
+uucore = { path = "crates/uucore-vendored" }
 
 [profile.release]
 opt-level = 3
