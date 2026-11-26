@@ -54,7 +54,25 @@ test("obsolete machine storage is rejected and can be reset without a backup", a
 	});
 	expect(await service.reset()).toBe(true);
 	expect(await service.status()).toMatchObject({ status: "missing" });
-	expect((await import("node:fs/promises")).readdir(join(path, ".."))).resolves.toEqual([]);
+	expect(await Bun.file(path).exists()).toBe(false);
+	const filesystem = await import("node:fs/promises");
+	const retained = await filesystem.readdir(join(path, ".."));
+	expect(retained).toHaveLength(2);
+	const owners: Array<{ leaseId: string; operation: string }> = [];
+	for (const name of retained) {
+		expect(name).toMatch(/^\.computer-profile-lock-[0-9a-f-]{36}\.release-directory$/);
+		const directory = join(path, "..", name);
+		expect(await filesystem.readdir(directory)).toEqual(["owner.json"]);
+		const ownerPath = join(directory, "owner.json");
+		const owner = JSON.parse(await readFile(ownerPath, "utf8"));
+		expect(owner).toMatchObject({ schemaVersion: 1, domain: "computer", pid: process.pid });
+		expect(owner.leaseId).toMatch(/^[0-9a-f-]{36}$/);
+		expect((await stat(directory)).mode & 0o777).toBe(0o700);
+		expect((await stat(ownerPath)).mode & 0o777).toBe(0o600);
+		owners.push(owner);
+	}
+	expect(owners.map(owner => owner.operation).sort()).toEqual(["mutate", "reset"]);
+	expect(new Set(owners.map(owner => owner.leaseId)).size).toBe(2);
 });
 test("machine tool reads in Plan and blocks refresh through the same permission guard", async () => {
 	const { service, calls } = await setup();

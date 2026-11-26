@@ -33,6 +33,7 @@ pub mod clipboard;
 pub mod diff;
 pub mod fd;
 pub mod fs_cache;
+pub mod fs_publication;
 pub mod glob;
 pub mod glob_util;
 pub mod grep;
