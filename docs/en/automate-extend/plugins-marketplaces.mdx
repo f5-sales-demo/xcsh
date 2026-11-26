@@ -20,6 +20,14 @@ The built-in marketplace cannot be removed because xcsh reconciles its canonical
 
 Run `xcsh plugin discover` or the marketplace action shown by `xcsh plugin --help`. Review the package source, version, requested features, and install scope.
 
+## How does reviewed configuration setup work?
+
+Integrations may declare `prepareConfiguration(signal)` alongside their authentication setup plan. It returns a title, summary, questions with optional defaults or choices, a validation callback, and an apply callback. Discovery prepares a proposal without writing configuration.
+
+Both `xcsh plugin setup <plugin>` and `/plugin setup <plugin>` verify authentication before this stage. A ready integration reuses its authentication and still refreshes configuration discovery. The terminal and TUI collect answers, validate them, and review the proposed private changes before calling apply. Cancellation, invalid answers and superseded discovery plans do not call apply. A failed apply remains an error.
+
+The plugin owns its private storage and must revalidate its target and reject concurrent file changes before replacing configuration. Integration probes and model-callable tools do not perform configuration setup. Integrations without this optional callback retain their existing setup behavior.
+
 ## How do I diagnose a plugin?
 
 Use `xcsh plugin list --json` and `xcsh plugin doctor`. Doctor checks installed marketplace source directories, manifests, declared entrypoints, runtime requirements, and enabled dependencies in their effective scope. It also checks legacy npm dependencies when their package manifest exists.

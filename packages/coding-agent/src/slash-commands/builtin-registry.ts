@@ -31,6 +31,7 @@ import {
 } from "../integrations/setup";
 import type { IntegrationHandle, IntegrationSetupPlan } from "../integrations/types";
 import { BorderedLoader } from "../modes/components/bordered-loader";
+import { reviewIntegrationConfiguration } from "../modes/components/integration-configuration";
 import type { ActionReview } from "../modes/components/reviewed-action";
 import { runReviewedAction } from "../modes/components/reviewed-action-dialog";
 import { getLoginOptions } from "../modes/controllers/login-options";
@@ -1789,7 +1790,14 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							break;
 						}
 						const current = await handle.get();
+						if (handle.prepareConfiguration && current.state !== "ready" && current.state !== "setup_required") {
+							pluginError(
+								`Integration ${handle.id} authentication could not be verified (${current.reason ?? current.state}); retry readiness before configuration setup.`,
+							);
+							break;
+						}
 						if (current.state === "ready") {
+							await reviewIntegrationConfiguration(runtime.ctx, handle);
 							showPluginStatus(`${handle.plugin ?? handle.id}: ready (setup is not required)`);
 							break;
 						}
@@ -1837,6 +1845,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						else if (outcome === "unresolved")
 							pluginError(`Plugin setup for ${rest} remains unresolved; retry from a fresh review.`);
 						else if (outcome === "succeeded" && result) {
+							if (result.state === "ready") await reviewIntegrationConfiguration(runtime.ctx, handle);
 							showPluginStatus(
 								`${handle.plugin ?? handle.id}: ${result.state}${result.reason ? ` (${result.reason})` : ""}`,
 							);

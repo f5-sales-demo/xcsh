@@ -1131,6 +1131,15 @@
           "purpose": "Answer this question within Install plugins and marketplaces: How do I diagnose a plugin?.",
           "readerQuestion": "How do I diagnose a plugin?",
           "text": "How do I diagnose a plugin?"
+        },
+        {
+          "text": "How does reviewed configuration setup work?",
+          "readerQuestion": "How does reviewed configuration setup work?",
+          "purpose": "Explain reviewed configuration refresh after authentication and cancellation without private writes.",
+          "evidence": [
+            "source-authority"
+          ],
+          "legacyConceptIds": []
         }
       ],
       "path": "docs/en/automate-extend/plugins-marketplaces.mdx",
@@ -1138,7 +1147,8 @@
       "readerNeed": "Install plugins and marketplaces: Discover, install, configure, update, and diagnose xcsh plugins.",
       "sourceAuthority": [
         "packages/coding-agent/src/extensibility/extensions",
-        "packages/coding-agent/src/sdk.ts"
+        "packages/coding-agent/src/sdk.ts",
+        "packages/coding-agent/src/integrations"
       ]
     },
     {
