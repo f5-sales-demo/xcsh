@@ -654,3 +654,168 @@ test.skipIf(process.platform !== "linux")(
 		expect(await readFile(f.path, "utf8")).toBe(f.profile);
 	},
 );
+
+// Model the reboot kernel observations only. Files, original inodes, private
+// ownership bytes and the exclusive rename remain real; this is offline evidence.
+async function previousBootFixture(changeBootAtIntent = false, failCapture = false) {
+	const f = await fixture();
+	const boot = "11111111-1111-4111-8111-111111111111";
+	let currentBoot = boot;
+	const bootSeconds = Math.ceil(Date.now() / 1000) + 10;
+	const capturedCtime = BigInt(bootSeconds + 1) * 1000000000n;
+	const read = filesystem.readFile;
+	const opened = filesystem.open;
+	const namedStat = filesystem.lstat;
+	const restoreHandles: Array<() => void> = [];
+	let captured = false;
+	let failedCapture = false;
+	const isCapture = (path: unknown) => {
+		if (String(path).endsWith(".recovery-directory")) captured = true;
+		return String(path).endsWith(".recovery-directory") || (captured && String(path) === f.lock);
+	};
+	const reads = spyOn(filesystem, "readFile").mockImplementation(
+		async (path: Parameters<typeof filesystem.readFile>[0], options?: unknown) => {
+			if (String(path) === "/proc/sys/kernel/random/boot_id") return `${currentBoot}\n`;
+			if (String(path) === "/proc/stat") return `btime ${bootSeconds}\n`;
+			return Reflect.apply(read, filesystem, [path, options]);
+		},
+	);
+	const descriptors = spyOn(filesystem, "open").mockImplementation(async (path, flags, mode) => {
+		const handle = await opened(path, flags, mode);
+		if (changeBootAtIntent && String(path).endsWith(".intent.json"))
+			currentBoot = "22222222-2222-4222-8222-222222222222";
+		if (isCapture(path)) {
+			const real = handle.stat;
+			const stats = spyOn(handle, "stat").mockImplementation((async (options?: unknown) => {
+				const value = await Reflect.apply(real, handle, [options]);
+				return Object.assign(Object.create(Object.getPrototypeOf(value)), value, { ctimeNs: capturedCtime });
+			}) as never);
+			restoreHandles.push(() => stats.mockRestore());
+		}
+		return handle;
+	});
+	const named = spyOn(filesystem, "lstat").mockImplementation((async (path: unknown, options?: unknown) => {
+		const value = await Reflect.apply(namedStat, filesystem, [path, options]);
+		if (failCapture && String(path).endsWith(".recovery-directory") && !failedCapture) {
+			failedCapture = true;
+			throw new Error("synthetic interrupted capture observation");
+		}
+		return isCapture(path)
+			? Object.assign(Object.create(Object.getPrototypeOf(value)), value, { ctimeNs: capturedCtime })
+			: value;
+	}) as never);
+	return {
+		...f,
+		async close() {
+			for (const restore of restoreHandles) restore();
+			named.mockRestore();
+			descriptors.mockRestore();
+			reads.mockRestore();
+		},
+	};
+}
+
+test.skipIf(process.platform !== "linux")(
+	"Previous boot capture preserves original evidence through changed directory ctime",
+	async () => {
+		const f = await previousBootFixture();
+		try {
+			const review = await f.candidate.reviewLockRecovery();
+			expect(review.closure.kind).toBe("previous-boot");
+			const result = await f.candidate.recoverLock(review, review.sha256);
+			expect(result.status).toBe("retained");
+			const { inspectProfileLockRecovery } = await import("../src/person-profile/lock-recovery");
+			for (let round = 0; round < 2; round++) {
+				expect(await inspectProfileLockRecovery(f.path, "person", review.sha256)).toMatchObject({
+					status: "captured",
+					activeLock: "absent",
+					intentUsed: true,
+					completionConfirmed: false,
+				});
+			}
+			expect(await readFile(join(result.retainedDirectoryPath, "owner.json"), "utf8")).toBe(f.owner);
+			expect(await readFile(f.path, "utf8")).toBe(f.profile);
+			const names = (await readdir(f.root)).sort();
+			await expect(f.candidate.recoverLock(review, review.sha256)).rejects.toMatchObject({
+				code: "lock_recovery_unavailable",
+			});
+			expect((await readdir(f.root)).sort()).toEqual(names);
+		} finally {
+			await f.close();
+		}
+	},
+);
+
+test.skipIf(process.platform !== "linux")(
+	"Previous boot changed again before capture retains the original and consumes intent",
+	async () => {
+		const f = await previousBootFixture(true);
+		try {
+			const review = await f.candidate.reviewLockRecovery();
+			expect(review.closure.kind).toBe("previous-boot");
+			await expect(f.candidate.recoverLock(review, review.sha256)).rejects.toMatchObject({
+				code: "lock_recovery_unavailable",
+				reason: "reviewed_identity_changed",
+			});
+			expect(await readFile(join(f.lock, "owner.json"), "utf8")).toBe(f.owner);
+			expect(await readFile(f.path, "utf8")).toBe(f.profile);
+			const names = await readdir(f.root);
+			expect(names.some(n => n.endsWith(".intent.json"))).toBe(true);
+			expect(names.some(n => n.endsWith(".recovery-directory"))).toBe(false);
+		} finally {
+			await f.close();
+		}
+	},
+);
+
+test.skipIf(process.platform !== "linux")(
+	"Previous boot captured owner changes remain unavailable to inspection",
+	async () => {
+		const f = await previousBootFixture();
+		try {
+			const review = await f.candidate.reviewLockRecovery();
+			const result = await f.candidate.recoverLock(review, review.sha256);
+			const changed = JSON.stringify({ ...JSON.parse(f.owner), createdAt: "2000-01-01T00:00:00.000Z" });
+			await writeFile(join(result.retainedDirectoryPath, "owner.json"), changed);
+			const { inspectProfileLockRecovery } = await import("../src/person-profile/lock-recovery");
+			await expect(inspectProfileLockRecovery(f.path, "person", review.sha256)).rejects.toMatchObject({
+				code: "lock_recovery_unavailable",
+			});
+			expect(await readFile(join(result.retainedDirectoryPath, "owner.json"), "utf8")).toBe(changed);
+			expect(await readFile(f.path, "utf8")).toBe(f.profile);
+		} finally {
+			await f.close();
+		}
+	},
+);
+
+test.skipIf(process.platform !== "linux")(
+	"Previous boot failed capture restores and inspects original through retained intent",
+	async () => {
+		const f = await previousBootFixture(false, true);
+		try {
+			const review = await f.candidate.reviewLockRecovery();
+			await expect(f.candidate.recoverLock(review, review.sha256)).rejects.toMatchObject({
+				code: "lock_recovery_unavailable",
+			});
+			expect(await readFile(join(f.lock, "owner.json"), "utf8")).toBe(f.owner);
+			expect(await readFile(f.path, "utf8")).toBe(f.profile);
+			const { inspectProfileLockRecovery } = await import("../src/person-profile/lock-recovery");
+			const names = (await readdir(f.root)).sort();
+			for (let round = 0; round < 2; round++) {
+				expect(await inspectProfileLockRecovery(f.path, "person", review.sha256)).toMatchObject({
+					status: "original-retained",
+					activeLock: "original",
+					intentUsed: true,
+					completionConfirmed: false,
+				});
+			}
+			await expect(f.candidate.recoverLock(review, review.sha256)).rejects.toMatchObject({
+				code: "lock_recovery_unavailable",
+			});
+			expect((await readdir(f.root)).sort()).toEqual(names);
+		} finally {
+			await f.close();
+		}
+	},
+);

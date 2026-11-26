@@ -164,7 +164,12 @@ async function boundedOwnerBytes(
 	return new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length));
 }
 /** Read-only review. No owner or profile is removed, reset, signalled or rewritten. */
-async function reviewLockAt(path: string, domain: ProfileDomain, lockPath: string): Promise<ProfileLockRecoveryReview> {
+async function reviewLockAt(
+	path: string,
+	domain: ProfileDomain,
+	lockPath: string,
+	capturedReview?: ProfileLockRecoveryReview,
+): Promise<ProfileLockRecoveryReview> {
 	const refuse = (reason: string, cause?: unknown) =>
 		new ProfileLockRecoveryError(domain, reason, cause ? { cause } : undefined);
 	if (process.platform !== "linux" || !process.getuid) throw refuse("unsupported_platform");
@@ -238,12 +243,27 @@ async function reviewLockAt(path: string, domain: ProfileDomain, lockPath: strin
 					let kind: ProfileLockRecoveryReview["closure"]["kind"];
 					if (bootId !== owner.originalProcess.bootId) {
 						const boot = (await readFile("/proc/stat", "utf8")).match(/^btime ([1-9]\d*)$/m)?.[1];
+						// Capture changes directory ctime. Only the exact approved original
+						// or its retained single-use intent can supply its pre-capture time.
+						const originalCtime = capturedReview
+							? BigInt(capturedReview.directory.ctimeNs)
+							: directoryStats.ctimeNs;
 						if (
 							!boot ||
-							directoryStats.ctimeNs >= BigInt(boot) * 1000000000n ||
+							originalCtime >= BigInt(boot) * 1000000000n ||
 							fileStats.ctimeNs >= BigInt(boot) * 1000000000n
 						)
 							throw refuse("unverified_previous_boot_evidence");
+						if (
+							capturedReview &&
+							(capturedReview.closure.kind !== "previous-boot" ||
+								capturedReview.closure.currentBootId !== bootId ||
+								!equalIdentity(capturedReview.binding.directory, observed.directory) ||
+								directoryStats.mtimeNs !== BigInt(capturedReview.directory.mtimeNs) ||
+								fileStats.ctimeNs !== BigInt(capturedReview.owner.ctimeNs) ||
+								hash(bytes) !== capturedReview.ownerSha256)
+						)
+							throw refuse("unverified_previous_boot_capture_evidence");
 						kind = "previous-boot";
 					} else {
 						const ns = owner.originalProcess.namespaces;
@@ -389,7 +409,6 @@ export async function recoverProfileLock(
 		if (cause instanceof ProfileStoreError) throw cause;
 		throw refuse("invalid_review", cause);
 	}
-	if (review.closure?.kind === "previous-boot") throw refuse("previous_boot_capture_mapping_unqualified");
 	const parentPath = dirname(path);
 	const lockPath = `${path}.lock`;
 	const intentName = `.${domain}-profile-lock-recovery-${review.sha256}.intent.json`;
@@ -397,7 +416,12 @@ export async function recoverProfileLock(
 	const retainedDirectoryPath = join(parentPath, retainedName);
 	const intentPath = join(parentPath, intentName);
 	const verify = async (captured: boolean) => {
-		const current = await reviewLockAt(path, domain, captured ? retainedDirectoryPath : lockPath);
+		const current = await reviewLockAt(
+			path,
+			domain,
+			captured ? retainedDirectoryPath : lockPath,
+			captured && review.closure.kind === "previous-boot" ? review : undefined,
+		);
 		if (comparison(current, captured) !== comparison(review, captured)) throw refuse("reviewed_identity_changed");
 	};
 	try {
@@ -595,7 +619,12 @@ export async function inspectProfileLockRecovery(
 		} catch (cause) {
 			if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause;
 		}
-		const current = await reviewLockAt(path, domain, capture ? retainedDirectoryPath : `${path}.lock`);
+		const current = await reviewLockAt(
+			path,
+			domain,
+			capture ? retainedDirectoryPath : `${path}.lock`,
+			review.closure.kind === "previous-boot" ? review : undefined,
+		);
 		// Rename and restoration change directory ctime; immutable identities,
 		// directory inventory/mtime and exact original owner bytes remain required.
 		if (comparison(current, true) !== comparison(review, true)) throw refuse("inspected_original_identity_changed");
@@ -617,7 +646,12 @@ export async function inspectProfileLockRecovery(
 				if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause;
 			}
 		}
-		const finalOriginal = await reviewLockAt(path, domain, capture ? retainedDirectoryPath : `${path}.lock`);
+		const finalOriginal = await reviewLockAt(
+			path,
+			domain,
+			capture ? retainedDirectoryPath : `${path}.lock`,
+			review.closure.kind === "previous-boot" ? review : undefined,
+		);
 		if (
 			comparison(finalOriginal, true) !== comparison(current, true) ||
 			(await boundedIntentBytes(intentPath, domain)) !== bytes

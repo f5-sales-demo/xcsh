@@ -255,7 +255,7 @@ test.skipIf(process.platform !== "linux")("Existing status and reset reject lock
 	expect(await readFile(f.path, "utf8")).toBe(f.profile);
 });
 test.skipIf(process.platform !== "linux")(
-	"CLI explicitly refuses unqualified previous-boot capture before retaining intent",
+	"CLI refuses a forged previous-boot review before retaining intent",
 	async () => {
 		const f = await fixture();
 		const review = { ...f.review, closure: { ...f.review.closure, kind: "previous-boot" as const } };
@@ -274,7 +274,7 @@ test.skipIf(process.platform !== "linux")(
 			"--json",
 		);
 		expect(result.code).not.toBe(0);
-		expect(result.stderr).toContain("previous_boot_capture_mapping_unqualified");
+		expect(result.stderr).toContain("reviewed_identity_changed");
 		expect((await readdir(f.root)).sort()).toEqual(names);
 		expect(await readFile(join(`${f.path}.lock`, "owner.json"), "utf8")).toBe(f.owner);
 	},
