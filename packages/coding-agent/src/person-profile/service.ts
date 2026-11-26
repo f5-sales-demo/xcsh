@@ -1,7 +1,6 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
 import { PROFILE_COLLECTORS } from "./collectors";
+import { defaultProfilePath } from "./default-location";
 import { PrivateProfileStore, type ProfileResetLease, type ProfileStoreStatus } from "./private-store";
 import {
 	expandObservations,
@@ -52,7 +51,6 @@ export interface ProfileCollector {
 export interface ExtensionProfileCollector extends Omit<ProfileCollector, "collect"> {
 	collect(signal?: AbortSignal): Promise<ProfileCollection>;
 }
-const defaultPath = () => join(homedir(), ".xcsh", "user-profile.json");
 function cancelled(signal?: AbortSignal) {
 	if (signal?.aborted) throw new Error("Person profile operation cancelled");
 }
@@ -121,7 +119,7 @@ export class PersonProfileService {
 	readonly #registrants = new Map<string, string>();
 	readonly #store: PrivateProfileStore<PersonProfile>;
 	constructor(
-		readonly path = defaultPath(),
+		readonly path = defaultProfilePath("user-profile.json"),
 		lockTimeoutMs = 10000,
 	) {
 		this.#store = new PrivateProfileStore(

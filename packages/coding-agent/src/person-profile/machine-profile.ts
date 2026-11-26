@@ -1,7 +1,6 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
+import { defaultProfilePath } from "./default-location";
 import { collectMachine } from "./machine-collectors";
 import { PrivateProfileStore, type ProfileResetLease, type ProfileStoreStatus } from "./private-store";
 
@@ -93,7 +92,7 @@ function validate(value: unknown): void {
 export class MachineProfileService {
 	readonly #store: PrivateProfileStore<MachineProfile>;
 	constructor(
-		readonly path = join(homedir(), ".xcsh", "computer-profile.json"),
+		readonly path = defaultProfilePath("computer-profile.json"),
 		private readonly collect = collectMachine,
 		lockTimeoutMs = 10000,
 	) {
