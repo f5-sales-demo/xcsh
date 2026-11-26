@@ -24,7 +24,9 @@ interface Entry<T = unknown> {
 	handle: IntegrationHandle<T>;
 	snapshot?: IntegrationSnapshot<T>;
 	expiresAt: number;
-	inFlight?: Promise<IntegrationSnapshot<T>>;
+	inFlight?: Promise<IntegrationSnapshot<T> | undefined>;
+	initializationComplete: boolean;
+	initializationRevision: number;
 	failures: number;
 }
 
@@ -181,7 +183,11 @@ export class IntegrationRegistry {
 				setupPlan = freezePlan(prepared)!;
 				return setupPlan;
 			},
-			get: (signal?: AbortSignal) => this.#get(definition.id, false, signal) as Promise<IntegrationSnapshot<T>>,
+			get: async (signal?: AbortSignal) => {
+				if (this.#entries.get(definition.id)?.handle !== handle)
+					throw new Error("Integration registration changed");
+				return this.#get(definition.id, false, signal) as Promise<IntegrationSnapshot<T>>;
+			},
 			prepareConfiguration: definition.prepareConfiguration
 				? async (signal?: AbortSignal) => {
 						const revision = ++configurationRevision;
@@ -232,7 +238,9 @@ export class IntegrationRegistry {
 						});
 					}
 				: undefined,
-			invalidate: () => this.invalidate(definition.id),
+			invalidate: () => {
+				if (this.#entries.get(definition.id)?.handle === handle) this.invalidate(definition.id);
+			},
 			verifyAfterSetup: (reviewedPlan: IntegrationSetupPlan, signal?: AbortSignal) => {
 				const current = this.#entries.get(definition.id);
 				if (current?.handle !== handle || reviewedPlan !== setupPlan)
@@ -246,6 +254,8 @@ export class IntegrationRegistry {
 			handle,
 			expiresAt: 0,
 			failures: 0,
+			initializationComplete: false,
+			initializationRevision: 0,
 		};
 		this.#entries.set(definition.id, entry as Entry);
 		try {
@@ -293,6 +303,29 @@ export class IntegrationRegistry {
 		if (entry) entry.expiresAt = 0;
 	}
 
+	/** Recheck only pre-initialization authentication failures after session handlers bind context. */
+	completeInitialization(handles: readonly IntegrationHandle<unknown>[]): void {
+		const entries = handles.flatMap(handle => {
+			const entry = this.#entries.get(handle.id);
+			return entry?.handle === handle && !entry.initializationComplete ? [entry] : [];
+		});
+		const blocked = new Set(entries.filter(entry => this.#isPrerequisiteFailure(entry, entry.snapshot)));
+		for (const entry of entries) {
+			entry.initializationComplete = true;
+			entry.initializationRevision++;
+			if (blocked.has(entry)) entry.expiresAt = 0;
+		}
+	}
+
+	#isPrerequisiteFailure(entry: Entry, snapshot: IntegrationProbeResult<unknown> | undefined): boolean {
+		if (snapshot?.reason === "not_authenticated" || snapshot?.reason === "expired") return true;
+		if (snapshot?.reason !== "dependency_missing") return false;
+		return (entry.definition.dependencies ?? []).some(id => {
+			const dependency = this.#entries.get(id);
+			return dependency !== undefined && this.#isPrerequisiteFailure(dependency, dependency.snapshot);
+		});
+	}
+
 	#assertAcyclic(): void {
 		const visiting = new Set<string>();
 		const visited = new Set<string>();
@@ -314,14 +347,19 @@ export class IntegrationRegistry {
 		if (!entry) throw new Error(`Unknown integration: ${id}`);
 		const now = this.#now();
 		if (!forceAfterSetup && entry.snapshot && now < entry.expiresAt) return entry.snapshot;
-		if (entry.inFlight) return entry.inFlight;
-		entry.inFlight = this.#probe(entry, signal).finally(() => {
-			entry.inFlight = undefined;
-		});
-		return entry.inFlight;
+		if (!entry.inFlight) {
+			entry.inFlight = this.#probe(entry, signal).finally(() => {
+				entry.inFlight = undefined;
+			});
+		}
+		const snapshot = await entry.inFlight;
+		if (this.#entries.get(id) !== entry) throw new Error("Integration registration changed");
+		// All concurrent readers join one fresh probe when an early authentication result is obsolete.
+		return snapshot ?? this.#get(id, false, signal);
 	}
 
-	async #probe(entry: Entry, signal?: AbortSignal): Promise<IntegrationSnapshot> {
+	async #probe(entry: Entry, signal?: AbortSignal): Promise<IntegrationSnapshot | undefined> {
+		const initializationRevision = entry.initializationRevision;
 		const checkedAt = this.#now();
 		const startedAt = performance.now();
 		let result: IntegrationProbeResult<unknown>;
@@ -330,7 +368,7 @@ export class IntegrationRegistry {
 				const dependencyEntry = this.#entries.get(dependency);
 				if (!dependencyEntry || (await this.#get(dependency, false, signal)).state !== "ready") {
 					result = { state: "unavailable", reason: "dependency_missing" };
-					return this.#storeResult(entry, result, checkedAt, startedAt);
+					return this.#storeResult(entry, result, checkedAt, startedAt, initializationRevision);
 				}
 			}
 			if (signal?.aborted) throw signal.reason;
@@ -345,7 +383,7 @@ export class IntegrationRegistry {
 		} catch {
 			result = { state: "error", reason: "invalid_response" };
 		}
-		return this.#storeResult(entry, result, checkedAt, startedAt);
+		return this.#storeResult(entry, result, checkedAt, startedAt, initializationRevision);
 	}
 
 	#storeResult(
@@ -353,7 +391,12 @@ export class IntegrationRegistry {
 		result: IntegrationProbeResult<unknown>,
 		checkedAt: number,
 		startedAt: number,
-	): IntegrationSnapshot {
+		initializationRevision: number,
+	): IntegrationSnapshot | undefined {
+		if (initializationRevision !== entry.initializationRevision && this.#isPrerequisiteFailure(entry, result)) {
+			entry.expiresAt = 0;
+			return undefined;
+		}
 		const durationMs = Math.max(0, Math.round(performance.now() - startedAt));
 		let retryAt: number | undefined;
 		if (result.state === "ready") {
