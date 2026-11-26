@@ -274,7 +274,7 @@ export async function withPluginContext<T>(name: string | undefined, run: () => 
 		if (isF5ContextEnvKey(key)) {
 			if (environment[key] === undefined) delete process.env[key];
 			else process.env[key] = environment[key];
-		} else if (!process.env[key] && environment[key] !== undefined) process.env[key] = environment[key];
+		} else if (process.env[key] === undefined && environment[key] !== undefined) process.env[key] = environment[key];
 	}
 	try {
 		return await runWithContextExecution(captureNextContextExecution(Settings.instance), run);
