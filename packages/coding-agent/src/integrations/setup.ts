@@ -1,7 +1,47 @@
 import { presentation } from "../extensibility/presentation";
 import { installArchive } from "../host/archive";
 import { host } from "../host/host";
-import type { IntegrationHandle, IntegrationSetupPlan, IntegrationSetupStep, IntegrationSnapshot } from "./types";
+import type {
+	IntegrationConfigurationAnswers,
+	IntegrationConfigurationPlan,
+	IntegrationHandle,
+	IntegrationSetupPlan,
+	IntegrationSetupStep,
+	IntegrationSnapshot,
+} from "./types";
+
+export type ConfigurationReviewer = (
+	plan: IntegrationConfigurationPlan,
+) => Promise<IntegrationConfigurationAnswers | undefined>;
+
+/** Authentication must be verified before discovering or applying configuration. */
+export async function executeConfigurationSetup<T>(
+	handle: IntegrationHandle<T>,
+	review: ConfigurationReviewer,
+	signal?: AbortSignal,
+): Promise<void> {
+	if (!handle.prepareConfiguration) return;
+	signal?.throwIfAborted();
+	if ((await handle.get(signal)).state !== "ready")
+		throw new Error("Configuration setup requires a ready authenticated integration");
+	const plan = await handle.prepareConfiguration(signal);
+	signal?.throwIfAborted();
+	const reviewed = await review(plan);
+	if (!reviewed) throw new Error("Integration configuration setup cancelled");
+	const answers = Object.freeze({ ...reviewed });
+	for (const question of plan.questions) {
+		if (
+			typeof answers[question.id] !== "string" ||
+			(question.options && !question.options.includes(answers[question.id]))
+		)
+			throw new Error(`Invalid answer for ${question.id}`);
+	}
+	signal?.throwIfAborted();
+	await plan.validate(answers, signal);
+	signal?.throwIfAborted();
+	await plan.apply(answers, signal);
+	handle.invalidate();
+}
 
 export type PluginSetupTrigger = "direct-install" | "bulk-install" | "upgrade" | "cache-refresh" | "dependency-install";
 
