@@ -644,7 +644,7 @@ test.skipIf(process.platform !== "linux")(
 		const f = await fixture();
 		const ownerPath = join(f.lock, "owner.json");
 		const bytes = Buffer.concat([
-			Buffer.from(f.owner.slice(0, -1) + ',"synthetic":"'),
+			Buffer.from(`${f.owner.slice(0, -1)},"synthetic":"`),
 			Buffer.from([0xff]),
 			Buffer.from('"}'),
 		]);
