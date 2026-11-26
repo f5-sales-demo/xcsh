@@ -4,15 +4,12 @@ import { chmod, lstat, mkdir, open, readdir, readFile, readlink, rename, rm, unl
 import { basename, dirname, join } from "node:path";
 import { renameExclusive, renameExclusiveAt } from "@f5-sales-demo/pi-natives";
 
-export type ProfileStoreErrorCode =
-	| "unsupported_format"
-	| "unsupported_platform"
-	| "insecure_permissions"
-	| "invalid_shape"
-	| "ownership_mismatch"
-	| "lock_busy"
-	| "persistence_unavailable";
-export type ProfileDomain = "person" | "computer";
+import { reviewProfileLockRecovery } from "./lock-recovery";
+
+import { type ProfileDomain, ProfileStoreError, type ProfileStoreErrorCode } from "./profile-store-error";
+
+export type { ProfileDomain, ProfileStoreErrorCode } from "./profile-store-error";
+export { ProfileStoreError } from "./profile-store-error";
 export interface ProfileStoreStatus {
 	status: "missing" | "ready" | "invalid";
 	schemaVersion?: number;
@@ -31,24 +28,6 @@ export interface ProfileResetLease {
 export interface ProfileResetTarget {
 	readonly path: string;
 	acquireResetLease(signal?: AbortSignal): Promise<ProfileResetLease>;
-}
-
-export class ProfileStoreError extends Error {
-	constructor(
-		readonly code: ProfileStoreErrorCode,
-		readonly domain: ProfileDomain,
-		options?: ErrorOptions,
-	) {
-		super(
-			code === "unsupported_platform"
-				? `${domain} profile storage unsupported_platform; durable locking is unavailable on ${process.platform}; use a qualified Linux host`
-				: code === "lock_busy"
-					? `${domain} profile storage lock_busy; wait for the active operation; retain the original lock and owner evidence and verify original-holder closure before recovery`
-					: `${domain} profile storage ${code}; run xcsh profile reset ${domain} --yes`,
-			options,
-		);
-		this.name = "ProfileStoreError";
-	}
 }
 
 const errorCode = (error: unknown) => (error as { code?: string })?.code;
@@ -247,9 +226,13 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 			const identity = (stats: typeof originalOwner) => ({
 				device: String(stats.dev),
 				inode: String(stats.ino),
+				birthtimeNs: String(stats.birthtimeNs),
 				uid: Number(stats.uid),
 			});
 			if (
+				originalParent.birthtimeNs <= 0n ||
+				originalDirectory.birthtimeNs <= 0n ||
+				originalOwner.birthtimeNs <= 0n ||
 				!originalOwner.isFile() ||
 				originalOwner.nlink !== 1n ||
 				(originalOwner.mode & 0o777n) !== 0o600n ||
@@ -274,7 +257,7 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 				createdAt: new Date().toISOString(),
 				originalProcess,
 				recoveryBinding: {
-					schemaVersion: 1,
+					schemaVersion: 2,
 					parent: identity(originalParent),
 					directory: identity(originalDirectory),
 					owner: identity(originalOwner),
@@ -283,6 +266,8 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 			await owner.writeFile(ownerBytes);
 			await owner.sync();
 			ownerStats = await owner.stat();
+			const publishedOwner = await owner.stat({ bigint: true });
+			if (publishedOwner.birthtimeNs !== originalOwner.birthtimeNs) throw this.#failure("persistence_unavailable");
 		} finally {
 			await owner.close();
 		}
@@ -516,6 +501,9 @@ export class PrivateProfileStore<T extends { schemaVersion: number; revision: nu
 			if (error instanceof ProfileStoreError || signal?.aborted) throw error;
 			throw new ProfileStoreError("persistence_unavailable", this.domain, { cause: error });
 		}
+	}
+	async reviewLockRecovery() {
+		return reviewProfileLockRecovery(this.path, this.domain);
 	}
 	async acquireResetLease(signal?: AbortSignal): Promise<ProfileResetLease> {
 		const lock = await this.#acquireLock("reset", signal);

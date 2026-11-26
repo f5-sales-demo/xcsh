@@ -25,7 +25,12 @@ async function fixture() {
 }
 async function identity(path: string) {
 	const stats = await lstat(path, { bigint: true });
-	return { device: String(stats.dev), inode: String(stats.ino), uid: Number(stats.uid) };
+	return {
+		device: String(stats.dev),
+		inode: String(stats.ino),
+		birthtimeNs: String(stats.birthtimeNs),
+		uid: Number(stats.uid),
+	};
 }
 test.skipIf(process.platform !== "linux")(
 	"Reset publication binds the original parent, directory and owner inode",
@@ -35,7 +40,7 @@ test.skipIf(process.platform !== "linux")(
 		try {
 			const owner = JSON.parse(await readFile(join(lock, "owner.json"), "utf8"));
 			expect(owner.recoveryBinding).toEqual({
-				schemaVersion: 1,
+				schemaVersion: 2,
 				parent: await identity(root),
 				directory: await identity(lock),
 				owner: await identity(join(lock, "owner.json")),
@@ -58,7 +63,7 @@ test.skipIf(process.platform !== "linux")(
 		expect(names).toHaveLength(1);
 		const retained = join(root, names[0]!);
 		expect(original!.recoveryBinding).toEqual({
-			schemaVersion: 1,
+			schemaVersion: 2,
 			parent: await identity(root),
 			directory: await identity(retained),
 			owner: await identity(join(retained, "owner.json")),
