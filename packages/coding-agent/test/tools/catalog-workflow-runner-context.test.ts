@@ -20,6 +20,7 @@ describe.skipIf(catalogIsEmpty)("runner context-driven base_url/namespace", () =
 			).rejects.toThrow(/base_url|active tenant context|XCSH_API_URL/i);
 		} finally {
 			if (prev !== undefined) process.env.XCSH_API_URL = prev;
+			else delete process.env.XCSH_API_URL;
 		}
 	});
 });

@@ -40,8 +40,8 @@ test("CI installs cross targets into the repository-selected Rust toolchain", as
 test("current macOS ARM qualification and signing use the explicit supported route", async () => {
 	const source = await Bun.file(CI_WORKFLOW).text();
 	const workflow = parse(source) as WorkflowDocument;
-	expect(workflow.jobs?.["image-runtime"]?.strategy?.matrix?.os).toContain("macos-26");
+	expect(workflow.jobs?.["image-runtime"]?.strategy?.matrix?.os).toContain("macos-15");
 	const signer = workflow.jobs?.["build-sign-macos"]?.strategy?.matrix?.include?.find(row => row.arch === "arm64");
-	expect(signer?.os).toBe("macos-26");
+	expect(signer?.os).toBe("macos-15");
 	expect(source).not.toContain("macos-latest");
 });

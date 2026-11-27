@@ -459,8 +459,8 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 
 		expect(smokeJob).toBe("");
 		expect(nativeJob).toContain("ubuntu-24.04");
-		expect(nativeJob).toContain("macos-26-intel");
-		expect(nativeJob).toContain("macos-26");
+		expect(nativeJob).toContain('{"os":"macos-26-intel","platform":"darwin","arch":"x64"');
+		expect(nativeJob).toContain('{"os":"macos-15","platform":"darwin","arch":"arm64"');
 		expect(nativeJob).toContain("windows-latest");
 		expect(nativeJob).toContain("uses: $/.github/actions/setup-zig");
 		expect(nativeJob).toContain("run: bash scripts/verify-self-hosted-tools.sh full");
@@ -531,10 +531,8 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 		expect(job).toContain("needs: [update-homebrew]");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 		expect(job).toContain("runs-on: ${{ matrix.os }}");
-		expect(job).toContain("os: macos-26");
-		expect(job).toContain("arch: arm64");
-		expect(job).toContain("os: macos-26-intel");
-		expect(job).toContain("arch: x64");
+		expect(job).toMatch(/\bos: macos-15\s*\n\s*arch: arm64\b/);
+		expect(job).toMatch(/\bos: macos-26-intel\s*\n\s*arch: x64\b/);
 	});
 
 	it("runs the cask UAT under a standard account", async () => {
@@ -685,8 +683,8 @@ describe("macOS pkg release contract", () => {
 		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
 		const job = workflow.match(/\n {2}verify-macos-pkg:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/)?.[0] ?? "";
 		const script = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-macos-pkg.sh"), "utf8");
-		expect(job).toContain("os: macos-26");
-		expect(job).toContain("macos-26-intel");
+		expect(job).toMatch(/\bos: macos-15\s*\n\s*arch: arm64\b/);
+		expect(job).toMatch(/\bos: macos-26-intel\s*\n\s*arch: x64\b/);
 		expect(job).toContain("scripts/ci-verify-macos-pkg.sh");
 		expect(script).toContain("pkgutil --check-signature");
 		expect(script).toContain("xcrun stapler validate");
@@ -733,7 +731,7 @@ describe("protected CI enforces the macOS sibling-customer boundary", () => {
 		expect(matrices).toHaveLength(2);
 		for (const matrix of matrices) {
 			expect(matrix.filter(row => row.platform === "darwin" && row.arch === "arm64")).toEqual([
-				{ os: "macos-26", platform: "darwin", arch: "arm64", sandbox_check: true },
+				{ os: "macos-15", platform: "darwin", arch: "arm64", sandbox_check: true },
 			]);
 		}
 		expect(matrices[1]).toHaveLength(1);
