@@ -12,8 +12,12 @@ import subprocess
 from collections import defaultdict
 from functools import cache
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from check_docs_quality import workflow_authority_digest
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY_PATH = ROOT / ".github" / "docs-quality" / "legacy-concepts.json"
@@ -74,6 +78,7 @@ def candidate_files(authority: str) -> tuple[Path, ...]:
     path = ROOT / authority
     if not path.exists():
         raise ValueError(f"authority does not exist: {authority}")
+    candidates: Iterator[Path]
     if (ROOT / ".git").exists():
         git = shutil.which("git")
         if git is None:
