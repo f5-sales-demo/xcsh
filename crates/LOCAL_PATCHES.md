@@ -28,8 +28,10 @@ intentionally synchronous. All other repository lint levels remain enforced. Run
 The direct stack refresh completed the generic shell migration tracked in #3835.
 Canonical crate archives were copied first, then the residual XCSH patch above was
 ported onto their new execution, expansion, builtin, and platform interfaces. Lockfile
-resolution excludes releases inside the audit's seven-day holdback: `console` is fixed
-at 0.16.3 and the Pest family at 2.8.6.
+resolution at that historical audit selected `console` 0.16.3 and the Pest family
+2.8.6. These record the September snapshot, not current version constraints.
+Current dependency refreshes select latest stable releases without an age hold;
+the lockfiles retain the exact versions qualified by each build.
 
 | Source | Archive SHA-256 | Disposition |
 | --- | --- | --- |

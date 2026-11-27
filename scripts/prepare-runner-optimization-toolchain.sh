@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly BUN_VERSION=1.4.4
-readonly BUN_SHA256=bf8ccbfb2b0b80159e0f9a6d15c55317add8077534dbc6130a3edb52fccb395c
+readonly BUN_VERSION=1.4.5
+readonly BUN_SHA256=94559b3b528995a49452f9f2404cec74f2efd7d06e0a000a8cd214b02c3666eb
 readonly ZIG_VERSION=0.16.0
 readonly ZIG_SHA256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
 readonly RUST_TOOLCHAIN=nightly-2026-09-03
@@ -47,7 +47,7 @@ verify_source_pins() {
   local source_toolchain
   source_toolchain=$(sed -nE 's/^channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml)
   test "$source_toolchain" = "$RUST_TOOLCHAIN"
-  grep -Fq 'expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.4.4}' scripts/ci-bun-install.sh
+  grep -Fq 'expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.4.5}' scripts/ci-bun-install.sh
 }
 
 install_legacy_toolchain() {

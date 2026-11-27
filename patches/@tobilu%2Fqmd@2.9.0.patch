@@ -1,0 +1,162 @@
+diff --git a/dist/db.d.ts b/dist/db.d.ts
+--- a/dist/db.d.ts
++++ b/dist/db.d.ts
+@@ -36,7 +36,9 @@
+  * restores the upstream fail-fast behaviour). See
+  * https://bun.sh/docs/api/sqlite#busy-timeout.
+  */
+-export declare function openDatabase(path: string): Database;
++export declare function openDatabase(path: string, options?: {
++    readonly?: boolean;
++}): Database;
+ /**
+  * Common subset of the Database interface used throughout QMD.
+  */
+diff --git a/dist/db.js b/dist/db.js
+--- a/dist/db.js
++++ b/dist/db.js
+@@ -1,3 +1,4 @@
++import { pathToFileURL } from "node:url";
+ /**
+  * db.ts - Cross-runtime SQLite compatibility layer
+  *
+@@ -5,10 +6,8 @@
+  * and Node.js (better-sqlite3). The APIs are nearly identical — the main
+  * difference is the import path.
+  *
+- * On macOS, Apple's system SQLite is compiled with SQLITE_OMIT_LOAD_EXTENSION,
+- * which prevents loading native extensions like sqlite-vec. When running under
+- * Bun we call Database.setCustomSQLite() to swap in Homebrew's full-featured
+- * SQLite build before creating any database instances.
++ * Bun uses its embedded SQLite. Optional native extensions are probed without
++ * changing the process-global SQLite implementation.
+  */
+ export const isBun = "Bun" in globalThis;
+ let _Database;
+@@ -17,22 +16,8 @@
+     // Dynamic string prevents tsc from resolving bun:sqlite on Node.js builds
+     const bunSqlite = "bun:" + "sqlite";
+     const BunDatabase = (await import(/* @vite-ignore */ bunSqlite)).Database;
+-    // See: https://bun.com/docs/runtime/sqlite#setcustomsqlite
+-    if (process.platform === "darwin") {
+-        const homebrewPaths = [
+-            "/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib", // Apple Silicon
+-            "/usr/local/opt/sqlite/lib/libsqlite3.dylib", // Intel
+-        ];
+-        for (const p of homebrewPaths) {
+-            try {
+-                BunDatabase.setCustomSQLite(p);
+-                break;
+-            }
+-            catch { }
+-        }
+-    }
+     _Database = BunDatabase;
+-    // setCustomSQLite may have silently failed — test that extensions actually work.
++    // sqlite-vec is optional — test whether embedded SQLite can load it.
+     try {
+         const { getLoadablePath } = await import("sqlite-vec");
+         const vecPath = getLoadablePath();
+@@ -106,13 +91,20 @@
+  * restores the upstream fail-fast behaviour). See
+  * https://bun.sh/docs/api/sqlite#busy-timeout.
+  */
+-export function openDatabase(path) {
+-    const db = new _Database(path);
++export function openDatabase(path, options = {}) {
++    const readonlyOptions = options.readonly
++        ? (isBun ? { readonly: true, create: false } : { readonly: true, fileMustExist: true })
++        : undefined;
++    const databasePath = options.readonly && isBun && process.platform === "darwin"
++        ? `${pathToFileURL(path).href}?immutable=1`
++        : path;
++    const db = new _Database(databasePath, readonlyOptions);
+     const raw = process.env.QMD_SQLITE_BUSY_TIMEOUT;
+     const parsed = raw !== undefined && raw !== "" ? Number(raw) : Number.NaN;
+     const busyTimeoutMs = Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 120_000;
+     db.exec(`PRAGMA busy_timeout = ${busyTimeoutMs}`);
+-    enableWal(db, busyTimeoutMs);
++    if (!options.readonly)
++        enableWal(db, busyTimeoutMs);
+     return db;
+ }
+ /**
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -126,6 +126,8 @@
+ export interface StoreOptions {
+     /** Path to the SQLite database file */
+     dbPath: string;
++    /** Open an existing database without changing its bytes or journal mode. */
++    readonly?: boolean;
+     /** Path to a YAML config file owned by this store (mutually exclusive with `config`) */
+     configPath?: string;
+     /** Inline collection config owned by this store (mutually exclusive with `configPath`) */
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -195,6 +195,9 @@
+     if (options.configPath && options.config) {
+         throw new Error("Provide either configPath or config, not both");
+     }
++    if (options.readonly && (options.configPath || options.config)) {
++        throw new Error("Read-only stores require existing database configuration");
++    }
+     // Each store owns its own configuration scope. A YAML or inline source is
+     // bound to this store for its lifetime, so another store created in the same
+     // process can neither redirect nor reset this store's write-through target.
+@@ -218,7 +221,7 @@
+         inactivityTimeoutMs: 5 * 60 * 1000,
+         disposeModelsOnInactivity: true,
+     });
+-    const internal = createStoreInternal(options.dbPath);
++    const internal = createStoreInternal(options.dbPath, { readonly: options.readonly });
+     const db = internal.db;
+     // Seed SQLite from the configuration that is authoritative now, read under
+     // the config lock. A lock-free read and a later sync would delete a
+diff --git a/dist/store.d.ts b/dist/store.d.ts
+--- a/dist/store.d.ts
++++ b/dist/store.d.ts
+@@ -520,7 +520,9 @@
+  * @param dbPath - Path to the SQLite database file
+  * @returns Store instance with all methods bound to the database
+  */
+-export declare function createStore(dbPath?: string): Store;
++export declare function createStore(dbPath?: string, options?: {
++    readonly?: boolean;
++}): Store;
+ /**
+  * Unified document result type with all metadata.
+  * Body is optional - use getDocumentBody() to load it separately if needed.
+diff --git a/dist/store.js b/dist/store.js
+--- a/dist/store.js
++++ b/dist/store.js
+@@ -1118,10 +1118,10 @@
+         _sqliteVecUnavailableReason = null;
+     }
+     catch (err) {
+-        // sqlite-vec is optional — vector search won't work but FTS is fine
++        // sqlite-vec is optional. Preserve the reason for vector callers without
++        // warning BM25-only consumers during ordinary database initialization.
+         _sqliteVecAvailable = false;
+         _sqliteVecUnavailableReason = getErrorMessage(err);
+-        console.warn(_sqliteVecUnavailableReason);
+     }
+     db.exec("PRAGMA foreign_keys = ON");
+     // Drop legacy tables that are now managed in YAML
+@@ -2416,10 +2416,11 @@
+  * @param dbPath - Path to the SQLite database file
+  * @returns Store instance with all methods bound to the database
+  */
+-export function createStore(dbPath) {
++export function createStore(dbPath, options = {}) {
+     const resolvedPath = dbPath || getDefaultDbPath();
+-    const db = openDatabase(resolvedPath);
+-    initializeDatabase(db);
++    const db = openDatabase(resolvedPath, options);
++    if (!options.readonly)
++        initializeDatabase(db);
+     const store = {
+         db,
+         dbPath: resolvedPath,
