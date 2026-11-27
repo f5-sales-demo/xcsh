@@ -42,7 +42,7 @@ feature. Entries marked “all” cover Haiku, Sonnet, and Opus 5.5.
 | Signed thinking continuation | Passed, all | Separate live acceptance pending | `anthropic-controls.ts`, `anthropic-native-history.ts`; retain signatures in their original positions |
 | Context edit effects | Passed with reported thinking removal and preserved recall, all | Separate live acceptance pending | `anthropic-controls.ts`; outbound fields alone are insufficient |
 | Cancellation recovery | Passed with full-context thread recreation, all | Separate live acceptance pending | `anthropic-thread-continuity.test.ts`; cancellation consumes the prior anchor |
-| Restart/resume and model switching | Interactive acceptance pending | Interactive acceptance pending | `anthropic-session-controls.test.ts`, `model-selection-session.test.ts`; session controls omit credentials |
+| Restart/resume and model switching | Installed interactive acceptance pending | Source terminal candidate passed; installed acceptance pending | `anthropic-session-controls.test.ts`, `model-selection-session.test.ts`; session controls omit credentials |
 
 ## Delivery gates
 
@@ -52,11 +52,16 @@ The published standard and container-build images passed tool and frozen
 bootstrap qualification for recorded candidate trees. Publication does not prove
 that a live runner uses those images.
 
-The final source commit still requires its package, type, shell, and privacy
-checks. Narrow runner routing belongs in
-[docs-control issue #2724](https://github.com/f5-sales-demo/docs-control/issues/2724),
-followed by manifest propagation and an actual job proving image, Bun, and SDK
-identity. Shared runner profiles must retain their existing compatibility.
+Source package checks passed before the corpus refresh. The merged candidate
+passes types, source-matched native readiness, shell audit, documentation checks,
+and 83 focused provider, session, and corpus regressions. Final PR CI remains a
+separate gate.
+
+[docs-control PR #2733](https://github.com/f5-sales-demo/docs-control/pull/2733)
+merged the scoped runner routing. The four xcsh runner scale sets now reference
+the qualified immutable images, and a live standard runner reported Bun 1.4.5.
+Manifest propagation and final job identity remain separate checks. Shared runner
+profiles retain their existing compatibility.
 
 Publication uses best-effort coverage for the credit-dependent fast and fallback
 features. Synthetic fixtures verify their request controls, speed overrides,
