@@ -1,2 +1,61 @@
+import indexGzipPath from "./.documentation-generated/terraform/terraform-documentation.sqlite.gz" with {
+	type: "file",
+};
 import type { TerraformEmbeddedAssets } from "./terraform-documentation";
-export const EMBEDDED_TERRAFORM_DOCUMENTATION: TerraformEmbeddedAssets | null = null;
+export const EMBEDDED_TERRAFORM_DOCUMENTATION = {
+	indexGzipPath,
+	pin: {
+		assets: {
+			"canonical-documentation.tar.gz": {
+				sha256: "9b29e17ff1dada1cdbc826d78a54f0c86c6390f9df779862d0051145465f1cbd",
+				size_bytes: 46322493,
+			},
+			"canonical-manifest.json": {
+				sha256: "d8abfccc990f9d372a246ee636342fefbd0193b051d5bfb5ad0d47ac2649ef91",
+				size_bytes: 7565729,
+			},
+			"manifest.json": {
+				sha256: "55c82e18f93bc40c3a29d88bb923535ed9b935b27282fc8e3749bc3f37cd7f54",
+				size_bytes: 70478861,
+			},
+			"publication.json": {
+				sha256: "41c7f05912fdd46bdf057c152722853b5e3eb4e3cc2ec3667e49da922649d6f0",
+				size_bytes: 1382,
+			},
+			"registry-documentation.tar.gz": {
+				sha256: "8dc572310e731147a28f860d75a9b1e04bf64c24087708ca5109434b83a11eda",
+				size_bytes: 9982254,
+			},
+			"registry-manifest.json": {
+				sha256: "bd2904a8ff5a26a501efeaf09bccd4b18aca535e61f129b25d4c90ff0d1a6745",
+				size_bytes: 237499,
+			},
+			"registry-projection-manifest.json": {
+				sha256: "581badafac5bcd5911c57a84d7516298850e5b7da4797adff0bd35405ce90d1d",
+				size_bytes: 276722,
+			},
+			SHA256SUMS: { sha256: "05703a9e80262cd0037aaa78a480510c76fefdc8cc185a6983522b35a4b048bd", size_bytes: 723 },
+			"terraform-docs.tar.gz": {
+				sha256: "68e0b5510ad97f0a057caedf81dd9e54c36f8f115007d19ceb94b3c3a805d48c",
+				size_bytes: 9857727,
+			},
+		},
+		document_count: 16403,
+		provider_schema_digest: "sha256:e62318985676da5dc8f5d2d35ccc26c58c5f11f463e5627995ce95f8658f6b43",
+		provider_version: "v15.17.10",
+		release_tag: "documentation-v15.17.10",
+		retrieval_metadata_version: 1,
+		schema_version: 2,
+		source_commit: "ae336940601b5000643d9888795eadb743ef9522",
+		source_repository: "f5-sales-demo/terraform-provider-xcsh",
+		source_root: "documentation",
+		spec_pin_digest: "sha256:b750ce4b9c0ad9c90dad992a893773bacfb3aeff7598bc37194f3037f353c949",
+		receipt_sha256: "41c7f05912fdd46bdf057c152722853b5e3eb4e3cc2ec3667e49da922649d6f0",
+		index: {
+			sha256: "323b9f00eacadd68b49c7e23105f4f01291c432b099afd3c598d0bc8cb53e2fc",
+			size_bytes: 668192768,
+			gzip_sha256: "538cd01bb793f801fe262cda9c3d962766bc0f84910c01acd103b49f3dde6637",
+			gzip_size_bytes: 63345010,
+		},
+	},
+} satisfies TerraformEmbeddedAssets;
