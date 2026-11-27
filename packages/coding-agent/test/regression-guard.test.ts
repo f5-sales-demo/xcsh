@@ -733,7 +733,7 @@ describe("protected CI enforces the macOS sibling-customer boundary", () => {
 		expect(matrices).toHaveLength(2);
 		for (const matrix of matrices) {
 			expect(matrix.filter(row => row.platform === "darwin" && row.arch === "arm64")).toEqual([
-				{ os: "macos-26", platform: "darwin", arch: "arm64", sandbox_check: true },
+				{ os: "macos-15", platform: "darwin", arch: "arm64", sandbox_check: true },
 			]);
 		}
 		expect(matrices[1]).toHaveLength(1);
