@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "baselineSource": "ec792fe99dced76818f60d23f0e54404da6fc764",
+  "baselineInstalledVersion": "25.1.0",
+  "model": "litellm/gpt-6.1-sol:high",
+  "repetitions": 3,
+  "developmentCases": 16,
+  "heldoutCases": 8,
+  "hashes": {
+    "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
+    "scripts/blindfold-native-eval.ts": "fa58e2772b2a5013d6aa6dc9770851ec23190410b64af40ff12921a8a3a4c909",
+    "scripts/blindfold-native-score.ts": "c6ddfbdf1e120c2517d7ce77401ea3fef579c5638f005e272336a4c6aa0ef9ba",
+    "scripts/blindfold-native-guard.ts": "9b7d5811e2fd57c1cafb433d3055f704ab37515b2b83962ceb27f77a960e8499",
+    "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
+  },
+  "acceptance": {
+    "nativeProgressionMinimum": 0.95,
+    "hintCoverage": 1,
+    "negativeHintInjections": 0,
+    "obsoleteRecommendationsOrExecutions": 0,
+    "secretLeaks": 0
+  },
+  "uncertainty": "Three repetitions measure this frozen corpus and do not establish a universal model guarantee."
+}

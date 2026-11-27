@@ -5,13 +5,24 @@ import template from "../prompts/system/blindfold-awareness.md" with { type: "te
 /** Deterministic intent over admitted user task text, never retrieved/model content. */
 export function classifyBlindfoldIntent(text: string, previous: boolean): boolean {
 	const automaticCertificateProtocol = "ACME protocol";
-	const task = text.toLowerCase().replace(/[–—_/-]/g, " ");
+	const task = text
+		.toLowerCase()
+		.replace(/[–—_/-]/g, " ")
+		.replace(/\b(?:blind\s+fold|blidnfold|blindflod)\b/g, "blindfold");
 	if (
-		/\b(?:new topic|unrelated|switch topics|instead talk|forget (?:that|this)|do not use blindfold|don't use blindfold)\b/.test(
+		/\b(?:new topic|unrelated|switch topics|instead talk|forget (?:that|this)|(?:do not|don't|never) (?:use (?:native )?blindfold|blindfold|encrypt))\b/.test(
 			task,
 		)
 	)
 		return false;
+	// Reading historical instructions is not admission of their encryption task.
+	if (
+		/^(?:please )?(?:read|summarize|review|translate|quote)\b/.test(task) &&
+		/\b(?:articles?|documents?|examples?|tutorials?|commands?|guides?)\b/.test(task) &&
+		!/\b(?:and|then|also)\s+(?:encrypt|blindfold|prepare|create)\b/.test(task)
+	)
+		return false;
+	if (/\bvoltshare\b/.test(task) && !/\b(?:replace|migrate|instead)\b/.test(task)) return false;
 	if (
 		!/\b(?:f5|xcsh|distributed cloud)\b/.test(task) &&
 		/\b(?:aws|amazon|azure|google cloud|gcp|kubernetes|cert manager|nginx|apache|iis|cloudflare|vault)\b/.test(task)
@@ -26,13 +37,14 @@ export function classifyBlindfoldIntent(text: string, previous: boolean): boolea
 			task,
 		);
 	const operation =
-		/\b(?:import(?:ing)?|prepar(?:e|ing|ation)|encrypt(?:ing|ion)?|upload(?:ing)?|rotate|rotating|rotation)\b/.test(
+		/\b(?:import(?:ing)?|prepar(?:e|ing|ation)|encrypt(?:ed|ing|ion)?|upload(?:ing)?|rotate|rotating|rotation)\b/.test(
 			task,
 		);
 	const owned =
 		/\b(?:my|our|your|owned|existing|own)\b/.test(task) &&
 		/\b(?:certificates?|certs?|secrets?|keys?|inputs?)\b/.test(task);
 	if (custom || formatInput || (privateInput && operation)) return true;
+	if (/\bsecrets?\b/.test(task) && /\bencrypt(?:ed|ing|ion)?\b/.test(task)) return true;
 	if (
 		task.split(/\W+/).includes(automaticCertificateProtocol.split(" ")[0].toLowerCase()) ||
 		/\b(?:automatic|automated|managed|let'?s encrypt|public certificate|tls|ssl|handshake)\b/.test(task)

@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "phase": "after-development-screening-before-heldout",
+  "reason": "Block all cloud lookups as before, but distinguish read-only requests from mutation attempts. The source service encrypt path uses GET to retrieve public material; create, replace and ensure mutate cloud resources. Correct the observation input to the unchanged scorer. Preserve original development results. Protect declared existing encrypted outputs from their first read, alongside newly prepared outputs. The follow-up scenario also rejects an artifact created during its explicit wait instruction.",
+  "previousEffectiveHashes": {
+    "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
+    "scripts/blindfold-native-eval.ts": "7f288d337a38cf11d9a1ebb4220c0e264e99ae1519edc2c1d3be3cda6447faaa",
+    "scripts/blindfold-native-score.ts": "7e276975be6452e878fc325857258a78a62262dc9ba219c4b12e8bee301fb965",
+    "scripts/blindfold-native-guard.ts": "cfb468756df2bac2d8672f122a04f32f300d57334725d19678ce220a87aa1d8d",
+    "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
+  },
+  "effectiveHashes": {
+    "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
+    "scripts/blindfold-native-eval.ts": "b23f75ae3398a3f5c356fa777266fc8499e9311938217a73d940ad2604b4996c",
+    "scripts/blindfold-native-score.ts": "7e276975be6452e878fc325857258a78a62262dc9ba219c4b12e8bee301fb965",
+    "scripts/blindfold-native-guard.ts": "4864e228ba03ab97dd4933beae1cc538c10c9008c6814094ff0a3e799dbfe080",
+    "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
+  },
+  "selectedCandidate": "refined",
+  "candidateRevisionFrozenBeforeHeldout": true
+}

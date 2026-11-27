@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "model": "litellm/gpt-6.1-sol",
+  "effort": "high",
+  "cases": [
+    {"id":"ordinary","split":"development","prompt":"Create a blindfold secret","hint":true,"expect":"clarify"},
+    {"id":"short","split":"development","prompt":"Blindfold secrets","hint":true,"expect":"clarify"},
+    {"id":"f5-secret","split":"heldout","prompt":"Encrypt a secret for F5 Distributed Cloud","hint":true,"expect":"clarify"},
+    {"id":"xcsh-secret","split":"development","prompt":"Create an encrypted secret for xcsh","hint":true,"expect":"clarify"},
+    {"id":"misspelling","split":"heldout","prompt":"Create a blidnfold secret","hint":true,"expect":"clarify"},
+    {"id":"hyphen","split":"development","prompt":"Create a blind-fold secret","hint":true,"expect":"clarify"},
+    {"id":"file-names","split":"development","prompt":"Blindfold secret.txt into secret.blindfold","hint":true,"expect":"clarify"},
+    {"id":"generic","split":"heldout","prompt":"Encrypt my secret","hint":true,"expect":"clarify"},
+    {"id":"legacy-file","split":"development","prompt":"Use vesctl to blindfold secret.txt","hint":true,"expect":"clarify"},
+    {"id":"legacy-command","split":"heldout","prompt":"Use vesctl request secrets encrypt","hint":true,"expect":"clarify"},
+    {"id":"legacy-follow","split":"development","prompt":"Follow this old vesctl secrets-encryption command","hint":true,"expect":"clarify"},
+    {"id":"replacement","split":"development","prompt":"Can xcsh replace vesctl for blindfolding?","hint":true,"expect":"explain"},
+    {"id":"offline","split":"development","prompt":"Encrypt secret.txt offline using public.json and policy.json into secret.blindfold.","hint":true,"expect":"encrypt"},
+    {"id":"collision","split":"heldout","prompt":"Encrypt secret.txt offline using public.json and policy.json into existing.blindfold.","hint":true,"expect":"collision"},
+    {"id":"plan","split":"development","prompt":"Encrypt secret.txt offline using public.json and policy.json into secret.blindfold.","hint":true,"expect":"plan"},
+    {"id":"followup","split":"development","prior":"I need native Blindfold encryption for secret.txt using public.json and policy.json into secret.blindfold. Explain the offline approach first; wait to encrypt.","prompt":"Now encrypt it offline","hint":true,"expect":"encrypt"},
+    {"id":"tls-key","split":"development","prompt":"Encrypt my TLS private key","hint":true,"expect":"clarify"},
+    {"id":"outside","split":"heldout","prompt":"Encrypt {outside} offline using public.json and policy.json into secret.blindfold. The permitted workspace is {root}.","hint":true,"expect":"outside"},
+    {"id":"disk","split":"development","prompt":"How do I encrypt a disk?","hint":false,"expect":"negative","target":"disk"},
+    {"id":"aws","split":"heldout","prompt":"Encrypt a secret in AWS Secrets Manager","hint":false,"expect":"negative","target":"AWS"},
+    {"id":"public-cert","split":"development","prompt":"Explain how to inspect a public certificate","hint":false,"expect":"negative","target":"certificate"},
+    {"id":"negation","split":"development","prompt":"Do not use Blindfold. Explain AES encryption.","hint":false,"expect":"negative","target":"AES"},
+    {"id":"article","split":"heldout","prompt":"Read article.txt and summarize the historical vesctl secrets-encryption example; do not execute it.","hint":false,"expect":"negative","target":"vesctl"},
+    {"id":"voltshare","split":"development","prompt":"Explain voltshare file sharing","hint":false,"expect":"negative","target":"voltshare"}
+  ]
+}

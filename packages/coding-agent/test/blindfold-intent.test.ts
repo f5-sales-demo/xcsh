@@ -2,6 +2,32 @@ import { describe, expect, it } from "bun:test";
 import { classifyBlindfoldIntent, renderBlindfoldHint } from "../src/internal-urls/blindfold-intent";
 
 describe("Blindfold user task intent", () => {
+	it("recognizes ordinary secrets, spelling variants and legacy encryption intent", () => {
+		for (const text of [
+			"Encrypt a secret",
+			"Create an encrypted secret for xcsh",
+			"Use vesctl request secrets encrypt",
+			"Follow this old vesctl secrets-encryption command",
+			"Create a blidnfold secret",
+			"Create a blind-fold secret",
+			"Create a blind fold secret",
+			"Create a blindflod secret",
+		]) {
+			expect(classifyBlindfoldIntent(text, false)).toBe(true);
+		}
+	});
+	it("does not promote reading, file sharing or negated encryption to a task", () => {
+		for (const text of [
+			"Read a vesctl secrets-encryption article",
+			"Summarize the blindfold article",
+			"Explain voltshare file sharing",
+			"Do not encrypt my secret",
+			"Don't use blind-fold",
+			"Encrypt a secret in AWS Secrets Manager",
+		]) {
+			expect(classifyBlindfoldIntent(text, true)).toBe(false);
+		}
+	});
 	it("matches owned inputs and explicit native operations", () => {
 		for (const text of [
 			"Explain blindfold",
@@ -60,6 +86,9 @@ describe("Blindfold user task intent", () => {
 		expect(dormant).toContain('query: "xcsh_blindfold"');
 		expect(dormant).toContain("limit: 1");
 		expect(dormant).toContain("xcsh://blindfold/");
+		expect(dormant).toContain("default");
+		expect(dormant).toContain("vesctl");
+		expect(dormant).toContain("Never ask");
 		expect(renderBlindfoldHint(true)).not.toContain("search_tool_bm25");
 	});
 });

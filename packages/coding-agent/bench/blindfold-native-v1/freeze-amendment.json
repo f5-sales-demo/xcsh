@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "phase": "before-candidate-screening",
+  "reason": "Correct negated safety instructions being classified as requests, and track all native private file paths and unintended artifacts. Corpus and acceptance criteria unchanged. Original smoke failures preserved and excluded from comparison.",
+  "originalHashes": {
+    "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
+    "scripts/blindfold-native-eval.ts": "fa58e2772b2a5013d6aa6dc9770851ec23190410b64af40ff12921a8a3a4c909",
+    "scripts/blindfold-native-score.ts": "c6ddfbdf1e120c2517d7ce77401ea3fef579c5638f005e272336a4c6aa0ef9ba",
+    "scripts/blindfold-native-guard.ts": "9b7d5811e2fd57c1cafb433d3055f704ab37515b2b83962ceb27f77a960e8499",
+    "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
+  },
+  "effectiveHashes": {
+    "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
+    "scripts/blindfold-native-eval.ts": "7f288d337a38cf11d9a1ebb4220c0e264e99ae1519edc2c1d3be3cda6447faaa",
+    "scripts/blindfold-native-score.ts": "7e276975be6452e878fc325857258a78a62262dc9ba219c4b12e8bee301fb965",
+    "scripts/blindfold-native-guard.ts": "cfb468756df2bac2d8672f122a04f32f300d57334725d19678ce220a87aa1d8d",
+    "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
+  }
+}

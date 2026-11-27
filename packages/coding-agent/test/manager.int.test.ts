@@ -751,7 +751,7 @@ test("a provision frame split across two TCP writes is still parsed (NDJSON buff
 }, 60_000);
 
 test("a worker that dies out of band is reconciled so the next provision respawns", async () => {
-	await startManager();
+	const stderr = await startManager();
 
 	await send({ type: "provision", sessionId: "tab-revive", tenant: "example-revive|staging" });
 	const first = await findTenant("example-revive", 80);
@@ -762,7 +762,9 @@ test("a worker that dies out of band is reconciled so the next provision respawn
 	// exit handler reconciles it.
 	const pids = await pidsOnPort(first as number);
 	expect(pids.length).toBeGreaterThan(0); // lsof must resolve the worker pid on macOS
-	for (const pid of pids) process.kill(pid);
+	// SIGTERM starts asynchronous graceful disposal: its bridge can close while
+	// the PID is still live. This test requires an abrupt OS-dead worker.
+	for (const pid of pids) process.kill(pid, "SIGKILL");
 
 	// Confirm the worker is actually dead (port goes silent) before re-provisioning.
 	// This does NOT guarantee the manager's `proc.exited` callback has run: under
@@ -783,7 +785,7 @@ test("a worker that dies out of band is reconciled so the next provision respawn
 	// manager must reconcile the OS-dead PID synchronously and respawn.
 	await send({ type: "provision", sessionId: "tab-revive", tenant: "example-revive|staging" });
 	const second = await findTenant("example-revive", 80);
-	expect(second).not.toBeNull();
+	expect(second, describeManagerCensus(stderr()).join("\n")).not.toBeNull();
 
 	await send({ type: "release", sessionId: "tab-revive" });
 }, 90_000);
