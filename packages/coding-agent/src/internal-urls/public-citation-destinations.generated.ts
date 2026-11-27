@@ -5,7 +5,7 @@ export const PUBLIC_CITATION_SOURCES = {
 		digest: "623c64115529279811b606b2b64f840a2ece46dd59158a4f2f6805261f39b23b",
 	},
 	terraform: {
-		version: "documentation-v15.17.10",
+		version: "documentation-v15.17.11",
 		digest: "9b29e17ff1dada1cdbc826d78a54f0c86c6390f9df779862d0051145465f1cbd",
 	},
 	api: {
