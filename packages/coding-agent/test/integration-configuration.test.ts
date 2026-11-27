@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { reviewAndExecuteIntegrationSetup } from "../src/cli/plugin-cli";
+import { reviewAndExecuteIntegrationSetup, shouldSkipIntegrationSetup } from "../src/cli/plugin-cli";
 import { IntegrationRegistry } from "../src/integrations/registry";
 import { executeConfigurationSetup } from "../src/integrations/setup";
 import { reviewIntegrationConfiguration } from "../src/modes/components/integration-configuration";
@@ -184,4 +184,13 @@ test("failed discovery invalidates cached authentication so the next setup can v
 	expect((await handle.get()).state).toBe("ready");
 	await expect(handle.prepareConfiguration!()).rejects.toThrow("expired");
 	expect((await handle.get()).reason).toBe("expired");
+});
+
+test("CLI setup enters configuration review for a ready configurable integration", async () => {
+	const { handle, events } = fixture();
+	const current = await handle.get();
+	expect(shouldSkipIntegrationSetup(current.state, false, Boolean(handle.prepareConfiguration))).toBe(false);
+	expect(shouldSkipIntegrationSetup(current.state, false, false)).toBe(true);
+	await reviewAndExecuteIntegrationSetup(handle, { reviewConfiguration: async () => ({ amount: "Amount" }) });
+	expect(events).toEqual(["discover", "validate", "apply"]);
 });
