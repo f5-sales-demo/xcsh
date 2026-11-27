@@ -167,7 +167,7 @@ class CiCapacityContractTests(unittest.TestCase):
             ),
         )
         for pinned_value in (
-            "BUN_VERSION=1.4.4",
+            "BUN_VERSION=1.4.5",
             "BUN_SHA256=bf8ccbfb2b0b80159e0f9a6d15c55317add8077534dbc6130a3edb52fccb395c",
             "ZIG_VERSION=0.16.0",
             "ZIG_SHA256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00",
@@ -236,7 +236,7 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertNotIn("bun install --frozen-lockfile", workflows)
         self.assertNotIn('bun-version: "1.3', workflows)
         self.assertIn(
-            "bun-1.4.4-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}",
+            "bun-1.4.5-${{ runner.environment }}-${{ runner.os }}-${{ runner.arch }}",
             workflows,
         )
         self.assertNotIn("lookup-only:", workflows)
@@ -272,7 +272,7 @@ class CiCapacityContractTests(unittest.TestCase):
 
         self.assertGreater(len(cache_keys), 0)
         expected_prefix = (
-            "key: bun-1.4.4-${{ runner.environment }}-${{ runner.os }}-"
+            "key: bun-1.4.5-${{ runner.environment }}-${{ runner.os }}-"
             "${{ runner.arch }}-"
         )
         expected_lock = "${{ hashFiles('**/bun.lock') }}"
@@ -291,7 +291,7 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertEqual(
             2,
             prime.count(
-                "key: bun-1.4.4-${{ runner.environment }}-${{ runner.os }}-"
+                "key: bun-1.4.5-${{ runner.environment }}-${{ runner.os }}-"
                 "${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}"
             ),
         )

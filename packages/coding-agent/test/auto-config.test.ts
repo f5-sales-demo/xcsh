@@ -1029,13 +1029,13 @@ describe("config schema versioning", () => {
 	);
 
 	test.skipIf(process.platform === "win32")(
-		"startupHealthCheck upgrades generated v11 config to v12 without losing its route or credential",
+		"startupHealthCheck upgrades generated v11 config to v13 without losing its route or credential",
 		() => {
 			clearEnv();
 			const v8 = generateModelsYml("https://proxy.example.com", {
 				apiBasePath: "/api/v1",
 				apiKeyLiteral: "literal-test-key",
-			}).replace("configVersion: 12", "configVersion: 11");
+			}).replace(`configVersion: ${CURRENT_CONFIG_VERSION}`, "configVersion: 11");
 			fs.writeFileSync(modelsPath, v8, { mode: 0o644 });
 
 			const repaired = startupHealthCheck("ok", modelsPath, {
@@ -1044,7 +1044,7 @@ describe("config schema versioning", () => {
 
 			expect(repaired).toBe(true);
 			const content = fs.readFileSync(modelsPath, "utf-8");
-			expect(content).toContain("configVersion: 12");
+			expect(content).toContain(`configVersion: ${CURRENT_CONFIG_VERSION}`);
 			expect(content).toContain('baseUrl: "https://proxy.example.com/api/v1"');
 			expect(content).toContain('baseUrl: "https://proxy.example.com/openai/v1"');
 			expect(content).toContain('apiKey: "literal-test-key"');
@@ -1265,6 +1265,17 @@ describe("probeLiteLLMConnection()", () => {
 });
 
 describe("generateModelsYml() always includes litellm discovery", () => {
+	test("pins all current Claude families and separates discovery from inference", () => {
+		const yaml = generateModelsYml("https://proxy.example.com");
+		const document = Bun.YAML.parse(yaml) as any;
+		expect(document.providers.anthropic.modelAllowlist).toEqual([
+			"claude-haiku-5-5",
+			"claude-sonnet-5-5",
+			"claude-opus-5-5",
+		]);
+		expect(document.providers.anthropic.baseUrl).toBe("https://proxy.example.com/anthropic");
+		expect(document.providers.anthropic.discovery.baseUrl).toBe("https://proxy.example.com/openai/v1");
+	});
 	test("always includes litellm discovery provider", () => {
 		const yaml = generateModelsYml("https://proxy.example.com");
 		expect(yaml).toContain("litellm:");

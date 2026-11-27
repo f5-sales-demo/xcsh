@@ -35,8 +35,8 @@ export function resolveTierModel(
 			const qualified = selector.includes("/") ? selector : `${pool.provider}/${selector}`;
 			const resolved =
 				availableModels.find(model => model === qualified || model === selector) ??
-				(pool.provider === "anthropic" && selector === "claude-haiku-4-5"
-					? availableModels.find(model => /^anthropic\/claude-haiku-4-5-\d{8}$/.test(model))
+				(pool.provider === "anthropic" && /^claude-haiku-(?:4-5|5-5)$/.test(selector)
+					? availableModels.find(model => new RegExp(`^anthropic/${selector}-\\d{8}$`).test(model))
 					: undefined);
 			if (!resolved) return undefined;
 

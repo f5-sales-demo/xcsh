@@ -239,6 +239,16 @@ const OpenAICompatSchema = Type.Object({
 	supportsStrictMode: Type.Optional(Type.Boolean()),
 	supportsMidConvoSystemMessages: Type.Optional(Type.Boolean()),
 	supportsMidConvoToolChanges: Type.Optional(Type.Boolean()),
+	supportsMidConvoEffort: Type.Optional(Type.Boolean()),
+	supportsForcedToolChoice: Type.Optional(Type.Boolean()),
+	supportsThinkingBindingControls: Type.Optional(Type.Boolean()),
+	requiresThinkingEnabled: Type.Optional(Type.Boolean()),
+	supportsStrictTools: Type.Optional(Type.Boolean()),
+	supportsServerCompaction: Type.Optional(Type.Boolean()),
+	supportsContextManagement: Type.Optional(Type.Boolean()),
+	supportsMessageThreads: Type.Optional(Type.Boolean()),
+	supportsEagerToolInputStreaming: Type.Optional(Type.Boolean()),
+	supportsFastMode: Type.Optional(Type.Boolean()),
 	supportsOpenAIGrammarTools: Type.Optional(Type.Boolean()),
 	supportsAdditionalTools: Type.Optional(Type.Boolean()),
 	supportsToolSearch: Type.Optional(Type.Boolean()),
@@ -367,6 +377,8 @@ const ModelOverrideSchema = Type.Object({
 type ModelOverride = Static<typeof ModelOverrideSchema>;
 
 const ProviderDiscoverySchema = Type.Object({
+	/** Discovery may use a separately qualified route from inference. */
+	baseUrl: Type.Optional(Type.String()),
 	type: Type.Union([
 		Type.Literal("ollama"),
 		Type.Literal("llama.cpp"),
@@ -2173,7 +2185,8 @@ export class ModelRegistry {
 			headers.Authorization = `Bearer ${apiKey}`;
 		}
 
-		const modelsUrl = `${baseUrl}/models`;
+		const discoveryBase = (providerConfig.discovery.baseUrl ?? baseUrl).replace(/\/+$/, "");
+		const modelsUrl = `${discoveryBase}/models`;
 		const response = await fetch(modelsUrl, {
 			headers: { Accept: "application/json", ...headers },
 			signal: AbortSignal.timeout(3000),
@@ -2197,26 +2210,33 @@ export class ModelRegistry {
 		for (const item of items) {
 			const id = item.id;
 			if (!id) continue;
+			const reference =
+				providerConfig.api === "anthropic-messages"
+					? getBundledModels("anthropic").find(model => model.id === id)
+					: undefined;
 			const advertisedContextWindow =
 				positiveInteger(item.context_window) ?? positiveInteger(item.max_input_tokens) ?? item.contextWindow;
 			const advertisedOutputLimit = positiveInteger(item.max_output_tokens);
-			const contextWindow = advertisedContextWindow ?? 128000;
+			const contextWindow = advertisedContextWindow ?? reference?.contextWindow ?? 128000;
 			discovered.push(
 				enrichModelThinking({
 					id,
-					name: id,
+					name: reference?.name ?? id,
 					api: providerConfig.api,
 					provider: providerConfig.provider,
 					baseUrl,
-					reasoning: false,
-					input: ["text"],
+					reasoning: reference?.reasoning ?? false,
+					input: reference?.input ?? ["text"],
 					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 					contextWindow,
 					maxTokens:
 						advertisedOutputLimit ??
+						reference?.maxTokens ??
 						(advertisedContextWindow === undefined
 							? 8192
 							: Math.max(1, Math.min(8192, Math.floor(advertisedContextWindow / 4)))),
+					thinking: reference?.thinking,
+					compat: reference?.compat,
 					providerContextWindow: advertisedContextWindow,
 					headers,
 				}),

@@ -281,8 +281,8 @@ describe("setup litellm round-trip", () => {
 			"gpt-5.6-terra",
 			"gpt-5.6-luna",
 			"claude-opus-5",
-			"claude-sonnet-5",
-			"claude-haiku-4-5",
+			"claude-sonnet-5-5",
+			"claude-haiku-5-5",
 		]) {
 			expect(yml).toContain(`- ${id}`);
 		}
@@ -293,7 +293,7 @@ describe("setup litellm round-trip", () => {
 		const yml = generateModelsYml("https://litellm.internal:4000");
 		const astra = yml.slice(yml.indexOf("      gpt-6-astra:"), yml.indexOf("      gpt-5.6-sol:"));
 
-		expect(CURRENT_CONFIG_VERSION).toBe(12);
+		expect(CURRENT_CONFIG_VERSION).toBe(13);
 		expect(yml).toContain(
 			'      - id: gpt-6-astra\n        name: GPT-6 Astra\n        api: openai-responses\n        baseUrl: "https://litellm.internal:4000/openai/v1"',
 		);

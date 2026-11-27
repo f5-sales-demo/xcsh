@@ -148,7 +148,7 @@ type SemVer = {
 };
 
 type GeminiKind = "pro" | "flash";
-type AnthropicKind = "fable" | "opus" | "sonnet";
+type AnthropicKind = "fable" | "opus" | "sonnet" | "haiku";
 type OpenAIVariant = "base" | "codex" | "codex-max" | "codex-mini" | "codex-spark" | "mini" | "max" | "nano";
 
 const CODEX_GPT_5_4_PRIORITY_BY_VARIANT: Partial<Record<OpenAIVariant, number>> = {
@@ -663,13 +663,15 @@ function inferGeminiSupportedEfforts(model: GeminiModel): readonly Effort[] {
 function inferAnthropicSupportedEfforts<TApi extends Api>(
 	parsedModel: AnthropicModel,
 	model: ApiModel<TApi>,
-): readonly Effort[] {
+): readonly ReasoningEffort[] {
 	if (
 		(model.api === "anthropic-messages" || model.api === "bedrock-converse-stream") &&
 		semverGte(parsedModel.version, "4.6")
 	) {
-		if (parsedModel.kind === "opus" && semverEqual(parsedModel.version, "5.5")) {
-			return ANTHROPIC_OPUS_55_EFFORTS;
+		if (semverEqual(parsedModel.version, "5.5")) {
+			return (model.compat as import("./types").AnthropicCompat | undefined)?.requiresThinkingEnabled === false
+				? [ReasoningEffort.None, ...ANTHROPIC_OPUS_55_EFFORTS]
+				: ANTHROPIC_OPUS_55_EFFORTS;
 		}
 		// Only 5.x accepts the extended range. Probed against the live gateway on
 		// 2026-07-30 with a bogus control value (rejected everywhere, so the accepts
@@ -801,7 +803,7 @@ function parseGeminiModel(modelId: string): GeminiModel | null {
 }
 
 function parseAnthropicModel(modelId: string): AnthropicModel | null {
-	const match = /claude-(fable|opus|sonnet)-(\d{1,2}(?:[.-]\d{1,2}){0,2})\b/.exec(modelId);
+	const match = /claude-(fable|opus|sonnet|haiku)-(\d{1,2}(?:[.-]\d{1,2}){0,2})\b/.exec(modelId);
 	if (!match) {
 		return null;
 	}
@@ -815,6 +817,8 @@ function parseAnthropicModel(modelId: string): AnthropicModel | null {
 /** Whether the model requires adaptive thinking on every request. */
 export function isAnthropicAlwaysThinkingModel<TApi extends Api>(model: ApiModel<TApi>): boolean {
 	const parsed = parseKnownModel(model.id);
+	const required = (model.compat as import("./types").AnthropicCompat | undefined)?.requiresThinkingEnabled;
+	if (model.api === "anthropic-messages" && required !== undefined) return required;
 	return (
 		model.api === "anthropic-messages" &&
 		parsed.family === "anthropic" &&

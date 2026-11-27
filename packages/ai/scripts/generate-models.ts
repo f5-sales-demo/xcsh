@@ -12,6 +12,7 @@ const COPILOT_PREMIUM_MULTIPLIERS: Record<string, number> = {
 import * as path from "node:path";
 import { $env } from "@f5-sales-demo/pi-utils";
 import { AuthCredentialStore } from "../src/auth-storage";
+import { CURRENT_ANTHROPIC_MODELS } from "../src/current-anthropic-models";
 import { createModelManager } from "../src/model-manager";
 import {
 	applyGeneratedModelPolicies,
@@ -44,18 +45,7 @@ const SUBSCRIPTION_CONTEXT_WINDOW = 272_000;
 const SUBSCRIPTION_MAX_TOKENS = 128_000;
 
 const CURRENT_SUBSCRIPTION_MODELS: readonly Model[] = [
-	{
-		id: "claude-opus-5-5",
-		name: "Claude Opus 5.5",
-		api: "anthropic-messages",
-		provider: "anthropic",
-		baseUrl: "https://api.anthropic.com",
-		reasoning: true,
-		input: ["text", "image"],
-		cost: { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 },
-		contextWindow: 1_000_000,
-		maxTokens: 128_000,
-	},
+	...CURRENT_ANTHROPIC_MODELS,
 	{
 		id: "gpt-6-luna",
 		name: "GPT-6 Luna",

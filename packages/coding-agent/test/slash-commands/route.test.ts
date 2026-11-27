@@ -14,7 +14,7 @@ import { executeBuiltinSlashCommand } from "../../src/slash-commands/builtin-reg
 beforeAll(async () => setThemeInstance((await getThemeByName("xcsh-dark"))!));
 test("profile save retry does not repeat an already completed profile/model application", async () => {
 	const settings = Settings.isolated();
-	const roles = { default: "anthropic/claude-sonnet-5:medium" };
+	const roles = { default: "anthropic/claude-sonnet-5-5:medium" };
 	const prepare = vi.fn(async () => ({ applied: true, roles, missingModels: [] }));
 	const flush = vi.fn(async () => {}).mockRejectedValueOnce(new Error("Synthetic disk failure"));
 	settings.flush = flush;
@@ -72,7 +72,7 @@ test("profile save retry does not repeat an already completed profile/model appl
 test("route profile resolves exact assignments before a cancel-first review without applying them", async () => {
 	const settings = Settings.isolated();
 	settings.set("modelRoles", { default: "fixture/original" });
-	const roles = { default: "anthropic/claude-sonnet-5:medium", smol: "anthropic/claude-haiku-4-5-20251001:low" };
+	const roles = { default: "anthropic/claude-sonnet-5-5:medium", smol: "anthropic/claude-haiku-5-5-20261007:low" };
 	const applyRoutingProfile = vi.fn(async () => ({ applied: true, missingModels: [] }));
 	let screen = "";
 	const ctx = {
@@ -100,7 +100,7 @@ test("route profile resolves exact assignments before a cancel-first review with
 	await executeBuiltinSlashCommand("/route profile anthropic", { ctx, handleBackgroundCommand() {} });
 	expect(applyRoutingProfile).not.toHaveBeenCalled();
 	expect(screen).toContain("Review routing profile");
-	expect(screen).toContain("claude-haiku-4-5-20251001:low");
+	expect(screen).toContain("claude-haiku-5-5-20261007:low");
 	expect(settings.getModelRoles().default).toBe("fixture/original");
 });
 test("an already effective routing profile performs no review, model switch, or settings write", async () => {
@@ -116,7 +116,7 @@ test("an already effective routing profile performs no review, model switch, or 
 		settings,
 		sessionManager: { getSessionId: () => "profile-noop" },
 		session: {
-			model: { provider: "anthropic", id: "claude-sonnet-5" },
+			model: { provider: "anthropic", id: "claude-sonnet-5-5" },
 			thinkingLevel: "medium",
 			routingCoordinator: new RoutingCoordinator(),
 			getRoutingStatus: () => ({ mode: "off", profile: "anthropic" }),

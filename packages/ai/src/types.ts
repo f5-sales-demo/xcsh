@@ -1,6 +1,7 @@
 import type { TSchema } from "@sinclair/typebox";
 import type { BedrockOptions } from "./providers/amazon-bedrock";
 import type { AnthropicOptions } from "./providers/anthropic";
+import type { AnthropicAuthentication } from "./providers/anthropic-authentication";
 import type { AzureOpenAIResponsesOptions } from "./providers/azure-openai-responses";
 import type { CursorOptions } from "./providers/cursor";
 import type {
@@ -212,7 +213,34 @@ export interface DeferredHandle {
 	pollAfterMs?: number;
 }
 
-export interface StreamOptions {
+export interface AnthropicRequestControls {
+	thinkingDisplay?: "summarized" | "omitted";
+	anthropicPrefixMismatchBehavior?: "drop_block" | "error";
+	outputFormat?: { type: "json_schema"; schema: Record<string, unknown> };
+	taskBudget?: { type: "tokens"; total: number; remaining?: number };
+	contextManagement?: { edits: Record<string, unknown>[] };
+	anthropicCompaction?: { instructions?: string };
+	/** Explicit server fallback targets. Local pricing never goes on the wire. */
+	fallbacks?: {
+		model: string;
+		cost?: ModelCost;
+		speed?: "standard" | "fast";
+		thinking?: Record<string, unknown>;
+		output_config?: {
+			effort?: "low" | "medium" | "high" | "xhigh" | "max";
+			task_budget?: { type: "tokens"; total: number; remaining?: number };
+			format?: { type: "json_schema"; schema: Record<string, unknown> };
+		};
+	}[];
+	/** Opt in only after the route is qualified to forward thread fields. */
+	messageThreads?: boolean;
+}
+
+export interface StreamOptions extends AnthropicRequestControls {
+	/** Processing priority. Anthropic maps priority to explicit fast mode. */
+	serviceTier?: ServiceTier;
+	/** Request-only authentication. Credentials are never session settings. */
+	authentication?: AnthropicAuthentication;
 	/** Cloudflare account used to resolve endpoint placeholders before dispatch. */
 	accountId?: string;
 	gatewayId?: string;
@@ -386,6 +414,9 @@ export interface ToolCall {
 }
 
 export interface Usage {
+	/** Inference speed reported by the provider, independent of the requested mode. */
+	inferenceSpeed?: "standard" | "fast";
+	processingTier?: string;
 	/** Distinguishes service token counts from local estimates. */
 	tokenSource?: "reported" | "estimated";
 	/** Distinguishes token reporting from API dollar estimates. */
@@ -396,6 +427,8 @@ export interface Usage {
 	reasoningTokens?: number;
 	/** Provider-reported cache writes before normalization. */
 	cacheWriteTokens?: number;
+	/** Provider-reported cache creation buckets, retained without inflating totals. */
+	cacheCreation?: { ephemeral5m: number; ephemeral1h: number };
 	input: number;
 	output: number;
 	cacheRead: number;
@@ -420,7 +453,18 @@ export interface OpenAIResponsesHistoryPayload {
 	items: Array<Record<string, unknown>>;
 }
 
-export type ProviderPayload = OpenAIResponsesHistoryPayload;
+export interface AnthropicHistoryPayload {
+	compactedAt?: number;
+	filesText?: string;
+	endpoint?: string;
+	type: "anthropicHistory";
+	provider: string;
+	model: string;
+	/** Opaque blocks, including signatures and tool changes, in original order. */
+	blocks: Record<string, any>[];
+}
+
+export type ProviderPayload = OpenAIResponsesHistoryPayload | AnthropicHistoryPayload;
 
 export interface UserMessage {
 	role: "user";
@@ -435,6 +479,8 @@ export interface UserMessage {
 }
 
 export interface DeveloperMessage {
+	/** Native Anthropic per-message effort control. */
+	effort?: "low" | "medium" | "high" | "xhigh" | "max";
 	toolsAdded?: Tool[];
 	toolsRemoved?: { name: string }[];
 	role: "developer";
@@ -635,6 +681,21 @@ export type AssistantMessageEvent =
  * Compatibility settings for openai-completions API.
  * Use this to override URL-based auto-detection for custom providers.
  */
+export interface AnthropicCompat extends OpenAICompat {
+	supportsLongCacheRetention?: boolean;
+	extendedCacheTtlBeta?: boolean;
+	requiresThinkingEnabled?: boolean;
+	supportsStrictTools?: boolean;
+	supportsForcedToolChoice?: boolean;
+	supportsThinkingBindingControls?: boolean;
+	supportsServerCompaction?: boolean;
+	supportsContextManagement?: boolean;
+	supportsMidConvoEffort?: boolean;
+	supportsMessageThreads?: boolean;
+	supportsEagerToolInputStreaming?: boolean;
+	supportsFastMode?: boolean;
+}
+
 export interface OpenAICompat {
 	/** Anthropic native transcript controls. Opt in only for a qualified route. */
 	supportsMidConvoSystemMessages?: boolean;
@@ -813,11 +874,13 @@ export interface Model<TApi extends Api = any> {
 	/** Canonical thinking capability metadata for this model. */
 	thinking?: ThinkingConfig;
 	/** Provider-specific request compatibility overrides. */
-	compat?: TApi extends "openai-completions" | "anthropic-messages"
-		? OpenAICompat
-		: TApi extends "openai-responses" | "openai-codex-responses" | "azure-openai-responses"
-			? OpenAIResponsesCompat
-			: never;
+	compat?: TApi extends "anthropic-messages"
+		? AnthropicCompat
+		: TApi extends "openai-completions"
+			? OpenAICompat
+			: TApi extends "openai-responses" | "openai-codex-responses" | "azure-openai-responses"
+				? OpenAIResponsesCompat
+				: never;
 }
 
 export interface ModelCostRates {

@@ -318,3 +318,55 @@ test("session persistence failure restores the previous active model and routing
 	expect(session.getRoutingState().manualPin).toBe(previousPin);
 	flush.mockRestore();
 });
+
+for (const scope of ["conversation", "default"] as const) {
+	test(`thinking display selection rolls back session controls after failed ${scope} persistence`, async () => {
+		const { session, models } = await harness();
+		session.setAnthropicControls({ thinkingDisplay: "summarized" });
+		const flush = vi.spyOn(session.sessionManager, "flush").mockRejectedValueOnce(new Error("session disk full"));
+		await expect(
+			applyModelSelection(session, {
+				scope,
+				model: models[0],
+				selector: "anthropic/claude-sonnet-4-5",
+				thinkingLevel: ThinkingLevel.Low,
+				thinkingDisplay: "omitted",
+			}),
+		).rejects.toThrow("session disk full");
+		expect(session.agent.anthropicControls.thinkingDisplay).toBe("summarized");
+		expect(
+			session.sessionManager
+				.getEntries()
+				.filter(entry => entry.type === "custom" && entry.customType === "anthropic-controls")
+				.at(-1),
+		).toMatchObject({ data: { thinkingDisplay: "summarized" } });
+		flush.mockRestore();
+	});
+}
+
+test("saving an Anthropic default persists the thinking display for future sessions", async () => {
+	const { session, settings, models } = await harness();
+	await applyModelSelection(session, {
+		scope: "default",
+		model: models[0],
+		selector: "anthropic/claude-sonnet-4-5",
+		thinkingLevel: ThinkingLevel.Low,
+		thinkingDisplay: "omitted",
+	});
+	expect(settings.get("anthropic.thinkingDisplay")).toBe("omitted");
+	expect(session.agent.anthropicControls.thinkingDisplay).toBe("omitted");
+});
+test("role-only assignments preserve the active conversation thinking display", async () => {
+	const { session, settings, models } = await harness();
+	session.setAnthropicControls({ thinkingDisplay: "summarized" });
+	await applyModelSelection(session, {
+		scope: "role",
+		role: "smol",
+		model: models[0],
+		selector: "anthropic/claude-sonnet-4-5",
+		thinkingLevel: ThinkingLevel.Low,
+		thinkingDisplay: "omitted",
+	});
+	expect(settings.get("anthropic.thinkingDisplay")).toBe("summarized");
+	expect(session.agent.anthropicControls.thinkingDisplay).toBe("summarized");
+});

@@ -203,8 +203,8 @@ describe("getLiteLLMLoginModelRoles", () => {
 
 	it("maps only the latest Claude tier defaults onto the Anthropic proxy provider", () => {
 		expect(getLiteLLMLoginModelRoles(OPUS_CHOICE)).toEqual({
-			smol: "anthropic/claude-haiku-4-5:low",
-			default: "anthropic/claude-sonnet-5:medium",
+			smol: "anthropic/claude-haiku-5-5:low",
+			default: "anthropic/claude-sonnet-5-5:medium",
 			slow: "anthropic/claude-opus-5-5:high",
 			plan: "anthropic/claude-opus-5-5:high",
 		});
@@ -316,31 +316,31 @@ describe("applyOAuthLoginModel", () => {
 		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: M("gpt-6.1-sol"),
 			models: [
-				M("claude-haiku-4-5-20251001", "anthropic"),
-				M("claude-sonnet-5", "anthropic"),
+				M("claude-haiku-5-5-20261007", "anthropic"),
+				M("claude-sonnet-5-5", "anthropic"),
 				M("claude-opus-5-5", "anthropic"),
 			],
 		});
 		(session.modelRegistry as any).getProviderDiscoveryState = () => ({
 			status: "ok",
 			stale: false,
-			models: ["claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5-5"],
+			models: ["claude-haiku-5-5-20261007", "claude-sonnet-5-5", "claude-opus-5-5"],
 		});
 
 		const applied = await applyOAuthLoginModel(session as never, "anthropic");
 
 		expect(applied).toMatchObject({
 			provider: "anthropic",
-			modelId: "claude-sonnet-5",
+			modelId: "claude-sonnet-5-5",
 			thinkingLevel: ThinkingLevel.Medium,
 		});
-		expect(setModel).toHaveBeenCalledWith(M("claude-sonnet-5", "anthropic"), "default", {
-			selector: "anthropic/claude-sonnet-5",
+		expect(setModel).toHaveBeenCalledWith(M("claude-sonnet-5-5", "anthropic"), "default", {
+			selector: "anthropic/claude-sonnet-5-5",
 			thinkingLevel: ThinkingLevel.Medium,
 		});
 		expect(getModelRoles()).toMatchObject({
-			smol: "anthropic/claude-haiku-4-5-20251001:low",
-			default: "anthropic/claude-sonnet-5:medium",
+			smol: "anthropic/claude-haiku-5-5-20261007:low",
+			default: "anthropic/claude-sonnet-5-5:medium",
 			slow: "anthropic/claude-opus-5-5:high",
 			plan: "anthropic/claude-opus-5-5:high",
 			vision: "google/vision",
@@ -353,12 +353,12 @@ describe("applyOAuthLoginModel", () => {
 		const previousModel = M("existing", "openai");
 		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: previousModel,
-			models: [M("claude-haiku-4-5", "anthropic"), M("claude-opus-5-5", "anthropic")],
+			models: [M("claude-haiku-5-5", "anthropic"), M("claude-opus-5-5", "anthropic")],
 		});
 		(session.modelRegistry as any).getProviderDiscoveryState = () => ({
 			status: "ok",
 			stale: false,
-			models: ["claude-haiku-4-5", "claude-opus-5-5"],
+			models: ["claude-haiku-5-5", "claude-opus-5-5"],
 		});
 		await expect(applyOAuthLoginModel(session as never, "anthropic")).resolves.toBeUndefined();
 		expect(session.model).toBe(previousModel);
@@ -468,15 +468,15 @@ describe("applyOAuthLoginModel", () => {
 			model: previousModel,
 			thinkingLevel: ThinkingLevel.Low,
 			models: [
-				M("claude-haiku-4-5", "anthropic"),
-				M("claude-sonnet-5", "anthropic"),
+				M("claude-haiku-5-5", "anthropic"),
+				M("claude-sonnet-5-5", "anthropic"),
 				M("claude-opus-5-5", "anthropic"),
 			],
 		});
 		(session.modelRegistry as any).getProviderDiscoveryState = () => ({
 			status: "ok",
 			stale: false,
-			models: ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5-5"],
+			models: ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"],
 		});
 		const persist = session.settings.set;
 		let failed = false;

@@ -27,8 +27,8 @@ const ANTHROPIC_POOL: RoutingPoolConfig = {
 	id: "anthropic/claude",
 	provider: "anthropic",
 	tiers: {
-		utility: "claude-haiku-4-5",
-		balanced: "claude-sonnet-5",
+		utility: "claude-haiku-5-5",
+		balanced: "claude-sonnet-5-5",
 		frontier: "claude-opus-5-5",
 	},
 	effortPolicy: {
@@ -42,8 +42,8 @@ export const SUBSCRIPTION_ROUTING_PROFILES: Readonly<Record<SubscriptionProfileI
 		id: "anthropic",
 		provider: "anthropic",
 		roles: {
-			smol: "anthropic/claude-haiku-4-5:low",
-			default: "anthropic/claude-sonnet-5:medium",
+			smol: "anthropic/claude-haiku-5-5:low",
+			default: "anthropic/claude-sonnet-5-5:medium",
 			slow: "anthropic/claude-opus-5-5:high",
 			plan: "anthropic/claude-opus-5-5:high",
 		},
@@ -110,8 +110,8 @@ function resolveAnthropicRoles(
 	fallback: Readonly<Record<"smol" | "default" | "slow" | "plan", string>>,
 ): Readonly<Record<"smol" | "default" | "slow" | "plan", string>> {
 	const haiku =
-		availableModels.find(selector => selector === "anthropic/claude-haiku-4-5") ??
-		availableModels.find(selector => /^anthropic\/claude-haiku-4-5-\d{8}$/.test(selector));
+		availableModels.find(selector => selector === "anthropic/claude-haiku-5-5") ??
+		availableModels.find(selector => /^anthropic\/claude-haiku-5-5-\d{8}$/.test(selector));
 	if (!haiku) return fallback;
 	return { ...fallback, smol: `${haiku}:low` };
 }

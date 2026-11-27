@@ -6,11 +6,11 @@ import { filterCurrentBrowserModels } from "../src/config/model-catalog";
 import { DEFAULT_MODEL_ROLES } from "../src/config/settings-schema";
 
 describe("GPT-6.1 Sol configuration", () => {
-	it("generates v12 with Sol Responses, valid efforts, zero cost and endpoint prefixes", () => {
+	it("generates v13 with Sol Responses, valid efforts, zero cost and endpoint prefixes", () => {
 		const config = parse(
 			generateModelsYml("https://proxy.example.com", { apiBasePath: "/api/v1", apiKeyLiteral: "synthetic-key" }),
 		);
-		expect(config.configVersion).toBe(12);
+		expect(config.configVersion).toBe(13);
 		const provider = config.providers.litellm;
 		expect(provider.apiKey).toBe("synthetic-key");
 		expect(provider.baseUrl).toBe("https://proxy.example.com/api/v1");
