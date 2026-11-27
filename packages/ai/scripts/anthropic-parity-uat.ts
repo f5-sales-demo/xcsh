@@ -78,7 +78,7 @@ const catalogResponse = await fetch(catalogUrl, {
 			: buildAnthropicHeaders({ apiKey: key, baseUrl, isOAuth: true }),
 });
 if (!catalogResponse.ok) throw new Error(`Model discovery failed with HTTP ${catalogResponse.status}`);
-const catalog = (await catalogResponse.json()) as { data: { id: string }[] };
+const catalog = (await catalogResponse.json()) as { data: { id: string; allowed_fallback_models?: string[] }[] };
 const ids = new Set(catalog.data.map(model => model.id));
 const canary = `parity-${randomUUID()}`;
 const receipts: Record<string, unknown>[] = [];
@@ -468,7 +468,24 @@ for (const model of models) {
 			throw new Error("Tool result replay failed");
 	});
 	await test("server-fallback-handoff", model, async () => {
-		const target = model.id === "claude-haiku-5-5" ? "claude-sonnet-5-5" : "claude-haiku-5-5";
+		let targets = catalog.data.find(entry => entry.id === model.id)?.allowed_fallback_models;
+		if (route === "subscription") {
+			const headers = new Headers(buildAnthropicHeaders({ apiKey: key, baseUrl, isOAuth: oauth }));
+			headers.set("anthropic-beta", `${headers.get("anthropic-beta")},server-side-fallback-2026-06-01`);
+			const response = await fetch(`${baseUrl}/v1/models/${encodeURIComponent(model.id)}`, {
+				headers,
+				redirect: "error",
+				signal: AbortSignal.timeout(15000),
+			});
+			if (!response.ok) throw new Error(`Native fallback discovery failed with HTTP ${response.status}`);
+			const detail = (await response.json()) as { allowed_fallback_models?: string[] };
+			await writeFile(path.join(output, `${model.id}-fallback-model-detail.json`), JSON.stringify(detail), {
+				mode: 0o600,
+			});
+			targets = detail.allowed_fallback_models;
+		}
+		const target = targets?.find(candidate => typeof candidate === "string" && candidate.trim().length > 0);
+		if (!target) throw new Error("The route did not advertise an allowed native fallback target");
 		const { result } = await call(`${model.id}-fallback`, model, prompt, { fallbacks: [{ model: target }] });
 		requireSuccess(result);
 		if (result.responseAttribution?.responseModel !== target)
