@@ -1,6 +1,7 @@
 """Offline contracts for the current source-qualified development toolchain."""
 
 import json
+import re
 import tomllib
 import unittest
 from pathlib import Path
@@ -20,6 +21,35 @@ class RuntimeToolchainContract(unittest.TestCase):
                 install = config.get("install", {})
                 assert install.get("minimumReleaseAge", 0) == 0
                 assert "minimumReleaseAgeExcludes" not in install
+
+    def test_container_bun_matches_the_selected_runtime(self):
+        selected = json.loads((ROOT / "package.json").read_text())["packageManager"]
+        version = selected.removeprefix("bun@")
+        for name in ("Dockerfile.alpine", "Dockerfile.debian"):
+            with self.subTest(dockerfile=name):
+                dockerfile = (ROOT / name).read_text()
+                declared = re.search(
+                    r"^ARG BUN_VERSION=(.+)$", dockerfile, re.MULTILINE
+                )
+                assert declared is not None
+                assert declared.group(1) == version, f"{declared.group(1)} != {version}"
+                for arch in ("AMD64", "ARM64"):
+                    digest = re.search(
+                        rf"^ARG BUN_{arch}_SHA256=([0-9a-f]{{64}})$",
+                        dockerfile,
+                        re.MULTILINE,
+                    )
+                    assert digest is not None
+                assert "bun-v${BUN_VERSION}/bun-linux-${bun_arch}.zip" in dockerfile
+                assert "bun_arch=x64-baseline" in dockerfile
+                assert "bun_arch=aarch64" in dockerfile
+                verify = dockerfile.index(
+                    'echo "${bun_sha256}  bun.zip" | sha256sum -c -'
+                )
+                assert verify < dockerfile.index("unzip -q bun.zip")
+                assert verify < dockerfile.index(
+                    'install -D -m 0755 "bun-linux-${bun_arch}/bun"'
+                )
 
     def test_current_runner_bun_matches_the_verified_artifact(self):
         script = (ROOT / "scripts/prepare-runner-optimization-toolchain.sh").read_text()
