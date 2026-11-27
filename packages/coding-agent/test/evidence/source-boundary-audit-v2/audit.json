@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "testCoverageVerified": false,
-  "revision": "71b95b36bf632befd08d70931999a3802ca443c2",
+  "revision": "6f544934cf3bf6861692848ea7d0a39fd420b5be",
   "fingerprint": "041794312bbb841108278dd5eb59c976d84d8130fb37a72c5d58d3ff3bb4b302",
   "counts": {
     "total": 247,
@@ -15800,6 +15800,7 @@
         "packages/coding-agent/test/blindfold-ensure.test.ts",
         "packages/coding-agent/test/blindfold-intent.test.ts",
         "packages/coding-agent/test/blindfold-interchangeability.test.ts",
+        "packages/coding-agent/test/blindfold-native-score.test.ts",
         "packages/coding-agent/test/blindfold-offline.test.ts",
         "packages/coding-agent/test/blindfold-process.test.ts",
         "packages/coding-agent/test/blindfold-producer-matrix.test.ts",

@@ -14,6 +14,19 @@ mutation attempts are counted separately, existing encrypted outputs stay
 private, and the follow-up must respect its initial wait instruction. Original
 smoke and development failures remain private evidence.
 
+The original installed v25.1.2 packet scored 67/72: all 54 native tasks passed,
+but three article-name checks and two AWS scoring false positives failed.
+`installed-25.1.2-original.json` preserves that failed result. The AWS replies
+ask for file paths and explicitly exclude the secret value. The scorer
+mistakenly counts those negated noun phrases as requests.
+
+On 2026-11-27 the user authorized the tested correction and a fresh packet.
+`freeze-installed-scorer-amendment.json` records the post-observation amendment,
+previous and effective hashes, unchanged product candidate and corpus, and
+verified immutable installed artifact. Diagnostic rescoring gives 69/72; that
+is not prospective acceptance. The article-name check remains unchanged.
+The new packet must run all 24 cases three times with a new private label.
+
 Run the shared RPC harness against source or an installed executable:
 
 ```sh
@@ -53,7 +66,8 @@ Work list:
 - [x] Implement matcher/hint and replacement-first policy candidates.
 - [x] Screen development candidates and record keep/discard decisions.
 - [x] Run baseline/final and held-out comparisons.
-- [ ] Complete package, type, documentation, lint and privacy checks.
-- [ ] Merge the linked PR through Ubuntu and publish the normal release.
-- [ ] Verify Homebrew artifact identity and installed three-repeat acceptance.
+- [x] Complete original package, type, documentation, lint and privacy checks.
+- [x] Merge the original linked PR and publish the immutable v25.1.2 release.
+- [x] Verify Homebrew artifact identity, signatures and native hashes.
+- [ ] Qualify a fresh installed three-repeat packet under the approved scorer amendment.
 - [ ] Preserve evidence and retire task worktrees.
