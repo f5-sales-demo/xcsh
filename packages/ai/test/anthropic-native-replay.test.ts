@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
 import { Messages } from "@anthropic-ai/sdk/resources/messages/messages";
+import { CURRENT_ANTHROPIC_MODELS } from "../src/current-anthropic-models";
+import { enrichModelThinking } from "../src/model-thinking";
 import { convertAnthropicMessages, streamAnthropic } from "../src/providers/anthropic";
 import type { AssistantMessageEvent, Model } from "../src/types";
 
@@ -20,11 +22,17 @@ async function run(
 	blocks: Record<string, unknown>[],
 	options: Record<string, unknown> = {},
 	usage: Record<string, unknown> = {},
+	startUsage: Record<string, unknown> = {},
+	selectedModel = model,
 ) {
 	const events = [
 		{
 			type: "message_start",
-			message: { id: "msg_native", model: model.id, usage: { input_tokens: 20, output_tokens: 0 } },
+			message: {
+				id: "msg_native",
+				model: selectedModel.id,
+				usage: { input_tokens: 20, output_tokens: 0, ...startUsage },
+			},
 		},
 		...blocks.flatMap((content_block, index) => [
 			{ type: "content_block_start", index, content_block },
@@ -37,34 +45,79 @@ async function run(
 		},
 		{ type: "message_stop" },
 	];
-	vi.spyOn(Messages.prototype, "create").mockImplementation(
-		() =>
-			({
-				async withResponse() {
-					return {
-						data: {
-							async *[Symbol.asyncIterator]() {
-								yield* events;
-							},
+	let request: any;
+	vi.spyOn(Messages.prototype, "create").mockImplementation((value: any) => {
+		request = value;
+		return {
+			async withResponse() {
+				return {
+					data: {
+						async *[Symbol.asyncIterator]() {
+							yield* events;
 						},
-						response: new Response(null, { status: 200, headers: { "request-id": "req_native" } }),
-					};
-				},
-			}) as never,
-	);
+					},
+					response: new Response(null, { status: 200, headers: { "request-id": "req_native" } }),
+				};
+			},
+		} as never;
+	});
 	const stream = streamAnthropic(
-		model,
+		selectedModel,
 		{ messages: [{ role: "user", content: "Do the canary task.", timestamp: 1 }] },
 		{ apiKey: "test-key", ...options },
 	);
 	const received: AssistantMessageEvent[] = [];
 	for await (const event of stream) received.push(event);
-	return { result: await stream.result(), events: received };
+	return { result: await stream.result(), events: received, request };
 }
 
 afterEach(() => vi.restoreAllMocks());
 
 describe("Anthropic native replay and fallback", () => {
+	it.each(["standard", "fast"])(
+		"honors an explicit standard fallback with initial %s speed without dispatching discarded tools",
+		async initialSpeed => {
+			const primary = enrichModelThinking(CURRENT_ANTHROPIC_MODELS.find(record => record.id === "claude-opus-5-5")!);
+			const target = "claude-opus-5";
+			const boundary = { type: "fallback", from: { model: primary.id }, to: { model: target } };
+			const { result, events, request } = await run(
+				[
+					{ type: "tool_use", id: "discarded_fast", name: "counter", input: { increment: 1 } },
+					boundary,
+					{ type: "tool_use", id: "served_standard", name: "counter", input: { increment: 2 } },
+				],
+				{ serviceTier: "priority", fallbacks: [{ model: target, speed: "standard" }] },
+				{
+					speed: "standard",
+					iterations: [
+						{ type: "message", model: primary.id, input_tokens: 20, output_tokens: 0 },
+						{ type: "fallback_message", model: target, input_tokens: 20, output_tokens: 10 },
+					],
+				},
+				{ speed: initialSpeed },
+				primary,
+			);
+			expect(request.speed).toBe("fast");
+			expect(request.fallbacks).toEqual([{ model: target, speed: "standard" }]);
+			expect(result.stopReason).toBe("toolUse");
+			expect(result.responseAttribution?.responseModel).toBe(target);
+			expect(result.usage.inferenceSpeed).toBe("standard");
+			expect(result.usage.costKnown).toBe(false);
+			expect(events.filter(event => event.type === "toolcall_end").map(event => event.toolCall.id)).toEqual([
+				"served_standard",
+			]);
+		},
+	);
+	it("does not excuse an unhonored fast primary merely because a standard fallback was configured", async () => {
+		const { result } = await run(
+			[{ type: "tool_use", id: "unhonored", name: "counter", input: {} }],
+			{ serviceTier: "priority", fallbacks: [{ model: "claude-opus-5", speed: "standard" }] },
+			{},
+			{ speed: "standard" },
+		);
+		expect(result.stopReason).toBe("error");
+		expect(result.providerFailureCode).toBe("fast_mode_not_honored");
+	});
 	it("rejects reported standard speed when fast mode was explicitly requested", async () => {
 		const events = [
 			{

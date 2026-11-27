@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getMemoriesDir } from "@f5-sales-demo/pi-utils";
 import { Settings } from "../../src/config/settings";
 import { buildMemoryToolDeveloperInstructions, getMemoryRoot } from "../../src/memories";
 
@@ -24,6 +25,25 @@ describe("buildMemoryToolDeveloperInstructions", () => {
 
 			expect(await buildMemoryToolDeveloperInstructions(agentDir, settings)).toBeUndefined();
 		});
+	});
+
+	it("preserves ambiguous legacy artifacts without injecting them", async () => {
+		await withTempDir(async agentDir => {
+			const settings = Settings.isolated({ "memories.enabled": true });
+			const cwd = path.join(agentDir, "alpha-beta");
+			const legacy = path.join(getMemoriesDir(agentDir), `--${cwd.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`);
+			await fs.mkdir(legacy, { recursive: true });
+			const summary = path.join(legacy, "memory_summary.md");
+			await Bun.write(summary, "LEGACY_ONLY: demo due in 23 hours");
+			expect(await buildMemoryToolDeveloperInstructions(agentDir, settings, cwd)).toBeUndefined();
+			expect(await Bun.file(summary).text()).toBe("LEGACY_ONLY: demo due in 23 hours");
+		});
+	});
+
+	it("normalizes equivalent lexical project paths", () => {
+		expect(getMemoryRoot("/synthetic-agent", "/projects/alpha/../beta")).toBe(
+			getMemoryRoot("/synthetic-agent", "/projects/beta"),
+		);
 	});
 
 	it("uses memory:// URLs and does not expose raw memory root paths", async () => {

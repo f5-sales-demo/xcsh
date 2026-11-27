@@ -7,8 +7,10 @@
 //   - the xcsh://branding/* protocol (via xcsh-protocol.ts, same generated data)
 //   - the CLI-Quick-Start renderer (isDisallowedCliCommand / getDeprecatedClis)
 
+import { prompt } from "@f5-sales-demo/pi-utils";
 import { BRANDING_DEPRECATIONS } from "./internal-urls/branding-index.generated";
 import apiCurlGuidance from "./prompts/system/api-curl-guidance.md" with { type: "text" };
+import vesctlPolicy from "./prompts/system/vesctl-policy.md" with { type: "text" };
 
 interface DeprecationEntry {
 	deprecated: Record<string, string>;
@@ -64,7 +66,7 @@ export function renderDeprecationGuardrails(): string {
 	return [
 		"These deprecations are non-negotiable. Full detail lives at `xcsh://branding` and `xcsh://branding/volterra`, but the rules below apply even when that protocol is never consulted.",
 		"",
-		`- **Never use \`${vesctl}\`.** It is the abandoned, unsupported legacy CLI; \`${xcshCmd}\` is its modern replacement. Never propose, generate, or run \`${vesctl}\`. For console automation use \`catalog_workflow_runner\`.`,
+		prompt.render(vesctlPolicy, { canonicalCommand: xcshCmd, legacyCommand: vesctl }).trim(),
 		`- **The legacy API docs are deprecated.** Never link or fetch \`${legacyApiUrl}\`; the canonical human-facing API documentation site is \`${enrichedUrl}\`. For your own API work you rarely need either — the enriched OpenAPI specs ship embedded in this binary: use \`xcsh://api-catalog/\` (operations/CRUD) and \`xcsh://api-spec/\` (schemas) per the routing rules above.`,
 		`- **"${deadBrand}" is a retired brand name.** The product is **${currentBrand}**; never write "${deadBrand}" as a product name or recommend ${deadBrand}-labeled tooling. BUT \`volterra_*\` API keys, \`*.volterra.io\`/\`*.volterra.us\` hostnames, and schema identifiers are **required functional identifiers** — use them verbatim, exactly as the API expects. Only the brand name is dead, not the identifiers.`,
 		"",

@@ -42,6 +42,12 @@ describe("isDisallowedCliCommand", () => {
 
 describe("renderDeprecationGuardrails", () => {
 	const block = renderDeprecationGuardrails();
+	test("identifies native xcsh before legacy status without eagerly advertising optional tools", () => {
+		expect(block.indexOf("Use native `xcsh`")).toBeGreaterThanOrEqual(0);
+		expect(block.indexOf("Use native `xcsh`")).toBeLessThan(block.indexOf("Never use"));
+		expect(block).not.toContain("xcsh_blindfold");
+		expect(block).toContain("continue the task");
+	});
 
 	test("forbids vesctl and points to xcsh_api", () => {
 		expect(block).toContain("vesctl");

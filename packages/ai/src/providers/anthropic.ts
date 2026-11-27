@@ -662,7 +662,7 @@ export function isProviderRetryableError(error: unknown): boolean {
 }
 
 export function isAnthropicPermanentErrorMessage(message: string): boolean {
-	return /fast_mode_not_honored|credits_required|obsolete[_ -]?client|client[_ -]?(?:is[_ -]?)?too[_ -]?old|version of (?:claude code|the client) is no longer supported/i.test(
+	return /fast_mode_not_honored|inference_speed_not_honored|credits_required|obsolete[_ -]?client|client[_ -]?(?:is[_ -]?)?too[_ -]?old|version of (?:claude code|the client) is no longer supported/i.test(
 		message,
 	);
 }
@@ -929,7 +929,11 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 							};
 							output.usage.inferenceSpeed = wireUsage.speed;
 							output.usage.processingTier = wireUsage.service_tier;
-							if (options?.serviceTier === "priority" && wireUsage.speed === "standard") {
+							if (
+								options?.serviceTier === "priority" &&
+								wireUsage.speed === "standard" &&
+								!options.fallbacks?.some(target => target.speed === "standard")
+							) {
 								output.providerFailureCode = "fast_mode_not_honored";
 								throw new Error(
 									"Anthropic fast mode was requested, but the provider reported standard speed (fast_mode_not_honored)",
@@ -1208,6 +1212,12 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 								);
 							}
 							Object.assign(usageSnapshot, structuredClone(event.usage));
+							const finalService = event.usage as unknown as {
+								speed?: "standard" | "fast";
+								service_tier?: string;
+							};
+							if (finalService.speed) output.usage.inferenceSpeed = finalService.speed;
+							if (finalService.service_tier) output.usage.processingTier = finalService.service_tier;
 							applyAnthropicCacheCreation(usageSnapshot, output.usage, model.cost);
 							const servedModel = applyAnthropicIterationUsage(
 								usageSnapshot,
@@ -1260,6 +1270,25 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 						);
 					}
 					nativeHistory.attach(output);
+					let expectedSpeed: "standard" | "fast" | undefined =
+						options?.serviceTier === "priority" ? "fast" : undefined;
+					const servedModel = output.responseAttribution?.responseModel;
+					const verifiedFallback =
+						output.providerPayload?.type === "anthropicHistory" &&
+						output.providerPayload.blocks.some(
+							block => block.type === "fallback" && (block.to?.model ?? block.model) === servedModel,
+						);
+					if (verifiedFallback) {
+						const target = options?.fallbacks?.find(fallback => fallback.model === servedModel);
+						if (target?.speed) expectedSpeed = target.speed;
+					}
+					if (expectedSpeed && output.usage.inferenceSpeed && output.usage.inferenceSpeed !== expectedSpeed) {
+						output.providerFailureCode =
+							expectedSpeed === "fast" ? "fast_mode_not_honored" : "inference_speed_not_honored";
+						throw new Error(
+							`Anthropic ${expectedSpeed === "fast" ? "fast mode" : "standard mode"} was requested, but the provider reported ${output.usage.inferenceSpeed} speed (${output.providerFailureCode})`,
+						);
+					}
 					break;
 				} catch (streamError) {
 					const streamFailure = activeAbortTracker.getLocalAbortReason() ?? streamError;

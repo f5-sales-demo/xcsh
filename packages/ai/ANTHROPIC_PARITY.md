@@ -58,7 +58,11 @@ checks. Narrow runner routing belongs in
 followed by manifest propagation and an actual job proving image, Bun, and SDK
 identity. Shared runner profiles must retain their existing compatibility.
 
-Full parity remains gated on the open live features above, the rebuilt owned
-terminal candidate, release provenance and hashes, approved MacBook and Ubuntu
-installation paths, and installed two-host reacceptance. Keep #5266 open until
-those gates have positive evidence.
+Publication uses best-effort coverage for the credit-dependent fast and fallback
+features. Synthetic fixtures verify their request controls, speed overrides,
+handoff bookkeeping, and rejection of unhonored modes; live acceptance remains
+unverified. Account and gateway capabilities still determine availability.
+
+Release provenance, approved MacBook and Ubuntu installation paths, and installed
+two-host reacceptance remain separate delivery checks. Describe the credit-dependent
+features as synthetically tested rather than live-qualified.

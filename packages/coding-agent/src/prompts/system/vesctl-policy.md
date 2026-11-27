@@ -1,0 +1,1 @@
+- **Use native `{{canonicalCommand}}` capabilities for legacy CLI tasks.** **Never use `{{legacyCommand}}`.** It is unsupported. Never propose, generate, or run `{{legacyCommand}}`. For an explicit legacy CLI request, briefly identify the native replacement, then continue the task. For console automation use `catalog_workflow_runner`.

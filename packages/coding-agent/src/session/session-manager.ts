@@ -849,7 +849,14 @@ function writeTerminalBreadcrumb(cwd: string, sessionFile: string): void {
  * Read the terminal breadcrumb for the current terminal, scoped to a cwd.
  * Returns the session file path if it exists and matches the cwd, null otherwise.
  */
-async function readTerminalBreadcrumb(cwd: string): Promise<string | null> {
+function sessionCwdMatches(headerCwd: unknown, cwd: string): boolean {
+	return (
+		typeof headerCwd === "string" &&
+		resolveEquivalentPath(path.resolve(headerCwd)) === resolveEquivalentPath(path.resolve(cwd))
+	);
+}
+
+async function readTerminalBreadcrumb(cwd: string, sessionDir: string): Promise<string | null> {
 	const terminalId = getTerminalId();
 	if (!terminalId) return null;
 
@@ -861,13 +868,25 @@ async function readTerminalBreadcrumb(cwd: string): Promise<string | null> {
 
 		const breadcrumbCwd = lines[0];
 		const sessionFile = lines[1];
+		// The same terminal may be reused with a different user/agent storage root.
+		if (
+			resolveEquivalentPath(path.dirname(path.resolve(sessionFile))) !==
+			resolveEquivalentPath(path.resolve(sessionDir))
+		)
+			return null;
 
 		// Only return if cwd matches (user might have cd'd)
 		if (path.resolve(breadcrumbCwd) !== path.resolve(cwd)) return null;
 
 		// Verify the session file still exists
 		const stat = fs.statSync(sessionFile, { throwIfNoEntry: false });
-		if (stat?.isFile()) return sessionFile;
+		if (stat?.isFile()) {
+			const entries = parseJsonlLenient<Record<string, unknown>>(
+				await new FileSessionStorage().readTextPrefix(sessionFile, 4096),
+			);
+			const header = entries[0];
+			if (header?.type === "session" && sessionCwdMatches(header.cwd, cwd)) return sessionFile;
+		}
 	} catch (err) {
 		if (!isEnoent(err)) logger.debug("Terminal breadcrumb read failed", { err });
 		// Breadcrumb doesn't exist or is corrupt — fall through
@@ -1035,7 +1054,11 @@ function extractFirstUserPrompt(entries: Array<Record<string, unknown>>): string
  * Uses low-level file I/O to efficiently read only the first 4KB of each file
  * to extract the JSON header and first user message without loading entire session logs into memory.
  */
-async function getSortedSessions(sessionDir: string, storage: SessionStorage): Promise<RecentSessionInfo[]> {
+async function getSortedSessions(
+	sessionDir: string,
+	storage: SessionStorage,
+	cwd?: string,
+): Promise<RecentSessionInfo[]> {
 	try {
 		const files: string[] = storage.listFilesSync(sessionDir, "*.jsonl");
 		const sessions: RecentSessionInfo[] = [];
@@ -1047,6 +1070,7 @@ async function getSortedSessions(sessionDir: string, storage: SessionStorage): P
 					if (entries.length === 0) return;
 					const header = entries[0] as Record<string, unknown>;
 					if (header.type !== "session" || typeof header.id !== "string") return;
+					if (cwd !== undefined && !sessionCwdMatches(header.cwd, cwd)) return;
 					const mtime = storage.statSync(path).mtimeMs;
 					const firstPrompt = header.title ? undefined : extractFirstUserPrompt(entries);
 					sessions.push(new RecentSessionInfo(path, mtime, header, firstPrompt));
@@ -1063,8 +1087,9 @@ async function getSortedSessions(sessionDir: string, storage: SessionStorage): P
 export async function findMostRecentSession(
 	sessionDir: string,
 	storage: SessionStorage = new FileSessionStorage(),
+	cwd?: string,
 ): Promise<string | null> {
-	const sessions = await getSortedSessions(sessionDir, storage);
+	const sessions = await getSortedSessions(sessionDir, storage, cwd);
 	return sessions[0]?.path || null;
 }
 
@@ -3257,8 +3282,8 @@ export class SessionManager {
 	): Promise<SessionManager> {
 		const dir = sessionDir ?? SessionManager.getDefaultSessionDir(cwd, undefined, storage);
 		// Prefer terminal-scoped breadcrumb (handles concurrent sessions correctly)
-		const terminalSession = await readTerminalBreadcrumb(cwd);
-		const mostRecent = terminalSession ?? (await findMostRecentSession(dir, storage));
+		const terminalSession = await readTerminalBreadcrumb(cwd, dir);
+		const mostRecent = terminalSession ?? (await findMostRecentSession(dir, storage, cwd));
 		const manager = new SessionManager(cwd, dir, true, storage);
 		if (mostRecent) {
 			await manager.#initSessionFile(mostRecent);
@@ -3291,7 +3316,10 @@ export class SessionManager {
 		const dir = sessionDir ?? SessionManager.getDefaultSessionDir(cwd, undefined, storage);
 		try {
 			const files = storage.listFilesSync(dir, "*.jsonl");
-			return await collectSessionsFromFiles(files, storage);
+			const sessions = await collectSessionsFromFiles(files, storage);
+			return sessionDir === undefined || resolveManagedSessionRoot(dir, cwd) !== undefined
+				? sessions.filter(info => sessionCwdMatches(info.cwd, cwd))
+				: sessions;
 		} catch {
 			return [];
 		}

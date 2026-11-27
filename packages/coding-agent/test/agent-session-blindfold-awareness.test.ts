@@ -74,6 +74,15 @@ function hints(messages: Message[]) {
 	return messages.filter(m => JSON.stringify(m).includes("Native Blindfold capability"));
 }
 describe("shared runtime Blindfold awareness", () => {
+	it("injects native guidance for generic, misspelled and legacy requests", async () => {
+		const { session, requests } = await create();
+		for (const text of ["Encrypt a secret", "Create a blidnfold secret", "Use vesctl request secrets encrypt"]) {
+			await session.prompt(text);
+			expect(hints(requests.at(-1)!)).toHaveLength(1);
+		}
+		await session.prompt("Read a vesctl secrets-encryption article");
+		expect(hints(requests.at(-1)!)).toHaveLength(0);
+	});
 	it("injects before inference and user text without activating schemas", async () => {
 		const { session, requests } = await create();
 		await session.prompt("Can I upload my custom certificate?");
