@@ -24,24 +24,25 @@ class BakedBunCompatibilityTests(unittest.TestCase):
                 environment["XCSH_EXPECTED_TOOL_ROOT"] = str(root)
             else:
                 environment.pop("XCSH_EXPECTED_TOOL_ROOT", None)
-            return subprocess.run(
-                ["bash", str(ROOT / "scripts/verify-self-hosted-tools.sh"), "bun"],
+            # The argv contains only the fixed repository verifier and a fixed scope.
+            return subprocess.run(  # noqa: S603
+                ["/bin/bash", str(ROOT / "scripts/verify-self-hosted-tools.sh"), "bun"],
                 env=environment,
                 capture_output=True,
                 check=False,
             ).returncode
 
     def test_qualified_worker_patch_is_admitted(self):
-        self.assertEqual(self.verify("1.4.5"), 0)
+        assert self.verify("1.4.5") == 0
 
     def test_obsolete_patch_is_rejected(self):
-        self.assertNotEqual(self.verify("1.4.4"), 0)
+        assert self.verify("1.4.4") != 0
 
     def test_incorrect_worker_uid_is_rejected(self):
-        self.assertNotEqual(self.verify("1.4.5", uid="1000"), 0)
+        assert self.verify("1.4.5", uid="1000") != 0
 
     def test_arbitrary_path_is_rejected(self):
-        self.assertNotEqual(self.verify("1.4.5", expected_path=False), 0)
+        assert self.verify("1.4.5", expected_path=False) != 0
 
 
 if __name__ == "__main__":
