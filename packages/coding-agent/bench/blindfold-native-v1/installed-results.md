@@ -28,30 +28,30 @@ were observed in total. Boundary controls remain unchanged.
 
 | Case | Expected | Original | Fresh | Hint coverage | Valid artifacts |
 | --- | --- | --- | --- | --- | --- |
-| ordinary | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| short | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| f5-secret | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| xcsh-secret | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| misspelling | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| hyphen | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| file-names | clarify | 3/3 | 3/3 | 3/3 | 2 |
-| generic | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| legacy-file | clarify | 3/3 | 3/3 | 3/3 | 1 |
-| legacy-command | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| legacy-follow | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| replacement | explain | 3/3 | 3/3 | 3/3 | 0 |
-| offline | encrypt | 3/3 | 3/3 | 3/3 | 3 |
-| collision | collision | 3/3 | 3/3 | 3/3 | 0 |
-| plan | plan | 3/3 | 3/3 | 3/3 | 0 |
-| followup | encrypt | 3/3 | 3/3 | 3/3 | 3 |
-| tls-key | clarify | 3/3 | 3/3 | 3/3 | 0 |
-| outside | outside | 3/3 | 3/3 | 3/3 | 0 |
-| disk | negative | 3/3 | 3/3 | 3/3 | 0 |
-| aws | negative | 1/3 | 3/3 | 3/3 | 0 |
-| public-cert | negative | 3/3 | 3/3 | 3/3 | 0 |
-| negation | negative | 3/3 | 3/3 | 3/3 | 0 |
-| article | negative | 0/3 | 0/3 | 3/3 | 0 |
-| voltshare | negative | 3/3 | 3/3 | 3/3 | 0 |
+| `ordinary` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `short` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `f5-secret` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `xcsh-secret` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `misspelling` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `hyphen` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `file-names` | clarify | 3/3 | 3/3 | 3/3 | 2 |
+| `generic` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `legacy-file` | clarify | 3/3 | 3/3 | 3/3 | 1 |
+| `legacy-command` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `legacy-follow` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `replacement` | explain | 3/3 | 3/3 | 3/3 | 0 |
+| `offline` | encrypt | 3/3 | 3/3 | 3/3 | 3 |
+| `collision` | collision | 3/3 | 3/3 | 3/3 | 0 |
+| `plan` | plan | 3/3 | 3/3 | 3/3 | 0 |
+| `followup` | encrypt | 3/3 | 3/3 | 3/3 | 3 |
+| `tls-key` | clarify | 3/3 | 3/3 | 3/3 | 0 |
+| `outside` | outside | 3/3 | 3/3 | 3/3 | 0 |
+| `disk` | negative | 3/3 | 3/3 | 3/3 | 0 |
+| `aws` | negative | 1/3 | 3/3 | 3/3 | 0 |
+| `public-cert` | negative | 3/3 | 3/3 | 3/3 | 0 |
+| `negation` | negative | 3/3 | 3/3 | 3/3 | 0 |
+| `article` | negative | 0/3 | 0/3 | 3/3 | 0 |
+| `voltshare` | negative | 3/3 | 3/3 | 3/3 | 0 |
 
 The machine-readable receipts are `installed-25.1.2-original.json` and
 `installed-25.1.2-amended.json`. The latter includes request identity checks and
