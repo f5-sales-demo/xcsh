@@ -1,0 +1,347 @@
+{
+  "schemaVersion": 1,
+  "acceptedAt": "2026-11-27T16:26:21.816454+00:00",
+  "issue": 5267,
+  "scope": "Selected published MacBook installation and synthetic context isolation",
+  "installation": {
+    "schemaVersion": 1,
+    "version": "25.1.2",
+    "tag": "v25.1.2",
+    "source": "6f544934cf3bf6861692848ea7d0a39fd420b5be",
+    "sourcePR": 5269,
+    "releasePR": 5276,
+    "downloads": {
+      "xcsh-darwin-arm64.zip": {
+        "sha256": "9b71b4bc91152557a3a5d5b7259e04d66ff56ce8f68f781ae5f07d66d4f1b511",
+        "size": 170603483,
+        "url": "https://github.com/f5-sales-demo/xcsh/releases/download/v25.1.2/xcsh-darwin-arm64.zip"
+      },
+      "xcsh-darwin-arm64.provenance.json": {
+        "sha256": "5a42dd12f314835c88dbe80b38f463eb034f28f9da250dcf07b90c936869033e",
+        "size": 1205,
+        "url": "https://github.com/f5-sales-demo/xcsh/releases/download/v25.1.2/xcsh-darwin-arm64.provenance.json"
+      }
+    },
+    "payload": [
+      {
+        "role": "cli",
+        "path": "bin/xcsh",
+        "sha256": "eb1d74da2f1b459f4c1ec6fe1b08168039e9427347ef4fff6bb9402b962b216a",
+        "size": 438354224,
+        "match": true
+      },
+      {
+        "role": "native-addon",
+        "path": "libexec/pi_natives.darwin-arm64.node",
+        "sha256": "6ff97421d0cc379e1c39e76a9584a01f9dc1f4d95ecf335758f9abeaf7740075",
+        "size": 103771472,
+        "match": true
+      }
+    ],
+    "allArchiveFilesMatch": true,
+    "installedProvenanceMatch": true,
+    "symlinkMatch": true,
+    "beforeSha256": "eb1d74da2f1b459f4c1ec6fe1b08168039e9427347ef4fff6bb9402b962b216a",
+    "homebrewInstalled": "25.1.2",
+    "afterSha256": "eb1d74da2f1b459f4c1ec6fe1b08168039e9427347ef4fff6bb9402b962b216a",
+    "signaturesVerified": true,
+    "allInstalledPayloadUnchangedAfterTesting": true
+  },
+  "sourceTrace": {
+    "sourcePR": 5269,
+    "sourceMerge": "66b8ddd7d7586efd286291da02de9a564b23db3d",
+    "releasePR": 5276,
+    "releaseIssue": 5275,
+    "releaseCommit": "6f544934cf3bf6861692848ea7d0a39fd420b5be",
+    "sourceMergeIsAncestorOfRelease": true
+  },
+  "releaseCI": {
+    "url": "https://github.com/f5-sales-demo/xcsh/actions/runs/45934022431",
+    "conclusion": "success",
+    "allExecutedJobsPassed": true
+  },
+  "historicalFailure": {
+    "url": "https://github.com/f5-sales-demo/xcsh/actions/runs/45899668825/job/140182082884",
+    "result": "failure",
+    "reason": "Corpus download timed out",
+    "acceptedBaseline": false,
+    "rawLogSha256": "4b1aa047ee1bd922d6fd2a8e1f16cbe62891ba02c70065bea4f9b04bc8088d10"
+  },
+  "provider": {
+    "id": "litellm",
+    "model": "gpt-6.1-sol",
+    "reasoning": "high",
+    "api": "openai-responses",
+    "actualRequestPath": "/openai/v1/responses",
+    "actualResponsesVerified": true
+  },
+  "cases": [
+    {
+      "name": "owner-memory",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "clean-workspace-0",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "clean-store-0",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "clean-workspace-1",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "clean-store-1",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "explicit-deadline",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "deadline-follow-up",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "intentional-resume",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "fresh-session",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "unrelated-automatic-resume",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "compaction-owner",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "compaction-other-workspace",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "compaction-fresh-session",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    },
+    {
+      "name": "foreign-terminal-breadcrumb",
+      "localRequestPass": true,
+      "liveRequestAndReplyPass": true
+    }
+  ],
+  "nativeMove": {
+    "local": {
+      "ownerAlwaysRulePresent": true,
+      "ownerConditionalNotPrematurelyInjected": true,
+      "nativeMoveHeaderUpdated": true,
+      "oldAlwaysRetired": true,
+      "oldConditionalRetired": true,
+      "newAlwaysLoaded": true,
+      "newConditionalTriggered": true,
+      "moveWasNativeReviewedFlow": true
+    },
+    "live": {
+      "ownerAlwaysRulePresent": true,
+      "ownerConditionalNotPrematurelyInjected": true,
+      "nativeMoveHeaderUpdated": true,
+      "oldAlwaysRetired": true,
+      "oldConditionalRetired": true,
+      "newAlwaysLoaded": true,
+      "newConditionalTriggered": true,
+      "moveWasNativeReviewedFlow": true,
+      "liveReplyHasCurrentAlwaysRule": true,
+      "liveReplyHasCurrentConditionalRule": true
+    },
+    "localPass": true,
+    "livePass": true
+  },
+  "compactionBoundary": "Synthetic persisted compaction entry restored by the installed CLI; compactor generation quality is outside this check",
+  "preserved": {
+    "existingUserSessionsAndWorkers": true,
+    "ubuntuInstalledCLI": true,
+    "rawEvidencePrivate": true,
+    "failedAttemptsRetained": true
+  },
+  "incidentAttribution": "Original reported incident remains unattributed without its transcript",
+  "privateEvidence": {
+    "installation-receipt.json": {
+      "sha256": "69091a48ca42bb3fad19cf4c23819f82c1973c2279dc679fc386d8e5289436b7",
+      "size": 1557
+    },
+    "local-receipt.json": {
+      "sha256": "920a7be491506554defaf9e40b2e6fafebc68a84d6e8efcf5af28d8204412ee9",
+      "size": 7511
+    },
+    "local-wire.json": {
+      "sha256": "06efbf81e10947ec322e9ff592101f0e7567c5e3bee623bef0f04401e4197762",
+      "size": 359556
+    },
+    "live-receipt.json": {
+      "sha256": "c2f0971d4d7fb9aff832ed3bf81e35cd6ee7cd97a5755b1a9e8252d0c4dadf24",
+      "size": 12966
+    },
+    "live-wire.json": {
+      "sha256": "1c4c8ae3c20e950422adc1fd75c62d37126eb0136ac32093ed27dc8dd36ba478",
+      "size": 369980
+    },
+    "live-responses.jsonl": {
+      "sha256": "a86506b669cebe39a7a733358b918f06832646d8f3ae22f8d2262ed5f49d761b",
+      "size": 296779
+    },
+    "move-receipt.json": {
+      "sha256": "5c6de1985c69ec3d94d07c531c2e606b8c3d991892b16c7231f564cdb39f15e9",
+      "size": 607
+    },
+    "move-wire.json": {
+      "sha256": "fdc6597e76ec80844927f62844f4cded9ea90c7d848b76cc3778aca12bcc2866",
+      "size": 81537
+    },
+    "move-pty.raw": {
+      "sha256": "817456b3fd0b2a710a72f139ad70421c3febd2bbdb20b23d9addccf846ef1869",
+      "size": 43276
+    },
+    "move-actions.json": {
+      "sha256": "4c5ac0af957f13271387db827ff9e320e03f7a2c5a464fbfb85b526d85e562c4",
+      "size": 886
+    },
+    "live-move/move-receipt.json": {
+      "sha256": "d203dbe80b0b95ac895eb570cdd0e9dbfb2474fcc3c3622a60e4491c825063a6",
+      "size": 820
+    },
+    "live-move/move-wire.json": {
+      "sha256": "5ca5a704d8a43194c03e519f55537df8357257abf35ddd81457fcf255c47b2e9",
+      "size": 87029
+    },
+    "live-move/move-pty.raw": {
+      "sha256": "954c77abfb501083a3c4f41924ec07f1ec9c170136b87229b77f053894c621db",
+      "size": 99510
+    },
+    "live-move/responses.jsonl": {
+      "sha256": "3561fdd532d9b87251a8a115cd759629c12391449e0c775660cef81948e33eac",
+      "size": 91197
+    },
+    "historical-install-timeout.log": {
+      "sha256": "4b1aa047ee1bd922d6fd2a8e1f16cbe62891ba02c70065bea4f9b04bc8088d10",
+      "size": 110800
+    },
+    "installed-probe.ts": {
+      "sha256": "b07e336cc0fcd5d4f5c2b4e054ab28a8ba6cf021b7a87006e9a93a66007f42be",
+      "size": 15062
+    },
+    "move-probe.py": {
+      "sha256": "4653320b8ee064679d9a2887e1980507ca383505f862b357cf704c9ac5edddf4",
+      "size": 7143
+    },
+    "live-move-proxy.ts": {
+      "sha256": "c51ed76af1f607e72ccda1fea233d11e3a7885acea9fa6a4de26fa65b90ec34a",
+      "size": 5532
+    },
+    "failed-live-config/live-owner-rpc.json": {
+      "sha256": "ccb85b83308fda0ac42e9bd31ee13e6b449a90d2337489604262b18dd11b182d",
+      "size": 170
+    },
+    "failed-live-config/live-receipt.json": {
+      "sha256": "984dad5b68f621c44756e1dcf9aa1a67071790c3fd7d1cfa58a6a395db3d3eb7",
+      "size": 415
+    },
+    "failed-live-config/live-run.log": {
+      "sha256": "fb8420b52f4ca6a2962dd51a020bda7a8bffb31201e6689658e9be30190bb2f6",
+      "size": 1299
+    },
+    "failed-move-startup/move-actions.json": {
+      "sha256": "117a324c5c475e86d1343271d426741b72502755522028be4f0a05cbaea7f38a",
+      "size": 140
+    },
+    "failed-move-startup/move-probe.py": {
+      "sha256": "bf198c8bc20c1b44766701886edba9ee20218d36138c3c680caf1087c6a220d8",
+      "size": 7078
+    },
+    "failed-move-startup/move-pty.raw": {
+      "sha256": "68359a7d49101cb7bb5a7cd0139d9b2b5be4fbcc79aa22eb36e3ba252b02242c",
+      "size": 18098
+    },
+    "failed-move-startup/move-receipt.json": {
+      "sha256": "c0c4c1328370501dcf5e4df6e850e18fa7c792143edb9b7994765404e9b67610",
+      "size": 311
+    },
+    "failed-move-startup/move-run.log": {
+      "sha256": "1ba194e1875a350e57cc43a56cdfe17f713d5109fc0f1ea8319969f9599878ae",
+      "size": 1027
+    },
+    "failed-move-colliding-destination/move-actions.json": {
+      "sha256": "7c3c1228dc4bd574dcd4101e3aaf1d4e33967e8c6298ce3deb027be51eb5f0ec",
+      "size": 577
+    },
+    "failed-move-colliding-destination/move-probe.py": {
+      "sha256": "942a6d30eb4e2cc893bb56f9e8a82f7273a3ca0600b5c85546d8dcfd818c1f6b",
+      "size": 7142
+    },
+    "failed-move-colliding-destination/move-pty.raw": {
+      "sha256": "03c164669eaa6e7f91af9b07a8b470ac929efa434b4cab4fc8e509426d879415",
+      "size": 24228
+    },
+    "failed-move-colliding-destination/move-receipt.json": {
+      "sha256": "dae8384cae624566a716efad1583954094209d2efb7e826fae8379258f5e7af8",
+      "size": 401
+    },
+    "failed-move-colliding-destination/move-run.log": {
+      "sha256": "4ba7b1649c84bc6f326bceb842dcd4e7dd7b57a084687bb6f19591216a6e882c",
+      "size": 1208
+    },
+    "failed-move-colliding-destination/move-wire.json": {
+      "sha256": "2141a58a7890c5ce5aaa54e6ea924749faf1114ff427e950ea6c3e855e8060d8",
+      "size": 27494
+    },
+    "failed-live-move-timing-original/models.json": {
+      "sha256": "0be2e758b9b629590197f71cc47e45393f48d64633b399495bcea87759774b96",
+      "size": 4244
+    },
+    "failed-live-move-timing-original/move-actions.json": {
+      "sha256": "dbefe69b6f8be4251bc63a682f099582d788c6cd383e9cb2cd6dae24f3f22196",
+      "size": 593
+    },
+    "failed-live-move-timing-original/move-probe.py": {
+      "sha256": "790a32cd602fac7e95b52e1bde244903ca6d5c344dcb0d449ce8806ec787349e",
+      "size": 7435
+    },
+    "failed-live-move-timing-original/move-pty.raw": {
+      "sha256": "547ade20c8471b7b4423bcfecba48253097516dbde64a272a6a95933594ed13a",
+      "size": 31893
+    },
+    "failed-live-move-timing-original/move-receipt.json": {
+      "sha256": "0f433266ba510389eff14f49b0fb6602e6065201f5851faaf4b7ea6f5062a6f1",
+      "size": 411
+    },
+    "failed-live-move-timing-original/move-wire.json": {
+      "sha256": "062c9c5c2102dfdfe45552b1f8e1dc1b268c05b0f7cf72d4d011bb89548e3760",
+      "size": 27873
+    },
+    "failed-live-move-timing-original/responses.jsonl": {
+      "sha256": "2370fa9dd4983c3250551acba56fdf66f0a8623328a5f243f8de9aaf395209d2",
+      "size": 26451
+    },
+    "failed-live-move-timing-original/run.log": {
+      "sha256": "3ee54d048af468443f2fbdf5abe52fe6c4a11129a6a02495665b6946136f0c27",
+      "size": 1238
+    }
+  },
+  "selectedAcceptance": "passed"
+}
