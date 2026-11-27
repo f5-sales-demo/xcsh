@@ -35,6 +35,7 @@ export class EventController {
 	#renderedCustomMessages = new Set<string>();
 	#lastIntent: string | undefined = undefined;
 	#backgroundToolCallIds = new Set<string>();
+	#completedToolCallIds = new Set<string>();
 	#readToolCallArgs = new Map<string, Record<string, unknown>>();
 	#readToolCallAssistantComponents = new Map<string, AssistantMessageComponent>();
 	#lastAssistantComponent: AssistantMessageComponent | undefined = undefined;
@@ -65,7 +66,7 @@ export class EventController {
 	}
 
 	#getReadGroup(toolCallId?: string): ReadToolGroupComponent {
-		if (!this.#lastReadGroup) {
+		if (!this.#lastReadGroup || this.#lastReadGroupGutter?.state === "done") {
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			const group = new ReadToolGroupComponent();
 			group.setExpanded(this.ctx.toolOutputExpanded);
@@ -260,6 +261,7 @@ export class EventController {
 				break;
 
 			case "agent_start":
+				this.#completedToolCallIds.clear();
 				this.#lastIntent = undefined;
 				this.#readToolCallArgs.clear();
 				this.#readToolCallAssistantComponents.clear();
@@ -361,6 +363,7 @@ export class EventController {
 
 					for (const content of this.ctx.streamingMessage.content) {
 						if (content.type !== "toolCall") continue;
+						if (this.#completedToolCallIds.has(content.id)) continue;
 						if (content.name === "read") {
 							this.#trackReadToolCall(content.id, content.arguments);
 							const component = this.ctx.pendingTools.get(content.id);
@@ -521,6 +524,7 @@ export class EventController {
 						event.toolCallId,
 					);
 					if (isFinalAsyncState) {
+						this.#completedToolCallIds.add(event.toolCallId);
 						// `tool_execution_update` events don't currently carry `isWarning`, but read
 						// it defensively so a future async tool returning a warning outcome on
 						// successful completion is honored without a second edit here.
@@ -538,6 +542,8 @@ export class EventController {
 			}
 
 			case "tool_execution_end": {
+				const asyncState = (event.result.details as { async?: { state?: string } } | undefined)?.async?.state;
+				if (asyncState !== "running") this.#completedToolCallIds.add(event.toolCallId);
 				if (event.toolName === "read") {
 					if (this.#inlineReadToolImages(event.toolCallId, event.result)) {
 						const component = this.ctx.pendingTools.get(event.toolCallId);

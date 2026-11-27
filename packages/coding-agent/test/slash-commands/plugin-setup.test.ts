@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerLocales } from "@f5-sales-demo/pi-utils";
+import { _resetSettingsForTest, Settings } from "../../src/config/settings";
 import { locales } from "../../src/locales/index";
 import { initTheme } from "../../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../../src/modes/types";
@@ -13,14 +14,17 @@ registerLocales(locales);
 beforeAll(() => initTheme());
 let contextDirectory = "";
 
-beforeEach(() => {
+beforeEach(async () => {
 	contextDirectory = mkdtempSync(join(tmpdir(), "xcsh-plugin-setup-context-"));
 	ContextService._resetForTest();
+	_resetSettingsForTest();
+	await Settings.init({ inMemory: true });
 	ContextService.init(contextDirectory);
 });
 
 afterEach(() => {
 	ContextService._resetForTest();
+	_resetSettingsForTest();
 	rmSync(contextDirectory, { recursive: true, force: true });
 });
 
@@ -59,12 +63,20 @@ describe("/plugin setup", () => {
 			XCSH_API_TOKEN: "secret-token",
 			XCSH_TENANT: "tenant",
 		};
+		await ContextService.instance.createContext({
+			name: "active-context",
+			apiUrl: activeEnvironment.XCSH_API_URL,
+			apiToken: activeEnvironment.XCSH_API_TOKEN,
+			defaultNamespace: "demo",
+			env: { XCSH_TENANT: activeEnvironment.XCSH_TENANT },
+		});
+		await ContextService.instance.activate("active-context");
 		const showStatus = vi.fn();
 		const ctx = {
 			editor: { addToHistory: vi.fn(), setText: vi.fn() },
 			editorContainer: { clear: vi.fn(), addChild: vi.fn((child: unknown) => children.push(child)) },
 			ui: { setFocus, requestRender: vi.fn(), terminal: { rows: 24 } },
-			settings: { get: vi.fn((key: string) => (key === "bash.environment" ? activeEnvironment : undefined)) },
+			settings: Settings.instance,
 			sessionManager: { getCwd: () => "/tmp" },
 			session: {
 				extensionRunner: {
@@ -81,7 +93,7 @@ describe("/plugin setup", () => {
 					],
 				},
 			},
-			showHookCustom: vi.fn(),
+			showHookCustom: vi.fn(async () => false),
 			showStatus,
 			showError: vi.fn(),
 		} as unknown as InteractiveModeContext;
@@ -90,6 +102,7 @@ describe("/plugin setup", () => {
 			true,
 		);
 		expect(verifyAfterSetup).toHaveBeenCalledWith(plan);
+		expect(ctx.showHookCustom).not.toHaveBeenCalled();
 		expect(children).toEqual([]);
 		expect(setFocus).not.toHaveBeenCalled();
 		expect(showStatus).toHaveBeenCalledWith("platform: ready (setup is not required)", { plugin: true });
@@ -98,12 +111,15 @@ describe("/plugin setup", () => {
 	it("opens the native context wizard for a guided Platform setup without a no-op review", async () => {
 		const children: unknown[] = [];
 		const setFocus = vi.fn();
+		let hookResult: Promise<unknown> | undefined;
 		const showHookCustom = vi.fn(
 			(factory: (ui: unknown, theme: unknown, keys: unknown, done: (result: unknown) => void) => unknown) => {
-				const child = factory({ requestRender: vi.fn(), terminal: { rows: 24 } }, {}, {}, () => {});
+				const completion = Promise.withResolvers<unknown>();
+				hookResult = completion.promise;
+				const child = factory({ requestRender: vi.fn(), terminal: { rows: 24 } }, {}, {}, completion.resolve);
 				children.push(child);
 				setFocus(child);
-				return new Promise(() => {});
+				return completion.promise;
 			},
 		);
 		const showError = vi.fn();
@@ -148,5 +164,8 @@ describe("/plugin setup", () => {
 		expect(showError.mock.calls).toEqual([]);
 		expect(children.at(-1)?.constructor.name).toBe("ContextAddWizard");
 		expect(setFocus).toHaveBeenCalledWith(children.at(-1));
+		(children.at(-1) as { handleInput(input: string): void }).handleInput("\x1b");
+		await expect(hookResult).resolves.toBe(false);
+		expect(showError).not.toHaveBeenCalled();
 	});
 });
