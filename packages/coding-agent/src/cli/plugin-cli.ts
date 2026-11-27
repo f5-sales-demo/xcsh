@@ -320,8 +320,8 @@ async function handleIntegrationStatus(args: string[], flags: { json?: boolean; 
 	});
 }
 
-export function shouldSkipIntegrationSetup(state: IntegrationState, force = false): boolean {
-	return state === "ready" && !force;
+export function shouldSkipIntegrationSetup(state: IntegrationState, force = false, hasConfiguration = false): boolean {
+	return state === "ready" && !force && !hasConfiguration;
 }
 
 export async function reviewAndExecuteIntegrationSetup(
@@ -397,7 +397,7 @@ async function handleIntegrationSetup(
 		await withPluginContext(flags.context, async () => {
 			const handle = selectSetupIntegration(handles, args[0]);
 			const current = await handle.get();
-			if (shouldSkipIntegrationSetup(current.state, flags.force)) {
+			if (shouldSkipIntegrationSetup(current.state, flags.force, Boolean(handle.prepareConfiguration))) {
 				process.stdout.write(`${handle.plugin ?? handle.id}: ready (setup is not required)\n`);
 				return;
 			}
