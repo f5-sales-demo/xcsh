@@ -57,7 +57,58 @@ diff --git a/dist/db.js b/dist/db.js
      try {
          const { getLoadablePath } = await import("sqlite-vec");
          const vecPath = getLoadablePath();
-@@ -106,13 +91,20 @@
+@@ -51,6 +36,50 @@
+     _Database = (await import("better-sqlite3")).default;
+     const sqliteVec = await import("sqlite-vec");
+     _sqliteVecLoad = (db) => sqliteVec.load(db);
++}
++/**
++ * Bun does not own uncached prepare() statements. A successful close() can leave
++ * their native handles alive and keep a WAL read lock until garbage collection.
++ * Keep only weak references and finalize this connection's live statements at
++ * close, after the store lifecycle has drained its admitted operations.
++ */
++function ownBunStatements(db) {
++    const references = new Set();
++    const collected = new FinalizationRegistry((reference) => references.delete(reference));
++    const prepare = db.prepare.bind(db);
++    const close = db.close.bind(db);
++    db.prepare = (...args) => {
++        const statement = prepare(...args);
++        const reference = new WeakRef(statement);
++        references.add(reference);
++        collected.register(statement, reference, reference);
++        return statement;
++    };
++    db.close = (...args) => {
++        const failures = [];
++        for (const reference of references) {
++            try {
++                reference.deref()?.finalize();
++            }
++            catch (error) {
++                failures.push(error);
++            }
++            finally {
++                collected.unregister(reference);
++            }
++        }
++        references.clear();
++        try {
++            close(...args);
++        }
++        catch (error) {
++            failures.push(error);
++        }
++        if (failures.length === 1)
++            throw failures[0];
++        if (failures.length > 1)
++            throw new AggregateError(failures, "QMD SQLite statement teardown failed");
++    };
+ }
+ /** True for SQLite's lock-contention errors (`SQLITE_BUSY*`, "database is locked"). */
+ export function isBusyError(err) {
+@@ -106,13 +135,22 @@
   * restores the upstream fail-fast behaviour). See
   * https://bun.sh/docs/api/sqlite#busy-timeout.
   */
@@ -71,6 +122,8 @@ diff --git a/dist/db.js b/dist/db.js
 +        ? `${pathToFileURL(path).href}?immutable=1`
 +        : path;
 +    const db = new _Database(databasePath, readonlyOptions);
++    if (isBun)
++        ownBunStatements(db);
      const raw = process.env.QMD_SQLITE_BUSY_TIMEOUT;
      const parsed = raw !== undefined && raw !== "" ? Number(raw) : Number.NaN;
      const busyTimeoutMs = Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 120_000;
