@@ -46,8 +46,10 @@ async function run(
 		{ type: "message_stop" },
 	];
 	let request: any;
+	let requestCount = 0;
 	vi.spyOn(Messages.prototype, "create").mockImplementation((value: any) => {
 		request = value;
+		requestCount++;
 		return {
 			async withResponse() {
 				return {
@@ -68,7 +70,7 @@ async function run(
 	);
 	const received: AssistantMessageEvent[] = [];
 	for await (const event of stream) received.push(event);
-	return { result: await stream.result(), events: received, request };
+	return { result: await stream.result(), events: received, request, requestCount };
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -117,6 +119,25 @@ describe("Anthropic native replay and fallback", () => {
 		);
 		expect(result.stopReason).toBe("error");
 		expect(result.providerFailureCode).toBe("fast_mode_not_honored");
+	});
+	it("rejects an unexpected fast fallback without retrying or dispatching its tools", async () => {
+		const primary = enrichModelThinking(CURRENT_ANTHROPIC_MODELS.find(record => record.id === "claude-opus-5-5")!);
+		const target = "claude-opus-5";
+		const { result, events, requestCount } = await run(
+			[{ type: "fallback", from: { model: primary.id }, to: { model: target } }],
+			{ serviceTier: "priority", fallbacks: [{ model: target, speed: "standard" }] },
+			{
+				speed: "fast",
+				iterations: [{ type: "fallback_message", model: target, input_tokens: 20, output_tokens: 0 }],
+			},
+			{ speed: "fast" },
+			primary,
+		);
+		expect(result.stopReason).toBe("error");
+		expect(result.providerFailureCode).toBe("inference_speed_not_honored");
+		expect(result.usage.inferenceSpeed).toBe("fast");
+		expect(requestCount).toBe(1);
+		expect(events.some(event => event.type === "toolcall_end")).toBe(false);
 	});
 	it("rejects reported standard speed when fast mode was explicitly requested", async () => {
 		const events = [
