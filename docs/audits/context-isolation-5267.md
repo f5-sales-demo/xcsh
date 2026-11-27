@@ -101,7 +101,7 @@ The provider harness uses a local synthetic OpenAI-compatible HTTP server. It re
 requests, exercises the actual CLI entrypoint, and keeps raw output private. It does not contact a
 live model provider or repair an affected user's installation.
 
-## Remaining affected-user gate
+## Installation gate at source delivery
 
 Source delivery and a tested candidate do not establish installation repair. Further incident
 attribution requires the affected version/platform and executable hash, a sanitized transcript
@@ -109,3 +109,81 @@ around the unexpected statement, session/workspace selection, relevant instructi
 provenance, and a private final-provider-request capture where available. Acceptance requires a
 fresh capture from the repaired installed artifact showing correct ownership. Existing user sessions
 and data were not changed by this audit.
+
+## Published MacBook acceptance
+
+The selected published MacBook gate passed on 2026-11-27 for **v25.1.2**. The installed
+Homebrew executable completed all 14 local request checks and all 14 live-model request and
+response checks. Native `/move` passed eight local assertions and ten live-model assertions.
+The original reported incident remains unattributed without its transcript; these results accept
+the selected installation and synthetic isolation behavior.
+
+### Publication and installation
+
+Source [PR #5269](https://github.com/f5-sales-demo/xcsh/pull/5269) merged as
+`66b8ddd7d7586efd286291da02de9a564b23db3d`, an ancestor of release commit
+`6f544934cf3bf6861692848ea7d0a39fd420b5be`. Release preparation
+[issue #5275](https://github.com/f5-sales-demo/xcsh/issues/5275) and
+[PR #5276](https://github.com/f5-sales-demo/xcsh/pull/5276) bind that commit to
+[v25.1.2](https://github.com/f5-sales-demo/xcsh/releases/tag/v25.1.2).
+The tag, downloaded asset digests, Homebrew cask checksum, and installed version agree.
+
+| File                       | SHA-256                                                            | Result                                                              |
+| -------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Fresh Darwin ARM64 archive | `9b71b4bc91152557a3a5d5b7259e04d66ff56ce8f68f781ae5f07d66d4f1b511` | Matches GitHub asset digest and Homebrew cask checksum              |
+| CLI                        | `eb1d74da2f1b459f4c1ec6fe1b08168039e9427347ef4fff6bb9402b962b216a` | Fresh archive, provenance, GitHub digest, and installed bytes match |
+| Native addon               | `6ff97421d0cc379e1c39e76a9584a01f9dc1f4d95ecf335758f9abeaf7740075` | Fresh archive, provenance, GitHub digest, and installed bytes match |
+| Provenance manifest        | `5a42dd12f314835c88dbe80b38f463eb034f28f9da250dcf07b90c936869033e` | Fresh download, archive manifest, and installed manifest match      |
+
+All three archive payload files match the existing installation. The Homebrew symlink resolves
+to its 25.1.2 CLI, which reports `xcsh/25.1.2`. CLI and native signatures verify. Executable,
+native addon, and provenance hashes remain unchanged after acceptance testing. The existing
+installation therefore counts without a reinstall.
+
+The accepted [release CI](https://github.com/f5-sales-demo/xcsh/actions/runs/45934022431)
+completed successfully at the pinned release commit. Every executed job passed, including
+installation methods, immutable publication, and both Homebrew architecture checks.
+The earlier source-PR [installation failure](https://github.com/f5-sales-demo/xcsh/actions/runs/45899668825/job/140182082884)
+remains failed evidence: `Corpus download timed out`. It is preserved privately and is not the
+accepted release baseline.
+
+### Installed prompt results
+
+| Boundary                    | Local serialized requests                                                                               | Live model responses                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Owned memory                | Owner marker present; legacy unowned marker absent                                                      | Owner code and explicit deadline returned                              |
+| Colliding workspace paths   | Owner memory absent from unrelated workspace in two fresh processes                                     | All missing context fields returned `NONE`                             |
+| Separate agent stores       | Owner memory absent from separate store in two fresh processes                                          | All missing context fields returned `NONE`                             |
+| Explicit deadline           | Deadline remains in initial prompt and follow-up                                                        | Intended code and `demo due in 23 hours` returned                      |
+| Intentional resume          | Selected conversation and deadline restored                                                             | Intended code and deadline returned                                    |
+| Fresh session               | Prior conversation and deadline absent                                                                  | All missing context fields returned `NONE`                             |
+| Unrelated automatic resume  | Another workspace's conversation absent                                                                 | All missing context fields returned `NONE`                             |
+| Persisted compaction        | Owner summary restored; unrelated workspace and fresh session exclude it                                | Owner code, compaction code, and deadline returned only to owner       |
+| Foreign terminal breadcrumb | Owned session selected; foreign session marker absent                                                   | Owned conversation code returned; foreign code absent                  |
+| Native `/move`              | Old always-apply and conditional rules retired; destination rules loaded and conditional rule triggered | Current destination rule codes returned after the native reviewed move |
+
+Live checks use the existing configured `litellm/gpt-6.1-sol` model at high reasoning through
+`openai-responses`. Captured requests confirm the actual model ID, reasoning effort, and
+`/openai/v1/responses` route. A local forwarding proxy records synthetic request bodies and actual
+model replies without authorization headers. Local mock replies establish request construction;
+the separate live checks establish observed model behavior. Unrelated prompts themselves never
+contain the excluded marker.
+
+Compaction tests seed a synthetic persisted compaction entry and restore it through the installed
+executable. They verify restoration and ownership, without assessing compactor generation quality.
+Native move tests drive the installed TUI, review the destination, confirm the move, verify the
+updated session header, and exercise streaming conditional-rule injection. Existing conversation
+continuity is preserved.
+
+### Evidence and acceptance boundary
+
+The [sanitized delivery receipt](context-isolation-5267-installed-receipt.json) records publication,
+installation, before/after hashes, prompt results, CI links, and private capture hashes.
+Raw requests, replies, terminal captures, fixture state, harness sources, and failed attempts remain
+outside Git. Early harness configuration and timing failures were corrected and preserved.
+A move between colliding legacy session-directory names was refused without overwrite; the accepted
+rule-retirement move uses a distinct destination.
+
+No runtime source repair or additional release was required for these accepted results.
+Existing user sessions and workers were preserved, and Ubuntu's installed CLI was unchanged.
+GitHub issue and documentation delivery operations ran through Ubuntu SSH.
