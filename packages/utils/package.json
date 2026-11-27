@@ -40,11 +40,11 @@
 		"yaml": "2.9.1"
 	},
 	"devDependencies": {
-		"@types/bun": "1.4.4",
+		"@types/bun": "1.4.5",
 		"@f5-sales-demo/pi-natives": "workspace:*"
 	},
 	"engines": {
-		"bun": ">=1.4.4"
+		"bun": ">=1.4.5"
 	},
 	"files": [
 		"src"

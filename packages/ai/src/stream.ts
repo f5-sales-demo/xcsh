@@ -201,6 +201,9 @@ export function stream<TApi extends Api>(
 	}
 
 	const apiKey = options?.apiKey || getEnvApiKey(model.provider);
+	if (model.api === "anthropic-messages" && !apiKey) {
+		return streamAnthropic(model as Model<"anthropic-messages">, context, options as AnthropicOptions);
+	}
 	if (!apiKey) {
 		throw new Error(`No API key for provider: ${model.provider}`);
 	}
@@ -277,6 +280,7 @@ export function streamSimple<TApi extends Api>(
 	}
 
 	const apiKey = options?.apiKey || getEnvApiKey(model.provider);
+	if (model.api === "anthropic-messages" && !apiKey) return stream(model, context, mapOptionsForApi(model, options));
 	if (!apiKey) {
 		throw new Error(`No API key for provider: ${model.provider}`);
 	}
@@ -451,6 +455,7 @@ export function mapOptionsForApi<TApi extends Api>(
 	apiKey?: string,
 ): OptionsForApi<TApi> {
 	const base = {
+		authentication: options?.authentication,
 		accountId: options?.accountId,
 		gatewayId: options?.gatewayId,
 		fetch: options?.fetch,
@@ -465,7 +470,7 @@ export function mapOptionsForApi<TApi extends Api>(
 		minP: options?.minP,
 		presencePenalty: options?.presencePenalty,
 		repetitionPenalty: options?.repetitionPenalty,
-		maxTokens: options?.maxTokens || Math.min(model.maxTokens, 32000),
+		maxTokens: options?.maxTokens ?? Math.min(model.maxTokens, 32000),
 		signal: options?.signal,
 		apiKey: apiKey || options?.apiKey,
 		cacheRetention: options?.cacheRetention,
@@ -491,12 +496,32 @@ export function mapOptionsForApi<TApi extends Api>(
 				toolChoice: options?.toolChoice,
 			} as OptionsForApi<TApi>;
 		case "anthropic-messages": {
+			const anthropicBase = {
+				...base,
+				thinkingDisplay: options?.thinkingDisplay,
+				anthropicPrefixMismatchBehavior: options?.anthropicPrefixMismatchBehavior,
+				outputFormat: options?.outputFormat,
+				taskBudget: options?.taskBudget,
+				contextManagement: options?.contextManagement,
+				anthropicCompaction: options?.anthropicCompaction,
+				fallbacks: options?.fallbacks,
+				messageThreads: options?.messageThreads,
+				serviceTier: options?.serviceTier,
+			};
+			if ((options?.reasoning as ReasoningEffort | undefined) === "none") {
+				requireSupportedReasoningEffort(model, "none");
+				return castApi<"anthropic-messages">({
+					...anthropicBase,
+					thinkingEnabled: false,
+					toolChoice: mapAnthropicToolChoice(options?.toolChoice),
+				});
+			}
 			// Fable requires adaptive thinking on every request. Other Anthropic models
 			// retain the caller-controlled behavior.
 			const reasoning = options?.reasoning ?? (isAnthropicAlwaysThinkingModel(model) ? Effort.High : undefined);
 			if (!reasoning || !model.reasoning) {
 				return castApi<"anthropic-messages">({
-					...base,
+					...anthropicBase,
 					thinkingEnabled: false,
 					toolChoice: mapAnthropicToolChoice(options?.toolChoice),
 				});
@@ -505,7 +530,7 @@ export function mapOptionsForApi<TApi extends Api>(
 			let thinkingBudget = options?.thinkingBudgets?.[reasoning] ?? ANTHROPIC_THINKING[reasoning];
 			if (thinkingBudget <= 0) {
 				return castApi<"anthropic-messages">({
-					...base,
+					...anthropicBase,
 					thinkingEnabled: false,
 					toolChoice: mapAnthropicToolChoice(options?.toolChoice),
 				});
@@ -516,7 +541,7 @@ export function mapOptionsForApi<TApi extends Api>(
 			if (model.thinking?.mode === "anthropic-adaptive") {
 				const effort = mapEffortToAnthropicAdaptiveEffort(model, reasoning);
 				return castApi<"anthropic-messages">({
-					...base,
+					...anthropicBase,
 					thinkingEnabled: true,
 					effort,
 					toolChoice: mapAnthropicToolChoice(options?.toolChoice),
@@ -525,7 +550,7 @@ export function mapOptionsForApi<TApi extends Api>(
 
 			if (ANTHROPIC_USE_INTERLEAVED_THINKING) {
 				return castApi<"anthropic-messages">({
-					...base,
+					...anthropicBase,
 					thinkingEnabled: true,
 					thinkingBudgetTokens: thinkingBudget,
 					toolChoice: mapAnthropicToolChoice(options?.toolChoice),
@@ -543,13 +568,13 @@ export function mapOptionsForApi<TApi extends Api>(
 			// If thinking budget is too low, disable thinking
 			if (thinkingBudget <= 0) {
 				return castApi<"anthropic-messages">({
-					...base,
+					...anthropicBase,
 					thinkingEnabled: false,
 					toolChoice: mapAnthropicToolChoice(options?.toolChoice),
 				});
 			} else {
 				return castApi<"anthropic-messages">({
-					...base,
+					...anthropicBase,
 					maxTokens,
 					thinkingEnabled: true,
 					thinkingBudgetTokens: thinkingBudget,

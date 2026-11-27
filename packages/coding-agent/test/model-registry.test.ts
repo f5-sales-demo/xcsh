@@ -449,7 +449,7 @@ describe("ModelRegistry", () => {
 			// claude-opus-latest collapses to the newest opus family id in the bundled
 			// catalog — currently claude-opus-5-5 (update when a newer opus ships).
 			const opusVariants = registry.getCanonicalVariants("claude-opus-5-5");
-			const haikuVariants = registry.getCanonicalVariants("claude-haiku-4-5");
+			const haikuVariants = registry.getCanonicalVariants("claude-haiku-5-5");
 
 			expect(opusVariants.some(variant => variant.selector === "demo/anthropic/claude-opus-latest")).toBe(true);
 			expect(haikuVariants.some(variant => variant.selector === "demo/anthropic/claude-haiku-latest")).toBe(true);
@@ -2101,6 +2101,31 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
+		test("uses the configured catalog route without changing Anthropic inference", async () => {
+			writeRawModelsJson({
+				anthropic: {
+					baseUrl: "https://proxy.example.com/anthropic",
+					apiKey: "fixture-proxy",
+					api: "anthropic-messages",
+					discovery: { type: "openai-compat", baseUrl: "https://proxy.example.com/openai/v1" },
+					modelAllowlist: ["claude-haiku-5-5"],
+				},
+			});
+			const requests: string[] = [];
+			using _hook = hookFetch(input => {
+				const url = String(input);
+				requests.push(url);
+				if (url !== "https://proxy.example.com/openai/v1/models") throw new Error("Wrong catalog route");
+				return Response.json({ data: [{ id: "claude-haiku-5-5" }] });
+			});
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+			await registry.refreshProvider("anthropic", "online");
+			const model = registry.find("anthropic", "claude-haiku-5-5");
+			expect(requests).toEqual(["https://proxy.example.com/openai/v1/models"]);
+			expect(registry.getProviderDiscoveryState("anthropic")?.status).toBe("ok");
+			expect(model?.baseUrl).toBe("https://proxy.example.com/anthropic");
+			expect(model?.thinking?.mode).toBe("anthropic-adaptive");
+		});
 		test("resolves an environment credential before discovery and preserves the restarted catalog", async () => {
 			const previous = Bun.env.MODEL_REGISTRY_TEST_API_KEY;
 			Bun.env.MODEL_REGISTRY_TEST_API_KEY = "fixture-proxy-token";

@@ -129,6 +129,7 @@ describe("searchAnthropic headers", () => {
 		expect(getHeaderCaseInsensitive(capturedRequest?.headers, "x-api-key")).toBe("sk-ant-api-test");
 		expect(getHeaderCaseInsensitive(capturedRequest?.headers, "authorization")).toBeUndefined();
 		expect(capturedRequest?.body?.tools).toEqual([{ type: "web_search_20250305", name: "web_search", max_uses: 8 }]);
+		expect(capturedRequest?.body?.model).toBe("claude-haiku-5-5");
 	});
 
 	it("includes web-search beta header and sends OAuth token in Authorization mode", async () => {

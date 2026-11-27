@@ -124,7 +124,7 @@ function catalogDescriptor(
  */
 export const PROVIDER_DESCRIPTORS: readonly ProviderDescriptor[] = [
 	...upstreamProviderDescriptors(),
-	descriptor("anthropic", "claude-opus-5", config => anthropicModelManagerOptions(config)),
+	descriptor("anthropic", "claude-opus-5-5", config => anthropicModelManagerOptions(config)),
 	catalogDescriptor(
 		"alibaba-coding-plan",
 		"qwen3.5-plus",

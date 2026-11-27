@@ -15,7 +15,7 @@ import { mapOptionsForApi } from "../src/stream";
 import type { Context, Model, Tool } from "../src/types";
 
 type FablePayload = {
-	thinking?: { type?: string };
+	thinking?: { type?: string; display?: string };
 	output_config?: { effort?: string };
 	temperature?: number;
 	top_p?: number;
@@ -68,7 +68,7 @@ describe("Claude Fable transport", () => {
 			const options = mapOptionsForApi(fable(id), { temperature: 0 });
 			const payload = await capturePayload(fable(id), options);
 
-			expect(payload.thinking).toEqual({ type: "adaptive" });
+			expect(payload.thinking).toEqual({ type: "adaptive", display: "summarized" });
 			expect(payload.output_config).toEqual({ effort: "high" });
 			expect(payload.temperature).toBeUndefined();
 		},
@@ -81,12 +81,12 @@ describe("Claude Fable transport", () => {
 
 	it("rejects disabled thinking", () => {
 		expect(() => mapOptionsForApi(fable(), { reasoning: "none" as Effort })).toThrow(
-			/Thinking effort none is not supported by anthropic\/claude-fable-5-1/,
+			/Reasoning effort none is not supported by anthropic\/claude-fable-5-1/,
 		);
 	});
 
 	it.each(["any", { type: "tool", name: "todo_write" }] as const)(
-		"normalizes forced tool choice to auto while preserving adaptive thinking and strict schemas",
+		"rejects unsupported forced tool choice before submitting a request",
 		async toolChoice => {
 			const tool: Tool = {
 				name: "todo_write",
@@ -94,18 +94,21 @@ describe("Claude Fable transport", () => {
 				strict: true,
 				parameters: Type.Object({ title: Type.Optional(Type.String()) }),
 			};
-			const payload = await capturePayload(
+			let submitted = false;
+			const response = await streamAnthropic(
 				fable(),
-				mapOptionsForApi(fable(), { reasoning: Effort.High, toolChoice }),
 				{ ...context, tools: [tool] },
-			);
-
-			expect(payload.tool_choice).toEqual({ type: "auto" });
-			expect(payload.thinking).toEqual({ type: "adaptive" });
-			if (typeof toolChoice === "object") {
-				expect(payload.tools?.[0]?.strict).toBe(true);
-				expect(payload.tools?.[0]?.input_schema).toMatchObject({ additionalProperties: false });
-			}
+				{
+					...mapOptionsForApi(fable(), { reasoning: Effort.High, toolChoice }),
+					apiKey: "sk-ant-api-test",
+					onPayload: () => {
+						submitted = true;
+					},
+				},
+			).result();
+			expect(submitted).toBe(false);
+			expect(response.stopReason).toBe("error");
+			expect(response.errorMessage).toContain("forced tool choice");
 		},
 	);
 

@@ -1,4 +1,5 @@
 import type { ModelManagerOptions } from "../model-manager";
+import { createThinkingConfig, ReasoningEffort } from "../model-thinking";
 import { getBundledModels, getBundledProviders } from "../models";
 import {
 	cloudflareGatewayHeaders,
@@ -1631,6 +1632,47 @@ export function githubCopilotModelManagerOptions(config?: GithubCopilotModelMana
 export interface AnthropicModelManagerConfig {
 	apiKey?: string;
 	baseUrl?: string;
+	/** Independently qualified model inventory route for compatible gateways. */
+	discoveryBaseUrl?: string;
+}
+
+function applyAnthropicInventoryMetadata(
+	model: Model<"anthropic-messages">,
+	entry: OpenAICompatibleModelRecord,
+): Model<"anthropic-messages"> {
+	const input = toPositiveNumber(entry.max_input_tokens, model.contextWindow);
+	const output = toPositiveNumber(entry.max_tokens, model.maxTokens);
+	if (input) model.contextWindow = input;
+	if (output) model.maxTokens = output;
+	const capabilities = isRecord(entry.capabilities) ? entry.capabilities : undefined;
+	if (!capabilities) return model;
+	const thinking = isRecord(capabilities.thinking) ? capabilities.thinking : undefined;
+	const types = thinking && isRecord(thinking.types) ? thinking.types : undefined;
+	const effort = isRecord(capabilities.effort) ? capabilities.effort : undefined;
+	const supported = (value: unknown) => isRecord(value) && value.supported === true;
+	model.reasoning = thinking?.supported === true || effort?.supported === true;
+	model.compat = {
+		...model.compat,
+		...(types
+			? { requiresThinkingEnabled: !supported(types.disabled), forceAdaptiveThinking: supported(types.adaptive) }
+			: {}),
+		...(isRecord(capabilities.structured_outputs)
+			? { supportsStrictTools: supported(capabilities.structured_outputs) }
+			: {}),
+	};
+	if (effort?.supported === true) {
+		const levels = [
+			...(types && supported(types.disabled) ? [ReasoningEffort.None] : []),
+			...(["low", "medium", "high", "xhigh", "max"] as const).filter(level => supported(effort[level])),
+		];
+		if (levels.length)
+			model.thinking = createThinkingConfig(
+				levels,
+				supported(types?.adaptive) ? "anthropic-adaptive" : "anthropic-budget-effort",
+			);
+	}
+	if (!model.reasoning) model.thinking = undefined;
+	return model;
 }
 
 export function anthropicModelManagerOptions(
@@ -1638,7 +1680,9 @@ export function anthropicModelManagerOptions(
 ): ModelManagerOptions<"anthropic-messages"> {
 	const apiKey = config?.apiKey;
 	const baseUrl = config?.baseUrl ?? ANTHROPIC_BASE_URL;
-	const discoveryBaseUrl = /\/v1\/?$/.test(baseUrl) ? baseUrl.replace(/\/$/, "") : `${baseUrl.replace(/\/$/, "")}/v1`;
+	const discoveryBaseUrl =
+		config?.discoveryBaseUrl ??
+		(/\/v1\/?$/.test(baseUrl) ? baseUrl.replace(/\/$/, "") : `${baseUrl.replace(/\/$/, "")}/v1`);
 	return {
 		providerId: "anthropic",
 		modelsDev: {
@@ -1666,22 +1710,32 @@ export function anthropicModelManagerOptions(
 							const discoveredName = typeof entry.display_name === "string" ? entry.display_name : defaults.name;
 							const reference = references.get(defaults.id);
 							if (!reference) {
-								return {
-									...defaults,
-									name: discoveredName,
-									baseUrl,
-								};
+								return applyAnthropicInventoryMetadata(
+									{
+										...defaults,
+										name: discoveredName,
+										baseUrl,
+									},
+									entry,
+								);
 							}
-							return {
-								...reference,
-								id: defaults.id,
-								name: discoveredName,
-								api: "anthropic-messages",
-								provider: "anthropic",
-								baseUrl,
-							};
+							return applyAnthropicInventoryMetadata(
+								{
+									...reference,
+									id: defaults.id,
+									name: discoveredName,
+									api: "anthropic-messages",
+									provider: "anthropic",
+									baseUrl,
+								},
+								entry,
+							);
 						},
-					}) ?? null
+					}).then(models =>
+						config?.discoveryBaseUrl
+							? (models?.filter(model => /(?:claude|anthropic)/i.test(model.id)) ?? null)
+							: models,
+					) ?? null
 				);
 			},
 		}),

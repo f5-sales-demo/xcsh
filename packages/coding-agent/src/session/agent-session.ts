@@ -8,6 +8,7 @@ import {
 	runWithContextExecution,
 } from "../services/context-execution";
 import { coordinateSessionTitle } from "../utils/title-generator";
+import { resolveAnthropicSessionControls } from "./anthropic-controls";
 /**
  * AgentSession - Core abstraction for agent lifecycle and session management.
  *
@@ -3153,6 +3154,12 @@ export class AgentSession {
 		return this.agent.serviceTier;
 	}
 
+	setAnthropicControls(controls: import("@f5-sales-demo/pi-ai").AnthropicRequestControls): void {
+		const validated = resolveAnthropicSessionControls(controls, []);
+		this.agent.anthropicControls = validated;
+		this.sessionManager.appendCustomEntry("anthropic-controls", validated);
+	}
+
 	/** Whether agent is currently streaming a response */
 	get isStreaming(): boolean {
 		return this.agent.state.isStreaming || this.#promptInFlightCount > 0;
@@ -3721,6 +3728,13 @@ export class AgentSession {
 	 * @throws Error if no model selected or no API key available (when not streaming)
 	 */
 	async prompt(text: string, options?: PromptOptions): Promise<void> {
+		this.agent.anthropicControls = resolveAnthropicSessionControls(
+			{
+				thinkingDisplay: this.settings.get("anthropic.thinkingDisplay"),
+				...this.settings.get("anthropic.controls"),
+			},
+			this.sessionManager.getBranch(),
+		);
 		const questionReplies = parseQuestionReplies(text);
 		if (questionReplies)
 			this.userInteractions.acknowledgeAsyncReplies(questionReplies.map(reply => reply.questionItemId));

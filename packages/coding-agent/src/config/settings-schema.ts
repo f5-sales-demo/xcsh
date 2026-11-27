@@ -275,6 +275,17 @@ export const SETTINGS_SCHEMA = {
 	modelRoles: { type: "record", default: DEFAULT_MODEL_ROLES },
 
 	modelTags: { type: "record", default: EMPTY_MODEL_TAGS_RECORD },
+	"anthropic.controls": { type: "record", default: {} as Record<string, unknown> },
+	"anthropic.thinkingDisplay": {
+		type: "enum",
+		values: ["summarized", "omitted"] as const,
+		default: "summarized",
+		ui: {
+			tab: "model",
+			label: "Claude thinking display",
+			description: "Show summarized thinking, or omit its text while retaining signed continuity",
+		},
+	},
 
 	modelProviderOrder: { type: "array", default: EMPTY_STRING_ARRAY },
 
@@ -1079,6 +1090,15 @@ export const SETTINGS_SCHEMA = {
 			tab: "context",
 			label: "Remote Compaction",
 			description: "Use remote compaction endpoints when available instead of local summarization",
+		},
+	},
+	"compaction.anthropicServerEnabled": {
+		type: "boolean",
+		default: false,
+		ui: {
+			tab: "context",
+			label: "Claude server compaction",
+			description: "Require a signed Claude summary; a rejected request keeps the conversation intact",
 		},
 	},
 

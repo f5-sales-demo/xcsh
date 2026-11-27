@@ -35,6 +35,7 @@ import compactionTurnPrefixPrompt from "../../prompts/compaction/compaction-turn
 import compactionUpdateSummaryPrompt from "../../prompts/compaction/compaction-update-summary.md" with { type: "text" };
 import { convertToLlm, createBranchSummaryMessage, createCustomMessage } from "../../session/messages";
 import type { CompactionEntry, SessionEntry } from "../../session/session-manager";
+import { requestAnthropicCompaction } from "./anthropic";
 
 import {
 	computeFileLists,
@@ -135,6 +136,7 @@ export interface CompactionResult<T = unknown> {
 // ============================================================================
 
 export interface CompactionSettings {
+	anthropicServerEnabled?: boolean;
 	enabled: boolean;
 	strategy?: "context-full" | "handoff" | "off";
 	thresholdPercent?: number;
@@ -1251,6 +1253,46 @@ export async function compact(
 		fileOps,
 		settings,
 	} = preparation;
+	if (settings.anthropicServerEnabled && model.api === "anthropic-messages") {
+		if ((model as Model<"anthropic-messages">).compat?.supportsServerCompaction === false)
+			throw new Error("Anthropic server compaction is unsupported by this route");
+		const prefix = convertToLlm([...messagesToSummarize, ...turnPrefixMessages]);
+		const previous = previousPreserveData?.anthropicRemoteCompaction as
+			| import("@f5-sales-demo/pi-ai").AnthropicHistoryPayload
+			| undefined;
+		if (previous?.type === "anthropicHistory")
+			prefix.unshift({
+				role: "user",
+				content: previousSummary ?? "",
+				providerPayload: previous,
+				timestamp: previous.compactedAt ?? 0,
+			});
+		else if (previousSummary) prefix.unshift({ role: "user", content: previousSummary, timestamp: 0 });
+		const native = await requestAnthropicCompaction(
+			model as Model<"anthropic-messages">,
+			apiKey,
+			{ systemPrompt: options?.remoteInstructions, messages: prefix },
+			customInstructions,
+			signal,
+		);
+		const { readFiles, modifiedFiles } = computeFileLists(fileOps);
+		const payload = {
+			...native.payload,
+			filesText: upsertFileOperations("", readFiles, modifiedFiles),
+			compactedAt: Date.now(),
+		};
+		return {
+			summary: native.summary,
+			shortSummary: native.summary
+				.split("\n")
+				.find(line => line.trim())
+				?.slice(0, 200),
+			firstKeptEntryId,
+			tokensBefore,
+			details: { readFiles, modifiedFiles },
+			preserveData: { ...(previousPreserveData ?? {}), anthropicRemoteCompaction: payload },
+		};
+	}
 
 	const summaryOptions: SummaryOptions = {
 		promptOverride: options?.promptOverride,

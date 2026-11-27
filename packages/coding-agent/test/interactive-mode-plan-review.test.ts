@@ -27,9 +27,9 @@ describe("InteractiveMode plan review rendering", () => {
 		await Settings.init({ inMemory: true, cwd: tempDir.path() });
 		authStorage = await AuthStorage.create(path.join(tempDir.path(), "testauth.db"));
 		modelRegistry = new ModelRegistry(authStorage);
-		const model = modelRegistry.find("anthropic", "claude-sonnet-5");
+		const model = modelRegistry.find("anthropic", "claude-sonnet-5-5");
 		if (!model) {
-			throw new Error("Expected claude-sonnet-5 to exist in registry");
+			throw new Error("Expected claude-sonnet-5-5 to exist in registry");
 		}
 
 		session = new AgentSession({
@@ -61,8 +61,8 @@ describe("InteractiveMode plan review rendering", () => {
 	it("applies remote Plan and Default through the idempotent terminal mode lifecycle", async () => {
 		const appendModeChange = vi.spyOn(session.sessionManager, "appendModeChange");
 		const workModel = session.model;
-		const planModel = modelRegistry.find("anthropic", "claude-opus-5");
-		if (!planModel) throw new Error("Expected claude-opus-5 to exist in registry");
+		const planModel = modelRegistry.find("anthropic", "claude-opus-5-5");
+		if (!planModel) throw new Error("Expected claude-opus-5-5 to exist in registry");
 		vi.spyOn(session, "resolveRoleModelWithThinking").mockReturnValue({
 			model: planModel,
 			thinkingLevel: undefined,

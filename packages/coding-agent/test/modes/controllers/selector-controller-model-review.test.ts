@@ -25,6 +25,7 @@ test("model selection is cancel-first, preserves browse context, persists only a
 		session.thinkingLevel = thinkingLevel;
 	});
 	const session = {
+		agent: { anthropicControls: {} },
 		model: current,
 		thinkingLevel: ThinkingLevel.Inherit,
 		sessionId: "model-review-session",

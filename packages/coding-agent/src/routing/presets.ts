@@ -19,7 +19,7 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 	"litellm/anthropic": {
 		id: "litellm/anthropic",
 		provider: "anthropic",
-		tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5-5" },
+		tiers: { utility: "claude-haiku-5-5", balanced: "claude-sonnet-5-5", frontier: "claude-opus-5-5" },
 		effortPolicy: ANTHROPIC_ROUTING_POOL.effortPolicy,
 	},
 };
