@@ -20,7 +20,7 @@ async function fixture(extra: Partial<AgentSessionConfig> = {}) {
 	auth.setRuntimeApiKey("anthropic", "test-key");
 	const registry = new ModelRegistry(auth);
 	const original = getBundledModel("anthropic", "claude-sonnet-4-5")!;
-	const target = getBundledModel("anthropic", "claude-sonnet-5")!;
+	const target = getBundledModel("anthropic", "claude-sonnet-5-5")!;
 	const settings = Settings.isolated({ "compaction.enabled": false, "context.loadingMode": "progressive" });
 	settings.setModelRole("default", `${original.provider}/${original.id}`);
 	const manager = SessionManager.inMemory();
@@ -75,7 +75,7 @@ for (const method of [
 				? {
 						scopedModels: [
 							{ model: getBundledModel("anthropic", "claude-sonnet-4-5")! },
-							{ model: getBundledModel("anthropic", "claude-sonnet-5")! },
+							{ model: getBundledModel("anthropic", "claude-sonnet-5-5")! },
 						],
 					}
 				: {},

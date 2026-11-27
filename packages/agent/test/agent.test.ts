@@ -40,6 +40,31 @@ function createAssistantMessage(
 }
 
 describe("Agent", () => {
+	it("forwards Anthropic controls on each turn, including a changed display mode", async () => {
+		const calls: SimpleStreamOptions[] = [];
+		const agent = new Agent({
+			anthropicControls: { thinkingDisplay: "omitted", taskBudget: { type: "tokens", total: 5000 } },
+			streamFn: (_model, _context, options) => {
+				calls.push(options ?? {});
+				const stream = new MockAssistantStream();
+				queueMicrotask(() => {
+					stream.push({
+						type: "done",
+						reason: "stop",
+						message: createAssistantMessage([{ type: "text", text: "done" }]),
+					});
+					stream.end();
+				});
+				return stream;
+			},
+		} as ConstructorParameters<typeof Agent>[0]);
+		await agent.prompt("First synthetic turn");
+		expect(calls[0].thinkingDisplay).toBe("omitted");
+		expect(calls[0].taskBudget).toEqual({ type: "tokens", total: 5000 });
+		Object.assign(agent, { anthropicControls: { thinkingDisplay: "summarized" } });
+		await agent.prompt("Next synthetic turn");
+		expect(calls[1].thinkingDisplay).toBe("summarized");
+	});
 	it("should create an agent instance with default state", () => {
 		const agent = new Agent();
 

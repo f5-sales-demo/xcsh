@@ -50,6 +50,20 @@ function installTestTheme(): void {
 }
 
 describe("ModelSelector role badge thinking display", () => {
+	test("offers Claude thinking text controls without changing settings before selection", async () => {
+		installTestTheme();
+		const model = getBundledModel("anthropic", "claude-opus-5-5");
+		const settings = Settings.isolated({});
+		const selector = createSelector(model, settings);
+		await Bun.sleep(0);
+		selector.handleInput("\r");
+		const before = normalizeRenderedText(selector.render(180).join("\n"));
+		expect(before).toContain("Thinking text: Summarized");
+		selector.handleInput("\x14");
+		const after = normalizeRenderedText(selector.render(180).join("\n"));
+		expect(after).toContain("Thinking text: Omitted");
+		expect(settings.get("anthropic.thinkingDisplay")).toBe("summarized");
+	});
 	beforeAll(async () => {
 		testTheme = await getThemeByName("xcsh-dark");
 		if (!testTheme) {

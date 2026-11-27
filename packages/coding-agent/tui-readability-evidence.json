@@ -232,14 +232,14 @@
       "7fa4e874"
     ],
     "packages/coding-agent/src/modes/components/model-selector.ts": [
-      "73db5681",
-      "e1017181",
-      "aca034e1",
-      "30e630b3",
-      "5b364475",
-      "bcaf9d03",
-      "83410ee4",
-      "3db7524c"
+      "01534b96",
+      "d965c9ec",
+      "1837944d",
+      "a4048688",
+      "70ac4e47",
+      "4268f469",
+      "9759e067",
+      "5f04dd72"
     ],
     "packages/coding-agent/src/modes/components/oauth-selector.ts": [
       "4ee12171",
@@ -1341,31 +1341,31 @@
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 435,
+      "line": 436,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 506,
+      "line": 512,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 520,
+      "line": 526,
       "sink": "selectorRow",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 532,
+      "line": 538,
       "sink": "selectorProse",
       "entry": "models-compact-rows"
     },
     {
       "file": "packages/coding-agent/src/modes/components/model-selector.ts",
-      "line": 534,
+      "line": 540,
       "sink": "selectorFrame",
       "entry": "models-compact-rows"
     },

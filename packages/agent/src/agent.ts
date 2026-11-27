@@ -2,6 +2,7 @@
  * No transport abstraction - calls streamSimple via the loop.
  */
 import {
+	type AnthropicRequestControls,
 	type AssistantMessage,
 	type AssistantMessageEvent,
 	type CursorExecHandlers,
@@ -68,6 +69,7 @@ export class AgentBusyError extends Error {
 	}
 }
 export interface AgentOptions {
+	anthropicControls?: AnthropicRequestControls;
 	initialState?: Partial<AgentState>;
 
 	/**
@@ -278,6 +280,7 @@ export class Agent {
 	#presencePenalty?: number;
 	#repetitionPenalty?: number;
 	#serviceTier?: ServiceTier;
+	#anthropicControls: AnthropicRequestControls = {};
 	#maxRetryDelayMs?: number;
 	#getToolContext?: (toolCall?: ToolCallContext) => AgentToolContext | undefined;
 	#cursorExecHandlers?: CursorExecHandlers;
@@ -319,6 +322,7 @@ export class Agent {
 		this.#presencePenalty = opts.presencePenalty;
 		this.#repetitionPenalty = opts.repetitionPenalty;
 		this.#serviceTier = opts.serviceTier;
+		this.#anthropicControls = opts.anthropicControls ?? {};
 		this.#maxRetryDelayMs = opts.maxRetryDelayMs;
 		this.getApiKey = opts.getApiKey;
 		this.#onPayload = opts.onPayload;
@@ -430,6 +434,13 @@ export class Agent {
 
 	set repetitionPenalty(value: number | undefined) {
 		this.#repetitionPenalty = value;
+	}
+
+	get anthropicControls(): AnthropicRequestControls {
+		return this.#anthropicControls;
+	}
+	set anthropicControls(value: AnthropicRequestControls) {
+		this.#anthropicControls = value;
 	}
 
 	get serviceTier(): ServiceTier | undefined {
@@ -840,6 +851,7 @@ export class Agent {
 				this.#getToolChoice?.() ?? refreshToolChoiceForActiveTools(options?.toolChoice, this.#state.tools);
 
 			const config: AgentLoopConfig = {
+				...this.#anthropicControls,
 				model,
 				reasoning,
 				temperature: this.#temperature,

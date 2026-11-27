@@ -14,7 +14,7 @@ describe("current subscription model catalog", () => {
 			maxTokens: 128_000,
 			thinking: { mode: "anthropic-adaptive" },
 		});
-		expect(getSupportedReasoningEfforts(model)).toEqual(["low", "medium", "high", "xhigh", "max"]);
+		expect(getSupportedReasoningEfforts(model)).toEqual(["none", "low", "medium", "high", "xhigh", "max"]);
 	});
 
 	it.each([

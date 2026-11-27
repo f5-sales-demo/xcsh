@@ -4,9 +4,9 @@ import { Settings } from "../../src/config/settings";
 
 /** Synthetic catalog matching the six routes reported by the internal gateway user. */
 export const liteLLMFixtureModels: Model[] = [
-	["anthropic", "claude-opus-5", "Claude Opus 5"],
-	["anthropic", "claude-sonnet-5", "Claude Sonnet 5"],
-	["anthropic", "claude-haiku-4-5", "Claude Haiku 4.5"],
+	["anthropic", "claude-opus-5-5", "Claude Opus 5.5"],
+	["anthropic", "claude-sonnet-5-5", "Claude Sonnet 5.5"],
+	["anthropic", "claude-haiku-5-5", "Claude Haiku 5.5"],
 	["litellm", "gpt-5.6-terra", "GPT-5.6 Terra"],
 	["litellm", "gpt-5.6-luna", "GPT-5.6 Luna"],
 	["litellm", "gpt-5.6-sol", "GPT-5.6 Sol"],

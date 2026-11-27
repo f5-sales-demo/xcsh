@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Effort, ReasoningEffort } from "@f5-sales-demo/pi-ai";
+import { calculateCost, Effort, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import { streamOpenAIResponses } from "@f5-sales-demo/pi-ai/providers/openai-responses";
 import type { Context, Model } from "@f5-sales-demo/pi-ai/types";
 import { Type } from "@sinclair/typebox";
@@ -27,7 +27,7 @@ const CURRENT_OPENAI_IDS = [
 	"gpt-5.6-sol",
 	"gpt-5.5",
 ] as const;
-const CURRENT_ANTHROPIC_IDS = ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5-5"] as const;
+const CURRENT_ANTHROPIC_IDS = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"] as const;
 
 describe("current internal LiteLLM model contract", () => {
 	let tempDir: string;
@@ -62,7 +62,7 @@ describe("current internal LiteLLM model contract", () => {
 		else Bun.env.LITELLM_API_KEY = previousApiKey;
 	});
 
-	it("generates v12 with Responses routing for all OpenAI interaction models", () => {
+	it("generates v13 with Responses routing for all OpenAI interaction models", () => {
 		const document = YAML.parse(fs.readFileSync(modelsPath, "utf8")) as {
 			configVersion: number;
 			providers: {
@@ -75,13 +75,13 @@ describe("current internal LiteLLM model contract", () => {
 				};
 			};
 		};
-		expect(CURRENT_CONFIG_VERSION).toBe(12);
-		expect(document.configVersion).toBe(12);
+		expect(CURRENT_CONFIG_VERSION).toBe(13);
+		expect(document.configVersion).toBe(13);
 
 		const anthropic = document.providers.anthropic;
 		expect(anthropic.api).toBe("anthropic-messages");
 		expect(anthropic.baseUrl).toBe("https://proxy.example.com/anthropic");
-		expect(anthropic.modelAllowlist).toEqual([...CURRENT_ANTHROPIC_IDS, "claude-opus-5"]);
+		expect(anthropic.modelAllowlist).toEqual([...CURRENT_ANTHROPIC_IDS]);
 
 		const openai = document.providers.litellm;
 		expect(openai.api).toBe("openai-completions");
@@ -142,8 +142,8 @@ describe("current internal LiteLLM model contract", () => {
 			expect(model?.thinking?.supportedLevels.map(level => level.effort)).toEqual(expectedEfforts.get(id));
 		}
 		for (const [id, contextWindow, maxTokens] of [
-			["claude-haiku-4-5", 200_000, 64_000],
-			["claude-sonnet-5", 1_000_000, 128_000],
+			["claude-haiku-5-5", 1_000_000, 128_000],
+			["claude-sonnet-5-5", 1_000_000, 128_000],
 			["claude-opus-5-5", 1_000_000, 128_000],
 		] as const) {
 			expect(registry.find("anthropic", id)).toMatchObject({
@@ -154,12 +154,27 @@ describe("current internal LiteLLM model contract", () => {
 				cost: ZERO_COST,
 				contextWindow,
 				maxTokens,
-				compat: { supportsToolChoice: false },
+				compat: { supportsStrictTools: true, supportsEagerToolInputStreaming: true },
 			});
 		}
-		for (const id of [...CURRENT_ANTHROPIC_IDS, "claude-opus-5"]) {
+		for (const id of [...CURRENT_ANTHROPIC_IDS]) {
 			expect(registry.find("anthropic", id)?.baseUrl).toBe("https://proxy.example.com/anthropic");
 		}
+	});
+
+	it("keeps internal Haiku pricing zero above its public long-context tier", () => {
+		const registry = new ModelRegistry(authStorage, modelsPath);
+		const model = registry.find("anthropic", "claude-haiku-5-5")!;
+		const usage = {
+			input: 120000,
+			output: 10,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 120010,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		};
+		calculateCost(model, usage);
+		expect(usage.cost.total).toBe(0);
 	});
 
 	it("builds GPT-6 requests as OpenAI Responses payloads", async () => {
@@ -268,7 +283,7 @@ describe("current internal LiteLLM model contract", () => {
 				...CURRENT_ANTHROPIC_IDS.map(id => `anthropic/${id}`),
 			].sort(),
 		);
-		expect(registry.find("anthropic", "claude-opus-5")).toBeDefined();
+		expect(registry.find("anthropic", "claude-opus-5-5")).toBeDefined();
 	});
 
 	it("restores sessions for every configured GPT-5.6 variant", async () => {
@@ -276,7 +291,7 @@ describe("current internal LiteLLM model contract", () => {
 		for (const [provider, id] of [
 			["litellm", "gpt-5.6-luna"],
 			["litellm", "gpt-5.6-sol"],
-			["anthropic", "claude-opus-5"],
+			["anthropic", "claude-opus-5-5"],
 		] as const) {
 			const restored = await restoreModelFromSession(provider, id, undefined, false, registry);
 			expect(restored.model).toMatchObject({ provider, id });
@@ -303,8 +318,8 @@ describe("current internal LiteLLM model contract", () => {
 			plan: "litellm/gpt-6.1-sol:high",
 		});
 		expect(getLiteLLMLoginModelRoles(LITELLM_LOGIN_MODEL_CHOICES[1]!)).toEqual({
-			smol: "anthropic/claude-haiku-4-5:low",
-			default: "anthropic/claude-sonnet-5:medium",
+			smol: "anthropic/claude-haiku-5-5:low",
+			default: "anthropic/claude-sonnet-5-5:medium",
 			slow: "anthropic/claude-opus-5-5:high",
 			plan: "anthropic/claude-opus-5-5:high",
 		});
@@ -314,7 +329,7 @@ describe("current internal LiteLLM model contract", () => {
 		});
 		expect(BUILTIN_ROUTING_PRESETS["litellm/anthropic"]).toMatchObject({
 			provider: "anthropic",
-			tiers: { utility: "claude-haiku-4-5", balanced: "claude-sonnet-5", frontier: "claude-opus-5-5" },
+			tiers: { utility: "claude-haiku-5-5", balanced: "claude-sonnet-5-5", frontier: "claude-opus-5-5" },
 		});
 	});
 
