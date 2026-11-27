@@ -1,0 +1,80 @@
+{
+  "version": 3,
+  "phase": "after-original-installed-observation-before-fresh-installed-packet",
+  "authorizedDate": "2026-11-27",
+  "issue": 5279,
+  "previousEffectiveHashes": {
+    "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
+    "scripts/blindfold-native-eval.ts": "b23f75ae3398a3f5c356fa777266fc8499e9311938217a73d940ad2604b4996c",
+    "scripts/blindfold-native-score.ts": "7e276975be6452e878fc325857258a78a62262dc9ba219c4b12e8bee301fb965",
+    "scripts/blindfold-native-guard.ts": "4864e228ba03ab97dd4933beae1cc538c10c9008c6814094ff0a3e799dbfe080",
+    "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
+  },
+  "effectiveHashes": {
+    "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
+    "scripts/blindfold-native-eval.ts": "b23f75ae3398a3f5c356fa777266fc8499e9311938217a73d940ad2604b4996c",
+    "scripts/blindfold-native-score.ts": "deb803a2088cdb550932580dd903a7a2491ad6ca458229f94306481cf6e1e5cf",
+    "scripts/blindfold-native-guard.ts": "4864e228ba03ab97dd4933beae1cc538c10c9008c6814094ff0a3e799dbfe080",
+    "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
+  },
+  "reason": "The frozen scorer falsely treats file-only guidance ending in not the secret value as an inline-secret request. Exclude explicitly negated sensitive noun phrases from this check; preserve detection of actual requests and mixed safe/unsafe clauses. User approved the tested correction and a fresh prospective 24x3 installed packet.",
+  "originalInstalledPacket": {
+    "file": "installed-25.1.2-original.json",
+    "runs": 72,
+    "progression": 67,
+    "gatePassed": false,
+    "awsFalsePositiveRuns": 2,
+    "articleNameFailures": 3
+  },
+  "diagnosticRescore": {
+    "progression": 69,
+    "runs": 72,
+    "freshAcceptance": false
+  },
+  "candidateUnchanged": true,
+  "productSourceHashes": {
+    "internal-urls/blindfold-intent.ts": "086a00503c94ade94c1a5e3ff47dc4a9a9fac4514bde8b6532aeed81e720a97a",
+    "prompts/system/blindfold-awareness.md": "89471e7495fcae7e40e57d01ad8cc15792a7e9a58dc8047a9a49d02edb23f0a2",
+    "deprecations.ts": "120526706c4969838f106f87301186bc8982cc11eec402e192035f0b5d2cf88d",
+    "prompts/system/vesctl-policy.md": "c023f4aeb03da3580714e67a713dc12c8602a59b14e2e5ece039e35cc756c7c0"
+  },
+  "corpusAndAcceptanceUnchanged": true,
+  "articleNameCheckUnchanged": true,
+  "pinnedInstalledRelease": {
+    "version": 1,
+    "verifiedAt": "2026-11-27T04:18:49.074973+00:00",
+    "issue": 5270,
+    "pr": 5274,
+    "mergeCommit": "f8bd0542250f20f5f6832113aa8ecde4642eb7fc",
+    "releaseTag": "v25.1.2",
+    "releaseSource": "6f544934cf3bf6861692848ea7d0a39fd420b5be",
+    "releaseId": 460158014,
+    "immutable": true,
+    "publishedAt": "2026-11-27T04:15:16Z",
+    "asset": "xcsh-darwin-arm64.zip",
+    "archiveSha256": "9b71b4bc91152557a3a5d5b7259e04d66ff56ce8f68f781ae5f07d66d4f1b511",
+    "releaseDigestMatches": true,
+    "caskSha256Matches": true,
+    "installedVersion": "25.1.2",
+    "installedPath": "/opt/homebrew/Caskroom/xcsh/25.1.2",
+    "installedFilesMatchRelease": true,
+    "strictSignatureAndNotarizationVerification": true,
+    "teamIdentifier": "97ZYL78T5F",
+    "files": [
+      {
+        "path": "bin/xcsh",
+        "role": "cli",
+        "sha256": "eb1d74da2f1b459f4c1ec6fe1b08168039e9427347ef4fff6bb9402b962b216a",
+        "size": 438354224
+      },
+      {
+        "path": "libexec/pi_natives.darwin-arm64.node",
+        "role": "native-addon",
+        "sha256": "6ff97421d0cc379e1c39e76a9584a01f9dc1f4d95ecf335758f9abeaf7740075",
+        "size": 103771472
+      }
+    ]
+  },
+  "freshPacketLabel": "installed-v25-1-2-amended",
+  "uncertainty": "This amendment follows exposure to the original installed results. Original scores remain failed. Only the fresh packet can establish acceptance under the amended scorer; three repetitions do not establish a universal guarantee."
+}

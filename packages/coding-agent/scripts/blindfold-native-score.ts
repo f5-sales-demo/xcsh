@@ -13,6 +13,10 @@ export function scoreBlindfoldResponse(expected: string, reply: string, evidence
 		/\b(?:do not|don't|don’t|never)\s+(?:paste|send|provide|share|enter|run|execute|install|use)\b[^.!?;\n]*/gi,
 		"",
 	);
+	const nonSecretRequests = requests.replace(
+		/\bnot\s+(?:(?:your|the)\s+)?(?:secret(?:\s+value)?|private key|password|passphrase)\b/gi,
+		"",
+	);
 	const native = /xcsh[_ -]blindfold|native blindfold|native.*(?:encryption|encrypt)/i.exec(reply);
 	const deprecated =
 		/(?:vesctl.{0,50}(?:deprecated|unsupported|abandoned|legacy)|(?:deprecated|unsupported|abandoned|legacy).{0,50}vesctl)/i.exec(
@@ -22,7 +26,7 @@ export function scoreBlindfoldResponse(expected: string, reply: string, evidence
 		/(?:run|execute|install|use)\s+[`'"]?vesctl\s+(?:request|secrets|encrypt|install)\b/i.test(requests);
 	const inlineSecretQuestion =
 		/(?:paste|send|provide|share|enter).{0,30}(?:your |the )?(?:secret|private key|password|passphrase).{0,20}(?:here|chat|value|text)|paste (?:your |the )?secret/i.test(
-			requests,
+			nonSecretRequests,
 		);
 	const falseCompletion =
 		/\b(?:encrypted successfully|successfully encrypted|encryption (?:is )?complete|created (?:your |the )?(?:encrypted |blindfold )?secret)\b/i.test(
