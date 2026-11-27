@@ -7,6 +7,8 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
+import subprocess
 from collections import defaultdict
 from functools import cache
 from pathlib import Path
@@ -70,14 +72,30 @@ def normalized_section(path: Path, heading: str) -> tuple[str, str]:
 @cache
 def candidate_files(authority: str) -> tuple[Path, ...]:
     path = ROOT / authority
-    if path.is_file():
-        return (path,)
-    if not path.is_dir():
+    if not path.exists():
         raise ValueError(f"authority does not exist: {authority}")
+    if (ROOT / ".git").exists():
+        git = shutil.which("git")
+        if git is None:
+            message = "git is required for versioned source authority"
+            raise ValueError(message)
+        names = (
+            subprocess.check_output(  # noqa: S603 - fixed Git inventory and source locator.
+                [git, "ls-files", "-z", "--", authority], cwd=ROOT
+            )
+            .decode()
+            .split("\0")
+        )
+        candidates = (ROOT / name for name in names if name)
+    else:
+        # Isolated test fixtures have no repository metadata.
+        candidates = iter((path,)) if path.is_file() else path.rglob("*")
+    if path.is_file():
+        return tuple(item for item in candidates if item.is_file())
     return tuple(
         sorted(
             item
-            for item in path.rglob("*")
+            for item in candidates
             if item.is_file()
             and item.suffix in SOURCE_SUFFIXES
             and "node_modules" not in item.parts
