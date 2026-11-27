@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { Model } from "@f5-sales-demo/pi-ai";
 import * as ai from "@f5-sales-demo/pi-ai";
-import { getAgentDbPath, Snowflake } from "@f5-sales-demo/pi-utils";
+import { getAgentDbPath, getMemoriesDir, Snowflake } from "@f5-sales-demo/pi-utils";
 import { Settings } from "../src/config/settings";
 import {
 	buildMemoryToolDeveloperInstructions,
@@ -297,6 +297,70 @@ describe("memories runtime", () => {
 			const raw = await fs.readFile(path.join(memoryRoot, "raw_memories.md"), "utf8");
 			expect(raw.indexOf("## thread-b")).toBeLessThan(raw.indexOf("## thread-a"));
 		});
+	});
+
+	test("rebuilds legacy memory from owned database outputs without copying an ambiguous summary", async () => {
+		const fx = await createFixture();
+		const cwd = fx.agentDir;
+		const legacy = path.join(getMemoriesDir(fx.agentDir), `--${cwd.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`);
+		await fs.mkdir(legacy, { recursive: true });
+		await fs.writeFile(path.join(legacy, "memory_summary.md"), "UNOWNED_LEGACY");
+		const db = memoryStorage.openMemoryDb(getAgentDbPath(fx.agentDir));
+		memoryStorage.upsertThreads(db, [
+			{ id: "owned", updatedAt: 100, rolloutPath: "/synthetic-owned.jsonl", cwd, sourceKind: "cli" },
+			{ id: "other", updatedAt: 100, rolloutPath: "/synthetic-other.jsonl", cwd: `${cwd}-other`, sourceKind: "cli" },
+		]);
+		db.run("INSERT INTO stage1_outputs VALUES ('owned', 100, 'OWNED_MEMORY', 'OWNED_SUMMARY', null, 100)");
+		db.run("INSERT INTO stage1_outputs VALUES ('other', 100, 'OTHER_MEMORY', 'OTHER_SUMMARY', null, 100)");
+		memoryStorage.enqueueGlobalWatermark(db, 100, cwd, { forceDirtyWhenNotAdvanced: true });
+		const claimed = memoryStorage.tryClaimGlobalPhase2Job(db, {
+			workerId: "synthetic",
+			leaseSeconds: 60,
+			nowSec: 100,
+			cwd,
+		});
+		if (claimed.kind !== "claimed") throw new Error("Missing consolidation claim");
+		memoryStorage.markGlobalPhase2Succeeded(db, {
+			ownershipToken: claimed.claim.ownershipToken,
+			newWatermark: 100,
+			nowSec: 101,
+			cwd,
+		});
+		memoryStorage.closeMemoryDb(db);
+		const complete = vi.spyOn(ai, "completeSimple").mockResolvedValue({
+			stopReason: "stop",
+			content: [
+				{
+					type: "text",
+					text: JSON.stringify({ memory_md: "OWNED_MEMORY", memory_summary: "OWNED_SUMMARY", skills: [] }),
+				},
+			],
+		} as any);
+		startMemoryStartupTask({
+			session: fx.session,
+			settings: fx.settings,
+			modelRegistry: fx.modelRegistry,
+			agentDir: fx.agentDir,
+			taskDepth: 0,
+		});
+		await waitFor(() => expect(fx.session.refreshBaseSystemPrompt).toHaveBeenCalledTimes(1));
+		expect(await readMemorySummary(fx.agentDir, fx.settings, cwd)).toBe("OWNED_SUMMARY");
+		const request = JSON.stringify(complete.mock.calls);
+		expect(request).toContain("OWNED_MEMORY");
+		expect(request).not.toContain("OTHER_MEMORY");
+		expect(request).not.toContain("UNOWNED_LEGACY");
+		expect(await fs.readFile(path.join(legacy, "memory_summary.md"), "utf8")).toBe("UNOWNED_LEGACY");
+		complete.mockClear();
+		fx.session.refreshBaseSystemPrompt.mockClear();
+		startMemoryStartupTask({
+			session: fx.session,
+			settings: fx.settings,
+			modelRegistry: fx.modelRegistry,
+			agentDir: fx.agentDir,
+			taskDepth: 0,
+		});
+		await waitFor(() => expect(fx.session.refreshBaseSystemPrompt).toHaveBeenCalledTimes(1));
+		expect(complete).not.toHaveBeenCalled();
 	});
 
 	test("phase2 empty-input cleanup removes consolidated files and skills dir", async () => {
