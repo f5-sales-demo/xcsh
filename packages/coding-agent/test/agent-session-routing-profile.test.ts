@@ -27,7 +27,7 @@ test("profile command persists and reopens real settings while retrying a failed
 	auth.setRuntimeApiKey("anthropic", "synthetic-not-a-secret");
 	const registry = new ModelRegistry(auth, join(agentDir, "models.yml"));
 	const base = getBundledModel("anthropic", "claude-sonnet-4-5")!;
-	const models = ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5-5"].map(id => ({ ...base, id }));
+	const models = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"].map(id => ({ ...base, id }));
 	const refresh = vi.spyOn(registry, "refresh").mockResolvedValue(undefined);
 	const available = vi.spyOn(registry, "getAvailable").mockReturnValue(models);
 	const discovery = vi
@@ -83,7 +83,7 @@ test("profile command persists and reopens real settings while retrying a failed
 		component!.handleInput?.("\x1b[B");
 		component!.handleInput?.("\r");
 		await waitFor(() => Bun.stripANSI(component!.render(100).join("\n")).includes("Unresolved routing profile"));
-		expect(session.model?.id).toBe("claude-sonnet-5");
+		expect(session.model?.id).toBe("claude-sonnet-5-5");
 		component!.handleInput?.("\r");
 		await pending;
 		await rm(config, { recursive: true });
@@ -100,12 +100,12 @@ test("profile command persists and reopens real settings while retrying a failed
 		expect(inference).not.toHaveBeenCalled();
 		expect(Bun.YAML.parse(await Bun.file(config).text())).toMatchObject({
 			routing: { profile: "anthropic" },
-			modelRoles: { default: "anthropic/claude-sonnet-5:medium", custom: "fixture/custom" },
+			modelRoles: { default: "anthropic/claude-sonnet-5-5:medium", custom: "fixture/custom" },
 		});
 		_resetSettingsForTest();
 		const reopened = await Settings.init({ agentDir, cwd: temp.path() });
 		expect(reopened.get("routing.profile")).toBe("anthropic");
-		expect(reopened.getModelRoles().default).toBe("anthropic/claude-sonnet-5:medium");
+		expect(reopened.getModelRoles().default).toBe("anthropic/claude-sonnet-5-5:medium");
 	} finally {
 		await settings.flush();
 		await session.dispose();
@@ -127,7 +127,7 @@ test("routing profile preparation is read-only and changed reviewed roles cannot
 	settings.override("modelRoles", { custom: "runtime/only" });
 	const registry = new ModelRegistry(auth, join(temp.path(), "models.yml"));
 	const refresh = vi.spyOn(registry, "refresh").mockResolvedValue(undefined);
-	let models = ["claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5-5"];
+	let models = ["claude-haiku-5-5-20261007", "claude-sonnet-5-5", "claude-opus-5-5"];
 	const discovery = vi.spyOn(registry, "getProviderDiscoveryState").mockImplementation(
 		() =>
 			({
@@ -149,11 +149,11 @@ test("routing profile preparation is read-only and changed reviewed roles cannot
 		const modelBefore = session.model;
 		const prepared = await session.prepareRoutingProfile("anthropic");
 		expect(prepared.applied).toBe(true);
-		expect(prepared.roles.smol).toBe("anthropic/claude-haiku-4-5-20251001:low");
+		expect(prepared.roles.smol).toBe("anthropic/claude-haiku-5-5-20261007:low");
 		expect(prepared.roles.custom).toBe("fixture/custom");
 		expect(settings.inspectScopes("modelRoles")).toEqual(before);
 		expect(session.model).toBe(modelBefore);
-		models = ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5-5"];
+		models = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"];
 		await expect(session.applyRoutingProfile("anthropic", prepared.roles)).rejects.toThrow("changed");
 		expect(settings.inspectScopes("modelRoles")).toEqual(before);
 		expect(session.model).toBe(modelBefore);

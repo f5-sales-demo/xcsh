@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "bun:test";
-import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import * as os from "node:os";
 import { join } from "node:path";
 import { MachineProfileService } from "../src/person-profile/machine-profile";
@@ -12,7 +12,7 @@ afterEach(async () => {
 	await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true })));
 });
 async function fixture(alias: boolean) {
-	const root = await mkdtemp(join(os.tmpdir(), "profile-location-"));
+	const root = await realpath(await mkdtemp(join(os.tmpdir(), "profile-location-")));
 	roots.push(root);
 	const home = join(root, "home"),
 		target = join(root, "private");

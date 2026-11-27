@@ -978,7 +978,7 @@ describe("AgentSession retry fallback", () => {
 	);
 
 	it("suppresses cooled selectors and lazily reverts to the role primary after cooldown expiry", async () => {
-		const primaryModel = getBundledModel("anthropic", "claude-sonnet-5");
+		const primaryModel = getBundledModel("anthropic", "claude-sonnet-5-5");
 		const fallbackModel = getBundledModel("openai", "gpt-4o-mini");
 		if (!primaryModel || !fallbackModel) {
 			throw new Error("Expected bundled test models to exist");
@@ -1070,7 +1070,7 @@ describe("AgentSession retry fallback", () => {
 	});
 
 	it("preserves thinking on bare fallback selectors and does not overwrite user thinking on restore", async () => {
-		const primaryModel = getBundledModel("anthropic", "claude-sonnet-5");
+		const primaryModel = getBundledModel("anthropic", "claude-sonnet-5-5");
 		const fallbackModel = getBundledModel("openai", "gpt-4o-mini");
 		if (!primaryModel || !fallbackModel) {
 			throw new Error("Expected bundled test models to exist");

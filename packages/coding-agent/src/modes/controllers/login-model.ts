@@ -59,10 +59,10 @@ export const OPENAI_CODEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 };
 
 export const ANTHROPIC_LOGIN_MODEL_CHOICE: LoginModelChoice = {
-	label: "Claude Sonnet 5",
+	label: "Claude Sonnet 5.5",
 	description: "Claude subscription default with medium thinking",
 	provider: "anthropic",
-	modelId: "claude-sonnet-5",
+	modelId: "claude-sonnet-5-5",
 	thinkingLevel: ThinkingLevel.Medium,
 };
 
@@ -81,8 +81,8 @@ export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly
 export function getLiteLLMLoginModelRoles(choice: LiteLLMLoginModelChoice): Record<string, string> {
 	if (choice.modelId === "claude-opus-5-5") {
 		return {
-			smol: `${choice.provider}/claude-haiku-4-5:low`,
-			default: `${choice.provider}/claude-sonnet-5:medium`,
+			smol: `${choice.provider}/claude-haiku-5-5:low`,
+			default: `${choice.provider}/claude-sonnet-5-5:medium`,
 			slow: `${choice.provider}/claude-opus-5-5:high`,
 			plan: `${choice.provider}/claude-opus-5-5:high`,
 		};

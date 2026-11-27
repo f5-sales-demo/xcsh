@@ -7,7 +7,7 @@
       "devDependencies": {
         "@biomejs/biome": "2.6.8",
         "@bufbuild/protoc-gen-es": "2.17.0",
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
         "lint-staged": "17.6.0",
         "prettier": "3.10.1",
         "typescript": "7.0.2",
@@ -23,7 +23,7 @@
       },
       "devDependencies": {
         "@sinclair/typebox": "0.34.52",
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
       },
     },
     "packages/ai": {
@@ -33,7 +33,7 @@
         "pi-ai": "./src/cli.ts",
       },
       "dependencies": {
-        "@anthropic-ai/sdk": "1.8.0",
+        "@anthropic-ai/sdk": "1.14.0",
         "@aws-sdk/client-bedrock-runtime": "3.1168.0",
         "@bufbuild/protobuf": "2.17.0",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -48,7 +48,7 @@
         "zod": "4.6.7",
       },
       "devDependencies": {
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
       },
     },
     "packages/chat-ui": {
@@ -62,7 +62,7 @@
       "devDependencies": {
         "@happy-dom/global-registrator": "21.0.4",
         "@testing-library/react": "16.3.3",
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
         "@types/jsdom": "30.0.0",
         "@types/react": "19.3.0",
         "@types/react-dom": "19.3.0",
@@ -108,7 +108,7 @@
       },
       "devDependencies": {
         "@tobilu/qmd": "2.8.3",
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
         "@types/tar-stream": "3.1.5",
         "@xterm/addon-unicode11": "0.9.0",
         "handlebars": "4.7.10",
@@ -122,7 +122,7 @@
         "@f5-sales-demo/pi-resource-management": "workspace:*",
       },
       "devDependencies": {
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
         "rolldown": "^1.3.2",
         "rolldown-plugin-dts": "0.30.2",
       },
@@ -132,7 +132,7 @@
       "version": "25.1.0",
       "devDependencies": {
         "@napi-rs/cli": "3.10.12",
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
       },
       "optionalDependencies": {
         "@f5-sales-demo/pi-natives-darwin-arm64": "23.10.12",
@@ -155,7 +155,7 @@
       "devDependencies": {
         "@happy-dom/global-registrator": "21.0.4",
         "@testing-library/react": "16.3.3",
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
         "@types/office-js": "1.0.617",
         "@types/react": "19.3.0",
         "@types/react-dom": "19.3.0",
@@ -171,7 +171,7 @@
         "yaml": "2.9.1",
       },
       "devDependencies": {
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
       },
     },
     "packages/stats": {
@@ -192,7 +192,7 @@
         "react-dom": "19.3.1",
       },
       "devDependencies": {
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
         "@types/react": "19.3.0",
         "@types/react-dom": "19.3.0",
         "postcss": "8.5.32",
@@ -233,7 +233,7 @@
         "regexp-tree": "0.1.27",
       },
       "devDependencies": {
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
       },
     },
     "packages/utils": {
@@ -250,7 +250,7 @@
       },
       "devDependencies": {
         "@f5-sales-demo/pi-natives": "workspace:*",
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
       },
     },
   },
@@ -271,7 +271,7 @@
   "packages": {
     "@agentclientprotocol/sdk": ["@agentclientprotocol/sdk@2.6.0", "", { "peerDependencies": { "@modelcontextprotocol/server": "^2.4.0", "zod": "^3.25.76 || ^4.0.0" }, "optionalPeers": ["@modelcontextprotocol/server"] }, "sha512-3FtL6MkAV5F9qxg0FQV8wmBszIm2xuVPoDWOILIFSDQ+Vq3Twdh7Cw6Hk2GOPUbevgrTUpUAqZXQy7Geaj79mw=="],
 
-    "@anthropic-ai/sdk": ["@anthropic-ai/sdk@1.8.0", "", { "dependencies": { "@opentelemetry/api": "^1.4.1", "json-schema-to-ts": "^3.1.1", "standardwebhooks": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" }, "optionalPeers": ["zod"], "bin": { "anthropic-ai-sdk": "bin/cli" } }, "sha512-yDOArk2+Qpd/djEKmZjrv7JZ+pn5iBHARJ9PAdvfhGf4H5wNqTgY/2K0/yDKdQdm8G8hrNQchMlBAHpPK7yBfg=="],
+    "@anthropic-ai/sdk": ["@anthropic-ai/sdk@1.14.0", "", { "dependencies": { "@opentelemetry/api": "^1.4.1", "json-schema-to-ts": "^3.1.1", "standardwebhooks": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" }, "optionalPeers": ["zod"], "bin": { "anthropic-ai-sdk": "bin/cli" } }, "sha512-nADYXUd5fn9Zgw2nHi1iKyt/kb1UUt1cN3RbdxEI6XjTDTxbx4LLG4GnMrxWyS9GgXQllFOyAKSiFM3joDNK9A=="],
 
     "@aws-sdk/client-bedrock-runtime": ["@aws-sdk/client-bedrock-runtime@3.1168.0", "", { "dependencies": { "@aws-sdk/core": "^3.981.0", "@aws-sdk/credential-provider-node": "^3.972.97", "@aws-sdk/eventstream-handler-node": "^3.972.42", "@aws-sdk/middleware-eventstream": "^3.972.38", "@aws-sdk/middleware-websocket": "^3.972.66", "@aws-sdk/token-providers": "3.1168.0", "@aws-sdk/types": "^3.975.1", "@smithy/core": "^3.40.0", "@smithy/fetch-http-handler": "^5.8.1", "@smithy/node-http-handler": "^4.14.2", "@smithy/types": "^4.20.0", "tslib": "^2.6.2" } }, "sha512-9fRm/vh6nehGcwZefi7yuQu2dlwIRMk7ZRMri8aqLtUEWleUzxqFIGE2QLV2GZlIuYYq1691D4IPmej++PEj/w=="],
 
@@ -761,7 +761,7 @@
 
     "@types/aria-query": ["@types/aria-query@5.0.4", "", {}, "sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw=="],
 
-    "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
+    "@types/bun": ["@types/bun@1.4.5", "", { "dependencies": { "bun-types": "1.4.5" } }, "sha512-DpgwNI9z0L1S0gtb45QLCWgwCUcMLnsHYMJHQvpNj7erGiCGBvpggltAIeARrtobNMKMuy0UP7i56tKKgwFs/Q=="],
 
     "@types/fs-extra": ["@types/fs-extra@11.0.4", "", { "dependencies": { "@types/jsonfile": "*", "@types/node": "*" } }, "sha512-yTbItCNreRooED33qjunPthRcSjERP1r4MqCZc7wv0u2sUkzTFp45tgUfS5+r7FrZPdmCCNflLhVSP/o+SemsQ=="],
 
@@ -917,7 +917,7 @@
 
     "buffer-image-size": ["buffer-image-size@0.6.4", "", { "dependencies": { "@types/node": "*" } }, "sha512-nEh+kZOPY1w+gcCMobZ6ETUp9WfibndnosbpwB1iJk/8Gt5ZF2bhS6+B6bPYz424KtwsR6Rflc3tCz1/ghX2dQ=="],
 
-    "bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
+    "bun-types": ["bun-types@1.4.5", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-ECHn+9dhL3wv0G6u0+7dQvrnaimXiRDxxerYBmhTaLyJEEuvTPWk2Fye3XIf5Y++JIIiHKfQw4Z7V5D8KuiXbg=="],
 
     "bytes": ["bytes@3.1.2", "", {}, "sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg=="],
 

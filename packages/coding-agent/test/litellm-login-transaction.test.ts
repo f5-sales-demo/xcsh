@@ -175,8 +175,8 @@ describe("commitLiteLLMLogin", () => {
 		});
 
 		expect(state.getModelRoles()).toEqual({
-			smol: "anthropic/claude-haiku-4-5:low",
-			default: "anthropic/claude-sonnet-5:medium",
+			smol: "anthropic/claude-haiku-5-5:low",
+			default: "anthropic/claude-sonnet-5-5:medium",
 			slow: "anthropic/claude-opus-5-5:high",
 			plan: "anthropic/claude-opus-5-5:high",
 		});
@@ -200,8 +200,8 @@ describe("commitLiteLLMLogin", () => {
 		});
 
 		expect(state.getModelRoles()).toEqual({
-			smol: "anthropic/claude-haiku-4-5:low",
-			default: "anthropic/claude-sonnet-5:medium",
+			smol: "anthropic/claude-haiku-5-5:low",
+			default: "anthropic/claude-sonnet-5-5:medium",
 			slow: "anthropic/claude-opus-5-5:high",
 			plan: "anthropic/claude-opus-5-5:high",
 		});

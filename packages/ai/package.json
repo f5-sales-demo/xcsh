@@ -43,7 +43,7 @@
 		"generate-models": "bun scripts/generate-models.ts"
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "1.8.0",
+		"@anthropic-ai/sdk": "1.14.0",
 		"@aws-sdk/client-bedrock-runtime": "3.1168.0",
 		"@bufbuild/protobuf": "2.17.0",
 		"@f5-sales-demo/pi-utils": "workspace:*",
@@ -58,10 +58,10 @@
 		"zod": "4.6.7"
 	},
 	"devDependencies": {
-		"@types/bun": "1.4.4"
+		"@types/bun": "1.4.5"
 	},
 	"engines": {
-		"bun": ">=1.4.4"
+		"bun": ">=1.4.5"
 	},
 	"files": [
 		"src",

@@ -318,6 +318,7 @@ interface RoleAssignment {
 }
 
 export interface ModelSelection {
+	thinkingDisplay?: "summarized" | "omitted";
 	scope: "conversation" | "default" | "role";
 	model: Model;
 	selector: string;
@@ -442,8 +443,13 @@ export class ModelSelectorComponent extends Container {
 						"Changes only the selected specialist role.",
 					][this.#menuSelectedIndex],
 				);
-			else if (this.#menuStep === "thinking") details.push(`Reasoning: ${labels[this.#menuSelectedIndex]}`);
-			else if (this.#menuStep === "context") {
+			else if (this.#menuStep === "thinking") {
+				details.push(`Reasoning: ${labels[this.#menuSelectedIndex]}`);
+				if (selected.model.api === "anthropic-messages")
+					details.push(
+						`Thinking text: ${this.#menuThinkingDisplay === "omitted" ? "Omitted" : "Summarized"} · Ctrl+T: change`,
+					);
+			} else if (this.#menuStep === "context") {
 				const context = this.#contextActions(selected.model)[this.#menuSelectedIndex];
 				if (context) {
 					details.push(`Usable window: ${formatContextSize(context.effectiveContextWindow)}.`);
@@ -621,6 +627,7 @@ export class ModelSelectorComponent extends Container {
 	#currentThinkingLevel: ThinkingLevel = ThinkingLevel.Inherit;
 	#menuSelectedRole: string | null = null;
 	#menuThinkingLevel: ThinkingLevel = ThinkingLevel.Inherit;
+	#menuThinkingDisplay: "summarized" | "omitted" = "summarized";
 	#menuContextTier?: CodexContextTier;
 
 	constructor(
@@ -1288,6 +1295,7 @@ export class ModelSelectorComponent extends Container {
 		this.#menuStep = "thinking";
 		this.#menuSelectedRole = null;
 		this.#menuThinkingLevel = this.#getThinkingLevelsForModel(this.#menuItem.model)[0] ?? ThinkingLevel.Inherit;
+		this.#menuThinkingDisplay = this.#settings.get("anthropic.thinkingDisplay");
 		this.#menuContextTier = undefined;
 		this.#menuSelectedIndex = this.#getThinkingPreselectIndex("default", this.#menuItem.model);
 		this.#updateMenu();
@@ -1407,6 +1415,15 @@ export class ModelSelectorComponent extends Container {
 	#handleMenuInput(keyData: string): void {
 		const selectedItem = this.#menuItem;
 		if (!selectedItem) return;
+		if (
+			this.#menuStep === "thinking" &&
+			selectedItem.model.api === "anthropic-messages" &&
+			matchesKey(keyData, "ctrl+t")
+		) {
+			this.#menuThinkingDisplay = this.#menuThinkingDisplay === "omitted" ? "summarized" : "omitted";
+			this.#updateMenu();
+			return;
+		}
 
 		const optionCount =
 			this.#menuStep === "thinking"
@@ -1518,6 +1535,7 @@ export class ModelSelectorComponent extends Container {
 			model: item.model,
 			selector: item.selector,
 			thinkingLevel,
+			...(item.model.api === "anthropic-messages" ? { thinkingDisplay: this.#menuThinkingDisplay } : {}),
 			...(this.#menuContextTier ? { contextTier: this.#menuContextTier } : {}),
 			...(this.#menuScope === "role" ? { role: this.#menuSelectedRole! } : {}),
 		};

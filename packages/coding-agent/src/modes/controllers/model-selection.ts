@@ -25,6 +25,16 @@ export function prepareModelSelection(session: AgentSession, selection: ModelSel
 				: undefined;
 	const routingState = session.getRoutingState();
 	const changes: Array<{ field: string; before: string; after: string }> = [];
+	if (selection.thinkingDisplay && selection.scope !== "role")
+		changes.push({
+			field:
+				selection.scope === "default" ? "Default Claude thinking display" : "Conversation Claude thinking display",
+			before:
+				selection.scope === "default"
+					? session.settings.get("anthropic.thinkingDisplay")
+					: (session.agent.anthropicControls.thinkingDisplay ?? session.settings.get("anthropic.thinkingDisplay")),
+			after: selection.thinkingDisplay,
+		});
 	if (contextSetting) {
 		changes.push({
 			field: "Provider-wide context tier",
@@ -83,6 +93,8 @@ export async function applyModelSelection(session: AgentSession, selection: Mode
 	const { model, thinkingLevel, selector, scope } = selection;
 	const previousModel = session.model;
 	const previousThinking = session.thinkingLevel;
+	const previousAnthropicControls = structuredClone(session.agent.anthropicControls);
+	const previousThinkingDisplay = session.settings.get("anthropic.thinkingDisplay");
 	const previousRoles = { ...session.settings.get("modelRoles") };
 	const contextSetting =
 		selection.contextTier && model.provider === "openai-codex"
@@ -101,6 +113,8 @@ export async function applyModelSelection(session: AgentSession, selection: Mode
 	}
 	try {
 		if (scope !== "conversation" || contextSetting) {
+			if (scope === "default" && selection.thinkingDisplay)
+				session.settings.set("anthropic.thinkingDisplay", selection.thinkingDisplay);
 			if (scope !== "conversation")
 				session.settings.setModelRole(role!, formatModelSelectorValue(selector, thinkingLevel));
 			if (contextSetting) session.settings.set(contextSetting, selection.contextTier!);
@@ -113,6 +127,11 @@ export async function applyModelSelection(session: AgentSession, selection: Mode
 		if (scope !== "role") {
 			switched = true;
 			await session.setModelTemporary(model, thinkingLevel);
+			if (selection.thinkingDisplay)
+				session.setAnthropicControls({
+					...session.agent.anthropicControls,
+					thinkingDisplay: selection.thinkingDisplay,
+				});
 			session.routingCoordinator.getStateMachine().setManualPin(`${model.provider}/${model.id}`);
 			session.sessionManager.appendCustomEntry("routing_event", {
 				type: "routing_skipped",
@@ -128,6 +147,8 @@ export async function applyModelSelection(session: AgentSession, selection: Mode
 		}
 	} catch (error) {
 		if (scope !== "conversation" || contextSetting) {
+			if (scope === "default" && selection.thinkingDisplay)
+				session.settings.set("anthropic.thinkingDisplay", previousThinkingDisplay);
 			session.settings.set("modelRoles", previousRoles);
 			if (contextSetting) session.settings.set(contextSetting, previousContextTier!);
 			await session.settings.flush({ throwOnError: true }).catch(() => {});
@@ -137,6 +158,7 @@ export async function applyModelSelection(session: AgentSession, selection: Mode
 			else session.modelRegistry.setLiteLLMContextTier(previousContextTier!);
 		}
 		if (switched && previousModel) await session.setModelTemporary(previousModel, previousThinking);
+		if (switched && selection.thinkingDisplay) session.setAnthropicControls(previousAnthropicControls);
 		session.restoreRoutingState(previousRouting);
 		if (switched) {
 			session.sessionManager.appendCustomEntry("routing_event", {

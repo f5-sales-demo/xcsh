@@ -731,6 +731,11 @@ export function buildSessionContext(
 
 	if (compaction) {
 		const providerPayload: ProviderPayload | undefined = (() => {
+			const anthropic = compaction.preserveData?.anthropicRemoteCompaction;
+			if (anthropic && typeof anthropic === "object") {
+				const payload = anthropic as ProviderPayload;
+				if (payload.type === "anthropicHistory" && Array.isArray(payload.blocks)) return payload;
+			}
 			const candidate = compaction.preserveData?.openaiRemoteCompaction;
 			if (!candidate || typeof candidate !== "object") return undefined;
 			const remote = candidate as { provider?: unknown; replacementHistory?: unknown };
@@ -742,7 +747,8 @@ export function buildSessionContext(
 				items: remote.replacementHistory as Array<Record<string, unknown>>,
 			};
 		})();
-		const remoteReplacementHistory = providerPayload?.items;
+		const remoteReplacementHistory =
+			providerPayload?.type === "openaiResponsesHistory" ? providerPayload.items : undefined;
 
 		// Emit summary first
 		messages.push(
