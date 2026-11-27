@@ -26,6 +26,8 @@ previous and effective hashes, unchanged product candidate and corpus, and
 verified immutable installed artifact. Diagnostic rescoring gives 69/72; that
 is not prospective acceptance. The article-name check remains unchanged.
 The new packet must run all 24 cases three times with a new private label.
+The completed fresh packet passes at 69/72 (95.83%); see `installed-results.md`
+and `installed-25.1.2-amended.json`. The original failed packet remains preserved.
 
 Run the shared RPC harness against source or an installed executable:
 
@@ -69,5 +71,5 @@ Work list:
 - [x] Complete original package, type, documentation, lint and privacy checks.
 - [x] Merge the original linked PR and publish the immutable v25.1.2 release.
 - [x] Verify Homebrew artifact identity, signatures and native hashes.
-- [ ] Qualify a fresh installed three-repeat packet under the approved scorer amendment.
+- [x] Qualify a fresh installed three-repeat packet under the approved scorer amendment.
 - [ ] Preserve evidence and retire task worktrees.
