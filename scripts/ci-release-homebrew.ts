@@ -183,7 +183,12 @@ export function generateCask(version: string, tag: string, checksums: Map<string
 	const app = usesStapledHomebrew(version);
 	const extension = app ? "dmg" : "zip";
 	const executable = app ? "xcsh.app/Contents/MacOS/xcsh-darwin-#{arch}" : "bin/xcsh";
-	const binaryArtifact = app ? `binary "${executable}", target: "xcsh"` : `binary "${executable}"`;
+	// InstallSteps::DSL has no arch method. Resolve the app path on the outer
+	// cask receiver and let both artifact and postflight blocks capture it.
+	const binaryArtifact = app
+		? `executable_path = "${executable}"\n\n  binary executable_path, target: "xcsh"`
+		: `binary "${executable}"`;
+	const postflightExecutable = app ? "executable_path" : `"${executable}"`;
 	const armSha = requiredChecksum(`xcsh-darwin-arm64.${extension}`);
 	const intelSha = requiredChecksum(`xcsh-darwin-x64.${extension}`);
 	return `cask "xcsh" do
@@ -201,9 +206,9 @@ export function generateCask(version: string, tag: string, checksums: Map<string
   ${binaryArtifact}
 
   postflight_steps do
-    run "${executable}", args: ["chrome", "recycle"], base: :staged_path,
+    run ${postflightExecutable}, args: ["chrome", "recycle"], base: :staged_path,
                     sudo: false, must_succeed: false
-    run "${executable}", args: ["office", "recycle"], base: :staged_path,
+    run ${postflightExecutable}, args: ["office", "recycle"], base: :staged_path,
                     sudo: false, must_succeed: false
   end
 end
