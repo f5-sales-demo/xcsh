@@ -49,8 +49,8 @@
 	},
 	"index": {
 		"qmd_version": "2.8.3",
-		"fingerprint": "b3ba08d648b90f63f5b95fa1ef87e35bbf2c9fd8bbb8841358ac82b0a2fc5f16",
-		"sha256": "105753803204578e9c253753886fcad5e584a6815957a7c103870473872bf971",
-		"size_bytes": 44445696
+		"fingerprint": "42d82b5d1c48e9176805569de7d6b043516fcfb40eb270cf2e5d9f1f0a62c9be",
+		"sha256": "a755f0162551e18e679ebb9557dad321a93be004ecca21899d827897daf881ac",
+		"size_bytes": 44548096
 	}
 }

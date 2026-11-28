@@ -217,7 +217,7 @@ features = [
 ]
 
 [target."cfg(any(unix, windows))".dependencies.uucore]
-version = "0.8.0"
+version = "0.13.0"
 features = ["format"]
 default-features = false
 
@@ -230,7 +230,7 @@ features = [
 ]
 
 [target."cfg(unix)".dependencies.nix]
-version = "0.31.2"
+version = "0.32.0"
 features = [
     "fs",
     "process",

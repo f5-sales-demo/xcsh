@@ -497,30 +497,109 @@ class DocsQualityCheckerTests(unittest.TestCase):
         path.write_text(json.dumps(fidelity), encoding="utf-8")
         self.assert_rejected(root, "superseded fidelity concept has a reader locator")
 
+    def fixture_generator(self, root: Path) -> Path:
+        scripts = root / "scripts"
+        scripts.mkdir()
+        for name in ("generate_docs_fidelity.py", "check_docs_quality.py"):
+            shutil.copyfile(ROOT / "scripts" / name, scripts / name)
+        return scripts / "generate_docs_fidelity.py"
+
     def test_generator_is_idempotent_and_does_not_rewrite_inputs(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        self.add_fidelity(root)
+        generator = self.fixture_generator(root)
+        ledger = ROOT / ".github" / "docs-quality" / "legacy-fidelity.json"
+        real_before = ledger.read_bytes()
         protected = [
-            *sorted((ROOT / "docs" / "en").rglob("*.mdx")),
-            ROOT / ".github" / "docs-quality" / "inventory.json",
-            ROOT / ".github" / "docs-quality" / "legacy-concepts.json",
-            ROOT / ".github" / "docs-quality" / "evidence" / "manifest.json",
+            *sorted((root / "docs" / "en").rglob("*.mdx")),
+            root / ".github" / "docs-quality" / "inventory.json",
+            root / ".github" / "docs-quality" / "legacy-concepts.json",
+            root / ".github" / "docs-quality" / "evidence" / "manifest.json",
         ]
         before = {path: path.read_bytes() for path in protected}
-        subprocess.run(  # noqa: S603
-            [sys.executable, str(ROOT / "scripts" / "generate_docs_fidelity.py")],
-            check=True,
-        )
+        subprocess.run([sys.executable, str(generator)], check=True)  # noqa: S603
         first = (
-            ROOT / ".github" / "docs-quality" / "legacy-fidelity.json"
+            root / ".github" / "docs-quality" / "legacy-fidelity.json"
         ).read_bytes()
-        subprocess.run(  # noqa: S603
-            [sys.executable, str(ROOT / "scripts" / "generate_docs_fidelity.py")],
-            check=True,
-        )
+        subprocess.run([sys.executable, str(generator)], check=True)  # noqa: S603
         second = (
-            ROOT / ".github" / "docs-quality" / "legacy-fidelity.json"
+            root / ".github" / "docs-quality" / "legacy-fidelity.json"
         ).read_bytes()
         assert first == second
         assert before == {path: path.read_bytes() for path in protected}
+        assert ledger.read_bytes() == real_before
+
+    def test_generator_ignores_untracked_and_ignored_authority_candidates(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        self.add_fidelity(root)
+        generator = self.fixture_generator(root)
+        legacy_path = root / ".github" / "docs-quality" / "legacy-concepts.json"
+        legacy = json.loads(legacy_path.read_text())
+        legacy["concepts"][0]["knowledgeSummary"] = "Read the `poison` configuration."
+        legacy["concepts"][0]["currentSourceAuthorities"] = [
+            "packages/coding-agent/src"
+        ]
+        legacy_path.write_text(json.dumps(legacy), encoding="utf-8")
+        (root / ".gitignore").write_text("*.generated.ts\n", encoding="utf-8")
+        sources = root / "packages" / "coding-agent" / "src"
+        (sources / "000.generated.ts").write_text(
+            "export const poison = true;\n", encoding="utf-8"
+        )
+        (sources / "001-untracked.ts").write_text(
+            "export const poison = true;\n", encoding="utf-8"
+        )
+        subprocess.run([GIT_EXECUTABLE, "init", "-q", str(root)], check=True)  # noqa: S603
+        subprocess.run(  # noqa: S603 - fixed Git command and isolated fixture.
+            [
+                GIT_EXECUTABLE,
+                "-C",
+                str(root),
+                "add",
+                ".gitignore",
+                "packages/coding-agent/src/cli.ts",
+            ],
+            check=True,
+        )
+        subprocess.run([sys.executable, str(generator)], check=True)  # noqa: S603
+        result = json.loads(
+            (root / ".github" / "docs-quality" / "legacy-fidelity.json").read_bytes()
+        )
+        assert (
+            result["concepts"][0]["authorityLocators"][0]["path"]
+            == "packages/coding-agent/src/cli.ts"
+        )
+
+    def test_generator_accepts_explicit_versioned_extensionless_authority(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        self.add_fidelity(root)
+        generator = self.fixture_generator(root)
+        authority = root / "packages" / "coding-agent" / "src" / "command"
+        authority.write_text("#!/bin/sh\necho qualification\n", encoding="utf-8")
+        legacy_path = root / ".github" / "docs-quality" / "legacy-concepts.json"
+        legacy = json.loads(legacy_path.read_text())
+        legacy["concepts"][0]["currentSourceAuthorities"] = [
+            "packages/coding-agent/src/command"
+        ]
+        legacy_path.write_text(json.dumps(legacy), encoding="utf-8")
+        subprocess.run([GIT_EXECUTABLE, "init", "-q", str(root)], check=True)  # noqa: S603
+        subprocess.run(  # noqa: S603 - fixed Git command and isolated fixture.
+            [
+                GIT_EXECUTABLE,
+                "-C",
+                str(root),
+                "add",
+                "packages/coding-agent/src/command",
+            ],
+            check=True,
+        )
+        subprocess.run([sys.executable, str(generator)], check=True)  # noqa: S603
+        result = json.loads(
+            (root / ".github" / "docs-quality" / "legacy-fidelity.json").read_bytes()
+        )
+        assert (
+            result["concepts"][0]["authorityLocators"][0]["path"]
+            == "packages/coding-agent/src/command"
+        )
 
     def test_rejects_long_sidebar_label(self) -> None:
         root = self.fixture(
