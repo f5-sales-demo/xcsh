@@ -36,6 +36,8 @@ export interface MacOsProvenanceManifest {
 	files: MacOsProvenanceFile[];
 }
 
+export type MacOsProvenanceLayout = "release" | "homebrew" | "pkg" | "app";
+
 type InspectSignature = (file: string) => Promise<MacOsSignature>;
 
 function sha256(bytes: Uint8Array): string {
@@ -68,7 +70,7 @@ export function assertMacOsSignaturePolicy(signature: MacOsSignature, role: MacO
 	if (failures.length > 0) throw new Error(failures.join("; "));
 }
 
-export async function inspectMacOsSignature(file: string): Promise<MacOsSignature> {
+export async function inspectMacOsSignature(file: string, notarizedBundle?: string): Promise<MacOsSignature> {
 	const verify = await $`codesign --verify --deep --strict --verbose=2 ${file}`.quiet().nothrow();
 	if (verify.exitCode !== 0) throw new Error(`codesign strict verification failed: ${verify.stderr.toString().trim()}`);
 	const display = await $`codesign --display --verbose=4 ${file}`.quiet().nothrow();
@@ -82,11 +84,24 @@ export async function inspectMacOsSignature(file: string): Promise<MacOsSignatur
 	const entitlements = [...entitlementText.matchAll(/<key>([^<]+)<\/key>/gu)].map(match => match[1] ?? "").sort();
 	const lipo = await $`lipo -archs ${file}`.quiet().nothrow();
 	if (lipo.exitCode !== 0) throw new Error(`Mach-O architecture inspection failed: ${lipo.stderr.toString().trim()}`);
+	if (notarizedBundle) {
+		const bundle = await fs.realpath(notarizedBundle);
+		const nested = await fs.realpath(file);
+		if (path.basename(bundle) !== "xcsh.app" || !nested.startsWith(bundle + path.sep)) {
+			throw new Error("Notarized bundle must contain the exact signed file");
+		}
+		const sealed = await $`codesign --verify --deep --strict --verbose=2 ${bundle}`.quiet().nothrow();
+		if (sealed.exitCode !== 0) throw new Error("App resource seal verification failed");
+	}
 	let notarized = false;
 	for (let attempt = 1; attempt <= 8; attempt += 1) {
-		const assessment = await $`spctl --assess --verbose=4 --type install ${file}`.quiet().nothrow();
+		const assessment = notarizedBundle
+			? await $`spctl --assess --verbose=4 --type execute ${notarizedBundle}`.quiet().nothrow()
+			: await $`spctl --assess --verbose=4 --type install ${file}`.quiet().nothrow();
 		const assessmentText = `${assessment.stdout}${assessment.stderr}`;
-		notarized = assessment.exitCode === 0 && /source=Notarized Developer ID/u.test(assessmentText);
+		const ticket = notarizedBundle ? await $`xcrun stapler validate ${notarizedBundle}`.quiet().nothrow() : undefined;
+		notarized = assessment.exitCode === 0 && /source=Notarized Developer ID/u.test(assessmentText)
+			&& (ticket === undefined || ticket.exitCode === 0);
 		if (notarized || attempt === 8) break;
 		await Bun.sleep(15_000);
 	}
@@ -151,6 +166,7 @@ export async function createMacOsProvenanceManifest(options: {
 function manifestPath(file: MacOsProvenanceFile, manifest: MacOsProvenanceManifest, layout: string): string {
 	if (layout === "release") return file.name;
 	if (layout === "homebrew") return file.role === "cli" ? "bin/xcsh" : `libexec/${file.name}`;
+	if (layout === "app") return `xcsh.app/Contents/${file.role === "cli" ? "MacOS" : "libexec"}/${file.name}`;
 	if (layout === "pkg") {
 		return file.role === "cli"
 			? "usr/local/bin/xcsh"
@@ -159,20 +175,20 @@ function manifestPath(file: MacOsProvenanceFile, manifest: MacOsProvenanceManife
 	throw new Error(`unsupported provenance layout: ${layout}`);
 }
 
-function inventoryRoots(manifest: MacOsProvenanceManifest, layout: "release" | "homebrew" | "pkg"): string[] {
+function inventoryRoots(manifest: MacOsProvenanceManifest, layout: MacOsProvenanceLayout): string[] {
 	const roots = new Set<string>();
 	for (const file of manifest.files) roots.add(path.posix.dirname(manifestPath(file, manifest, layout)));
-	if (layout === "homebrew") roots.add("provenance");
+	if (layout === "homebrew" || layout === "app") roots.add("provenance");
 	return [...roots].sort();
 }
 
-function auxiliaryInventoryPaths(manifest: MacOsProvenanceManifest, layout: "release" | "homebrew" | "pkg"): string[] {
+function auxiliaryInventoryPaths(manifest: MacOsProvenanceManifest, layout: MacOsProvenanceLayout): string[] {
 	// The signed release staging directory retains the per-architecture manifest
 	// that is being verified. It is subsequently copied into the ZIP and PKG
 	// layouts under their respective canonical names. Permit only that exact
 	// architecture-bound staging file; every other root file remains unexpected.
 	if (layout === "release") return [`xcsh-darwin-${manifest.arch}.provenance.json`];
-	if (layout === "homebrew") return ["provenance/manifest.json"];
+	if (layout === "homebrew" || layout === "app") return ["provenance/manifest.json"];
 	if (layout === "pkg") {
 		return [`Library/Application Support/xcsh/natives/${manifest.version}/provenance.json`];
 	}
@@ -207,7 +223,7 @@ function validateManifest(manifest: MacOsProvenanceManifest): string[] {
 export async function verifyMacOsProvenance(options: {
 	manifest: MacOsProvenanceManifest;
 	rootDir: string;
-	layout: "release" | "homebrew" | "pkg";
+	layout: MacOsProvenanceLayout;
 	inspectSignature?: InspectSignature | false;
 	rejectUnexpected?: boolean;
 }): Promise<void> {
@@ -226,7 +242,10 @@ export async function verifyMacOsProvenance(options: {
 		}
 		if (options.inspectSignature !== false) {
 			try {
-				const actual = await (options.inspectSignature ?? inspectMacOsSignature)(file);
+				const inspect = options.inspectSignature ?? (options.layout === "app"
+					? (value: string) => inspectMacOsSignature(value, path.join(options.rootDir, "xcsh.app"))
+					: inspectMacOsSignature);
+				const actual = await inspect(file);
 				const policy = signaturePolicyFailures(actual, entry.role);
 				if (policy.length > 0) failures.push(`${relative}: ${policy.join("; ")}`);
 				if (JSON.stringify(actual) !== JSON.stringify(entry.signature)) failures.push(`${relative}: signature changed`);
@@ -275,7 +294,7 @@ async function main(): Promise<void> {
 	if (command === "verify") {
 		const manifest = (await Bun.file(arg("--manifest")).json()) as MacOsProvenanceManifest;
 		const layout = arg("--layout");
-		if (layout !== "release" && layout !== "homebrew" && layout !== "pkg") throw new Error("invalid --layout");
+		if (layout !== "release" && layout !== "homebrew" && layout !== "pkg" && layout !== "app") throw new Error("invalid --layout");
 		const installedSystemRoot = process.argv.includes("--installed-system-root");
 		if (installedSystemRoot && layout !== "pkg") {
 			throw new Error("--installed-system-root is valid only for pkg verification");

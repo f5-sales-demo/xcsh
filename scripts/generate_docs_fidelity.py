@@ -7,6 +7,8 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
+import subprocess
 from collections import defaultdict
 from functools import cache
 from pathlib import Path
@@ -74,10 +76,20 @@ def candidate_files(authority: str) -> tuple[Path, ...]:
         return (path,)
     if not path.is_dir():
         raise ValueError(f"authority does not exist: {authority}")
+    # Bootstrap changes ignored embeddings. They cannot bind durable source claims.
+    executable = shutil.which("git")
+    if executable is None:
+        message = "Git is required to inventory documentation authorities"
+        raise FileNotFoundError(message)
+    tracked = subprocess.check_output(  # noqa: S603 - fixed git inventory argv
+        [executable, "-C", str(ROOT), "ls-files", "-z", "--", authority]
+    )
     return tuple(
         sorted(
             item
-            for item in path.rglob("*")
+            for name in tracked.decode().split("\0")
+            if name
+            for item in (ROOT / name,)
             if item.is_file()
             and item.suffix in SOURCE_SUFFIXES
             and "node_modules" not in item.parts
@@ -103,23 +115,31 @@ def authority_locator(authority: str, concept: dict) -> dict:
     selected = candidates[0]
     line_number = 1
     matched_token = "authority-scope"
-    for candidate in candidates:
-        try:
-            lines = source_lines(candidate)
-        except OSError:
-            continue
-        for token in tokens:
-            token_variants = {token, Path(token).name, token.removesuffix("()")}
-            for index, line in enumerate(lines, 1):
-                if any(value and value in line for value in token_variants):
-                    selected = candidate
-                    line_number = index
-                    matched_token = token
+    # A cited source path is stronger evidence than an incidental basename mention.
+    for token in tokens:
+        referenced = ROOT / token
+        if referenced in candidates:
+            selected = referenced
+            matched_token = token
+            break
+    if matched_token == "authority-scope":
+        for candidate in candidates:
+            try:
+                lines = source_lines(candidate)
+            except OSError:
+                continue
+            for token in tokens:
+                token_variants = {token, Path(token).name, token.removesuffix("()")}
+                for index, line in enumerate(lines, 1):
+                    if any(value and value in line for value in token_variants):
+                        selected = candidate
+                        line_number = index
+                        matched_token = token
+                        break
+                if matched_token != "authority-scope":
                     break
             if matched_token != "authority-scope":
                 break
-        if matched_token != "authority-scope":
-            break
     relative = selected.relative_to(ROOT).as_posix()
     if relative.startswith(".github/workflows/"):
         kind = "workflow"

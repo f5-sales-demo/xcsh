@@ -40,8 +40,10 @@ grep -Fq 'environment: release' "$workflow" || fail "backfill must use the relea
 for release_workflow in "$workflow" "$ci_workflow"; do
   grep -Fq 'name: Confirm immutable publication independently' "$release_workflow" ||
     fail "release workflow must independently reject false successful draft uploads"
-  grep -Fq '.immutable == true and (.assets | length) == 28' "$release_workflow" ||
-    fail "release workflow must require the complete immutable publication"
+  grep -Fq 'expected_count=28' "$release_workflow" || fail "legacy release inventory must remain 28 assets"
+  grep -Fq 'expected_count=32' "$release_workflow" || fail "stapled release inventory must require 32 assets"
+  grep -Fq '.immutable == true and (.assets | length) == $count' "$release_workflow" ||
+    fail "release workflow must require the complete version-bound immutable publication"
 done
 grep -Fq 'RELEASE_TEST_BASH: /bin/bash' "$ci_workflow" || fail "macOS system Bash regression is missing"
 

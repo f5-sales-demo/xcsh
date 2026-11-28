@@ -61,6 +61,16 @@ expected_assets=(
   xcsh-windows-x64.exe
 )
 
+IFS=. read -r release_major release_minor release_patch <<<"${tag#v}"
+if ((release_major > 25 || (release_major == 25 && (release_minor > 2 || (release_minor == 2 && release_patch >= 4))))); then
+  expected_assets+=(
+    xcsh-darwin-arm64.dmg
+    xcsh-darwin-arm64.homebrew.provenance.json
+    xcsh-darwin-x64.dmg
+    xcsh-darwin-x64.homebrew.provenance.json
+  )
+fi
+
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 printf '%s\n' "${expected_assets[@]}" | LC_ALL=C sort >"$work/expected-names"

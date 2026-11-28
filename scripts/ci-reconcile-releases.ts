@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { usesStapledHomebrew } from "./ci-release-homebrew";
 
 /**
  * Reconcile git tags against what was actually published (#2505).
@@ -150,12 +151,18 @@ export async function reconcileReleases(
 	const digestMatch = cask.match(/^\s*sha256\s+arm:\s*"([^"]*)",\s*intel:\s*"([^"]*)"/m);
 	const digests = digestMatch ? [digestMatch[1] ?? "", digestMatch[2] ?? ""] : [];
 	const downloadUrl = cask.match(/^\s*url\s+"([^"]+)"/m)?.[1];
+	let extension: "zip" | "dmg";
+	try {
+		extension = usesStapledHomebrew(toVersion(brewVersion)) ? "dmg" : "zip";
+	} catch {
+		return { status: "unknown", divergences: [], detail: "invalid Homebrew release version" };
+	}
 	const expectedDownloadUrl =
-		"https://github.com/f5-sales-demo/xcsh/releases/download/v#{version}/xcsh-darwin-#{arch}.zip";
+		`https://github.com/f5-sales-demo/xcsh/releases/download/v#{version}/xcsh-darwin-#{arch}.${extension}`;
 	const pairs = digestMatch
 		? [
-				{ asset: "xcsh-darwin-arm64.zip", sha: digestMatch[1] ?? "" },
-				{ asset: "xcsh-darwin-x64.zip", sha: digestMatch[2] ?? "" },
+				{ asset: `xcsh-darwin-arm64.${extension}`, sha: digestMatch[1] ?? "" },
+				{ asset: `xcsh-darwin-x64.${extension}`, sha: digestMatch[2] ?? "" },
 			]
 		: [];
 
