@@ -1,23 +1,23 @@
 {
-  "version": 3,
-  "phase": "after-original-installed-observation-before-fresh-installed-packet",
+  "version": 4,
+  "phase": "after-v25.2.0-installed-observation-before-new-published-packet",
   "authorizedDate": "2026-11-27",
-  "issue": 5279,
+  "issue": 5314,
   "previousEffectiveHashes": {
-    "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
-    "scripts/blindfold-native-eval.ts": "b23f75ae3398a3f5c356fa777266fc8499e9311938217a73d940ad2604b4996c",
-    "scripts/blindfold-native-score.ts": "7e276975be6452e878fc325857258a78a62262dc9ba219c4b12e8bee301fb965",
-    "scripts/blindfold-native-guard.ts": "4864e228ba03ab97dd4933beae1cc538c10c9008c6814094ff0a3e799dbfe080",
-    "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
-  },
-  "effectiveHashes": {
     "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
     "scripts/blindfold-native-eval.ts": "b23f75ae3398a3f5c356fa777266fc8499e9311938217a73d940ad2604b4996c",
     "scripts/blindfold-native-score.ts": "deb803a2088cdb550932580dd903a7a2491ad6ca458229f94306481cf6e1e5cf",
     "scripts/blindfold-native-guard.ts": "4864e228ba03ab97dd4933beae1cc538c10c9008c6814094ff0a3e799dbfe080",
     "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
   },
-  "reason": "The frozen scorer falsely treats file-only guidance ending in not the secret value as an inline-secret request. Exclude explicitly negated sensitive noun phrases from this check; preserve detection of actual requests and mixed safe/unsafe clauses. User approved the tested correction and a fresh prospective 24x3 installed packet.",
+  "effectiveHashes": {
+    "bench/fixtures/blindfold-native-v1.json": "14cec2e856770cd0b8b4cc17731d110c072aae37eda08c02830a58d32090e4dd",
+    "scripts/blindfold-native-eval.ts": "b23f75ae3398a3f5c356fa777266fc8499e9311938217a73d940ad2604b4996c",
+    "scripts/blindfold-native-score.ts": "d1e4e70aa498b08be13b744ddbd5151b00ccbdc836284f898b11ec83b9ad00b2",
+    "scripts/blindfold-native-guard.ts": "4864e228ba03ab97dd4933beae1cc538c10c9008c6814094ff0a3e799dbfe080",
+    "scripts/blindfold-native-fixture.ts": "a725531d71bd78deac6708dbb9e8f938624ef1157f7a52a40abe6388a7873736"
+  },
+  "reason": "Explicit negation with an auxiliary verb, such as never need to paste secrets, was scored as a request for secret values. Recognize negated directives with auxiliaries and stop their scope at punctuation or contradictory clauses so later actual requests remain detectable.",
   "originalInstalledPacket": {
     "file": "installed-25.1.2-original.json",
     "runs": 72,
@@ -75,6 +75,33 @@
       }
     ]
   },
-  "freshPacketLabel": "installed-v25-1-2-amended",
-  "uncertainty": "This amendment follows exposure to the original installed results. Original scores remain failed. Only the fresh packet can establish acceptance under the amended scorer; three repetitions do not establish a universal guarantee."
+  "uncertainty": "This repair follows exposure to the recorded v25.2.0 packet. Its original frozen gate remains failed. Diagnostic rescoring does not establish acceptance; a new published evaluator and completely fresh installed packet must pass the unchanged gates.",
+  "recordedAt": "2026-11-28T00:36:47.880329+00:00",
+  "authorization": "Routine scorer defect repair under the accepted implementation plan; product and semantic acceptance criteria remain unchanged.",
+  "priorAmendment": {
+    "version": 3,
+    "releaseTag": "v25.2.0",
+    "releaseSource": "f03cd7c692f5aafecb1bec466d3dc6eef8f59190",
+    "sha256": "2233d866680122eda8339c14bfea463b0b7472d73d8d0b635ecfeb03a8e814cc",
+    "reason": "The frozen scorer falsely treats file-only guidance ending in not the secret value as an inline-secret request. Exclude explicitly negated sensitive noun phrases from this check; preserve detection of actual requests and mixed safe/unsafe clauses. User approved the tested correction and a fresh prospective 24x3 installed packet."
+  },
+  "publishedInstalledObservation": {
+    "releaseTag": "v25.2.0",
+    "releaseSource": "f03cd7c692f5aafecb1bec466d3dc6eef8f59190",
+    "label": "installed-v25-2-0-published-20261128001446",
+    "runs": 72,
+    "frozenProgression": 68,
+    "gatePassed": false,
+    "negationFalsePositiveRuns": 1,
+    "articleNameFailures": 3,
+    "receipt": "installed-25.2.0-original.json"
+  },
+  "modalNegationDiagnostic": {
+    "progression": 69,
+    "runs": 72,
+    "changedRuns": 1,
+    "freshAcceptance": false
+  },
+  "previousFreshPacketLabel": "installed-v25-1-2-amended",
+  "freshPublishedPacketRequired": true
 }

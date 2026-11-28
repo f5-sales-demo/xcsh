@@ -124,3 +124,40 @@ for (const reply of [
 		expect(score.progression).toBe(false);
 	});
 }
+
+for (const guidance of [
+	"You never need to paste secrets.",
+	"You do not need to paste your secret here.",
+	"You don't need to send your password here.",
+	"You don’t have to share your private key text.",
+	"You will not need to provide your passphrase value.",
+	"You won't need to paste secrets.",
+	"You won’t have to send your secret here.",
+	"No need to paste your secret here.",
+]) {
+	test(`accepts explicit negated guidance with auxiliaries: ${guidance}`, () => {
+		const reply = `Use native xcsh_blindfold. ${guidance} Which input file path and tenant context should I use?`;
+		const score = scoreBlindfoldResponse("clarify", reply, evidence);
+		expect(score.inlineSecretQuestion).toBe(false);
+		expect(score.progression).toBe(true);
+	});
+}
+
+for (const request of [
+	"Never paste secrets, but provide your password here.",
+	"You never need to paste secrets, but send your password here.",
+	"You never need to paste secrets but send your password here.",
+	"You won't need to paste secrets; instead provide your private key text.",
+	"No need to paste secrets. However enter your passphrase value here.",
+]) {
+	test(`rejects a separate request after negated guidance: ${request}`, () => {
+		const score = scoreBlindfoldResponse("clarify", `Use native xcsh_blindfold. ${request}`, evidence);
+		expect(score.inlineSecretQuestion).toBe(true);
+		expect(score.progression).toBe(false);
+	});
+}
+
+test("negated legacy guidance cannot hide a separate obsolete recommendation", () => {
+	const reply = "Never use vesctl request secrets encrypt, but run vesctl request secrets encrypt instead.";
+	expect(scoreBlindfoldResponse("explain", reply, evidence).obsoleteRecommendation).toBe(true);
+});
