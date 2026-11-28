@@ -1143,6 +1143,11 @@ jobs:
             --manifest "packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.provenance.json" \
             --root "$expanded/Payload" \
             --layout pkg
+      - name: Verify Homebrew cask Ruby receiver scopes
+        if: inputs.macos_recovery_tag == ''
+        run: |
+          ruby --version
+          bun test packages/coding-agent/test/scripts/homebrew-postflight-dsl.test.ts --max-concurrency 2
       - name: Build signed and stapled Homebrew app distribution
         run: bash scripts/ci-build-macos-homebrew-app.sh
       - name: Verify signed macOS sandbox check in a direct-home live profile

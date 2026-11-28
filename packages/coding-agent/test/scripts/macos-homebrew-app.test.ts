@@ -16,7 +16,8 @@ const checksums = new Map([
 test("new Homebrew releases select the stapled DMG and versioned app executable", () => {
 	const cask = generateCask("25.2.4", "v25.2.4", checksums);
 	expect(cask).toContain("xcsh-darwin-#{arch}.dmg");
-	expect(cask).toContain('binary "xcsh.app/Contents/MacOS/xcsh-darwin-#{arch}", target: "xcsh"');
+	expect(cask).toContain('executable_path = "xcsh.app/Contents/MacOS/xcsh-darwin-#{arch}"');
+	expect(cask).toContain('binary executable_path, target: "xcsh"');
 	expect(cask).toContain(`sha256 arm:   "${"c".repeat(64)}"`);
 	expect(cask).not.toMatch(/no-quarantine|xattr|sudo: true|^\s*pkg\s/m);
 });
