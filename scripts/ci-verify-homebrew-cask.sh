@@ -22,7 +22,18 @@ brew_prefix=$(brew --prefix)
 caskroom=$(brew --caskroom)
 installed_link="${brew_prefix}/bin/xcsh"
 installed_root="${caskroom}/xcsh/${expected}"
-archive="${TMPDIR:-/tmp}/xcsh-darwin-${RELEASE_ARCH}.zip"
+app_delivery=$(/usr/bin/python3 -c 'import re, sys; v=sys.argv[1]; assert re.fullmatch(r"\d+\.\d+\.\d+", v); print("true" if tuple(map(int,v.split("."))) >= (25,2,4) else "false")' "$expected")
+homebrew_layout=homebrew
+archive_extension=zip
+cli_relative=bin/xcsh
+native_relative=libexec
+if [ "$app_delivery" = true ]; then
+  homebrew_layout=app
+  archive_extension=dmg
+  cli_relative="xcsh.app/Contents/MacOS/xcsh-darwin-${RELEASE_ARCH}"
+  native_relative=xcsh.app/Contents/libexec
+fi
+archive="${TMPDIR:-/tmp}/xcsh-darwin-${RELEASE_ARCH}.$archive_extension"
 source_root="${TMPDIR:-/tmp}/xcsh-homebrew-source-${RELEASE_ARCH}"
 data_marker="${HOME}/.xcsh/no-sudo-homebrew-uat"
 uat_workspace="${HOME}/xcsh-homebrew-uat-workspace"
@@ -44,7 +55,7 @@ verify_developer_id() {
 }
 
 snapshot_installed() {
-  find "$installed_root/bin" "$installed_root/libexec" -type f -exec shasum -a 256 {} + | LC_ALL=C sort
+  find "$installed_root/$(dirname "$cli_relative")" "$installed_root/$native_relative" -type f -exec shasum -a 256 {} + | LC_ALL=C sort
 }
 
 verify_manifest() {
@@ -67,13 +78,16 @@ for item in manifest["files"]:
     assert signature["notarized"] is True, item
     assert signature["architectures"] == [expected_architecture], item
     assert set(signature["entitlements"]) == (cli_entitlements if item["role"] == "cli" else set()), item
-    relative = pathlib.Path("bin/xcsh" if item["role"] == "cli" else f"libexec/{item['name']}")
+    relative = pathlib.Path(
+        f"xcsh.app/Contents/MacOS/{item['name']}" if item["role"] == "cli" else f"xcsh.app/Contents/libexec/{item['name']}"
+    ) if layout == "app" else pathlib.Path("bin/xcsh" if item["role"] == "cli" else f"libexec/{item['name']}")
     expected.add(relative.as_posix())
     target = root / relative
     assert target.is_file(), target
     assert target.stat().st_size == item["size"], target
     assert hashlib.sha256(target.read_bytes()).hexdigest() == item["sha256"], target
-actual = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
+inventory_roots = [root / "xcsh.app/Contents/MacOS", root / "xcsh.app/Contents/libexec", root / "provenance"] if layout == "app" else [root]
+actual = {p.relative_to(root).as_posix() for directory in inventory_roots for p in directory.rglob("*") if p.is_file()}
 assert actual == expected | {"provenance/manifest.json"}, (actual, expected)
 PY
 }
@@ -137,13 +151,19 @@ verify_current_install() {
   local phase=$1
   test -L "$installed_link"
   resolved_binary=$(realpath "$installed_link")
-  test "$resolved_binary" = "$installed_root/bin/xcsh"
-  verify_manifest "$installed_root" homebrew "$installed_root/provenance/manifest.json"
-  test "$(sha256 "$source_root/bin/xcsh")" = "$(sha256 "$resolved_binary")"
+  test "$resolved_binary" = "$installed_root/$cli_relative"
+  if [ "$app_delivery" = true ]; then
+    codesign --verify --deep --strict --verbose=2 "$installed_root/xcsh.app"
+    xcrun stapler validate "$installed_root/xcsh.app"
+    spctl --assess --verbose=4 --type execute "$installed_root/xcsh.app"
+    /usr/bin/python3 "$script_dir/verify_macos_app_payload.py" --root "$installed_root" --arch "$RELEASE_ARCH"
+  fi
+  verify_manifest "$installed_root" "$homebrew_layout" "$installed_root/provenance/manifest.json"
+  test "$(sha256 "$source_root/$cli_relative")" = "$(sha256 "$resolved_binary")"
   verify_developer_id "$resolved_binary"
 
   for source_native in "${source_natives[@]}"; do
-    installed_native="$installed_root/libexec/$(basename "$source_native")"
+    installed_native="$installed_root/$native_relative/$(basename "$source_native")"
     test -f "$installed_native"
     test "$(sha256 "$source_native")" = "$(sha256 "$installed_native")"
     verify_developer_id "$installed_native"
@@ -160,7 +180,7 @@ verify_current_install() {
   test ! -s "$qmd_stderr"
   rm -rf "$qmd_home" "$qmd_stdout" "$qmd_stderr"
   PI_DEV=1 "$installed_link" sandbox check 2>&1 | tee "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
-  grep -F "Loaded native addon from ${installed_root}/libexec/" "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
+  grep -F "Loaded native addon from ${installed_root}/${native_relative}/" "${TMPDIR:-/tmp}/xcsh-cask-native-load.log"
   "$installed_link" chrome recycle
   "$installed_link" office recycle
   /usr/bin/python3 "$script_dir/installed_agent_e2e.py" \
@@ -197,15 +217,19 @@ brew uninstall --cask --force "$cask" >/dev/null 2>&1 || true
 assert_no_legacy_package
 
 curl --proto '=https' --tlsv1.2 -fsSLo "$archive" \
-  "https://github.com/f5-sales-demo/xcsh/releases/download/${EXPECTED_VERSION}/xcsh-darwin-${RELEASE_ARCH}.zip"
+  "https://github.com/f5-sales-demo/xcsh/releases/download/${EXPECTED_VERSION}/xcsh-darwin-${RELEASE_ARCH}.$archive_extension"
 rm -rf "$source_root"
 mkdir -p "$source_root"
-unzip -q "$archive" -d "$source_root"
-test -x "$source_root/bin/xcsh"
+if [ "$app_delivery" = true ]; then
+  bash "$script_dir/ci-verify-homebrew-dmg.sh" "$archive" "$RELEASE_ARCH" "${TMPDIR:-/tmp}/xcsh-homebrew-source-mount-${RELEASE_ARCH}" "$source_root"
+else
+  unzip -q "$archive" -d "$source_root"
+fi
+test -x "$source_root/$cli_relative"
 test -f "$source_root/provenance/manifest.json"
-verify_manifest "$source_root" homebrew "$source_root/provenance/manifest.json"
+verify_manifest "$source_root" "$homebrew_layout" "$source_root/provenance/manifest.json"
 shopt -s nullglob
-source_natives=("$source_root"/libexec/pi_natives.darwin-"${RELEASE_ARCH}"*.node)
+source_natives=("$source_root/$native_relative/pi_natives.darwin-${RELEASE_ARCH}"*.node)
 if [[ ${#source_natives[@]} -eq 0 ]]; then
   echo "::error::Released archive contains no darwin-${RELEASE_ARCH} native addon"
   exit 1

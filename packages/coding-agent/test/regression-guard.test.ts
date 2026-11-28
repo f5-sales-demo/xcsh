@@ -589,7 +589,7 @@ describe("CI verifies the published no-sudo Homebrew cask end to end", () => {
 		expect(script).toContain('assert signature["hardenedRuntime"] is True');
 		expect(script).not.toContain('spctl --assess --verbose=4 --type execute "$file"');
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell variable expression
-		expect(script).toContain("Loaded native addon from ${installed_root}/libexec/");
+		expect(script).toContain("Loaded native addon from ${installed_root}/${native_relative}/");
 		expect(script).toContain("pkgutil --pkg-info com.f5.xcsh");
 		expect(script).toContain("/Library/Application Support/xcsh");
 		expect(script).toContain('test -f "$data_marker"');

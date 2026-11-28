@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Retry only transient Apple ticket delivery; notarization is already accepted.
 set -euo pipefail
-if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
-  echo 'usage: ci-staple-macos-pkg.sh EXISTING_PACKAGE' >&2
+if [ "$#" -ne 1 ] || { [ ! -f "$1" ] && [ ! -d "$1" ]; }; then
+  echo 'usage: ci-staple-macos-pkg.sh EXISTING_NOTARIZED_ARTIFACT' >&2
   exit 2
 fi
 attempts=${XCSH_STAPLER_MAX_ATTEMPTS:-6}

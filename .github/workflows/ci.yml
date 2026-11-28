@@ -1141,6 +1141,8 @@ jobs:
             --manifest "packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.provenance.json" \
             --root "$expanded/Payload" \
             --layout pkg
+      - name: Build signed and stapled Homebrew app distribution
+        run: bash scripts/ci-build-macos-homebrew-app.sh
       - name: Verify signed macOS sandbox check in a direct-home live profile
         env:
           XCSH_TEST_SANDBOX_CHECK_BINARY: ${{ github.workspace }}/packages/coding-agent/binaries/xcsh-darwin-${{ matrix.arch }}
@@ -1223,6 +1225,15 @@ jobs:
               --root "$root" \
               --layout homebrew
           done
+      - name: Verify managed Homebrew disk images
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          if [ "$(bun -e 'import {usesStapledHomebrew} from "./scripts/ci-release-homebrew.ts"; console.log(usesStapledHomebrew(process.argv[1]));' "$version")" = true ]; then
+            for arch in arm64 x64; do
+              bash scripts/ci-verify-homebrew-dmg.sh "packages/coding-agent/binaries/xcsh-darwin-${arch}.dmg" "$arch" "$RUNNER_TEMP/release-homebrew-dmg-${arch}"
+            done
+          fi
       - name: List release binaries
         run: ls -la packages/coding-agent/binaries/
       - name: Create GitHub Release
@@ -1241,10 +1252,14 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          expected_count=28
+          if [ "$(bun -e 'import {usesStapledHomebrew} from "./scripts/ci-release-homebrew.ts"; console.log(usesStapledHomebrew(process.argv[1]));' "${REF_NAME#v}")" = true ]; then
+            expected_count=32
+          fi
           gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${REF_NAME}?cache_bust=$(date +%s)" |
-            jq -e --arg tag "$REF_NAME" '
+            jq -e --arg tag "$REF_NAME" --argjson count "$expected_count" '
               .tag_name == $tag and .draft == false and .prerelease == false and
-              .immutable == true and (.assets | length) == 28
+              .immutable == true and (.assets | length) == $count
             ' >/dev/null
 
   # Publish the macOS binary cask from the signed archives
@@ -1316,20 +1331,28 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
+          extension=zip
+          if [ "$(bun -e 'import {usesStapledHomebrew} from "./scripts/ci-release-homebrew.ts"; console.log(usesStapledHomebrew(process.argv[1]));' "${GITHUB_REF_NAME#v}")" = true ]; then
+            extension=dmg
+          fi
           gh release download "$GITHUB_REF_NAME" \
-            --pattern 'xcsh-*.zip' \
+            --pattern "xcsh-darwin-*.$extension" \
             --dir packages/coding-agent/binaries
       - name: Verify downloaded archive provenance
         run: |
           set -euo pipefail
           for arch in arm64 x64; do
             root="$RUNNER_TEMP/downloaded-homebrew-${arch}"
-            mkdir "$root"
-            unzip -q "packages/coding-agent/binaries/xcsh-darwin-${arch}.zip" -d "$root"
-            bun scripts/macos-release-provenance.ts verify \
-              --manifest "$root/provenance/manifest.json" \
-              --root "$root" \
-              --layout homebrew
+            if [ -f "packages/coding-agent/binaries/xcsh-darwin-${arch}.dmg" ]; then
+              bash scripts/ci-verify-homebrew-dmg.sh "packages/coding-agent/binaries/xcsh-darwin-${arch}.dmg" "$arch" "$root"
+            else
+              mkdir "$root"
+              unzip -q "packages/coding-agent/binaries/xcsh-darwin-${arch}.zip" -d "$root"
+              bun scripts/macos-release-provenance.ts verify \
+                --manifest "$root/provenance/manifest.json" \
+                --root "$root" \
+                --layout homebrew
+            fi
           done
       - name: Update Homebrew tap
         env:
@@ -1367,6 +1390,7 @@ jobs:
           brew_prefix=$(brew --prefix)
           sudo mkdir -p "$uat_home/tmp"
           sudo cp scripts/ci-verify-homebrew-cask.sh "$uat_home/ci-verify-homebrew-cask.sh"
+          sudo cp scripts/ci-verify-homebrew-dmg.sh scripts/verify_macos_app_payload.py "$uat_home/"
           sudo cp scripts/ci-homebrew-upgrade-fixture.sh "$uat_home/ci-homebrew-upgrade-fixture.sh"
           sudo cp -R scripts/installed_agent_acceptance "$uat_home/"
           sudo cp scripts/installed_agent_e2e.py scripts/ci-package-installed-agent-evidence.sh \
