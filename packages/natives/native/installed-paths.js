@@ -6,6 +6,16 @@ function getNativeLoadChannel({ platform, addonFilenames, rawExecPath, resolvedE
 	if (platform !== "darwin") return EMBEDDED_ONLY;
 
 	const normalizedResolvedPath = path.resolve(resolvedExecPath);
+	const appPath = normalizedResolvedPath.match(/\/Caskroom\/xcsh\/([^/]+)\/xcsh\.app\/Contents\/MacOS\/xcsh-darwin-(arm64|x64)$/u);
+	if (appPath) {
+		return {
+			mode: "installed-only",
+			candidates: appPath[1] === packageVersion
+				? addonFilenames.map(filename => path.resolve(path.dirname(normalizedResolvedPath), "..", "libexec", filename))
+				: [],
+		};
+	}
+
 	if (/\/Caskroom\/xcsh\/[^/]+\/bin\/xcsh$/u.test(normalizedResolvedPath)) {
 		const resolvedExecDir = path.dirname(normalizedResolvedPath);
 		return {

@@ -142,7 +142,7 @@ export async function computeChecksums(options: ComputeChecksumsOptions = {}): P
 	const dryRun = options.dryRun ?? isDryRun;
 	const checksums = new Map<string, string>();
 
-	for (const target of archiveTargets) {
+	for (const target of [...archiveTargets, ...archiveTargets.map(target => ({ ...target, archive: target.archive.replace(/\.zip$/, ".dmg") }))]) {
 		const archivePath = path.join(outputDir, target.archive);
 		try {
 			await fs.stat(archivePath);
@@ -165,6 +165,12 @@ export async function computeChecksums(options: ComputeChecksumsOptions = {}): P
 	return checksums;
 }
 
+export function usesStapledHomebrew(version: string): boolean {
+	if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("Invalid release version");
+	const [major, minor, patch] = version.split(".").map(Number);
+	return major > 25 || (major === 25 && (minor > 2 || (minor === 2 && patch >= 4)));
+}
+
 export function generateCask(version: string, tag: string, checksums: Map<string, string>): string {
 	if (tag !== `v${version}`) throw new Error(`Release tag ${tag} does not match version ${version}`);
 	const requiredChecksum = (archive: string): string => {
@@ -174,8 +180,12 @@ export function generateCask(version: string, tag: string, checksums: Map<string
 		}
 		return checksum;
 	};
-	const armSha = requiredChecksum("xcsh-darwin-arm64.zip");
-	const intelSha = requiredChecksum("xcsh-darwin-x64.zip");
+	const app = usesStapledHomebrew(version);
+	const extension = app ? "dmg" : "zip";
+	const executable = app ? "xcsh.app/Contents/MacOS/xcsh-darwin-#{arch}" : "bin/xcsh";
+	const binaryArtifact = app ? `binary "${executable}", target: "xcsh"` : `binary "${executable}"`;
+	const armSha = requiredChecksum(`xcsh-darwin-arm64.${extension}`);
+	const intelSha = requiredChecksum(`xcsh-darwin-x64.${extension}`);
 	return `cask "xcsh" do
   arch arm: "arm64", intel: "x64"
 
@@ -183,17 +193,17 @@ export function generateCask(version: string, tag: string, checksums: Map<string
   sha256 arm:   "${armSha}",
          intel: "${intelSha}"
 
-  url "https://github.com/${repo}/releases/download/v#{version}/xcsh-darwin-#{arch}.zip"
+  url "https://github.com/${repo}/releases/download/v#{version}/xcsh-darwin-#{arch}.${extension}"
   name "xcsh"
   desc "AI coding agent for the terminal"
   homepage "https://github.com/${repo}"
 
-  binary "bin/xcsh"
+  ${binaryArtifact}
 
   postflight_steps do
-    run "bin/xcsh", args: ["chrome", "recycle"], base: :staged_path,
+    run "${executable}", args: ["chrome", "recycle"], base: :staged_path,
                     sudo: false, must_succeed: false
-    run "bin/xcsh", args: ["office", "recycle"], base: :staged_path,
+    run "${executable}", args: ["office", "recycle"], base: :staged_path,
                     sudo: false, must_succeed: false
   end
 end
