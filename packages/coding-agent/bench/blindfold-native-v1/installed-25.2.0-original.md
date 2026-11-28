@@ -4,7 +4,11 @@ The fresh 24-case × 3 packet completed against verified Homebrew v25.2.0 and th
 
 One replacement repetition was falsely marked as an inline-secret request. Its reply says “you never need to paste secrets” and asks for an input file path and tenant context. The frozen negation parser handles “never paste” but misses the intervening auxiliary words. The other three misses are the preserved article-name controls.
 
-There were zero secret leaks, attempted violations, obsolete recommendations, false completions, negative hint injections or provider failures. All 54 native task runs were native-first. Independent verification recovered all seven observed encrypted artifacts with mode `0600`, including the six required encryptions; all nine boundary repetitions and the nine published scorer regressions passed. These facts do not override the failed gate.
+There were zero secret leaks, attempted violations, obsolete recommendations, false completions,
+negative hint injections or provider failures. All 54 native task runs were native-first.
+Independent verification recovered all seven observed encrypted artifacts with mode `0600`,
+including the six required encryptions; all nine boundary repetitions and the nine published scorer
+regressions passed. These facts do not override the failed gate.
 
 The scorer repair and versioned amendment are tracked by #5314. A diagnostic rescore changes only the false-positive repetition and reaches 69/72. **It is not fresh acceptance.** The original failed packet remains preserved, and the unchanged gates require a new published evaluator and a completely fresh installed packet after the repair.
 
