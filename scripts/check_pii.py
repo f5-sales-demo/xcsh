@@ -26,6 +26,7 @@ import re
 import sys
 import unicodedata
 import urllib.parse
+from bisect import bisect_right
 from dataclasses import asdict, dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path, PurePosixPath
@@ -139,6 +140,14 @@ PERSON_FIELD_RE = re.compile(
 )
 REPOSITORY_FULL_NAME_RE = re.compile(
     r"[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_.-]{1,100}",
+)
+TERRAFORM_PROVIDER_FULL_NAME_RE = re.compile(
+    r"registry\.terraform\.io/hashicorp/(?P<name>[a-z0-9][a-z0-9-]{0,63})",
+)
+TERRAFORM_PROVIDER_VERSION_RE = re.compile(r"(?:=\s*)?[0-9]+\.[0-9]+\.[0-9]+")
+TERRAFORM_PROVIDER_LITERAL_PAIR_RE = re.compile(
+    r"\s*(?P<key_quote>['\"]?)(?P<key>[A-Za-z_][A-Za-z0-9_]*)"
+    r"(?P=key_quote)\s*:\s*(?P<quote>['\"])(?P<value>[^'\"\\\r\n]*)(?P=quote)\s*"
 )
 LOCALIZATION_BUNDLE_RE = re.compile(
     r"(?:bundle\.l10n|package\.nls)(?:\.[A-Za-z0-9-]+)?\.json$",
@@ -334,6 +343,14 @@ DOTTED_VERSION_PREFIX_RE = re.compile(
     r"|version[A-Za-z0-9_.-]*\)?\.to(?:be|equal)\(\s*['\"`]?\s*$"
     r")"
 )
+SOFTWARE_VERSION_LITERAL_RE = re.compile(
+    r"[0-9]+(?:\.[0-9]+){3}(?:[+-][A-Za-z0-9.-]+)?",
+)
+SOFTWARE_VERSION_OUTPUT_RE = re.compile(
+    r'\b(?:openjdk|java)\s+version\s+(?P<quote>\\?")'
+    r"(?P<version>[0-9]+(?:\.[0-9]+){3}(?:[+-][A-Za-z0-9.-]+)?)(?P=quote)",
+    re.IGNORECASE,
+)
 SVG_PATH_ATTRIBUTE_RE = re.compile(r"(?:^|\s)d\s*=\s*(?P<quote>['\"])", re.IGNORECASE)
 PDF_AUTHOR_RE = re.compile(
     r"/(?:Author|Subject)\s*\((?P<value>[^)]{2,})\)",
@@ -502,6 +519,7 @@ class LineScanContext:
     jq_spans: tuple[tuple[int, int], ...]
     localization_spans: tuple[tuple[int, int], ...]
     repository_full_name_columns: frozenset[int]
+    terraform_provider_full_name_columns: frozenset[int]
     source_structure: str
     source_brace_depth: int
     enum_body_depth: int | None
@@ -880,6 +898,148 @@ def json_string_end(text: str, start: int) -> int | None:
     return None
 
 
+@dataclass
+class JsonVersionFrame:
+    """Track a JSON container field and the shape of its version array."""
+
+    kind: str
+    key: str | None = None
+    version_array: bool = False
+    strings_only: bool = True
+
+
+@dataclass(frozen=True)
+class JsonVersionCandidate:
+    """Retain exact literal coordinates and their array ownership evidence."""
+
+    start: int
+    end: int
+    array: JsonVersionFrame | None
+
+
+def unique_json_metadata(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject duplicate metadata keys before attributing literal version values."""
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError
+        result[key] = value
+    return result
+
+
+def reject_json_metadata_constant(_value: str) -> None:
+    """Reject nonfinite constants that are outside the JSON data grammar."""
+    raise ValueError
+
+
+def json_version_string(
+    text: str,
+    start: int,
+    frames: list[JsonVersionFrame],
+    candidates: list[JsonVersionCandidate],
+) -> int | None:
+    """Inspect one string token with an explicitly established container type."""
+    end = json_string_end(text, start)
+    if end is None:
+        return None
+    value: object = json.loads(text[start : end + 1])
+    if not isinstance(value, str):
+        return None
+    cursor = end + 1
+    while cursor < len(text) and text[cursor] in " \t\r\n":
+        cursor += 1
+    if not frames:
+        return end + 1
+    frame = frames[-1]
+    is_key = cursor < len(text) and text[cursor] == ":"
+    if frame.kind == "{" and is_key:
+        frame.key = value.casefold()
+        return end + 1
+    owner: JsonVersionFrame | None = None
+    if frame.kind == "{":
+        role = frame.key == "version"
+        frame.key = None
+    else:
+        role = frame.version_array
+        owner = frame
+    if role and SOFTWARE_VERSION_LITERAL_RE.fullmatch(value):
+        candidates.append(JsonVersionCandidate(start + 1, end, owner))
+    return end + 1
+
+
+def json_version_symbol(
+    character: str,
+    frames: list[JsonVersionFrame],
+) -> bool:
+    """Maintain container shape without inferring roles across nested values."""
+    if character in "[{":
+        versions = False
+        if frames:
+            parent = frames[-1]
+            if parent.kind == "[":
+                parent.strings_only = False
+            else:
+                versions = character == "[" and parent.key == "versions"
+                parent.key = None
+        frames.append(JsonVersionFrame(character, version_array=versions))
+    elif character in "]}":
+        if not frames:
+            return False
+        frames.pop()
+    elif character not in " \t\r\n,:" and frames:
+        if frames[-1].kind == "[":
+            frames[-1].strings_only = False
+        else:
+            frames[-1].key = None
+    return True
+
+
+def json_version_candidates(text: str) -> list[JsonVersionCandidate]:
+    """Walk validated JSON once and retain only exact literal-string candidates."""
+    frames: list[JsonVersionFrame] = []
+    candidates: list[JsonVersionCandidate] = []
+    index = 0
+    while index < len(text):
+        if text[index] == '"':
+            end = json_version_string(text, index, frames, candidates)
+            if end is None:
+                return []
+            index = end
+            continue
+        if not json_version_symbol(text[index], frames):
+            return []
+        index += 1
+    return candidates
+
+
+def json_software_version_spans(
+    path: str,
+    text: str,
+) -> dict[int, tuple[tuple[int, int], ...]]:
+    """Attribute literal versions in valid JSON without trusting nearby fields."""
+    if PurePosixPath(path).suffix.lower() != ".json":
+        return {}
+    try:
+        json.loads(
+            text,
+            object_pairs_hook=unique_json_metadata,
+            parse_constant=reject_json_metadata_constant,
+        )
+    except (ValueError, RecursionError):
+        return {}
+    newlines = re.finditer(r"\r\n?|\n", text)
+    line_starts = [0, *(match.end() for match in newlines)]
+    spans: dict[int, list[tuple[int, int]]] = {}
+    for candidate in json_version_candidates(text):
+        if candidate.array is not None and not candidate.array.strings_only:
+            continue
+        line_index = bisect_right(line_starts, candidate.start) - 1
+        offset = line_starts[line_index]
+        line_spans = spans.setdefault(line_index + 1, [])
+        line_spans.append((candidate.start - offset, candidate.end - offset))
+    return {line: tuple(items) for line, items in spans.items()}
+
+
 def repository_full_name_columns(path: str, text: str) -> dict[int, frozenset[int]]:
     """Locate repository identifiers proven by their enclosing JSON metadata."""
     columns: dict[int, set[int]] = {}
@@ -913,6 +1073,138 @@ def repository_full_name_columns(path: str, text: str) -> dict[int, frozenset[in
             # Parent metadata cannot establish the meaning of a nested name.
             break
     return {line: frozenset(values) for line, values in columns.items()}
+
+
+def literal_provider_fields(text: str) -> dict[str, str] | None:
+    """Read only a flat literal object; reject duplicate keys and expressions."""
+    fields: dict[str, str] = {}
+    position = 0
+    while text[position:].strip():
+        pair = TERRAFORM_PROVIDER_LITERAL_PAIR_RE.match(text, position)
+        if pair is None or pair.group("key") in fields:
+            return None
+        fields[pair.group("key")] = pair.group("value")
+        position = pair.end()
+        if position == len(text):
+            break
+        if text[position] != ",":
+            return None
+        position += 1
+    return fields
+
+
+def terraform_provider_full_name_columns(
+    path: str,
+    text: str,
+) -> dict[int, frozenset[int]]:
+    """Join a public HashiCorp provider address to literal name and exact version.
+
+    This mapping covers flat saved-provider JSON and source fixtures. It grants
+    no exemption to personal fields, foreign namespaces or unresolved metadata.
+    """
+    if PurePosixPath(path).suffix.lower() not in SOURCE_CODE_SUFFIXES | {".json"}:
+        return {}
+    columns: dict[int, set[int]] = {}
+    for match in PERSON_FIELD_RE.finditer(text):
+        if match.group("key") != "full_name":
+            continue
+        value = normalized_value(structured_field_value(path, text, match))
+        address = TERRAFORM_PROVIDER_FULL_NAME_RE.fullmatch(value)
+        if address is None:
+            continue
+        key_start = match.start("key")
+        start = text.rfind("{", 0, key_start)
+        end = text.find("}", match.end("key"))
+        if start < 0 or end < 0:
+            continue
+        fields = literal_provider_fields(text[start + 1 : end])
+        if (
+            fields is None
+            or not {"name", "full_name", "version_constraint"} <= fields.keys()
+            or fields.keys()
+            - {
+                "name",
+                "full_name",
+                "version_constraint",
+                "alias",
+                "module_address",
+            }
+        ):
+            continue
+        version_constraint = fields["version_constraint"]
+        if (
+            fields["full_name"] != value
+            or fields["name"] != address.group("name")
+            or TERRAFORM_PROVIDER_VERSION_RE.fullmatch(version_constraint) is None
+        ):
+            continue
+        line_number = text.count("\n", 0, key_start) + 1
+        line_start = text.rfind("\n", 0, key_start) + 1
+        columns.setdefault(line_number, set()).add(key_start - line_start)
+    return {line: frozenset(values) for line, values in columns.items()}
+
+
+def arc_controller_namespace_columns(
+    path: str,
+    text: str,
+) -> dict[int, frozenset[int]]:
+    """Join ARC's namespace to its direct, literal controller account mapping.
+
+    This recognizes the documented Helm values mapping, rather than treating
+    its namespace as a safe customer identifier in unrelated fields or paths.
+    Ambiguous, nested, aliased and extended mappings remain review findings.
+    """
+    if PurePosixPath(path).suffix.lower() not in {".yaml", ".yml"}:
+        return {}
+    lines = text.splitlines()
+    headers = [
+        index
+        for index, line in enumerate(lines)
+        if re.match(
+            r"^(?:controllerServiceAccount|'controllerServiceAccount'|"
+            r'"controllerServiceAccount")\s*:',
+            line,
+        )
+    ]
+    header_pattern = r"controllerServiceAccount:[ \t]*(?:#.*)?"
+    if len(headers) != 1 or not re.fullmatch(header_pattern, lines[headers[0]]):
+        return {}
+    header = headers[0]
+    fields: dict[str, str] = {}
+    indentation = None
+    namespace_line = None
+    namespace_column = None
+    for index in range(header + 1, len(lines)):
+        line = lines[index]
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if not line.startswith(" "):
+            break
+        pair = re.fullmatch(
+            r"(?P<indent> +)(?P<key>name|namespace):[ \t]*"
+            r"(?P<value>arc-gha-rs-controller|arc-systems|"
+            r"'arc-gha-rs-controller'|'arc-systems'|"
+            r'"arc-gha-rs-controller"|"arc-systems")'
+            r"[ \t]*(?:#.*)?",
+            line,
+        )
+        if pair is None or pair.group("key") in fields:
+            return {}
+        width = len(pair.group("indent"))
+        if indentation is not None and indentation != width:
+            return {}
+        indentation = width
+        fields[pair.group("key")] = pair.group("value").strip("'\"")
+        if pair.group("key") == "namespace":
+            namespace_line = index + 1
+            namespace_column = pair.start("key")
+    if (
+        fields != {"name": "arc-gha-rs-controller", "namespace": "arc-systems"}
+        or namespace_line is None
+        or namespace_column is None
+    ):
+        return {}
+    return {namespace_line: frozenset({namespace_column})}
 
 
 def localization_top_level_string_spans(
@@ -2164,6 +2456,7 @@ def scan_contacts(
             if (
                 match_is_in_spans(match, context.localization_spans)
                 or match.start("key") in context.repository_full_name_columns
+                or match.start("key") in context.terraform_provider_full_name_columns
             ):
                 continue
             value = structured_field_value(path, line, match)
@@ -2253,12 +2546,35 @@ def is_documented_identity_expression(
     return bool(positional or lookup or fixed_query or supported_namespace)
 
 
+def is_dynamic_shell_identity_read(
+    path: str,
+    line: str,
+    match: re.Match[str],
+) -> bool:
+    """Recognize a matched jq field read from a runtime shell variable only."""
+    if PurePosixPath(path).suffix.lower() != ".sh" or match.group("separator") != "=":
+        return False
+    prefix = line[: match.start("key")].strip()
+    if prefix not in {"", "export"}:
+        return False
+    key = re.escape(match.group("key"))
+    filter_pattern = rf"(?:\.{key}|'[ \t]*\.{key}[ \t]*'|\"[ \t]*\.{key}[ \t]*\")"
+    variable = r"\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})"
+    pattern = (
+        rf"{key}=\$\(jq[ \t]+(?:-(?:er|re|r|e)[ \t]+)+{filter_pattern}"
+        rf"[ \t]+<<<[ \t]*\"{variable}\"[ \t]*\)"
+        r"(?:[ \t]*;.*|[ \t]+#.*|[ \t]*)"
+    )
+    return re.fullmatch(pattern, line[match.start("key") :]) is not None
+
+
 def scan_structured_identity(
     path: str,
     line_number: int,
     line: str,
     findings: set[Finding],
     context: LineScanContext,
+    controller_namespace_columns: frozenset[int],
 ) -> None:
     """Scan structured fields for customer identifiers and personal records."""
     for match in IDENTITY_FIELD_RE.finditer(line):
@@ -2267,6 +2583,10 @@ def scan_structured_identity(
         if not is_literal_structured_identity_field(path, line, match):
             continue
         value = structured_field_value(path, line, match)
+        controller_namespace = match.start("key") in controller_namespace_columns
+        dynamic_shell_read = is_dynamic_shell_identity_read(path, line, match)
+        if controller_namespace or dynamic_shell_read:
+            continue
         if (
             is_documented_identity_expression(line, match, value, context)
             or numeric_enum_member(match, value, context)
@@ -2409,9 +2729,18 @@ def scan_public_ips(
     line_number: int,
     line: str,
     findings: set[Finding],
+    software_spans: tuple[tuple[int, int], ...] = (),
 ) -> None:
-    """Report globally routable unicast IPv4 values outside documentation ranges."""
+    """Report public IPv4 values while attributing exact software-version spans."""
+    version_spans = list(software_spans)
+    outputs = SOFTWARE_VERSION_OUTPUT_RE.finditer(line)
+    version_spans.extend(output.span("version") for output in outputs)
+    version_spans.sort()
+    starts = [start for start, _ in version_spans]
     for match in IPV4_RE.finditer(line):
+        version_index = bisect_right(starts, match.start()) - 1
+        if version_index >= 0 and version_spans[version_index][1] >= match.end():
+            continue
         try:
             address = ipaddress.ip_address(match.group(0))
         except ValueError:
@@ -2605,7 +2934,10 @@ def scan_text(path: str, text: str, findings: set[Finding]) -> None:
     yaml = suffix in {".yaml", ".yml"}
     aliases: dict[str, bool] = {}
     localization_strings = localization_top_level_string_spans(path, text)
+    software_versions = json_software_version_spans(path, text)
     repository_names = repository_full_name_columns(path, text)
+    provider_names = terraform_provider_full_name_columns(path, text)
+    controller_namespaces = arc_controller_namespace_columns(path, text)
     if yaml or suffix in PROSE_DOCUMENT_SUFFIXES:
         scan_yaml_identity_blocks(path, text, findings)
     scan_multiline_identity_fields(path, text, findings)
@@ -2780,6 +3112,10 @@ def scan_text(path: str, text: str, findings: set[Finding]) -> None:
             jq_spans=spans,
             localization_spans=localization_strings.get(line_number, ()),
             repository_full_name_columns=repository_names.get(line_number, frozenset()),
+            terraform_provider_full_name_columns=provider_names.get(
+                line_number,
+                frozenset(),
+            ),
             source_structure=source_structure,
             source_brace_depth=line_source_brace_depth,
             enum_body_depth=enum_body_depth,
@@ -2804,10 +3140,17 @@ def scan_text(path: str, text: str, findings: set[Finding]) -> None:
             line,
             findings,
             context,
+            controller_namespaces.get(line_number, frozenset()),
         )
         scan_jq_identity_writes(path, line_number, line, findings, context)
         scan_query_parameters(path, line_number, line, findings)
-        scan_public_ips(path, line_number, line, findings)
+        scan_public_ips(
+            path,
+            line_number,
+            line,
+            findings,
+            software_versions.get(line_number, ()),
+        )
 
         if source_code:
             source_brace_depth += source_structure.count("{")
