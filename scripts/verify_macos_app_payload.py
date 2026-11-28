@@ -43,6 +43,33 @@ def command(arguments: list[str]) -> str:
     return result.stdout + result.stderr
 
 
+def signature_evidence(target: Path) -> dict[str, str | bool | list[str]]:
+    """Read code identity and reject missing signer metadata explicitly."""
+    details = command(["codesign", "--display", "--verbose=4", str(target)])
+    entitlements = command(
+        ["codesign", "--display", "--entitlements", ":-", str(target)]
+    )
+    architectures = command(["lipo", "-archs", str(target)]).strip().split()
+    team = re.search(r"^TeamIdentifier=(.+)$", details, re.MULTILINE)
+    if team is None:
+        fail("App signer identifier missing")
+    return {
+        "authority": "Developer ID Application"
+        if "Authority=Developer ID Application:" in details
+        else "unknown",
+        "teamIdentifier": team.group(1).strip(),
+        "hardenedRuntime": bool(
+            re.search(r"flags=0x[0-9a-f]+\([^)]*runtime[^)]*\)", details, re.IGNORECASE)
+        ),
+        "trustedTimestamp": bool(
+            re.search(r"^Timestamp=(?!none\s*$).+", details, re.MULTILINE)
+        ),
+        "notarized": True,
+        "entitlements": sorted(re.findall(r"<key>([^<]+)</key>", entitlements)),
+        "architectures": sorted(architectures),
+    }
+
+
 def verify(root: Path, arch: str) -> dict[str, str | int | bool]:
     """Verify the app ticket, identity, each signed code file and its closed inventory."""
     app = root / "xcsh.app"
@@ -105,30 +132,7 @@ def verify(root: Path, arch: str) -> dict[str, str | int | bool]:
         command(
             ["codesign", "--verify", "--deep", "--strict", "--verbose=2", str(target)]
         )
-        details = command(["codesign", "--display", "--verbose=4", str(target)])
-        entitlements = command(
-            ["codesign", "--display", "--entitlements", ":-", str(target)]
-        )
-        architectures = command(["lipo", "-archs", str(target)]).strip().split()
-        actual = {
-            "authority": "Developer ID Application"
-            if "Authority=Developer ID Application:" in details
-            else "unknown",
-            "teamIdentifier": re.search(r"^TeamIdentifier=(.+)$", details, re.MULTILINE)
-            .group(1)
-            .strip(),
-            "hardenedRuntime": bool(
-                re.search(
-                    r"flags=0x[0-9a-f]+\([^)]*runtime[^)]*\)", details, re.IGNORECASE
-                )
-            ),
-            "trustedTimestamp": bool(
-                re.search(r"^Timestamp=(?!none\s*$).+", details, re.MULTILINE)
-            ),
-            "notarized": True,
-            "entitlements": sorted(re.findall(r"<key>([^<]+)</key>", entitlements)),
-            "architectures": sorted(architectures),
-        }
+        actual = signature_evidence(target)
         signature = dict(entry["signature"])
         signature["entitlements"] = sorted(signature["entitlements"])
         signature["architectures"] = sorted(signature["architectures"])
@@ -142,7 +146,7 @@ def verify(root: Path, arch: str) -> dict[str, str | int | bool]:
             fail("App hardened runtime/timestamp missing")
         if actual["entitlements"] != (sorted(ENTITLEMENTS) if role == "cli" else []):
             fail("App entitlement mismatch")
-        if architectures != ["arm64" if arch == "arm64" else "x86_64"]:
+        if actual["architectures"] != ["arm64" if arch == "arm64" else "x86_64"]:
             fail("App architecture mismatch")
         expected.add(relative.as_posix())
     inventory = ["xcsh.app/Contents/MacOS", "xcsh.app/Contents/libexec", "provenance"]

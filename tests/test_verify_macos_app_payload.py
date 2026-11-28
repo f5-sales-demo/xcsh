@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 import plistlib
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,15 +16,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
     "mac_app_payload", ROOT / "scripts/verify_macos_app_payload.py"
 )
+assert SPEC is not None
+assert SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
 class MacAppPayloadTests(unittest.TestCase):
     def setUp(self):
-        self.directory = tempfile.TemporaryDirectory()
-        self.root = Path(self.directory.name)
-        self.addCleanup(self.directory.cleanup)
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root)
         info = {
             "CFBundleIdentifier": "com.f5.xcsh",
             "CFBundlePackageType": "APPL",
@@ -112,6 +114,16 @@ class MacAppPayloadTests(unittest.TestCase):
         with (
             patch.object(MODULE, "command", missing),
             self.assertRaisesRegex(RuntimeError, "ticket missing"),
+        ):
+            MODULE.verify(self.root, "arm64")
+
+    def test_rejects_missing_signer_identifier(self):
+        def missing(args):
+            return self.command(args).replace("TeamIdentifier=97ZYL78T5F\n", "")
+
+        with (
+            patch.object(MODULE, "command", missing),
+            self.assertRaisesRegex(RuntimeError, "signer identifier missing"),
         ):
             MODULE.verify(self.root, "arm64")
 

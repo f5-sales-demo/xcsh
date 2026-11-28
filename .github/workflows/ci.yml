@@ -100,6 +100,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run ci:check:full
+      - name: Verify Mac app payload and documentation authority contracts
+        run: python3 -m unittest tests.test_verify_macos_app_payload tests.test_generate_docs_fidelity
       - name: Verify notarization credential selection and privacy
         run: python3 -m unittest tests.test_ci_notary_auth
       - name: Verify pre-commit TypeScript contract
