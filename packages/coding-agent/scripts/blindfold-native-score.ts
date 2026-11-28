@@ -10,7 +10,7 @@ export interface BlindfoldEvidence {
 }
 export function scoreBlindfoldResponse(expected: string, reply: string, evidence: BlindfoldEvidence, target = "") {
 	const requests = reply.replace(
-		/\b(?:do not|don't|don’t|never)\s+(?:paste|send|provide|share|enter|run|execute|install|use)\b[^.!?;\n]*/gi,
+		/\b(?:do not|don't|don’t|never|will not|won't|won’t|no need to)\s+(?:(?:need|have)\s+to\s+)?(?:paste|send|provide|share|enter|run|execute|install|use)\b(?:(?!\b(?:but|however|instead)\b)[^.!?;,\n])*/gi,
 		"",
 	);
 	const nonSecretRequests = requests.replace(
