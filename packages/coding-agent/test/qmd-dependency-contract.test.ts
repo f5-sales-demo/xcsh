@@ -13,7 +13,7 @@ describe("QMD dependency patch", () => {
 		) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
 
 		expect(codingAgentPackage.dependencies?.["@tobilu/qmd"]).toBeUndefined();
-		expect(codingAgentPackage.devDependencies?.["@tobilu/qmd"]).toBe("2.8.3");
+		expect(codingAgentPackage.devDependencies?.["@tobilu/qmd"]).toBe("2.9.0");
 	});
 
 	it("uses bundled better-sqlite3 binaries without running its node-gyp fallback", async () => {

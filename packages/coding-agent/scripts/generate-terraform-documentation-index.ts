@@ -11,6 +11,7 @@ import {
 } from "../src/internal-urls/terraform-documentation";
 
 import { assertSourceRecord, requireFreshCorpusSources } from "./corpus-sources";
+import { formatTerraformIndex } from "./generate-terraform-index";
 import { fetchTerraformSnapshot } from "./terraform-snapshot-download";
 
 const root = path.join(import.meta.dir, "../../..");
@@ -19,6 +20,17 @@ const loader = path.join(import.meta.dir, "../src/internal-urls/terraform-docume
 const pinPath = path.join(root, "tools/terraform-documentation-release.json");
 const placeholder =
 	'import type { TerraformEmbeddedAssets } from "./terraform-documentation";\nexport const EMBEDDED_TERRAFORM_DOCUMENTATION: TerraformEmbeddedAssets | null = null;\n';
+
+export async function writeTerraformDocumentationLoader(
+	destination: string,
+	pin: ReturnType<typeof parseTerraformPin>,
+): Promise<void> {
+	await writeFile(
+		destination,
+		`import indexGzipPath from "./.documentation-generated/terraform/terraform-documentation.sqlite.gz" with { type: "file" };\nimport type { TerraformEmbeddedAssets } from "./terraform-documentation";\nexport const EMBEDDED_TERRAFORM_DOCUMENTATION = { indexGzipPath, pin: ${JSON.stringify(pin)} } satisfies TerraformEmbeddedAssets;\n`,
+	);
+	await formatTerraformIndex(destination);
+}
 
 async function main(): Promise<void> {
 	if (process.argv.includes("--reset")) {
@@ -105,11 +117,8 @@ async function main(): Promise<void> {
 	const bytes = gunzipSync(compressed, { maxOutputLength: pin.index.size_bytes });
 	if (bytes.length !== pin.index.size_bytes || terraformHash(bytes) !== pin.index.sha256)
 		throw new Error("Terraform prebuilt SQLite verification failed");
-	await writeFile(
-		loader,
-		`import indexGzipPath from "./.documentation-generated/terraform/terraform-documentation.sqlite.gz" with { type: "file" };\nimport type { TerraformEmbeddedAssets } from "./terraform-documentation";\nexport const EMBEDDED_TERRAFORM_DOCUMENTATION = { indexGzipPath, pin: ${JSON.stringify(pin)} } satisfies TerraformEmbeddedAssets;\n`,
-	);
+	await writeTerraformDocumentationLoader(loader, pin);
 	console.log(JSON.stringify({ providerVersion: pin.provider_version, ...pin.index }));
 }
 
-await main();
+if (import.meta.main) await main();

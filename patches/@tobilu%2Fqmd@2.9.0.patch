@@ -1,0 +1,233 @@
+diff --git a/dist/db.d.ts b/dist/db.d.ts
+index f89bf1524c86698318e8f833205b85a26ef69989..9e1d99f66333d4a0e31944ea1aecfffe5312f13c 100644
+--- a/dist/db.d.ts
++++ b/dist/db.d.ts
+@@ -36,7 +36,9 @@ export declare function sleepSync(ms: number): void;
+  * restores the upstream fail-fast behaviour). See
+  * https://bun.sh/docs/api/sqlite#busy-timeout.
+  */
+-export declare function openDatabase(path: string): Database;
++export declare function openDatabase(path: string, options?: {
++    readonly?: boolean;
++}): Database;
+ /**
+  * Common subset of the Database interface used throughout QMD.
+  */
+diff --git a/dist/db.js b/dist/db.js
+index e238dae6c3ce252299bb4e80addc849429ed0e28..7e3c819fb66e3839f0656d702965a089cad51e96 100644
+--- a/dist/db.js
++++ b/dist/db.js
+@@ -1,3 +1,4 @@
++import { pathToFileURL } from "node:url";
+ /**
+  * db.ts - Cross-runtime SQLite compatibility layer
+  *
+@@ -5,10 +6,8 @@
+  * and Node.js (better-sqlite3). The APIs are nearly identical — the main
+  * difference is the import path.
+  *
+- * On macOS, Apple's system SQLite is compiled with SQLITE_OMIT_LOAD_EXTENSION,
+- * which prevents loading native extensions like sqlite-vec. When running under
+- * Bun we call Database.setCustomSQLite() to swap in Homebrew's full-featured
+- * SQLite build before creating any database instances.
++ * Bun uses its embedded SQLite. Optional native extensions are probed without
++ * changing the process-global SQLite implementation.
+  */
+ export const isBun = "Bun" in globalThis;
+ let _Database;
+@@ -17,28 +16,18 @@ if (isBun) {
+     // Dynamic string prevents tsc from resolving bun:sqlite on Node.js builds
+     const bunSqlite = "bun:" + "sqlite";
+     const BunDatabase = (await import(/* @vite-ignore */ bunSqlite)).Database;
+-    // See: https://bun.com/docs/runtime/sqlite#setcustomsqlite
+-    if (process.platform === "darwin") {
+-        const homebrewPaths = [
+-            "/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib", // Apple Silicon
+-            "/usr/local/opt/sqlite/lib/libsqlite3.dylib", // Intel
+-        ];
+-        for (const p of homebrewPaths) {
+-            try {
+-                BunDatabase.setCustomSQLite(p);
+-                break;
+-            }
+-            catch { }
+-        }
+-    }
+     _Database = BunDatabase;
+-    // setCustomSQLite may have silently failed — test that extensions actually work.
++    // sqlite-vec is optional — test whether embedded SQLite can load it.
+     try {
+         const { getLoadablePath } = await import("sqlite-vec");
+         const vecPath = getLoadablePath();
+         const testDb = new BunDatabase(":memory:");
+-        testDb.loadExtension(vecPath);
+-        testDb.close();
++        try {
++            testDb.loadExtension(vecPath);
++        }
++        finally {
++            testDb.close();
++        }
+         _sqliteVecLoad = (db) => db.loadExtension(vecPath);
+     }
+     catch {
+@@ -52,6 +41,50 @@ else {
+     const sqliteVec = await import("sqlite-vec");
+     _sqliteVecLoad = (db) => sqliteVec.load(db);
+ }
++/**
++ * Bun does not own uncached prepare() statements. A successful close() can leave
++ * their native handles alive and keep a WAL read lock until garbage collection.
++ * Keep only weak references and finalize this connection's live statements at
++ * close, after the store lifecycle has drained its admitted operations.
++ */
++function ownBunStatements(db) {
++    const references = new Set();
++    const collected = new FinalizationRegistry((reference) => references.delete(reference));
++    const prepare = db.prepare.bind(db);
++    const close = db.close.bind(db);
++    db.prepare = (...args) => {
++        const statement = prepare(...args);
++        const reference = new WeakRef(statement);
++        references.add(reference);
++        collected.register(statement, reference, reference);
++        return statement;
++    };
++    db.close = (...args) => {
++        const failures = [];
++        for (const reference of references) {
++            try {
++                reference.deref()?.finalize();
++            }
++            catch (error) {
++                failures.push(error);
++            }
++            finally {
++                collected.unregister(reference);
++            }
++        }
++        references.clear();
++        try {
++            close(...args);
++        }
++        catch (error) {
++            failures.push(error);
++        }
++        if (failures.length === 1)
++            throw failures[0];
++        if (failures.length > 1)
++            throw new AggregateError(failures, "QMD SQLite statement teardown failed");
++    };
++}
+ /** True for SQLite's lock-contention errors (`SQLITE_BUSY*`, "database is locked"). */
+ export function isBusyError(err) {
+     if (typeof err !== "object" || err === null)
+@@ -106,13 +139,22 @@ function enableWal(db, budgetMs) {
+  * restores the upstream fail-fast behaviour). See
+  * https://bun.sh/docs/api/sqlite#busy-timeout.
+  */
+-export function openDatabase(path) {
+-    const db = new _Database(path);
++export function openDatabase(path, options = {}) {
++    const readonlyOptions = options.readonly
++        ? (isBun ? { readonly: true, create: false } : { readonly: true, fileMustExist: true })
++        : undefined;
++    const databasePath = options.readonly && isBun && process.platform === "darwin"
++        ? `${pathToFileURL(path).href}?immutable=1`
++        : path;
++    const db = new _Database(databasePath, readonlyOptions);
++    if (isBun)
++        ownBunStatements(db);
+     const raw = process.env.QMD_SQLITE_BUSY_TIMEOUT;
+     const parsed = raw !== undefined && raw !== "" ? Number(raw) : Number.NaN;
+     const busyTimeoutMs = Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 120_000;
+     db.exec(`PRAGMA busy_timeout = ${busyTimeoutMs}`);
+-    enableWal(db, busyTimeoutMs);
++    if (!options.readonly)
++        enableWal(db, busyTimeoutMs);
+     return db;
+ }
+ /**
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index 7a7cc4244a846ac510a195de545bec3cef550963..ab0cf8b980c03d0707576616ffa0122f6af41202 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -126,6 +126,8 @@ export interface ExpandQueryOptions {
+ export interface StoreOptions {
+     /** Path to the SQLite database file */
+     dbPath: string;
++    /** Open an existing database without changing its bytes or journal mode. */
++    readonly?: boolean;
+     /** Path to a YAML config file owned by this store (mutually exclusive with `config`) */
+     configPath?: string;
+     /** Inline collection config owned by this store (mutually exclusive with `configPath`) */
+diff --git a/dist/index.js b/dist/index.js
+index 4211a43034f2c69203c4b76fb7c7bacceb6b126b..db32bd188e670908591f6e838ef192844ffc10e2 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -195,6 +195,9 @@ export async function createStore(options) {
+     if (options.configPath && options.config) {
+         throw new Error("Provide either configPath or config, not both");
+     }
++    if (options.readonly && (options.configPath || options.config)) {
++        throw new Error("Read-only stores require existing database configuration");
++    }
+     // Each store owns its own configuration scope. A YAML or inline source is
+     // bound to this store for its lifetime, so another store created in the same
+     // process can neither redirect nor reset this store's write-through target.
+@@ -218,7 +221,7 @@ export async function createStore(options) {
+         inactivityTimeoutMs: 5 * 60 * 1000,
+         disposeModelsOnInactivity: true,
+     });
+-    const internal = createStoreInternal(options.dbPath);
++    const internal = createStoreInternal(options.dbPath, { readonly: options.readonly });
+     const db = internal.db;
+     // Seed SQLite from the configuration that is authoritative now, read under
+     // the config lock. A lock-free read and a later sync would delete a
+diff --git a/dist/store.d.ts b/dist/store.d.ts
+index 3353e52bd1309c777e3cc3efcbda4cffcad1cf26..6395dd05a180139ee32f3565768d8ab75229a95f 100644
+--- a/dist/store.d.ts
++++ b/dist/store.d.ts
+@@ -520,7 +520,9 @@ export declare function generateEmbeddings(store: Store, options?: EmbedOptions)
+  * @param dbPath - Path to the SQLite database file
+  * @returns Store instance with all methods bound to the database
+  */
+-export declare function createStore(dbPath?: string): Store;
++export declare function createStore(dbPath?: string, options?: {
++    readonly?: boolean;
++}): Store;
+ /**
+  * Unified document result type with all metadata.
+  * Body is optional - use getDocumentBody() to load it separately if needed.
+diff --git a/dist/store.js b/dist/store.js
+index 48b79a4fc110874a7902c162fb5f15dc26894e6d..47ffd4d6d0386cb3ec6d507a5c38b9713677d232 100644
+--- a/dist/store.js
++++ b/dist/store.js
+@@ -1118,10 +1118,10 @@ function initializeDatabase(db) {
+         _sqliteVecUnavailableReason = null;
+     }
+     catch (err) {
+-        // sqlite-vec is optional — vector search won't work but FTS is fine
++        // sqlite-vec is optional. Preserve the reason for vector callers without
++        // warning BM25-only consumers during ordinary database initialization.
+         _sqliteVecAvailable = false;
+         _sqliteVecUnavailableReason = getErrorMessage(err);
+-        console.warn(_sqliteVecUnavailableReason);
+     }
+     db.exec("PRAGMA foreign_keys = ON");
+     // Drop legacy tables that are now managed in YAML
+@@ -2416,10 +2416,11 @@ async function embedWithIndexLockHeld(store, batchOptions, options) {
+  * @param dbPath - Path to the SQLite database file
+  * @returns Store instance with all methods bound to the database
+  */
+-export function createStore(dbPath) {
++export function createStore(dbPath, options = {}) {
+     const resolvedPath = dbPath || getDefaultDbPath();
+-    const db = openDatabase(resolvedPath);
+-    initializeDatabase(db);
++    const db = openDatabase(resolvedPath, options);
++    if (!options.readonly)
++        initializeDatabase(db);
+     const store = {
+         db,
+         dbPath: resolvedPath,

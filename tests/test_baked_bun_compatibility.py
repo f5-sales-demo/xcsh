@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class BakedBunCompatibilityTests(unittest.TestCase):
-    def verify(self, version, expected_path=True, uid="1001"):
+    def verify(self, version, expected_path=True, uid="1001", diagnostics=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             tools = root / "bin"
@@ -25,12 +25,13 @@ class BakedBunCompatibilityTests(unittest.TestCase):
             else:
                 environment.pop("XCSH_EXPECTED_TOOL_ROOT", None)
             # The argv contains only the fixed repository verifier and a fixed scope.
-            return subprocess.run(  # noqa: S603
+            result = subprocess.run(  # noqa: S603
                 ["/bin/bash", str(ROOT / "scripts/verify-self-hosted-tools.sh"), "bun"],
                 env=environment,
                 capture_output=True,
                 check=False,
-            ).returncode
+            )
+            return result if diagnostics else result.returncode
 
     def test_qualified_worker_patch_is_admitted(self):
         assert self.verify("1.4.5") == 0
@@ -43,6 +44,26 @@ class BakedBunCompatibilityTests(unittest.TestCase):
 
     def test_arbitrary_path_is_rejected(self):
         assert self.verify("1.4.5", expected_path=False) != 0
+
+    def test_wrong_bun_version_reports_expected_and_observed(self):
+        result = self.verify("1.4.4", diagnostics=True)
+        assert result.returncode != 0
+        assert "Bun version" in result.stderr.decode()
+        assert "1.4.5" in result.stderr.decode()
+        assert "1.4.4" in result.stderr.decode()
+
+    def test_wrong_worker_uid_reports_expected_and_observed(self):
+        result = self.verify("1.4.5", uid="1000", diagnostics=True)
+        assert result.returncode != 0
+        assert "worker UID" in result.stderr.decode()
+        assert "1001" in result.stderr.decode()
+        assert "1000" in result.stderr.decode()
+
+    def test_wrong_bun_path_reports_expected_and_observed(self):
+        result = self.verify("1.4.5", expected_path=False, diagnostics=True)
+        assert result.returncode != 0
+        assert "Bun executable" in result.stderr.decode()
+        assert "/usr/local/bin/bun" in result.stderr.decode()
 
 
 if __name__ == "__main__":

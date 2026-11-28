@@ -894,7 +894,7 @@ function fingerprint(snapshot: VerifiedDocumentationSnapshot): string {
 			enrichmentArtifactSha256: snapshot.enrichmentArtifactSha256 ?? null,
 			releaseTag: snapshot.releaseTag,
 			sourceCommit: snapshot.sourceCommit,
-			qmdVersion: "2.8.3",
+			qmdVersion: "2.9.0",
 			documents: snapshot.documents.map(({ archivePath, bodySha256, fileSha256, sizeBytes }) => ({
 				archivePath,
 				bodySha256,
