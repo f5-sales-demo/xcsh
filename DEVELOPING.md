@@ -35,6 +35,12 @@ Fork: `@f5-sales-demo/xcsh` | Upstream: `can1357/oh-my-pi`
 
 > **Package manager: bun only.** This monorepo uses Bun workspaces. Never use `npm`, `yarn`, or `pnpm` — they cannot resolve `workspace:` protocol references and produce broken `node_modules` in worktrees. Do not substitute a plain `bun install` for the worktree bootstrap below.
 
+Dependency and toolchain refreshes select the latest stable releases immediately.
+This prerelease project has no release-age eligibility window. Both root and
+package-local Bun installation configurations disable the minimum release age.
+Record exact versions, lockfiles and artifact hashes for each qualified build;
+refresh those selections as development continues and re-run the relevant checks.
+
 ---
 
 ## Managed Codex instructions and agent policy
